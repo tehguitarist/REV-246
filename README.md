@@ -50,7 +50,8 @@ python3 -m venv .venv && .venv/bin/pip install numpy scipy soundfile matplotlib 
 .venv/bin/python tools/analyze_ir.py irs/<file>.wav --out analysis/<name>      # one IR, deep dive
 .venv/bin/python tools/harness/run.py <library_dir> --templates              # inspect naming
 .venv/bin/python tools/harness/run.py <library_dir> --name <lib>             # whole library, stages A–C
-.venv/bin/python tools/harness/run.py "irs/EMT 246 captures" --name tomkin --separate-rates   # both rates, separate captures
+.venv/bin/python tools/harness/run.py "irs/EMT 246 captures" --name tomkin   # both rates (they are the same capture; do not pass --separate-rates)
+.venv/bin/python tools/harness/crossrate.py "irs/EMT 246 captures" --out analysis/library/tomkin/crossrate.csv   # direct 48k vs 96k comparison
 .venv/bin/python tools/harness/run.py "irs/EMT 246 captures" --name trial --separate-rates --sample 60   # quick spread-out subset
 .venv/bin/python tools/model_s.py [--tighten|--tail|--diffuser|--allpass|--groups|--stochastic]
 .venv/bin/python -m pytest tests -q

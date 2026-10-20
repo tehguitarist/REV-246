@@ -49,7 +49,7 @@ The library is in `irs/EMT 246 captures/` (6 GB, 4,874 stereo 24-bit WAVs, gitig
 ```
 irs/EMT 246 captures/
   README.txt, emt246_front.jpg, emt246_operation_and_function.jpg
-  48kHz/ and 96kHz/            identical file sets (separate captures)
+  48kHz/ and 96kHz/            identical file sets (same capture rendered at two rates; see below)
     Short RT/ (512)  Med RT/ (519)  Long RT/ (360)  Non-Lin/ (1,046)
 ```
 
@@ -77,17 +77,23 @@ irs/EMT 246 captures/
 - **Non-Lin with negative EARLY RT does not align across rates.** All 7 `different`/`near` Non-Lin pairs are reversed settings, with the best lag pinned at the ±40-sample search limit. The onset anchor is unsuited to a rising envelope; needs a wider search or another anchor before E1 can use them.
 - **2 Long RT pairs are `different` with a −26 dB gain** (RT 10 and 6, AMPL 0). Cause not yet found.
 
-**Full run done** (`analysis/library/tomkin/`, 4,874 files, about 11 min with a warm cache; `report.md` has the detail). Headlines, none yet interpreted:
-- 395 of 2,437 settings have a 96k file that is a resampled copy of the 48k one (`resampled_copy`, 16 %); 1,737 same-setting pairs are genuine repeats; 137 `near` and 168 `different` same-label pairs need a look (336 files flagged `label_group_inconsistent`).
-- Repeat/near median residual is only about −33 dB (L and R alike) over all same-label pairs, against −64 dB in the trial's clean repeats, so the `near` tail (reversed Non-Lin, long RT) is large. Do not use these pairs for modulation tests until it is understood.
+**Full run done** (`analysis/library/tomkin/`, 4,874 files, about 11 min with a warm cache; `report.md` has the detail). Headlines:
 - S clusters found in 768 files (190 with the exact S loop set), 31 `novel_cluster` files, 141 unknown loop sets (M/L candidates: e.g. `1108-1254-1386`, `2641`, `5279-10826-12176`, `231-628-803-1108-1292-2032`).
-- Kernel B2: both rates agree (max deviation 0.64 dB, spread under 0.02 dB); L/R offset 19.20 µs; capture clock −15.2 / −13.2 ppm (48k/96k); 30 clock outliers.
-- `label_mismatch_rt` on 2,381 files: mostly truncation and fades (see above).
+- Kernel B2: both rates agree (max deviation 0.64 dB, spread under 0.02 dB); L/R offset 19.20 µs in every S file; capture clock −15.2 / −13.2 ppm (48k/96k; a constant 2.0 ppm apart in every pair); 30 clock outliers.
+- `label_mismatch_rt` on 2,381 files: mostly truncation and fades (the files are trimmed and faded per setting).
+- **The pair classes in `report.md` (`copy` / `repeat` / `near` / `different`) are not reliable for this library.** `noise_ref` is meaningless where tails are digitally zeroed, and the ±40-sample alignment window on the short device-rate signature fails for ambiguous onsets (reversed Non-Lin, low-AMPL files). They are superseded by `tools/harness/crossrate.py`, which compares the two files directly in the capture domain (`analysis/library/tomkin/crossrate.csv`).
+
+**Cross-rate result (all 2,437 settings, 48 kHz against 96 kHz decimated, `crossrate.csv`):**
+- Every pair is sample-aligned (lag 0.0), has gain 0.9994 (a constant −0.005 dB), and agrees to **−67.5 dB median in the first 0.3 s** (range −67.9 to −66.8 for 75 % of pairs; 5 % worse than −60 dB). Later windows read worse only where the signal has fallen to the 24-bit floor.
+- **The out-of-band tail (14.5–22 kHz after 0.5 s, level about −150 dBFS) is correlated between the rates: median 0.79, minimum 0.37, and above 0.9 in 974 pairs, never near 0.** Independent captures would have independent noise there. The correlation is highest for long files (Long RT 0.99) and lowest where the files end near the 24-bit floor.
+- **Conclusion (S): the 48 kHz and 96 kHz files are renderings of the same capture data, not independent captures,** and they carry no usable repeat-capture information. This disagrees with the earlier note that the rates were captured separately ("confirmed by Tomkin"); check what Tomkin actually said (they may have been captured separately and then re-derived, or the 48 kHz set is a conversion of the 96 kHz one). The constant 2.0 ppm clock offset is the only sign of a difference and is more likely a resampler artefact than a second capture.
+- **Consequence:** the modulation tests in §2.3 cannot use 48k/96k pairs. The −67.5 dB agreement is only an upper bound on any time variance in the *data* (it says the files match, not that the unit is LTI). The `--separate-rates` switch should stay off for this library.
+- 7 earlier "different" pairs (e.g. reversed Non-Lin) are fine: they were alignment failures, and all agree to −66 dB once aligned directly.
 
 **Speed:** per-file cost halved (0.207 → 0.101 s) by replacing an O(n·w) `np.convolve` boxcar in `analyze_ir.edc` with a running sum. The harness already runs one process per core (10 here); threads would not help because the work is CPU-bound Python/NumPy. The full run is about 10 min of per-file work (two passes over 4,874 files) plus the pair stage.
 
 **Still to do:**
-2. Run `.venv/bin/python tools/harness/run.py "irs/EMT 246 captures" --name tomkin --separate-rates` (not yet run in full; results are cached per file, so an interrupted run resumes). Use `--sample N` for a quick spread-out subset with both rates; `--limit` takes the first files alphabetically, which are all one folder.
+2. Run `.venv/bin/python tools/harness/run.py "irs/EMT 246 captures" --name tomkin` (run done, without --separate-rates now; results are cached per file, so an interrupted run resumes). Use `--sample N` for a quick spread-out subset with both rates; `--limit` takes the first files alphabetically, which are all one folder.
 3. Review `analysis/library/tomkin/report.md`: flags, normalisation (A6), latency regression (B3, but DELAY never varies), clock and L/R offset (B1/B4), unit fingerprint against the CLA unit (B5), step tables (C3), coverage (C5; the `planned_sets` for `lowpass` and `predelay` will show as empty).
 4. Add the M and L loop sets to `config.json` → `known_loopsets` once seen. They appear as `U:<lengths>`.
 5. **Images re-parsed (done):** folded into `EMT246_unit_facts.md` §3. Results: LF reference is **50 Hz** (Q5, now **S**), HF at 7 kHz, optimum RT ranges, Non-Lin pivot/span diagram, and the panel's Non-Lin layout confirming the file field order.
@@ -100,7 +106,7 @@ Two scanned PDFs in `sources/emt-documents/` (`EMT 246S service manual 1.pdf`, 3
 |---|---|---|
 | Algorithm structure | Every delay is `base counter + TOM[tap]` into one 64 K-word memory; two synchronous TMS320s | Keep the model as integer taps of one circular buffer; tap offsets are per-setting data, so the *tap pattern* (cluster, injection, read-out) is data loaded per setting. Reinforces Q2/Q3: look for a fixed tap table scaled/shifted per setting |
 | Fixed-point | 16-bit storage, 32-bit accumulate; **REVERB noise is 15 dB above DELAY** (73 vs 88 dB re nominal, unweighted rms) | Q10: simulate truncation against rounding in the loop model and compare the added noise with 73 dB. Also an absolute check on any model noise: nominal = about −6 dBFS |
-| Analogue chain | Both filters transcribed and simulated (`tools/analog/`): the input filter really has +5 dB HF pre-emphasis and an elliptic skirt at 12.2 kHz; the output filter is flat then elliptic. Kernel = H_in · H_out · one-pole lag (about 5.5 kHz), 0.2–0.3 dB rms to 11 kHz | The analogue front end is now a 4-parameter structure (two filters fixed from the manual, plus the lag corner and a small skirt trim) instead of a free kernel. Use it as the analogue stage when fitting the digital model, and let the skirt shift (component tolerance, about 0.2 % in frequency) vary |
+| Analogue chain | Both filters transcribed and simulated (`tools/analog/`); the input filter has +5 dB HF pre-emphasis and an elliptic skirt at 12.2 kHz, the output filter is flat then elliptic. The residual is **the output S&H's exponential charging: a discrete one-pole at the device rate, pole 0.325 (CLA) / 0.301 (Tomkin), 0.11 dB rms** (manual p. 48, trimmer P202) | The analogue front end is a fixed structure with one trim parameter (the S&H pole, per unit) plus a small skirt shift. Cheap to implement (one IIR per output channel at 26.37 kHz) |
 | LP setting | Through path and kernel agree (12 kHz: −2.5 vs −2.0 dB), so the earlier idea of 5 extra dB from the LP at its 12 kHz step is withdrawn | LP steps still absent from the library; the LP remains an unknown digital stage |
 | Calibration | 0 dB = 0.775 V; nominal +6 dBu = −6 dBFS; overload reserve 6 dB at f < 2 kHz | Absolute levels in the IRs are lost in deconvolution and normalisation, so calibration mostly sets headroom and the noise targets |
 
@@ -110,13 +116,27 @@ Two scanned PDFs in `sources/emt-documents/` (`EMT 246S service manual 1.pdf`, 3
 - The IR noise floor is not the unit's noise: a deconvolved sweep has processing gain and the capture interface adds its own noise, so compare the spec (73/88 dB) with IRs only through a known sweep level, or via L-versus-R and settings-versus-settings differences.
 
 **Processor and filter schematics (read):** details are in `EMT246_unit_facts.md` §2b. What follows for modelling:
-- **Tap budget:** at most **256 TOM entries**, every memory access (read or write) is one entry, and the DSP time (182 instr per DSP per sample) allows far fewer. Counting accesses in the fitted S model (cluster 8 taps per channel, 4 loops with injection/read-out, diffuser, 460 comb) gives a hard cross-check: a model that needs more than a few hundred accesses is wrong. Do this count for the S model next.
+- **Tap budget:** at most **256 TOM entries**, every memory access (read or write) is one entry, and the DSP time (182 instr per DSP per sample) allows far fewer. The count is below.
 - **Run-time tap changes are possible** (the TOM can be rewritten by processor A and the tap counter reloaded). A modulated or jittered read-out tap (the L-only "1 % gain jitter" from the CLA IR) is thus a hardware-possible mechanism; the library repeats (48k/96k) are the test.
 - **Fixed timing:** the 182-state sequencer places the A/D and D/A strobes; the L/R offset is quantised to 208.3 ns. The library's B4 values are already one value (19.19–19.21 µs in all 768 S files, about 92.1 steps) against the CLA unit's 18.6 µs (about 89 steps), so the two units differ by about 3 timing steps; a per-unit difference of that size is the kind of thing a different timing PROM or analogue S&H trim would produce.
 - **Analogue chain:** both filters are nominal-value-checkable; see next.
 
+**Memory-access count for the identified S structure** (each delay element = one TOM entry per read or write; counted from `EMT246_unit_facts.md` §5, **H** for the access pattern):
+
+| Part | Accesses per sample |
+|---|---|
+| Input write, pre-delay read | 2 |
+| Reflection cluster (4 taps per channel, 2 channels) | 8 |
+| 4 loops (1321/1389/1461/1587): one read and one write each | 8 |
+| 460 comb: read and write | 2 |
+| Diffuser AP20 · AP72 · AP230: read and write each | 6 |
+| Read-outs (lags 26 and 332 in each of the 4 loops, shared by L and R) | 8 |
+| **Identified total** | **about 34** |
+
+So the identified structure uses about 34 of the 256 TOM entries and about half of the 50–70-tap instruction budget (a read, a multiply-accumulate and a write cost several of the 182 cycles per DSP). The **TOM is not the binding limit; the instruction budget is.** What the 256 limit does settle: the sparse injection fits (1,719 integer taps per channel) cannot be the real structure, and the unidentified injection and per-loop read-out must fit in about 20–35 accesses, which is the constraint for Q2.
+
 **Next reads and jobs (not done):**
-1. **Filters: done** (see the table above and facts §2b). Open: where the one-pole lag at about 5.5 kHz comes from (S&H stages on boards 121/122, pp. 40–50), and a comparison against the 48k/96k library kernels (`analysis/library/tomkin/kernels/`) rather than only the CLA kernel.
+1. **Filters: done** (see the table above and facts §2b). The lag is the output S&H (see table). Open: the input-side integrate/hold window (boxcar, board 121 p. 41–43) and the finite op-amp GBW question (ideal op-amps fit better than 3–5 MHz GBW models).
 2. Sheets 2/5 and 3/5 (p. 55–56; processor A and B wiring, reset, clock sync), the S&H and DAC wiring on boards 121/122 (pp. 40–45, 47–50) for the exact aperture and hold timing, and the interface board 7 246 125 (control CPU link).
 3. Test-program pages 26–31 (Tests 1–3, 25, 26) and the front pages (pdf pp. 1–7, 13) not yet read.
 
@@ -137,6 +157,8 @@ Two scanned PDFs in `sources/emt-documents/` (`EMT 246S service manual 1.pdf`, 3
 | Q11 | **Absolute timing:** pre-delay = DELAY exactly? | Harness B3 regression, if delays vary |
 
 ### 2.3 Modulation tests (hypothesis only; there may be none)
+
+> **Update:** the 48k/96k pairs are the same capture rendered twice (§2.1), so the first bullet group below cannot be run on this library. What remains: similar presets one step apart, the per-program comparison, and a repeat capture from another source if one exists.
 
 - **48k/96k pairs (separate captures of the same setting):**
   - Bring both to the device grid; remove level, clock and per-rate kernel differences; compare the residual with the noise floor.
