@@ -563,6 +563,7 @@ def main():
     ap.add_argument("--tighten", action="store_true", help="run only the tightening study (section 8 of the results doc)")
     ap.add_argument("--wav", default="irs/eugtone_EMT246_CLA_shortRT.wav")
     ap.add_argument("--tail", action="store_true", help="run only the long-tail study (section 9 of the results doc)")
+    ap.add_argument("--groups", action="store_true", help="run only the group-sparse tap study (section 12; needs tighten.json)")
     ap.add_argument("--allpass", action="store_true", help="run only the all-pass diffuser search (section 11; needs tighten.json)")
     ap.add_argument("--diffuser", action="store_true", help="run only the injection/diffuser study (section 10; needs tighten.json and tail.json)")
     a = ap.parse_args(); os.makedirs(a.out, exist_ok=True)
@@ -574,6 +575,8 @@ def main():
         return diffuser_study(a)
     if a.allpass:
         return allpass_study(a)
+    if a.groups:
+        return group_study(a)
     y = load(a.h); out = {"h": a.h, "fs_dev": FS, "S0": S0, "t_fit_s": a.t_fit, "t_cap_s": a.t_cap}
 
     # 1. clock: cluster taps' sub-sample positions
@@ -1470,9 +1473,6 @@ def allpass_study(a):
     log("done")
 
 
-if __name__ == "__main__":
-    main()
-
 
 # ---------- group-sparse injection taps (docs/model_s_results.md §12) ----------
 def group_omp(y, Gs, post, eps, Nfit, wt, d_max, checkpoints=(4, 8, 16, 32, 64, 128), direct=True, d_min=0):
@@ -1514,3 +1514,66 @@ def group_omp(y, Gs, post, eps, Nfit, wt, d_max, checkpoints=(4, 8, 16, 32, 64, 
         out.append({"groups": k, "params": k * ns * 2 + 8, "delays": ds, "gains": {"LR"[c]: g[c].tolist() for c in (0, 1)},
                     "null": null_depth(y, model, HOLD_WIN), "null_band": null_depth(band_limit(y), band_limit(model), HOLD_WIN)})
     return out
+
+
+def loop_shared_omp(y, Gs, post, eps, Nfit, wt, d_max=2000, checkpoints=(50, 100, 200, 400)):
+    """Groups = (loop or direct path, delay) shared by L and R (one gain per channel)."""
+    Nall = len(y); kn, kb = cluster_kernels(eps)
+    Hs = [post / (1 - G * np.exp(-1j * W * Pi)) for G, Pi in zip(Gs, P)] + [post]; ns = len(Hs)
+    hs = [np.roll(np.fft.irfft(H, NFFT), PRE) for H in Hs]; Hspec = [np.fft.rfft(h) for h in hs]
+    w2 = np.zeros(NFFT); w2[:Nfit] = wt[:Nfit] ** 2; W2 = np.fft.rfft(w2)
+    nrm = [np.sqrt(np.maximum(np.fft.irfft(W2 * np.conj(np.fft.rfft(h ** 2)), NFFT)[:d_max], 1e-30)) for h in hs]
+    col = lambda s, d: np.roll(np.fft.irfft(Hs[s] * np.exp(-1j * W * d * (1 + eps)), NFFT), PRE)[:Nall]
+    def ccol(c, k):
+        v = np.zeros(Nall); idx = PRE + CLUSTER[c][k] + kn; m = (idx >= 0) & (idx < Nall); v[idx[m]] = kb[c][k][m]; return v
+    cols = {c: [ccol(c, k) for k in range(4)] for c in (0, 1)}; sel = []; r = y.copy(); out = []
+    while len(sel) < checkpoints[-1]:
+        sc = np.zeros((ns, d_max))
+        for c in (0, 1):
+            rw = np.zeros(NFFT); rw[:Nfit] = r[:Nfit, c] * wt[:Nfit] ** 2; Rr = np.fft.rfft(rw)
+            for s in range(ns):
+                sc[s] += (np.fft.irfft(Rr * np.conj(Hspec[s]), NFFT)[:d_max] / nrm[s]) ** 2
+        for s, d in sel:
+            sc[s, d] = 0
+        s, d = np.unravel_index(np.argmax(sc), sc.shape); sel.append((int(s), int(d))); model = np.zeros_like(y)
+        for c in (0, 1):
+            cols[c].append(col(s, d)); A = np.stack(cols[c], 1)
+            model[:, c] = A @ np.linalg.lstsq(A[:Nfit] * wt[:Nfit, None], y[:Nfit, c] * wt[:Nfit], rcond=None)[0]
+        r = y - model
+        if len(sel) in checkpoints:
+            out.append({"groups": len(sel), "params": 2 * len(sel) + 8, "null": null_depth(y, model, HOLD_WIN),
+                        "null_band": null_depth(band_limit(y), band_limit(model), HOLD_WIN)})
+    return out
+
+
+def group_study(a):
+    """Everything in docs/model_s_results.md §12. Writes <out>/groups.json."""
+    import time
+    T0 = time.time(); y = load(a.h); Nall = len(y); res = {}
+    le = json.load(open(os.path.join(a.out, "tighten.json")))["loops_early"]; th5 = np.array(le["theta5"]); g5, hf5 = le["g5"], le["hf5"]; eps = th5[4] * 1e-6
+    Gs = G_param(th5, "jot"); Nfit = PRE + int(0.4 * FS); wt = np.r_[tail_weight(np.maximum(np.arange(Nfit) - PRE, 0), t_cap=0.3), np.zeros(Nall - Nfit)]
+    post = (1 / (1 - G5_of(th5, g5, hf5, 460) * np.exp(-1j * W * 460))) * allpass(20, -.7, eps) * allpass(72, -.7, eps) * allpass(230, -.7, eps)
+    res["noise_floor"] = noise_floor_null(y, HOLD_WIN); res["noise_floor_band"] = noise_floor_null(band_limit(y), HOLD_WIN)
+    g = group_omp(y, Gs, post, eps, Nfit, wt, 2000, checkpoints=(4, 8, 16, 32, 64))
+    for d in g[-1:]:
+        ds = np.array(d["delays"]); stats = {}
+        for c in "LR":
+            gg = np.array(d["gains"][c]); e = 20 * np.log10(np.sqrt(np.mean(gg ** 2, 1)) + 1e-12)
+            stats[c] = {"gain_vs_delay_db_per_s": float(np.polyfit(ds / FS, e, 1)[0]), "corr": float(np.corrcoef(ds, e)[0, 1]),
+                        "sign_agreement_across_loops": float(np.mean(np.abs(np.sign(gg[:, :4]).mean(1))))}
+        res["group_64_gain_stats"] = stats
+    res["shared_all_slots"] = [{k: v for k, v in d.items() if k != "gains"} for d in g]
+    print("shared all", [(d["groups"], np.round(d["null"]["400-600"], 1).tolist()) for d in g], f"{time.time() - T0:.0f}s", flush=True)
+    res["shared_LR_per_loop"] = loop_shared_omp(y, Gs, post, eps, Nfit, wt)
+    print("shared LR", [(d["groups"], np.round(d["null"]["400-600"], 1).tolist()) for d in res["shared_LR_per_loop"]], f"{time.time() - T0:.0f}s", flush=True)
+    res["independent"] = {}
+    for ext in (300, 8500):
+        r = omp_curve(y, Gs, post, eps, Nfit, wt, checkpoints=(414, 1600), ext=ext)
+        res["independent"][f"ext{ext}"] = r
+    print("independent", {k: {c: [(d["taps"], round(d["null"]["400-600"], 1)) for d in v[c]] for c in "LR"} for k, v in res["independent"].items()}, f"{time.time() - T0:.0f}s", flush=True)
+    with open(os.path.join(a.out, "groups.json"), "w") as fh:
+        json.dump(res, fh, indent=1, default=float)
+
+
+if __name__ == "__main__":
+    main()

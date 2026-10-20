@@ -305,7 +305,7 @@ in (mono) ─► A/D (SAR, 16 bit) ─► pre-delay = DELAY setting (integer sam
 ```
 
 What is still unknown:
-- **Where the LP sits.** It is drawn after the cluster on the data sheet, and the narrator in the video says "across the whole reverb mix".
+- ~~Where the LP sits~~: **downstream** of the reverb and cluster. Studio Magazin 96 says "nachgeschaltet"; the data sheet diagram and the video narration agree.
 - **How the injection is built.** Free FIRs work; the true sparse structure is not yet found.
 - **Whether the 460 stage is real.**
 - **What the "stochastic control" is.**
@@ -490,6 +490,13 @@ Because the parameters are discrete and the structure looks separable, a few hun
   - "Durch Aneinanderreihen zweier Nachhallverläufe", i.e. two decay curves joined end to end: pre-delay, then SPAN (the early decay), then the late reverb.
   - **The early section can be reversed** (a negative sign). In that case the reverb reaches full amplitude only at the end of the span.
   - SPAN is 0.1–0.5 s per the data sheet; the prototype allowed 0–2 s. A short SPAN cuts off abruptly, which gives gated or inverse effects.
+- **Further details from a second read of Studio Magazin 96 and 99:**
+  - The low-pass is "nachgeschaltet" (downstream of the reverb).
+  - S/M/L differ audibly "mainly in the temporal spacing of the early reflections".
+  - L has "comparatively low echo density".
+  - The SPAN in N truncates the early decay abruptly.
+  - The 246 is the direct successor of the 245; the 245's service manual describes 19 loops in mixed series/parallel.
+  - The prototype's display read `EMT 246 | F-86 | 10 | 950 0 | 2 12 05`, i.e. no decimals on the prototype.
 - **Remote behaviour:**
   - lever 1 = low-pass;
   - lever 2 = delay and amplitude;

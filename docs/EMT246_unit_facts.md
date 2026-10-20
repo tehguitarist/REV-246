@@ -58,17 +58,19 @@ Constraints: there is no hardware access, ROM dump or new capture, ever. Evidenc
 | Display formats: program shows letter + name ("S SNARE1"); LP one decimal below 10 kHz; RT one decimal | C | video |
 | **HF factor is applied at 7 kHz as specified:** HF ×0.9 gives a measured RT(7k)/RT(1k) of 0.90–0.91 | S | CLA IR + confirmed settings |
 | LF ×1.0 gives a flat LF decay. The **LF reference is 50 Hz (data-sheet table) or 250 Hz (data-sheet diagram, card)**; unresolved | C (conflict) | data sheet; card |
-| Remote: lever 1 = LP; lever 2 = delay/ampl; lever 3 = RT/LF/HF. Holding a lever more than 1 s accelerates the change | C | Studio Magazin 99 |
+| Remote levers work like a **gear shift**: horizontal selects the parameter, vertical steps it.<br>• lever 1 = LP (one position);<br>• lever 2 = 6 parameters: pre-delay and ampl for S/M/L/250, L/R delay for D;<br>• lever 3 = 9 parameters: RT/LF/HF for S/M/L/250, L/R feedback for D, early/late RT for N.<br>Holding a lever more than 1 s accelerates the change. The display shows a coarse LED bar plus the exact value | C | Studio Magazin 99 |
+| **The low-pass is downstream** ("Nachgeschaltet ist ein Tiefpassfilter"). The data sheet diagram also places it after the cluster. So model the LP at the output, after the reverb and cluster sum | C (claim) / S | Studio Magazin 96; data sheet |
 | Presets: 90 factory (F1–F90; card shows F1–F50; SNARE1 = F51), F91–F99 service, 99 user | C | data sheet; card; video |
 
 ## 4. Programs
 
 | Program | What is known | Conf. |
 |---|---|---|
+| **S / M / L** (A/B/C), sound | Studio Magazin 99:<br>• audibly, S/M/L differ **mainly in the temporal spacing of the early reflections** ("zeitliche Staffelung der frühen Reflexionen"), so expect a different cluster spacing per program;<br>• S has the highest echo density (small rooms, densification);<br>• M is the universal "concert hall";<br>• L is a "cathedral" with **comparatively low echo density** (interesting at short RT);<br>• all have even decays;<br>• the HF absorption simulation and the LF behaviour with factor > 1 are praised | C (review) |
 | **S / M / L** (A/B/C) | "Completely new algorithm, colouration-free through optimised eigentone distribution". They share one unified algorithm with a novel **"stochastic control"** that densifies eigentones "without perceptible FM". They differ in the degree of stochastic control (eigentone/echo density), the speed of energy build-up, and the **early-reflection distribution**. S has the highest density and fastest build-up | C (claims) |
 | **E** | "Exactly" the EMT 250 program, with extended pre-delay; likely an option (empty PROM sockets) | C / H |
 | **D** | Delay/echo: 2 taps (L, R), 0–999 ms, feedback 16 steps (~0 to −60 dB per repeat) | C |
-| **N** (Non-Lin) | Two decay curves joined end to end: pre-delay → SPAN (0.1–0.5 s; prototype 0–2 s) early decay → late reverb. The **early section can be reversed**. Probably 4 parameters (DELAY, SPAN, EARLY RT, LATE RT) with no AMPL/LF/HF | C / H (parameter set) |
+| **N** (Non-Lin) | SPAN is a "superordinate time value" for the early decay, after which the separate late decay begins. A shorter SPAN **cuts the early decay off abruptly** at its end, giving gated reverb; reversal gives a rising curve, i.e. inverse reverb. Two decay curves joined end to end: pre-delay → SPAN (0.1–0.5 s; prototype 0–2 s) early decay → late reverb. The **early section can be reversed**. Probably 4 parameters (DELAY, SPAN, EARLY RT, LATE RT) with no AMPL/LF/HF | C / H (parameter set) |
 | Digital-I/O variant | 4 × TMS320, fs locked to 44.1/48 kHz, 256 KB RAM, 32 KB ROM, so a different sample grid | C (catalogue 1988/89) |
 
 ## 5. Program S algorithm (measured from the CLA IR)
@@ -93,6 +95,8 @@ The CLA IR settings, from a numeric display with some dead segments: **SHORT RT,
 | **R: once the input ends (about 0.45 s), the 4 loops + 460 stage predict the rest to within 4–6 dB of the noise floor.** This prediction uses only the 9 loop/460 numbers and the IR's own past, e.g. −45.5 dB at 450–650 ms. So the loops and the 460 stage are right | S | model §10.1 |
 | **Late input:** each loop receives its **own dense injection** that keeps arriving and decays smoothly (R ≈ 290 dB/s, RT ≈ 0.2 s; L ≈ 130 dB/s) until about 0.45 s. There are no spikes. Fine structure is uncorrelated across loops but correlated between L and R of the same loop. **Ruled out:** a shared input, a long EMT 250-style loop (lags 3.5–16 k), and extra 230/460/920 stages. The 460 stage's gain is flat across frequency, g ≈ 0.44–0.46, consistent with an all-pass | S | model §10.2–10.3 |
 | **Diffuser found: a common series all-pass chain AP(20) · AP(72) · AP(230), all at g ≈ −0.70**, with the 460 recursion as a plain comb (pole gain 0.445). The delays are sharp (±1 sample costs 4–10 dB). It was chosen on R and confirmed on L at the same gain, and it explains the recurring 20/52/72 and 230/460/690/920 lags. Its cost is about 8 multiplies and ≤ 4.1 k words. For a sparse model it is worth 10–13 dB on the held-out null. Input side vs read-out side is undecidable from one IR; input side is favoured | S (chain) / H (placement) | model §11 |
+| **Round 12 (all negative):**<br>• no small tap-delay set is shared across loops/channels (4–64 shared delays explain ≤ 13 dB);<br>• sharing tap positions between L and R of one loop costs about 4 dB;<br>• long-delay-line taps (EMT 250 style) don't help, and the selected taps show no exponential gain decay;<br>• loop-sum feedback is ruled out indirectly, because the modes stay harmonic.<br>The injection is **per loop, dense, and not sparse in any basis tried** | S | model §12 |
+| **L's excess lives in the recirculating part, not the injection.** L's read-out departs from any fixed read-out all the way down the tail. A time-varying L read-out (the "stochastic control", modulation slower than about 1 Hz or of small depth) is consistent | S / H | model §12.4b |
 | The diffuser does **not** generate the late input. The best generative held-out null is still about −29 dB in band (400–600 ms), and the taps in front of the diffuser are still thousands per channel. Next candidate: a small tap set shared across loops and channels (group-sparse) | S | model §11.2–11.3 |
 | **Hardware plausibility:** free excitation FIRs (2 × 8.4 k taps) are far beyond the ~50–70 taps per sample budget, so the real injection must be compact. The best guess is **per-loop diffusers** (short all-pass chains or nested all-passes), with lags 20/30/72/230 as candidate delays | H | model §10.4 |
 | **Injection is not a sparse tap set.** 1,719 integer taps per channel recover less than the dense model. Something dense (an unidentified diffuser) feeds the loops and **keeps delivering new input at 0.25–0.4 s**. This is now the main limit on the null | S | model §8.3–8.4 |
@@ -120,13 +124,14 @@ All of this is **H**, derived from the parts and TI timings.
 2. **What the "stochastic control" is.** The best candidate is now slow gain modulation on L (an L-only excess at loop-length-difference periodicities). There are no repeat captures; use library duplicates, joint fits and within-IR linewidth (research §7.2b).
 3. **Exact step tables** for RT, LF, HF, AMPL and LP; the LF reference frequency (50 or 250 Hz); the HF ×1.0 behaviour.
 4. **Loop sets and cluster patterns for M and L.** The 1986 review says the early reflections differ per program.
-5. **Where the LP sits**, and the filter types and order of the loop filters (from LF/HF sweeps).
+5. **The LP's filter type and order** (it is downstream per Studio Magazin 96), and the loop filters' type and order (from LF/HF sweeps).
 6. **Fixed-point details** (rounding/truncation, coefficient grid), needed for bit-exactness.
 7. **N's structure** (FIR against truncated loops; how reversal works).
 
 ## 8. Source index
 
-- **Documents:**
+- **Documents** (local copies of the key sources are in `sources/`, which is gitignored):
+  - the EMT 245 service manual: lineage only. It describes **19 loops in mixed series/parallel** on several parallel microprocessors; the 246 is the 245's direct successor, but its software is "in keinerlei Beziehung" to it;
   - data sheet (your PDF; emt-archiv.de);
   - manual pp. 65–74 (remote boards);
   - parameter card (studiorepair.com);

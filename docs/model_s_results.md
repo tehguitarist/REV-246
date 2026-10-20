@@ -31,6 +31,10 @@ Labels: **[M]** measured here, **[A]** assumption, **[H]** hypothesis.
     - A common all-pass chain AP20 · AP72 · AP230 with g ≈ −0.70, plus the 460 comb (g 0.445), was found on R and confirmed on L. The delays are sharp to ±1 sample.
     - It improves sparse-tap models by 10–13 dB at every tap budget.
     - It does not generate the late input, so the held-out null with a generative model is still about −29 dB in band.
+  - **Group-sparse taps (§12):**
+    - No small tap set is shared across loops; within a loop, sharing between L and R costs about 4 dB.
+    - Long-delay-line (EMT 250-style) taps and loop feedback don't generate the late input.
+    - L's excess is in the recirculating read-out, not the injection.
   - What is left over in R sits at loop-mode frequencies; what is left over in L is mostly broadband noise. L's *model* error is not worse than R's (§6.5).
 - **HF.**
   - The HF *decay* is right: T30 at 8 kHz is 0.874/0.868 s against 0.878/0.872 s measured. The loop filter's 7 kHz loss is 0.37–0.40 dB per pass. The panel's numeric displays read HF ×0.9, and the measured RT(7 kHz)/RT(1 kHz) ≈ 0.90 is exactly that setting, with the HF factor applied at 7 kHz as the data sheet says. A pure one-pole lowpass with p ≈ 0.037–0.044 fits it as well as a general first-order section. Whether any damping remains at HF ×1.0 is unknown.
@@ -615,3 +619,82 @@ combined with the 460 recursion (pole gain 0.445, better modelled as a plain com
 2. **The late input** (§10) is still not generated. In R, the input-ended predictor (§10.1) remains the best held-out evidence (−38.8 dB from early-window parameters, −41.7 dB with whole-decay parameters, at 400–600 ms). No generative model reaches it.
 3. **L-only excess** (§8.4, §10.1): unchanged by any of this.
 4. **Gains** are resolved to about ±0.02 (diffuser) and ±8 Q15 LSB (loops). That is not bit-exact.
+
+## 12. Group-sparse injection taps, and the late-input generator
+
+Code: `.venv/bin/python tools/model_s.py --groups` (needs `tighten.json`) → `analysis/model_s/groups.json` (log: `analysis/model_s_groups.log`).
+
+**Set-up.**
+- Fixed parts: the §11 diffuser (comb460 · AP20 · AP72 · AP230, g = −0.7), the early-window loops, and the cluster with free gains.
+- Taps sit at integer device-sample delays after cluster tap 0 (the 10 ms pre-delay output), placed with the (1 + ε) clock stretch.
+- Each tap feeds a "slot": loop i (4 slots) or the direct, non-recirculating path through the diffuser (1 slot), in each channel.
+- Fit: 0–400 ms. Held-out windows: 400–600 and 600–1000 ms. Excess is over the noise floor of the same band.
+
+### 12.1 Tap delays shared across loops and channels (group OMP)
+
+Each group is one delay feeding all 10 slots (5 per channel) with its own gains.
+
+| Shared delays | Params | 50–300 ms (fit) | **400–600 held out**, broadband (excess) | 400–600 held out, 20 Hz–11.3 kHz (excess) | 600–1000 held out, broadband |
+|---|---|---|---|---|---|
+| 4 | 48 | −1.0 / −0.9 | −0.9 / −0.8 (+33.6 / +42.3) | −0.9 / −0.9 (+47.0 / +53.5) | −0.9 / −0.9 |
+| 8 | 88 | −1.5 / −1.4 | −1.4 / −1.3 | −1.5 / −1.4 | −1.4 / −1.5 |
+| 16 | 168 | −2.3 / −2.9 | −2.1 / −2.7 | −2.2 / −2.9 | −2.1 / −2.8 |
+| 32 | 328 | −4.4 / −5.3 | −4.6 / −5.1 | −5.1 / −5.6 | −4.3 / −5.3 |
+| 64 | 648 | −8.9 / −9.8 | −9.8 / −10.6 (+24.7 / +32.5) | −12.0 / −13.1 (+35.9 / +41.3) | −9.3 / −11.5 |
+
+**Negative result.** A small delay set shared by all loops and both channels does not exist: 4–16 shared delays explain almost nothing. The 64 selected groups show no structure either:
+- RMS gain against delay: L −201 dB/s (r = −0.27), R +5 dB/s (r = 0.01);
+- sign agreement across loops: 0.45 / 0.30, against about 0.375 for random signs;
+- their delays bunch just after the reverb onsets (L at 240; R at 570–1,250).
+
+This agrees with §10.3: different loops share no spectral fine structure.
+
+### 12.2 Sharing within a loop only (L and R read the same delay)
+
+Each group is (loop or direct path, delay), feeding both channels with its own gains.
+
+| Groups | Params | 50–300 ms (fit) | **400–600 held out**, broadband | 400–600 held out, in band | 600–1000 held out, broadband |
+|---|---|---|---|---|---|
+| 50 | 108 | −6.5 / −6.3 | −7.0 / −6.4 | −7.9 / −7.2 | −6.5 / −6.7 |
+| 100 | 208 | −10.5 / −10.9 | −12.5 / −12.7 | −17.4 / −18.0 | −11.5 / −13.8 |
+| 200 | 408 | −12.4 / −12.7 | −14.0 / −14.0 | −17.5 / −18.3 | −12.3 / −15.1 |
+| 400 | 808 | −15.6 / −15.6 | −16.9 / −16.7 (+17.6 / +26.4) | −19.4 / −19.7 (+28.5 / +34.7) | −13.4 / −17.1 |
+| *for comparison:* independent taps per slot and channel (§11), 414/ch | about 830 | −19.8 / −20.5 | −21.1 / −20.6 (+13.4 / +22.5) | n/a | −14.5 / −19.6 |
+
+At the same parameter count, sharing a loop's delays between L and R costs about 4 dB. The L and R read-outs of a loop are related (§5, §10.3), but not by identical tap positions.
+
+### 12.3 Late-input generator: long-delay-line taps (EMT 250 style)
+
+Independent per-slot taps allowed out to 8,500 samples beyond each loop's normal support, i.e. up to about 10,300 samples (0.39 s) after tap 0. These are the "taps read from a long delay line".
+
+| Taps per channel | normal support (ext 300), 400–600 held out | long support (ext 8,500), 400–600 held out |
+|---|---|---|
+| 414 | −21.1 / −20.6 | −20.4 / −20.1 |
+| 1,719 | −23.2 / −23.6 | −22.1 / **+88.1 (R unstable)** |
+
+- **Negative result.** Late taps do not improve the held-out null.
+- At 1,719 taps, R's prediction blows up: taps near the end of the fit window are almost unconstrained, and greedy selection fits them to it.
+- The exponential gain law could not be tested as a parametric model, because the selected taps show no decay with delay at all (§12.1). Fitting a·exp(−σt) to them would describe noise.
+- A long multi-tap line would also inject *bursts* (one diffuser response per tap). The late input of §10.2 is smooth and only mildly heavy-tailed: kurtosis 4–10 over 0.27–0.45 s *[exploratory]*.
+
+### 12.4 The two alternatives
+
+- **(a) Feedback from the loop sum or comb460 output into the diffuser input.**
+  - That couples the loops, which moves the modes off the harmonic series. §8.4 found that 12 free cross-coupling gains lower the annihilator cost by nothing (0.1944 against 0.1945). The modes fit Pᵢ(1+ε) per loop to a few mHz (§9.2).
+  - So any such feedback must be too small to matter. It is not the late-input generator. **[M, indirect: frequency-dependent coupling through the diffuser was not fitted explicitly]**
+- **(b) L-only time-varying injection.**
+  - The input-ended predictor (§10.1) keeps L 15–22 dB above noise even when started at T = 0.45–0.6 s, after the input has ended. R falls to +4–6 dB.
+  - So **L's excess lives in the recirculating part, not in the injection**: L's read-out of the loops differs from what a fixed set of read-out filters predicts, all the way down the tail **[M]**. The same predictor also rules out time-variance in the injection as the cause.
+  - A time-varying L read-out (the 1986 "stochastic control" confined to L) remains consistent with this **[H]**. The line-width test (§8.6) bounds it to modulation slower than about 1 Hz, or to small depths.
+
+### 12.5 What still limits
+
+1. The injection is **per loop, dense, and not sparse in any basis tried**: integer taps, loop-shared taps, L/R-shared taps, the §11 diffuser, or long-delay taps. Each loop's excitation behaves like a long, loop-specific diffused sequence. The best generative held-out results remain:
+   - dense model + diffuser: −29.2 / −29.1 dB in band at 400–600 ms (§11.2);
+   - sparse + diffuser at 0.8 k params: −21 dB.
+2. **The late input (0.25–0.45 s) is still unexplained.** Every candidate generator tried here fails: a long loop, a 460 cascade, a common all-pass chain, long-line taps, and loop feedback. The only description that works is the R predictor from the IR's own past (§10.1).
+3. **L's read-out excess** in the tail (12.4b).
+4. With only one setting, structural candidates can't be cross-checked against changes in RT, HF, LF, DELAY or AMPL. Several remaining questions are best settled on the library:
+   - does the late input scale with RT (recirculating) or not (feed-forward)?
+   - does the diffuser gain change with any control?
+   - does L's excess change between captures of other settings?

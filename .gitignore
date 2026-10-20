@@ -4,3 +4,4 @@ __pycache__/
 analysis/library/*/cache/
 analysis/library/pytest_synthetic/
 .DS_Store
+sources/
