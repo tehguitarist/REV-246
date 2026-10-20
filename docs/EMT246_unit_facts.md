@@ -4,6 +4,7 @@ The single place for *what we know about how the unit works*. Details and eviden
 - `discovery` = EMT246_discovery.md
 - `research` = algorithm_research.md
 - `model` = model_s_results.md
+- `ml` = ml_structure.md
 
 **Confidence:**
 - **C** = confirmed by a primary source or a direct measurement;
@@ -116,11 +117,11 @@ The CLA IR settings, from a numeric display with some dead segments: **SHORT RT,
 
 | Fact | Conf. | Source |
 |---|---|---|
-| **Time-invariant to measurement precision.** Fine-structure correlation is 0.67, against 0.60 for a static modal reference and 0.02 for noise. Loop modes are exactly harmonic. This must be reconciled with the 1986 "stochastic control" claim | S / open | discovery §1; research §7.2b |
+| **Time-invariant to measurement precision.** Fine-structure correlation is 0.67, against 0.60 for a static modal reference and 0.02 for noise. Loop modes are exactly harmonic. **Library confirmation:** separate captures of the same S setting (AMPL pairs) agree to −47 dB at 0.05–0.15 s and −35 dB at 0.6–1 s, with no L-only excess; the "stochastic control" lives in M and L (§5b) | S | discovery §1; research §7.2b; ml §4 |
 | **Pre-delay:** cluster tap 0 lands at the DELAY time (10 ms → 9.97–10.08 ms in the file; eugtone preserved absolute timing) | S | IR + settings |
 | **Cluster:**<br>• L taps at 0, 54, 194, 288 samples, signs + + + −;<br>• R taps at 0, 143, 194, 353, signs + + − +;<br>• all 8 equal in magnitude (±1.6 %);<br>• single integer samples;<br>• spacing fixed; DELAY shifts both groups together | S (pattern) / C (fixed spacing) | IR; Studio Magazin 99 |
 | Cluster level at AMPL 80 %: about +29 dB relative to early reverb level. Amplitude law unknown | S | IR |
-| **Late reverb = 4 uncoupled recirculating loops of 1321, 1389, 1461 and 1587 samples** (50.1–60.2 ms). They are integer and pure delays: the "+0.2" was a ~100 ppm capture clock offset. No all-pass inside the loops | S | autocorrelation, harmonic test, model §3.1 |
+| **Late reverb = 4 uncoupled recirculating loops of 1321, 1389, 1461 and 1587 samples** (50.1–60.2 ms). They are integer and pure delays: the "+0.2" was a ~100 ppm capture clock offset. No all-pass inside the loops. **Library confirmation:** the product of the four combs (all 15 subset-sum lags) predicts the library tail to −45 dB held out (LF 1.0/HF 1.0; −42 to −44 dB at LF 2.0/HF 0.6), single lags only to −11 dB; lag positions within 0.05 sample of the integers | S | autocorrelation, harmonic test, model §3.1; ml §3 |
 | **Loop gains are length-scaled exactly at the RT setting:** gᵢ = 0.707439, 0.695463, 0.682337, 0.660021, giving per-loop RT₀ 0.9997–1.0017 s at RT 1.0. They are resolved to about ±8 Q15 LSB (1σ), so 3–4 bits short of pinning exact coefficients. Library RT sweeps would close the gap | S | model §9.1 |
 | **Loop and 460 parameters are shared by L and R:** parameters fitted on L alone predict R within 0.5 % in annihilator cost | S | model §8.2 |
 | **In the tail the algorithm matches to within the noise:**<br>• noise-compensated EDC within 0.2 dB in most octaves to −50 dB;<br>• decay rates within 1 %;<br>• mode frequencies within a few mHz;<br>• R's fine structure at its noise ceiling.<br>The *waveform* null is limited by the excitation (injection), not the loops | S | model §9.2 |
@@ -151,10 +152,25 @@ The CLA IR settings, from a numeric display with some dead segments: **SHORT RT,
 | **No mode-line broadening** beyond the LTI decay at about 3 Hz resolution; modulation slower than about 1 Hz is not excluded | S (limit) | model §8.6 |
 | Noise model (in band): L −103 dB at 1.4 s, drifting −1.8 dB/s; R −110 dB, flat. The noise spectrum rises with frequency. Most of L's "decaying floor" is below 20 Hz | S | model §9.3 |
 
+## 5b. Programs M and L (measured from the Tomkin library)
+
+Details: `ml_structure.md`.
+
+| Fact | Conf. | Source |
+|---|---|---|
+| **Cluster = S's, time-scaled:** M L 0/108/388/576 (+ + + −), R 0/285/388/704 (+ + − +); L L 0/216/776/1152, R 0/570/776/1407. Integer, scatter ≤ 0.001 sample over 40 pairs each; all 8 taps equal within 0.13 dB. The L taps and the shared tap are exactly ×2 / ×4 of S; the two R-only taps are 0.28–0.35 % short of ×2 / ×4 | C (pattern) / open (R-only scaling) | ml §1 |
+| **Reverb onset after cluster tap 0:** S 240/572, M 474/1,134, L 948/2,268 samples (L/R): ×1.97 and ×3.95 of S; the L/R gap (S's 332 read-out lag) becomes about 659 and 1,320. The whole early section is S's, time-scaled | S | ml §2 |
+| **Late reverb: one five-term recursion per program**, four taps symmetric about N plus one at 2N, signs + − − + and −: **L** N = 11,501, taps 10826/11384/11618/12176 and 23002; **M** N = 5,753, taps 5416/5694/5812/6090 and 11506 (a + {0, p, q, p + q}, p/q = 558/792 and 278/396). L ≈ 2 × M within 4–10 samples. Held out it beats random lag sets by 7–10 dB; no further lag helps. Not S-style parallel loops (their pair sums add nothing) | S (lags) | ml §3 |
+| Realisation: one recirculating line of 2N words (L 23 K, M 11.5 K) with five feedback taps, or two N-word lines with a frequency-dependent coupling (same characteristic polynomial). The mid taps cancel at DC | H | ml §3.2 |
+| **All M/L lags carry a common −0.80 sample offset** (±0.04 across 12 settings; S calibrates at +0.04), i.e. integer d − 1 plus about 0.2 sample of shared group delay, probably a loop filter in the common feedback path. The absolute integers are uncertain by one sample | S (offset) / H (cause) | ml §3.3 |
+| **M and L are time-variant; S is not.** Separate captures of the same setting (AMPL pairs) decorrelate progressively: M −27/−38 dB at 0.05–0.15 s, −14 at 0.15–0.3, −9 at 0.3–0.6, −5 to −7 after 1 s; L −25/−33 at 0.15–0.3, −14 at 0.3–0.6, −3 at 2–4 s. Flat across frequency (not delay modulation or clock drift), the same for all three M AMPL pairings (not an AMPL effect), and seen inside single files as a flat −18 to −22 dB unpredictable part. This is the 1986 "stochastic control", with the program dependence the review describes | S | ml §4 |
+| Form of the variation: randomised gains or switched tap positions (jumps of many samples), free-running (not restarted per capture). Depth and rate are not readable from sweep IRs with an unknown sweep | H | ml §4 |
+| **Consequence:** past the first recirculation, M and L tails can't be nulled against a single capture (two captures of one unit don't null each other) | S | ml §5 |
+
 ## 6. Memory and compute budget (derived)
 
 - 64 K words of delay RAM. Maximum pre-delay is 26,347 words, leaving **about 39 K words** for the loops, cluster and diffusion.
-- S's loops use 5,758 words. M is expected at about 11.5 K; L is memory-capped at about 30–39 K.
+- S's loops use 5,758 words. M's recursion line is about 11.5 K words and L's about 23 K (§5b, **H** for the single-line form), both within the 39 K.
 - 364 instructions per sample in total, i.e. about 50–70 weighted delay taps for the whole machine.
 
 **Memory-access count for the identified S structure** (each delay element = one tap-offset entry per read or write; **H** for the access pattern, counted from §5):
@@ -178,9 +194,9 @@ The budgets above are **H**, derived from the parts and TI timings; the 256 limi
 All of these need library IRs. The tests for each are in `NEXT_STEPS.md` §3.
 
 1. **The remaining injection/read-out structure.** Sparse fits plateau at about −23 dB where a matching synthetic reaches −46 dB, so something structural is still missing. The diffuser (AP20/72/230 + comb460) is found; the late input is explained.
-2. **What the "stochastic control" is.** Injection randomisation is ruled out (R is LTI to about 3 %). The remaining candidate is about 1 % slow gain jitter on L's read-out, or the capture chain. Test (no repeat captures exist): is the L excess present across settings and programs, and does it track the loop lengths or the read-out?
+2. **What the "stochastic control" is.** **Found in M and L** (§5b): separate captures decorrelate flat across frequency. S shows none in the library (the CLA unit's ~1 % L read-out jitter is not seen there). Open: depth, rate, which taps vary, per pass or per second (`NEXT_STEPS.md` Q3b).
 3. **Exact step tables** for RT, LF, HF, AMPL and LP; confirming the LF reference (the card says 50 Hz); the HF ×1.0 behaviour.
-4. **Loop sets and cluster patterns for M and L.** The 1986 review says the early reflections differ per program.
+4. ~~**Loop sets and cluster patterns for M and L.**~~ Found (§5b). Open: the integer lags to ±1, loop gains and filters, and the R-only cluster taps' scaling.
 5. **The LP's filter type and order** (it is downstream per Studio Magazin 96), and the loop filters' type and order (from LF/HF sweeps).
 6. **Fixed-point details** (rounding/truncation, coefficient grid), needed for bit-exactness.
 7. **N's structure** (FIR against truncated loops; how reversal works).

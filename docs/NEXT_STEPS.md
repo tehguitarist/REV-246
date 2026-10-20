@@ -1,8 +1,8 @@
 # EMT 246: status and next steps
 
-Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we know), `library_notes.md` (the Tomkin library and harness results) and `model_s_results.md` §8–13 (where the model stands).
+Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we know), `library_notes.md` (the Tomkin library and harness results), `model_s_results.md` §8–13 (where the S model stands) and `ml_structure.md` (programs M and L).
 
-*Updated October 2026, at the end of the library-intake phase. The model itself has not changed since the single-IR phase; what changed is the data, the hardware knowledge and the analogue chain.*
+*Updated October 2026, after the M/L structure work (Q3, `ml_structure.md`). The S model itself has not changed since the single-IR phase.*
 
 ---
 
@@ -25,11 +25,15 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
   | R tail after 0.45 s | within 4–6 dB of the noise floor | Loops + 460 only, no fitted input |
   | L tail | 15–22 dB above noise | Fits about 1 % slow gain jitter on L's read-out (unit or capture chain) |
 
-- **Main gap:** the per-loop injection/read-out structure. Compact fits plateau at about −23 dB where a matching synthetic reaches −46 dB.
-- **Ruled out:** coupled FDNs; all-passes inside the loops; delay-length modulation (EMT 250 style); randomised injection taps; a separate late-input generator; a long EMT 250-style loop; a shared input or small tap set across loops.
+- **Programs M and L (new, `ml_structure.md`):**
+  - **Early section = S's time-scaled by 2 (M) and 4 (L):** same 8-tap cluster and signs (M L 0/108/388/576, R 0/285/388/704; L L 0/216/776/1152, R 0/570/776/1407), reverb onset and L/R gap ×2 / ×4 (**C** for the clusters, **S** for the onsets).
+  - **Late reverb is a different structure:** one five-term recursion each, four taps symmetric about N plus one at 2N (L 10826/11384/11618/12176/23002, M 5416/5694/5812/6090/11506; one 2N-word line, **H**). It beats random lag sets by 7–10 dB held out; S's four parallel loops predict S's tail to **−45 dB held out** by the same test.
+  - **M and L are time-variant, S is not (S).** AMPL pairs act as repeat captures: S's tails agree to −35…−47 dB; M/L tails decorrelate progressively and flat across frequency (L −25 dB at 0.15–0.3 s → −3 dB at 2–4 s). This is the "stochastic control", strong in M/L only.
+- **Main gap (S):** the per-loop injection/read-out structure. Compact fits plateau at about −23 dB where a matching synthetic reaches −46 dB.
+- **Ruled out (S):** coupled FDNs; all-passes inside the loops; delay-length modulation (EMT 250 style); randomised injection taps; a separate late-input generator; a long EMT 250-style loop; a shared input or small tap set across loops.
 - **New since the single-IR phase:**
-  - **The library is in and analysed** (`library_notes.md`): 2,437 settings, S/M/L/Non-Lin, LP and DELAY fixed. The harness run is done; 116 unknown loop sets are the M/L candidates.
-  - **The 48k and 96k sets are the same capture** (`library_notes.md` §5). There are no independent repeat captures, so the time-variance question cannot be answered by pair tests.
+  - **The library is in and analysed** (`library_notes.md`): 2,437 settings, S/M/L/Non-Lin, LP and DELAY fixed. The harness run is done; its 116 unknown loop sets are M's and L's recursion seen through the ACF (assigned in `ml_structure.md` §3.1).
+  - **The 48k and 96k sets are the same capture** (`library_notes.md` §5), so they are not repeats. **But settings that differ only in AMPL are separate captures of the same reverb** (AMPL changes only the cluster), and they do answer the time-variance question (`ml_structure.md` §4).
   - **The service manual is read** (text pages, processor board, both filters, output stage): `EMT246_unit_facts.md` §2b, page map in `sources/emt-documents/EMT246S-service-manual-page-map.md`.
   - **The analogue chain is modelled** (`tools/analog/`): two filters from the manual plus one S&H pole. This replaces the free band-limit kernel.
   - **Hard hardware limits:** 256 tap-offset entries, 64 K words of delay memory, 182 instructions per sample per DSP. The sparse injection fits (1,719 taps per channel) cannot be the real structure.
@@ -52,7 +56,8 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 |---|---|---|
 | Q1 | **Does Path B generalise?** Keep the S structure (loops, diffuser, cluster, injection), change only the loop gains and filters, and predict other RT/HF/LF steps | Held-out null against library IRs at other settings. The decisive test. S grid: 8 RT × 4 LF × 4 HF × 4 AMPL |
 | Q2 | **Per-loop injection/read-out structure** (the −23 dB plateau) | Joint fit across IRs that differ only in RT/HF/LF, with injection, diffuser and cluster shared. **Constraint:** the identified part uses about 34 memory accesses of a 50–70-tap budget, so the unidentified part has about 20–35 accesses |
-| Q3 | **Loop sets and cluster patterns for M and L** | The 116 unknown loop sets in the 96k set (`library_notes.md` §3) and the 15 `novel_cluster` files; assign them to programs from the folder labels (the harness can do D1/D3). Expect different cluster spacing per program (Studio Magazin 99). Memory budget: about 39 K words |
+| Q3 | ~~**Loop sets and cluster patterns for M and L**~~ **Answered for structure** (`ml_structure.md`) | Clusters and onsets = S's ×2 / ×4. Late reverb: one five-term recursion per program (2N-word line). Open: the integer lags to ±1 (a common −0.8-sample offset, probably a loop filter; §3.3 there), loop gains/filters per setting, the ACF peaks at 2641/5279 and 460/918 (injection or read-out taps?), and the R-only cluster taps being 0.3 % short of ×2 / ×4. The 15 `novel_cluster` files are not yet looked at |
+| Q3b | **The M/L time variance ("stochastic control")** | Separate captures decorrelate flat across frequency, progressively (`ml_structure.md` §4). Next: decorrelation rate vs RT/HF/LF and per pass vs per second; which part varies (tap gains, tap positions, read-out) by fitting the five-tap recursion with time-varying parameters; depth and rate bounds. **Without hardware this is the main M/L modelling question** |
 | Q4 | **Control laws and step tables:** RT, LF×, HF×, AMPL | The library has a sparse grid, not 16 steps. Fit the laws from the values present; spec says RT 16 steps, LF× 16 (0.1–2), HF× 10 (0.1–1), AMPL 11 steps |
 | Q5 | **LF reference frequency** | **S: 50 Hz** (operation card, data-sheet table, Studio Magazin; only one data-sheet diagram says 250). Confirm with the LF sweeps |
 | Q6 | **HF ×1.0: residual fixed damping?** | HF sweeps including the max step (S has 1.0, M 0.9, L 1.0) |
@@ -77,12 +82,14 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 
 ## 5. Suggested order of work
 
-1. **M and L structure (Q3).** Assign loop sets and cluster patterns to programs. This is data-driven and unblocks everything for M/L.
-2. **Path B generalisation on S (Q1)** at held-out settings, with the analogue stage from §4. If it holds, the same machinery applies to M and L.
-3. **Injection/read-out (Q2)** with the access-count constraint; joint fit across settings.
-4. **Control laws (Q4–Q8)** from the fits.
-5. **Fixed-point noise (Q10)** and exactness (Q9) once nulls reach about −50 dB.
-6. **Non-Lin (§6)** last.
+1. ~~**M and L structure (Q3).**~~ Done (`ml_structure.md`).
+2. **Decide the M/L null target** (§2): their tails are not repeatable between captures.
+3. **Path B generalisation on S (Q1)** at held-out settings, with the analogue stage from §4. If it holds, the same machinery applies to M and L.
+4. **Injection/read-out (Q2)** with the access-count constraint; joint fit across settings.
+5. **M/L time variance (Q3b)**, then the M/L loop gains and filters (Q4–Q7 for M/L) from the deterministic part.
+6. **Control laws (Q4–Q8)** from the fits.
+7. **Fixed-point noise (Q10)** and exactness (Q9) once nulls reach about −50 dB.
+8. **Non-Lin (§6)** last.
 
 ---
 
@@ -105,10 +112,13 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 
 ---
 
-## 8. Modulation / time-variance (hypothesis only; there may be none)
+## 8. Modulation / time variance (found in M and L)
 
 - **Hardware makes it possible:** the tap-offset memory can be rewritten by processor A while running, so jittered or modulated read-out taps are feasible (`EMT246_unit_facts.md` §2b). Nothing in the manual links the built-in noise generator (Tests 21/22) to the "stochastic control".
-- **What can be done without repeat captures:**
+- **Found (`ml_structure.md` §4, S):** AMPL pairs are separate captures of the same reverb. M's and L's tails decorrelate between captures, progressively and flat across frequency (gain or tap-switching type, not delay modulation); S's agree to −35…−47 dB, with no L-only excess. The tail predictor shows the same thing inside single files (a flat, signal-proportional −18 to −22 dB residual in M/L, −45 dB in S).
+- **Still open:** depth, rate, which taps vary, and whether the variation is per pass or per second. The captures are sine sweeps, so a time-variant response is seen through an unknown sweep (§9); existence and program dependence don't depend on it, but depth and rate do.
+- **Other tools:**
+  - AMPL pairs (S: 128 groups of 4, M: 160 of 3, L: 180 pairs), now the main repeat-capture test;
   - residuals across similar settings (one RT/HF step apart) share early structure; the scatter gives an upper bound on modulation depth and location (not its waveform);
   - L versus R behaviour in joint fits (the CLA IR's L-only excess against the library);
   - per program: "Grad der Stochastik" differs between S/M/L (1986 review); compare the L excess and residuals between programs.
@@ -137,7 +147,7 @@ Tomkin was asked and does not remember the details: the library was made a long 
 - **Which unit and firmware, and whether one unit made every capture:** unknown. Indirect evidence: all 384 S files share one L/R timing offset (19.19–19.21 µs) and one S loop set, so one unit and one firmware are likely (**H**); the CLA unit differs by about 3 timing steps and a slightly different S&H pole (§4).
 - **Recorded twice:** the data say one capture (`library_notes.md` §5). Closed.
 
-Consequence for the working rules (§2): do not rely on tail levels or noise floors in the library as unit noise, do not expect any repeat-based test, and when a result depends on an unknown above, say so explicitly.
+Consequence for the working rules (§2): do not rely on tail levels or noise floors in the library as unit noise, expect no repeat captures other than the AMPL pairs (`ml_structure.md` §0), and when a result depends on an unknown above, say so explicitly.
 
 ---
 
