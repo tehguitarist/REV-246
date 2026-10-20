@@ -8,6 +8,7 @@ This is the hand-over for the next session. Read it with `EMT246_unit_facts.md` 
 
 ## 1. Where we are
 
+- **Unit topology:** **mono in, stereo out**. One input (block diagram, analogue input board), two outputs from one multiplexed DAC. Each stereo IR is the complete 1×2 response.
 - **Viability:** confirmed. Program S is a small, deterministic, integer-delay design, and almost all of its structure has been identified from one IR (the CLA "Short RT" capture by eugtone):
   - device sample rate 19.2 MHz/728 = 26,373.6 Hz;
   - the 8-tap reflection cluster, starting at the DELAY time;

@@ -26,6 +26,7 @@ The full file map is in `README.md`.
 
   When a finding changes, update `docs/EMT246_unit_facts.md`.
 - **Device rate:** 19.2 MHz/728 = 26,373.6 Hz. All delays are integer device samples.
+- **Mono in, stereo out.** One mono input feeds the whole algorithm, with separate L and R outputs (one multiplexed DAC; L is half a sample late). A stereo IR file is therefore the complete 1-in/2-out response for that setting. Model the structure as shared up to the read-out, with per-channel output taps.
 - **Python:** use `.venv/bin/python`. Third-party downloads go in their own folders and are run with `-I`.
 - **Don't commit** `sources/` or third-party IR libraries unless their licence allows it.
 - **Git:** end commit messages with the attribution line given in the session's system reminder.

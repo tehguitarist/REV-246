@@ -16,6 +16,8 @@ Constraints: there is no hardware access, ROM dump or new capture, ever. Evidenc
 
 ---
 
+**At a glance:** **mono in, stereo out** (C). A single balanced input; L and R outputs come from one multiplexed DAC, with L half a sample late. Each stereo IR is the complete 1-in/2-out response of a setting.
+
 ## 1. Hardware
 
 | Fact | Conf. | Source |
