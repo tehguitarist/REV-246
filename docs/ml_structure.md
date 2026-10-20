@@ -10,8 +10,9 @@ through the same code as the control and the calibration. Labels as in `EMT246_u
 > **Summary.**
 > - **Early section = program S's, time-scaled by 2 (M) and 4 (L).** Same 8-tap cluster with the same signs, the reverb onset and the L/R onset gap all scale (§1, §2).
 > - **The late reverb is a different structure from S.** S is four parallel loops: the product of four combs predicts its tail to **−45 dB held out**. M and L follow one five-term recursion each, four taps symmetric about a centre plus one at twice the centre: L 10826/11384/11618/12176/23002, M 5416/5694/5812/6090/11506 (§3).
-> - **M and L are time-variant; S is not.** Separate captures of the same M or L setting decorrelate progressively (L: −25 dB at 0.15–0.3 s → −3 dB at 2–4 s), flat across frequency. S's tails agree to −35…−47 dB. This is the first direct evidence of the "stochastic control" and its program dependence (§4).
+> - **M and L are time-variant; S is not.** Separate captures of the same M or L setting decorrelate progressively (L: −25 dB at 0.15–0.3 s → −3 dB at 2–4 s), flat across frequency. S's repeat captures agree to −52…−59 dB once a per-capture clock ratio is fitted (§4.1). This is the first direct evidence of the "stochastic control" and its program dependence (§4).
 > - **Consequence for the null target:** past the first recirculation, M and L can't be nulled waveform-for-waveform against one capture; two captures of the same unit don't null each other (§5).
+> - **Noise floor vs the CLA capture (§4.2):** not the same. CLA levels off at −71/−77 dB (L/R) below its 50–300 ms reverb level; the library shows no capture noise down to its 24-bit floor, about −88 dB below. What limits a comparison against the library is the capture clock, not noise: with it fitted, the S repeat-capture ceiling is about −57 dB.
 
 ## 0. Method notes
 
@@ -127,7 +128,7 @@ Per octave (R channel, median):
 
 All three M pairings agree (R, 0.15–0.3 / 0.3–0.6 / 0.6–1.0 / 1–2 s): 60 vs 10 −15.2 / −10.5 / −8.0 / −6.4; 99 vs 60 −14.0 / −8.7 / −6.1 / −4.8; 99 vs 10 −15.4 / −9.4 / −6.6 / −4.9.
 
-- **S: LTI within the capture.** Its pairs agree to −47 dB early and still −35 dB at 0.6–1 s, where the decaying level and the fades take over. The S difference rises about 5 dB per octave, the signature of a small timing difference between two captures, not of the unit. L and R agree within 0.3 dB, so the library shows **no L-only excess** in S (the CLA unit's L read-out jitter, `model_s_results.md` §13, is not seen here at this depth).
+- **S: LTI within the capture.** Its pairs agree to −47 dB early and −35 dB at 0.6–1 s with a sub-sample shift only. The difference rises about 5 dB per octave and grows with time: a clock-rate difference between captures, not the unit. With a per-capture clock ratio fitted, S pairs agree to −52…−59 dB out to 1 s (§4.1). L and R agree within 0.3 dB, so the library shows **no L-only excess** in S (the CLA unit's L read-out jitter, `model_s_results.md` §13, is not seen here at this depth).
 - **M and L: the reverb decorrelates between captures, progressively and flat across frequency** (**S**). Both agree early (M −27/−38 dB at 0.05–0.15 s, L −25/−33 dB at 0.15–0.3 s, before its first recirculation at 0.41 s), then lose coherence as the reverb recirculates until they are uncorrelated (−3 dB) by 2–4 s (L) or nearly so (M, −5 to −7 dB after 1 s).
 - **It is per-capture randomness, not AMPL.** M has three AMPL values; all three pairings (60–10, 99–60, 99–10) decorrelate equally after 0.15 s.
 - **Not delay modulation, not clock drift.** Both would grow about 6 dB per octave, as S's small difference does; M's and L's decorrelation is flat from 125 Hz to 8 kHz in every window. (Without the sub-sample alignment step, L's 0.15–0.3 s window looks as if it rises with frequency; that was an alignment artefact *[exploratory]*.)
@@ -135,10 +136,42 @@ All three M pairings agree (R, 0.15–0.3 / 0.3–0.6 / 0.6–1.0 / 1–2 s): 60
 - **The tail predictor sees the same thing within one file** (§3.2): a flat, signal-proportional unpredictable part at about −18 dB (L) and −18 to −22 dB (M).
 - **Reading (H):** the "stochastic control" of the 1986 review (`algorithm_research.md` §7.2b) is real, **strong in M and L and not seen in S** (S's pair difference is timing-type and stays at −46 to −50 dB in the 125–500 Hz octaves at 0.6–1 s, so any flat gain-type variation in S is below about −45 dB there). Its flat spectrum points to randomised gains or switched tap positions (jumps of many samples), not small delay modulation, and it runs free (not restarted per capture). The review's "Grad der Stochastik differs per program" fits, though the review also calls S the densest. Rate, depth and which taps vary are open; the library can bound them (§6).
 
+### 4.1 S repeat captures with the capture clock fitted
+
+`--stage clock`: the 40 S AMPL pairs (90 vs 60 %) in the capture domain (raw 96 kHz, 100 Hz–10 kHz), aligned by cross-correlation, then either a sub-sample shift only or a shift plus a clock ratio, fitted on R over 0.05–0.6 s and applied to both channels. One extra parameter per capture.
+
+| Window (s) | Shift only, L / R | Shift + clock ratio, L / R | R, 10–90 % |
+|---|---|---|---|
+| 0.05–0.15 | −51.0 / −50.4 | **−57.6 / −56.2** | −58.4 … −49.3 |
+| 0.15–0.3 | −49.5 / −49.7 | **−59.1 / −58.5** | −61.9 … −51.3 |
+| 0.3–0.6 | −40.9 / −41.2 | **−58.2 / −57.8** | −60.1 … −52.9 |
+| 0.6–1.0 | −33.9 / −34.0 | **−51.8 / −51.7** | −54.4 … −36.6 |
+
+- **Clock ratio between the two captures of a pair:** −1.7 to +4.3 ppm (median −1.4), and the same within each LF group: LF 0.1 −1.6…−1.3, LF 0.4 −1.7…−1.5, LF 1.0 +2.0…+4.3, LF 2.0 −0.6…−0.2. That looks like one clock per capture session (**H**). The fit window is in-sample for the first three windows; 0.6–1.0 s is outside it.
+- **So the library repeats itself to about −57 dB** (S, until the fade takes over), as long as each capture gets its own clock ratio. This is the ceiling for any model nulled against one Tomkin capture: −50 dB is reachable and checkable, −60 dB can't be demonstrated with this library. What limits it below −57 dB is not resolved (residual timing, sweep artefacts or a tiny time variance); it is not noise (§4.2).
+- These numbers supersede the device-domain S pair nulls in the table above for S (which have no clock fit). M's and L's decorrelation is flat across frequency, so a clock can't explain it.
+
+### 4.2 Noise floor: library vs the CLA capture
+
+`--stage floors`: in-band (20 Hz–11.3 kHz) level per 25 ms frame, relative to each file's 50–300 ms reverb level, capture domain. "Natural decay holds to" is how far the tail keeps its own decay rate (local slope 0.7–1.4 × the rate measured between 0.3 s and −30 dB) before it flattens (a floor) or steepens (a fade).
+
+| | CLA (eugtone) L / R | Library S L / R (512 files) | Library M (519) | Library L (360) |
+|---|---|---|---|---|
+| Natural decay holds to | −65.2 / −71.6 dB, then **flattens** | median −38.9; 5 % −85; deepest −91 / −90 | median −34; 5 % −77 / −78; deepest −91 | median −31; deepest −40 (all faded early) |
+| Floor (plateau) | **−71.5 / −77.5 dB** re reverb, **−105.2 / −110.8 dBFS** (slope before it 0.06–0.07 × the decay rate: flat) | 8 files level off, at **−88.3 / −88.8 dB**, **−148 dBFS** | 26 / 20 files level off at −80 / −83 dB, −140 / −142 dBFS | none visible |
+| How the quietest frame is reached | floor | fade (slope 2.6–2.7 × the decay rate) | fade (2.8–2.9 ×) | fade (4.6–4.7 ×) |
+
+- **The floors are not consistent.** CLA has a real noise floor, L 6 dB above R. The library shows no capture noise at all: S tails keep their natural decay to about −85…−91 dB re the reverb and stop at −148 dBFS, the 24-bit export floor (rounding noise about −149 dBFS full band). L and R are equal. So the library is at least 11–17 dB cleaner relative to the signal than CLA. A longer or louder sweep (more processing gain) or denoising would both do this; with the sweep unknown (`NEXT_STEPS.md` §9) the two can't be told apart.
+- M's plateaus (−80 dB, −140 dBFS) are 8 dB above S's and may be where the time-variant tail meets the format floor; they are not separable as noise.
+- **Tomkin's fades usually come first:** the median file is at its natural decay only to −31…−39 dB re reverb, and every Long RT file is faded by about −40 dB. In most library files the usable null window ends where the fade starts, not at a noise floor.
+- **Pre-roll is not noise in either source:** it sits 31–48 dB below the reverb, far above both tail floors *[exploratory]*.
+- **CLA's noise-limited null per window** (from `model_s_results.md` §9.3, in band, L / R): −67 / −76 dB at 50–300 ms, −54 / −63 at 300–400 ms, −46 / −54 at 400–600 ms, −31 / −39 at 0.6–1 s. So CLA can show −60 dB or better only in roughly the first 300 ms, and mainly on R.
+
 ## 5. What this means
 
 - **Q3 is answered for structure:** M and L have their own cluster scale (×2, ×4), onset scale and a different late recursion; the harness's unknown loop sets are assigned (§3.1).
-- **The null target needs a decision for M and L.** Two captures of the same M/L setting from the same unit null each other only to −9 to −14 dB at 0.3–0.6 s and −3 to −7 dB after 1 s. No deterministic model can beat that against one capture. For M and L the waveform target can only apply to the deterministic part (cluster and first recirculation, about the first 0.1–0.2 s); beyond it, the right target is statistical (decay, spectrum, decorrelation rate between captures). S is unaffected: its tail is LTI to −35…−47 dB here.
+- **The null target needs a decision for M and L.** Two captures of the same M/L setting from the same unit null each other only to −9 to −14 dB at 0.3–0.6 s and −3 to −7 dB after 1 s. No deterministic model can beat that against one capture. For M and L the waveform target can only apply to the deterministic part (cluster and first recirculation, about the first 0.1–0.2 s); beyond it, the right target is statistical (decay, spectrum, decorrelation rate between captures). S is unaffected: its repeat captures agree to about −57 dB with the clock fitted (§4.1).
+- **What can be demonstrated for S:** against Tomkin, about −57 dB at best (repeat-capture ceiling, one clock parameter per capture), in held-out windows up to each file's fade; the noise floor is not the limit there (§4.2). Against CLA, −60 dB or better only in roughly the first 300 ms, and it is a different unit (S&H pole, L/R offset).
 - **Budget:** the M/L recursion is about 6 accesses (one write, five reads) on a 2N-word line; S's four loops are 8. The randomisation must also fit the budget.
 
 ## 6. Next tests

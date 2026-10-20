@@ -17,7 +17,7 @@ Goal: recreate the EMT 246 digital reverb's S/M/L programs (Non-Lin as a bonus) 
 | `library_notes.md` | The Tomkin library: licence, layout and naming, value sets, harness results, cross-rate (48k = 96k) analysis, harness usage |
 | `EMT246_unit_facts.md` | Consolidated fact sheet: hardware, converters, controls, programs, measured program-S algorithm, budgets, open questions, source index |
 | `model_s_results.md` | Program S grey-box model: 13 rounds of null tests. §8–13 hold the current state: hold-out, capture domain, long tail, diffuser, group-sparse, time-variance |
-| `ml_structure.md` | Programs M and L from the library: clusters and onsets (S's ×2 / ×4), the five-term late recursion, lag precision, and the time variance found with AMPL pairs as repeat captures |
+| `ml_structure.md` | Programs M and L from the library: clusters and onsets (S's ×2 / ×4), the five-term late recursion, lag precision, the time variance found with AMPL pairs as repeat captures, and the noise floors and repeat-capture ceiling (S about −57 dB) that bound the null target |
 | `EMT246_discovery.md` | The original discovery and viability study. Hardware photos analysis in §2.3a; period sources in §10a; history in §10 |
 | `algorithm_research.md` | Reverb-algorithm lineage (EMT 250 patent, Blesser), classic and modern methods, topology hypotheses and tests (T1–T10), the stochastic-control analysis (§7.2b) |
 | `analysis_harness_spec.md` | IR-library harness test specification (stages A–G), plus implementation status of A–C |
@@ -30,7 +30,7 @@ Goal: recreate the EMT 246 digital reverb's S/M/L programs (Non-Lin as a bonus) 
 | `tools/deconv_grid.py` | Recovers the device-rate IR (19.2 MHz/728 ≈ 26,373.6 Hz) from a capture |
 | `tools/topology_tests.py` | Topology tests T1/T2 against synthetic controls |
 | `tools/model_s.py` | Program S model and studies. Stages: default, `--tighten`, `--tail`, `--diffuser`, `--allpass`, `--groups`, `--stochastic` |
-| `tools/ml_structure.py` | M/L structure from the 96 kHz library, with S as control: clusters and onsets from AMPL pairs, held-out tail-predictor (characteristic polynomial) tests, lag precision, AMPL-pair time-variance test → `analysis/ml_structure/` |
+| `tools/ml_structure.py` | M/L structure from the 96 kHz library, with S as control: clusters and onsets from AMPL pairs, held-out tail-predictor (characteristic polynomial) tests, lag precision, AMPL-pair time-variance test, noise floors vs CLA, S repeat-capture null with a per-capture clock fit → `analysis/ml_structure/` |
 | `tools/analog/` | Analogue chain: `netlists.py` (input 7 246 131 and output 7 246 130 filters transcribed from the service manual), `mna.py` (AC solver, ideal or finite-GBW op-amps), `compare_kernel.py` (vs the reference kernel → `analysis/analog/`) |
 | `tools/harness/` | IR-library harness, stages A–C: `run.py` (CLI), `crossrate.py` (direct cross-rate comparison), `core.py` (per file), `library.py` (library level), `naming.py`, `report.py`, `synth.py` (synthetic test library), `config.json` (constants, templates, naming patterns) |
 | `tests/test_harness.py` | End-to-end harness tests: `.venv/bin/python -m pytest tests -q` |
@@ -61,7 +61,7 @@ python3 -m venv .venv && .venv/bin/pip install numpy scipy soundfile matplotlib 
 .venv/bin/python tools/harness/run.py "irs/EMT 246 captures/96kHz" --name tomkin96      # the Tomkin working set (96 kHz only)
 .venv/bin/python tools/harness/run.py "irs/EMT 246 captures" --name trial --sample 60   # quick spread-out subset (both rates)
 .venv/bin/python tools/harness/crossrate.py "irs/EMT 246 captures" --out analysis/library/tomkin/crossrate.csv   # direct 48k vs 96k comparison
-.venv/bin/python tools/ml_structure.py [--stage clusters|loops|lags|pairs]                # programs M/L (and S as control), 96 kHz set
+.venv/bin/python tools/ml_structure.py [--stage clusters|loops|lags|pairs|floors|clock]                # programs M/L (and S as control), 96 kHz set
 .venv/bin/python tools/analog/compare_kernel.py [--kernel <npz> --tag <name>]            # analogue chain vs a kernel
 .venv/bin/python tools/model_s.py [--tighten|--tail|--diffuser|--allpass|--groups|--stochastic]
 .venv/bin/python -m pytest tests -q

@@ -48,6 +48,7 @@ Constraints: there is no hardware access, ROM dump or new capture, ever. Evidenc
 | Overall band-limit (reference kernel, re 1 kHz): flat to 9 kHz, −0.7 dB at 11 kHz, −2.0 dB at 12.0 kHz, −7.6 dB at 12.2 kHz, −22 dB at 12.5 kHz, −52 dB at 13 kHz; energy above 13.2 kHz is −75 dB. Modelled in §2b | S | IR; `analysis/analog/` |
 | Spec: 30 Hz–12 kHz (+1/−3 dB, DELAY program); reverb S/N 73 dB unweighted; THD ≤ 0.03 % | C | data sheet |
 | **Noise:** L's floor is about 6–9 dB above R's, broadband and slowly decaying (−88 → −91 dB over 1.1–1.8 s); R's floor is flat. Other reports also show L/R mismatches | S | IR; model §6.5; user |
+| **The Tomkin library shows no capture noise:** S tails keep their natural decay to about −88 dB below the 50–300 ms reverb level and stop at −148 dBFS, the 24-bit export floor, with L = R. The CLA capture levels off at −71.5 / −77.5 dB (L/R) re the same reference (−105 / −111 dBFS in band). Sweep processing gain or denoising; the sweep is unknown. Most library files are faded long before either floor (median −31…−39 dB) | S | ml §4.2 |
 | Trimmers: input LEVEL, HF CMR, LF CMR, OFFSET; output LEVEL 1/2 | C | photo of the front flap |
 
 ## 2b. Service manual findings (EMT 246S service manual, read October 2026)
@@ -117,7 +118,7 @@ The CLA IR settings, from a numeric display with some dead segments: **SHORT RT,
 
 | Fact | Conf. | Source |
 |---|---|---|
-| **Time-invariant to measurement precision.** Fine-structure correlation is 0.67, against 0.60 for a static modal reference and 0.02 for noise. Loop modes are exactly harmonic. **Library confirmation:** separate captures of the same S setting (AMPL pairs) agree to −47 dB at 0.05–0.15 s and −35 dB at 0.6–1 s, with no L-only excess; the "stochastic control" lives in M and L (§5b) | S | discovery §1; research §7.2b; ml §4 |
+| **Time-invariant to measurement precision.** Fine-structure correlation is 0.67, against 0.60 for a static modal reference and 0.02 for noise. Loop modes are exactly harmonic. **Library confirmation:** separate captures of the same S setting (AMPL pairs) agree to **−52…−59 dB out to 1 s once each capture's clock ratio is fitted** (−1.7…+4.3 ppm, constant within an LF group; without it −50 → −34 dB), with no L-only excess; the "stochastic control" lives in M and L (§5b) | S | discovery §1; research §7.2b; ml §4 |
 | **Pre-delay:** cluster tap 0 lands at the DELAY time (10 ms → 9.97–10.08 ms in the file; eugtone preserved absolute timing) | S | IR + settings |
 | **Cluster:**<br>• L taps at 0, 54, 194, 288 samples, signs + + + −;<br>• R taps at 0, 143, 194, 353, signs + + − +;<br>• all 8 equal in magnitude (±1.6 %);<br>• single integer samples;<br>• spacing fixed; DELAY shifts both groups together | S (pattern) / C (fixed spacing) | IR; Studio Magazin 99 |
 | Cluster level at AMPL 80 %: about +29 dB relative to early reverb level. Amplitude law unknown | S | IR |
@@ -166,6 +167,7 @@ Details: `ml_structure.md`.
 | **M and L are time-variant; S is not.** Separate captures of the same setting (AMPL pairs) decorrelate progressively: M −27/−38 dB at 0.05–0.15 s, −14 at 0.15–0.3, −9 at 0.3–0.6, −5 to −7 after 1 s; L −25/−33 at 0.15–0.3, −14 at 0.3–0.6, −3 at 2–4 s. Flat across frequency (not delay modulation or clock drift), the same for all three M AMPL pairings (not an AMPL effect), and seen inside single files as a flat −18 to −22 dB unpredictable part. This is the 1986 "stochastic control", with the program dependence the review describes | S | ml §4 |
 | Form of the variation: randomised gains or switched tap positions (jumps of many samples), free-running (not restarted per capture). Depth and rate are not readable from sweep IRs with an unknown sweep | H | ml §4 |
 | **Consequence:** past the first recirculation, M and L tails can't be nulled against a single capture (two captures of one unit don't null each other) | S | ml §5 |
+| **Repeat-capture ceiling for S in the library: about −57 dB** (40 AMPL pairs, capture domain, one clock ratio per capture). A model nulled against one Tomkin capture can't be shown to do better than that | S | ml §4.1 |
 
 ## 6. Memory and compute budget (derived)
 
