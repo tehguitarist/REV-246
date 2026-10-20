@@ -35,6 +35,11 @@ Labels: **[M]** measured here, **[A]** assumption, **[H]** hypothesis.
     - No small tap set is shared across loops; within a loop, sharing between L and R costs about 4 dB.
     - Long-delay-line (EMT 250-style) taps and loop feedback don't generate the late input.
     - L's excess is in the recirculating read-out, not the injection.
+  - **Time-variance through the sweep (§13):**
+    - An LTI simulation of the fitted structure reproduces the "late input". It is the diffuser tail plus deconvolution band edges, not an extra generator.
+    - R is time-invariant to within about 3 % injection jitter.
+    - L's excess fits an L-only read-out gain variation of about 1 % every 0.2 s (unit or capture chain).
+    - The non-sparse injection is structural mismatch, not stochastic.
   - What is left over in R sits at loop-mode frequencies; what is left over in L is mostly broadband noise. L's *model* error is not worse than R's (§6.5).
 - **HF.**
   - The HF *decay* is right: T30 at 8 kHz is 0.874/0.868 s against 0.878/0.872 s measured. The loop filter's 7 kHz loss is 0.37–0.40 dB per pass. The panel's numeric displays read HF ×0.9, and the measured RT(7 kHz)/RT(1 kHz) ≈ 0.90 is exactly that setting, with the HF factor applied at 7 kHz as the data sheet says. A pure one-pole lowpass with p ≈ 0.037–0.044 fits it as well as a general first-order section. Whether any damping remains at HF ×1.0 is unknown.
@@ -546,7 +551,7 @@ Reading of each hypothesis:
 
 ### 10.5 What limits the held-out null now
 
-1. **No generator for the per-loop input over 0–0.45 s.** In R, everything else is within 4–6 dB of noise once the input has ended (§10.1). Until the injection structure is found, the best *generative* hold-out stays at about −28 dB (Cs). The structural information is there: a predictor that uses the IR's own past reaches −42 to −46 dB in R.
+1. *(Withdrawn in §13.2: the apparent late input is the diffuser tail plus deconvolution band edges.)* **No generator for the per-loop input over 0–0.45 s.** In R, everything else is within 4–6 dB of noise once the input has ended (§10.1). Until the injection structure is found, the best *generative* hold-out stays at about −28 dB (Cs). The structural information is there: a predictor that uses the IR's own past reaches −42 to −46 dB in R.
 2. **L-only excess**, 15–22 dB over noise at every T. Neither input timing nor any time-invariant recursion explains it (§8.4, §10.1). It is the main obstacle in L.
 3. Free excitations overfit (§8.2), and sparse integer taps fail (§8.3). **The next step is a structural search for per-loop diffusers.** For example, fit a small all-pass chain per loop (delays from {20, 30, 72, 230, 460, …} and gains) to each loop's excitation, judged by this held-out predictor and not by in-sample nulls.
 
@@ -692,9 +697,108 @@ Independent per-slot taps allowed out to 8,500 samples beyond each loop's normal
 1. The injection is **per loop, dense, and not sparse in any basis tried**: integer taps, loop-shared taps, L/R-shared taps, the §11 diffuser, or long-delay taps. Each loop's excitation behaves like a long, loop-specific diffused sequence. The best generative held-out results remain:
    - dense model + diffuser: −29.2 / −29.1 dB in band at 400–600 ms (§11.2);
    - sparse + diffuser at 0.8 k params: −21 dB.
-2. **The late input (0.25–0.45 s) is still unexplained.** Every candidate generator tried here fails: a long loop, a 460 cascade, a common all-pass chain, long-line taps, and loop feedback. The only description that works is the R predictor from the IR's own past (§10.1).
+2. *(Withdrawn in §13.2.)* **The late input (0.25–0.45 s) is still unexplained.** Every candidate generator tried here fails: a long loop, a 460 cascade, a common all-pass chain, long-line taps, and loop feedback. The only description that works is the R predictor from the IR's own past (§10.1).
 3. **L's read-out excess** in the tail (12.4b).
 4. With only one setting, structural candidates can't be cross-checked against changes in RT, HF, LF, DELAY or AMPL. Several remaining questions are best settled on the library:
    - does the late input scale with RT (recirculating) or not (feed-forward)?
    - does the diffuser gain change with any control?
    - does L's excess change between captures of other settings?
+
+## 13. Is it "stochastic control"? Time-variance seen through a sine sweep
+
+Code: `.venv/bin/python tools/model_s.py --stochastic` (needs `tighten.json` and `tail.json`) → `analysis/model_s/stochastic.json` (log: `analysis/model_s_stochastic.log`).
+
+**Hypothesis under test:** S/M/L randomly switch or drift their tap gains or positions, in the injection and, on L, in the read-out. Measured through a slow ESS, that would make a sparse system look dense and spoil the L predictor.
+
+### 13.1 Sweep parameters from the IR itself
+
+- No distortion images. Searching the WAV for scaled copies of the cluster pattern (15 ms template, normalised matched filter) finds:
+  - in the 10 ms before the first tap: best match 0.35 (L) / 0.34 (R);
+  - in the last second: 0.16 / 0.22;
+  - typical (median) values: 0.009 / 0.005.
+
+  No discrete images sit at consistent negative offsets. With a slow sweep, the k = 2, 3 images would lie hundreds of ms before t = 0, and the file starts only 10.1 ms before the first tap. **So the sweep parameters cannot be recovered from this file.**
+- **The pre-onset energy is diffuse.** L: −52.6 dB re its first tap. R: −78.6 dB. That is **26 dB higher in L**. L is also 18 dB above its own last 0.3 s (−70.3 dB). R is 8 dB above its own (−86.2 dB).
+- Another L-only anomaly. It is consistent with L-side time-variance smear, which an ESS spreads into negative time too, but this file can't separate that from a capture-chain artefact **[H]**.
+
+### 13.2 Simulator
+
+- **Synthetic program S** (`Synth246`), built from the fitted structure:
+  - integer loops with the fitted filters;
+  - comb460 · AP20 · AP72 · AP230 (g = −0.7);
+  - sparse injection: 8 random taps per loop, common to L and R;
+  - sparse read-out: 3 taps per loop and channel, at lags 0 / 26 / 332;
+  - the 8-tap cluster.
+
+  That is about 96 effective taps per channel.
+- **Measurement:** an exact ESS (20 Hz–12 kHz, 10 s and 30 s) through the system, deconvolved by regularised spectral division (`deconvolve`). Noise is added at −105 dB re tap.
+- **Variants** (taps change every *period*):
+  - injection gain jitter (relative rms 3–30 %);
+  - injection position jitter (±1 sample);
+  - full injection re-draws;
+  - L-only read-out gain jitter (1–10 %);
+  - combinations.
+- **Diagnostics (identical for CLA and the simulations):**
+  - batch OMP held out at 400–600 ms, after 103/414 taps. The atoms include the measurement's band-limit (`post·B`); see below for why;
+  - the state predictor (§10.1) on a *gently* band-limited IR (30–80 Hz and 9–11 kHz raised-cosine edges, `gentle_band`), given as excess over noise;
+  - cross-band envelope correlation of the de-recirculated input (`cross_band`).
+
+**Two corrections to earlier sections, both found with the LTI control:**
+
+1. **The "late input" up to about 0.4–0.45 s (§10) is reproduced by the LTI control,** whose taps all lie within the first 82 ms.
+   - Its state predictor behaves exactly like CLA's R: excess +21.0 dB at T = 0.35 s, falling to +9.0 / +8.3 dB at 0.40 / 0.45 s.
+   - The apparent late input is the **diffuser's own recursive tail** (AP230 at g = −0.7 decays at about 356 dB/s) **plus band-edge ringing of the deconvolution**: a sharp 10–20 Hz edge rings for hundreds of ms.
+   - **No extra late-input generator is needed.** §10.5 item 1 and §12.5 item 2 are withdrawn.
+2. **OMP atoms must include the measurement band-limit.**
+   - Without it, the LTI control (truth about 96 taps per channel) needs more than 400 OMP taps to reach −18 / −20 dB held out.
+   - With it, 103 taps reach **−45.5 / −46.0 dB**.
+   - So the poor sparse fits in §8.3 and §11–12 were partly a basis artefact. For CLA, adding the deconv_grid band-limit (11–12.3 kHz) to the atoms raises the 103-tap held-out null from −14.5 / −14.6 to −21.8 / −21.0 dB. **But CLA then plateaus at about −23 dB** (−23.8 / −23.1 at 414 taps), where the LTI control reaches −46 to −49 dB.
+
+### 13.3 Results (held-out 400–600 ms; predictor excess over noise at T = 0.35 / 0.40 / 0.45 s)
+
+| System | OMP 103 taps L / R | OMP 414 taps L / R | predictor excess L | predictor excess R |
+|---|---|---|---|---|
+| **CLA (measured)** | −21.8 / −21.0 | −23.8 / −23.1 | **+23.6 / +21.1 / +19.3** | **+16.5 / +8.1 / +6.2** |
+| LTI control (10 s and 30 s sweeps identical) | −45.5 / −46.0 | −46.5 / −48.6 | +18.5 / +7.8 / +7.7 | +21.0 / +9.0 / +8.3 |
+| injection gain 3 % / 0.2 s | −30.1 / −30.0 | −32.5 / −33.2 | +19.3 / +13.7 / +11.7 | +21.5 / +15.4 / +13.6 |
+| injection gain 10 % / 0.2 s | −20.0 / −20.0 | −23.1 / −23.9 | +22.5 / +19.9 / +17.3 | +22.8 / +20.0 / +18.3 |
+| injection gain 30 % / 0.2 s | −11.1 / −11.6 | −14.0 / −14.7 | +24.0 / +21.7 / +19.1 | +23.2 / +21.0 / +19.4 |
+| injection gain 10 % / 0.05 s | −19.1 / −19.2 | −21.0 / −21.2 | +22.6 / +21.2 / +19.0 | +23.6 / +22.4 / +20.5 |
+| injection gain 10 % / 1 s | −21.7 / −22.2 | −26.9 / −28.4 | +19.5 / +13.8 / +12.6 | +22.4 / +16.2 / +14.5 |
+| injection positions ±1 / 0.2 s | −3.9 / −4.8 | −7.4 / −8.2 | +22.8 / +20.5 / +19.3 | +23.1 / +20.9 / +19.3 |
+| injection full re-draw / 0.2 s | −1.0 / −1.0 | −2.4 / −2.8 | +24.7 / +22.7 / +21.0 | +23.1 / +21.4 / +21.3 |
+| injection full re-draw / 1 s | −2.3 / −2.6 | −5.1 / −5.6 | +27.4 / +23.0 / +17.7 | +26.9 / +25.2 / +22.1 |
+| **L read-out 1 % / 0.2 s** | −38.9 / −46.0 | −38.5 / −48.6 | **+26.3 / +22.1 / +18.9** | +21.0 / +9.0 / +8.3 |
+| L read-out 2 % / 0.2 s (10 s sweep; 30 s sweep in brackets) | −33.5 / −46.0 | −32.5 / −48.6 | +31.5 / +27.9 / +24.6 (+30.3 / +28.3 / +24.3) | +21.0 / +9.0 / +8.3 |
+| **L read-out 2 % / 1 s** | −34.5 / −46.0 | −35.4 / −48.6 | **+27.1 / +21.4 / +17.5** | +21.0 / +9.0 / +8.3 |
+| L read-out 3 % / 0.2 s | −30.1 / −46.0 | −29.0 / −48.6 | +34.8 / +31.3 / +27.9 | +21.0 / +9.0 / +8.3 |
+| L read-out 10 % / 0.2 s | −19.5 / −46.0 | −18.4 / −48.6 | +42.9 / +39.5 / +36.1 | +21.0 / +9.0 / +8.3 |
+| injection 3 % + L read-out 2 % / 0.2 s | −28.5 / −30.0 | −29.4 / −33.2 | +31.1 / +27.5 / +24.3 | +21.5 / +15.4 / +13.6 |
+
+- **Cross-band envelope correlation** of the de-recirculated input is 0.91–0.98 in every variant, and 0.94–0.99 in CLA. It is dominated by the shared decay envelope, so it **does not discriminate**.
+
+### 13.4 Reading
+
+- **R is time-invariant within this test's resolution.**
+  - CLA R's predictor excess after the input ends (+8.1 / +6.2 dB) matches the LTI control (+9.0 / +8.3).
+  - Injection jitter of 3 % / 0.2 s already gives +15.4 / +13.6, and 10 % / 1 s gives +16.2 / +14.5. So any randomisation of the injection, which R shares with L, is **below about 3 % rms per 0.2 s**. Larger re-draws are ruled out by a wide margin.
+- **L's excess fits an L-only read-out variation of about 1 % rms gain every 0.2 s, or about 2 % every 1 s** (+22 / +21 dB at T = 0.40 against CLA's +21.1). 2–3 % at 0.2 s already overshoots.
+  - This is the model's best explanation of the L excess. It also fits the 26 dB higher L pre-onset energy (13.1) and eugtone's "L-only null error".
+  - L-only gain modulation of about 1 % is far too small to hear as FM or AM, which fits "ohne wahrnehmbare Frequenzmodulation".
+  - **[H]** The same signature would come from any slow L-only variation in the capture chain (e.g. an unstable L converter or cable). One IR cannot tell unit from capture chain.
+- **The dense, non-sparse injection is not explained by time variance.**
+  - The variants that fit the predictors (R LTI, L read-out about 1 %) leave the simulated OMP at −38 to −49 dB.
+  - CLA's OMP plateau at −23 dB in **both** channels must therefore be **structural mismatch**: our loops, diffuser or read-out form differs from the real one in a way that sparse taps cannot absorb.
+  - Injection jitter of 10 % or more would produce the plateau, but it contradicts R's predictor.
+- **Not supported:** "stochastic control" as switched or re-drawn injection taps. Re-draws at 0.2–1 s destroy both the sparse fit (−1 to −6 dB) and the predictor (+18 to +27 dB). CLA shows neither.
+
+### 13.5 What it means for the model, and what the library can confirm
+
+- **For the plugin:**
+  - R path: time-invariant.
+  - L path: optionally a slow random gain modulation of the L read-out (about 1 % rms, re-drawn every 0.2–1 s). That costs nothing in hardware terms. Whether it belongs to the unit or to eugtone's capture is open.
+  - The injection still needs a structural model, which remains unidentified (§11–12). It is not a stochastic one.
+- **The library can test this:**
+  1. If L's excess is in the unit, it appears in every capture, with the same rough depth, and in L only. If it is the capture chain, it varies between libraries.
+  2. Captures that differ only in RT or HF reuse the same injection. If the injection were randomised, the excitations fitted on different captures would disagree beyond noise; in an LTI unit they agree. That is a direct test of injection randomness without repeat captures of the same setting.
+  3. Programs M and L ("Grad der Stochastik" differs per program, 1986 review): run the same predictor test. A larger L or R excess in M/L than in S would point to the unit.

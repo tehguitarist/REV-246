@@ -563,6 +563,7 @@ def main():
     ap.add_argument("--tighten", action="store_true", help="run only the tightening study (section 8 of the results doc)")
     ap.add_argument("--wav", default="irs/eugtone_EMT246_CLA_shortRT.wav")
     ap.add_argument("--tail", action="store_true", help="run only the long-tail study (section 9 of the results doc)")
+    ap.add_argument("--stochastic", action="store_true", help="run only the time-variance / sweep simulation study (section 13)")
     ap.add_argument("--groups", action="store_true", help="run only the group-sparse tap study (section 12; needs tighten.json)")
     ap.add_argument("--allpass", action="store_true", help="run only the all-pass diffuser search (section 11; needs tighten.json)")
     ap.add_argument("--diffuser", action="store_true", help="run only the injection/diffuser study (section 10; needs tighten.json and tail.json)")
@@ -577,6 +578,8 @@ def main():
         return allpass_study(a)
     if a.groups:
         return group_study(a)
+    if a.stochastic:
+        return stochastic_study(a)
     y = load(a.h); out = {"h": a.h, "fs_dev": FS, "S0": S0, "t_fit_s": a.t_fit, "t_cap_s": a.t_cap}
 
     # 1. clock: cluster taps' sub-sample positions
@@ -1572,6 +1575,185 @@ def group_study(a):
         res["independent"][f"ext{ext}"] = r
     print("independent", {k: {c: [(d["taps"], round(d["null"]["400-600"], 1)) for d in v[c]] for c in "LR"} for k, v in res["independent"].items()}, f"{time.time() - T0:.0f}s", flush=True)
     with open(os.path.join(a.out, "groups.json"), "w") as fh:
+        json.dump(res, fh, indent=1, default=float)
+
+
+
+# ---------- "stochastic control" measurement simulation (docs/model_s_results.md §13) ----------
+def ess(T, f1=20.0, f2=12000.0, fs=FS):
+    t = np.arange(int(T * fs)) / fs; L = T / np.log(f2 / f1)
+    x = np.sin(2 * np.pi * f1 * L * (np.exp(t / L) - 1)); fade = int(0.01 * fs)
+    x[:fade] *= np.hanning(2 * fade)[:fade]; x[-fade:] *= np.hanning(2 * fade)[fade:]
+    return x
+
+
+class Synth246:
+    """Synthetic program S from the fitted structure, with sparse injection taps (common to L and R, per loop)
+    and sparse per-channel read-out taps (per loop), either fixed or re-drawn / jittered every `period` s.
+    Signal path: x -> [pre delay PRE] -> diffuser (comb460*AP20*AP72*AP230) -> injection taps_i(t) -> loop i
+    -> read-out taps_{i,c}(t) -> sum + cluster (fixed taps on x)."""
+
+    def __init__(self, Gs, post, n_inj=8, readout_lags=(0, 26, 332), seed=0):
+        self.Gs, self.post, self.n_inj, self.rl = Gs, post, n_inj, readout_lags
+        self.cluster_amp = 8.0
+        self.rng = np.random.default_rng(seed)
+
+    def draw_inj(self):
+        return [(S0 + self.rng.integers(0, Pi, self.n_inj), self.rng.normal(0, 1, self.n_inj)) for Pi in P]
+
+    def draw_ro(self):
+        return [[self.rng.normal(0, 1, len(self.rl)) for _ in P] for _ in (0, 1)]
+
+    def run(self, x, period=0.2, inj_J=0, inj_gd=0.0, inj_redraw=False, roL_gd=0.0, tail_s=2.5):
+        """Injection taps: every `period` s positions jitter by +-inj_J samples and gains by (1 + inj_gd*N(0,1))
+        about the base set (or are re-drawn completely if inj_redraw). L read-out gains: (1 + roL_gd*N(0,1)) per period."""
+        n = len(x) + int(tail_s * FS); Nf = 1 << int(np.ceil(np.log2(n + 1)))
+        w = 2 * np.pi * np.fft.rfftfreq(Nf); X = np.fft.rfft(x, Nf) * np.exp(-1j * w * PRE)
+        d = np.fft.irfft(X * self.post(w), Nf)[:n]
+        tv = inj_redraw or inj_J or inj_gd or roL_gd
+        blocks = [(s, min(n, s + int(period * FS))) for s in range(0, n, int(period * FS))] if tv else [(0, n)]
+        inj0 = self.draw_inj(); ro0 = self.draw_ro(); y = np.zeros((n, 2)); cfg_inj, cfg_ro = [], []
+        for k, b in enumerate(blocks):
+            if inj_redraw and k:
+                cfg_inj.append(self.draw_inj())
+            else:
+                cfg_inj.append([(np.clip(dl + (self.rng.integers(-inj_J, inj_J + 1, len(dl)) if inj_J else 0), S0, None),
+                                 g * (1 + inj_gd * self.rng.normal(0, 1, len(g)))) for dl, g in inj0])
+            cfg_ro.append([[g * (1 + roL_gd * self.rng.normal(0, 1, len(g))) for g in ro0[0]], ro0[1]])
+        for i, (G, Pi) in enumerate(zip(self.Gs, P)):
+            z = np.zeros(n)
+            for (s, e), cfg in zip(blocks, cfg_inj):
+                dl, g = cfg[i]
+                for dd, gg in zip(dl, g):
+                    lo = max(s, dd)
+                    if lo < e:
+                        z[lo:e] += gg * d[lo - dd:e - dd]
+            yi = np.fft.irfft(np.fft.rfft(z, Nf) / (1 - G(w) * np.exp(-1j * w * Pi)), Nf)[:n]
+            for c in (0, 1):
+                for (s, e), ro in zip(blocks, cfg_ro):
+                    for lag, gg in zip(self.rl, ro[c][i]):
+                        lo = max(s, lag)
+                        if lo < e:
+                            y[lo:e, c] += gg * yi[lo - lag:e - lag]
+        xd = np.fft.irfft(X, Nf)[:n]
+        for c in (0, 1):
+            for t, sg in zip(CLUSTER[c], CLUSTER_SIGN[c]):
+                y[t:, c] += sg * self.cluster_amp * xd[:n - t]
+        return y
+
+
+def deconvolve(y, x, f1=20.0, f2=12000.0, n_out=None):
+    """Regularised spectral division (what an ESS inverse filter does in-band). Returns the circular IR."""
+    Nf = 1 << int(np.ceil(np.log2(len(y) + 1))); f = np.fft.rfftfreq(Nf, 1 / FS)
+    X = np.fft.rfft(x, Nf); Y = np.fft.rfft(y, Nf, axis=0)
+    win = np.clip((f - f1 / 2) / (f1 / 2), 0, 1) * np.where(f < f2 * 0.95, 1.0, np.where(f < f2, 0.5 * (1 + np.cos(np.pi * (f - 0.95 * f2) / (0.05 * f2))), 0.0))
+    eps = 1e-6 * np.max(np.abs(X)) ** 2
+    H = Y * (np.conj(X) * win / (np.abs(X) ** 2 + eps))[:, None]
+    return np.fft.irfft(H, Nf, axis=0)
+
+
+def gentle_band(h, lo=(30, 80), hi=(9000, 11000)):
+    """Band-limit with wide raised-cosine edges (short ringing), so the state predictor is not fed long band-edge tails."""
+    Nf = 1 << int(np.ceil(np.log2(2 * len(h)))); f = np.fft.rfftfreq(Nf, 1 / FS)
+    H = 0.5 - 0.5 * np.cos(np.pi * np.clip((f - lo[0]) / (lo[1] - lo[0]), 0, 1)); H *= 0.5 - 0.5 * np.cos(np.pi * np.clip((hi[1] - f) / (hi[1] - hi[0]), 0, 1))
+    return np.fft.irfft(np.fft.rfft(h, Nf, axis=0) * (H[:, None] if h.ndim == 2 else H), Nf, axis=0)[:len(h)]
+
+
+def sim_diagnostics(h, Gs_W, post_W, D, B, eps=0.0, ns_db=None, seed=1, omp_taps=(103, 414), normalise=True):
+    """Diagnostics used for both the CLA IR and simulated IRs (tap 0 at index PRE):
+    OMP with band-limited atoms (post*B), the state predictor on a gently band-limited IR, cross-band envelopes."""
+    h = h[:PRE + int(1.9 * FS)].copy()
+    if normalise:
+        h /= np.abs(h[:PRE + 400]).max()
+    if ns_db is not None:
+        h += np.random.default_rng(seed).normal(0, 10 ** (ns_db / 20), h.shape)
+    Nall = len(h); Nfit = PRE + int(0.4 * FS)
+    wt = np.r_[tail_weight(np.maximum(np.arange(Nfit) - PRE, 0), t_cap=0.3), np.zeros(Nall - Nfit)]
+    out = {}
+    r = omp_curve(h, Gs_W, post_W * B, eps, Nfit, wt, checkpoints=omp_taps)
+    out["omp"] = {c: [(d["taps"], d["null"]["50-300"], d["null"]["400-600"]) for d in r[c]] for c in "LR"}
+    g = gentle_band(h); out["predictor"] = {}
+    for T in (0.35, 0.40, 0.45):
+        w = (int(T * 1000), int(T * 1000) + 200); k = f"{w[0]}-{w[1]}"
+        nd = null_depth(g, predict_from_state(g, D, T), [w]); fl = noise_floor_null(g, [w])
+        out["predictor"][f"T{T:.2f}"] = {"null": nd[k], "excess": [nd[k][c] - fl[k][c] for c in (0, 1)]}
+    out["xband"] = cross_band(g, D)
+    return out
+
+
+def cross_band(h, D, win=(0.05, 0.40), centres=(250, 500, 1000, 2000, 4000, 8000)):
+    """Envelope correlation of the de-recirculated input between 1/3-octave bands (per channel),
+    as a function of band separation in octaves."""
+    n = np.arange(NFFT) - PRE; hh = np.zeros((NFFT, 2)); hh[:len(h)] = h
+    u = np.fft.irfft(np.fft.rfft(hh, axis=0) * D[:, None], NFFT, axis=0)
+    m = (n >= win[0] * FS) & (n < win[1] * FS); env = {}
+    from scipy.signal import hilbert
+    for fc in centres:
+        sos = butter(4, [fc / 2 ** (1 / 6), fc * 2 ** (1 / 6)], btype="band", fs=FS, output="sos")
+        b = sosfilt(sos, u, axis=0); e = np.abs(hilbert(b[m], axis=0))
+        k = int(0.005 * FS); env[fc] = np.stack([np.convolve(e[:, c], np.ones(k) / k, "same") for c in (0, 1)], 1)
+    res = {}
+    for i, f1 in enumerate(centres):
+        for f2 in centres[i + 1:]:
+            sep = float(np.log2(f2 / f1)); res.setdefault(sep, []).append([float(np.corrcoef(np.log(env[f1][:, c] + 1e-15), np.log(env[f2][:, c] + 1e-15))[0, 1]) for c in (0, 1)])
+    return {f"{k:.0f}oct": np.mean(v, 0).tolist() for k, v in sorted(res.items())}
+
+
+def stochastic_study(a):
+    """Everything in docs/model_s_results.md §13. Writes <out>/stochastic.json."""
+    import time, soundfile as sf
+    from deconv_grid import locate_first_tap
+    T0 = time.time(); res = {}
+    le = json.load(open(os.path.join(a.out, "tighten.json")))["loops_early"]; th5 = np.array(le["theta5"]); g5, hf5 = le["g5"], le["hf5"]; eps5 = th5[4] * 1e-6
+    tl = json.load(open(os.path.join(a.out, "tail.json")))["tail_fit_both"]["params"]
+    vt = np.array([tl[k] for k in ["g1321", "g1389", "g1461", "g1587", "kappa_db_per_s", "p", "eps_ppm", "g460", "hf460"]])
+    # 1. pre-onset energy and distortion images in the WAV
+    x96, fs96 = sf.read(a.wav, always_2d=True); i0 = locate_first_tap(x96[:, 1], fs96); pk = np.abs(x96[i0 - 5:i0 + 5]).max(0)
+    tmpl = x96[i0 - 50:i0 + int(0.015 * fs96)]; pre = {}
+    for c in (0, 1):
+        t_ = tmpl[:, c]; N = 1 << int(np.ceil(np.log2(len(x96) + len(t_))))
+        cc = np.fft.irfft(np.fft.rfft(x96[:, c], N) * np.conj(np.fft.rfft(t_, N)), N)[:len(x96)] / np.sqrt(np.sum(t_ ** 2))
+        e = np.sqrt(np.convolve(x96[:, c] ** 2, np.ones(len(t_)), "full")[len(t_) - 1:len(t_) - 1 + len(x96)] + 1e-30); ncc = np.abs(cc / e)
+        pre["LR"[c]] = {"pre_onset_rms_db_re_tap": float(20 * np.log10(np.sqrt(np.mean(x96[:i0 - 20, c] ** 2)) / pk[c])),
+                        "last_0.3s_rms_db_re_tap": float(20 * np.log10(np.sqrt(np.mean(x96[-int(0.3 * fs96):, c] ** 2)) / pk[c])),
+                        "best_cluster_copy_pre": float(ncc[:i0 - 200].max()), "best_cluster_copy_end": float(ncc[int(1.0 * fs96):len(x96) - len(t_)].max()),
+                        "median_match": float(np.median(ncc[:i0 - 200]))}
+    res["preonset"] = {"first_tap_ms": i0 / fs96 * 1000, "channels": pre}
+    # 2. synthetic 246 (integer loops) and its measurement through an ESS
+    th0 = th5.copy(); th0[4] = 0.0
+    Gw = [(lambda w, k=k: G_param(th0, "jot", w)[k]) for k in range(4)]
+    def post(w):
+        z = lambda d_: np.exp(-1j * w * d_); ap_ = lambda d_, g: (-g + z(d_)) / (1 - g * z(d_))
+        return 1 / (1 - g5 * shelf(w, 1.0, hf5, 0.0) * z(460)) * ap_(20, -.7) * ap_(72, -.7) * ap_(230, -.7)
+    Gs_W = G_param(th0, "jot"); post_W = post(W); D = recursion_poly(Gs_W, [(g5 * shelf(W, 1.0, hf5, 0.0), 460)])
+    f = np.fft.rfftfreq(NFFT, 1 / FS)
+    B_sim = np.clip((f - 10) / 10, 0, 1) * np.where(f < 11400, 1.0, np.where(f < 12000, 0.5 * (1 + np.cos(np.pi * (f - 11400) / 600)), 0.0))
+    B_cla = np.where(f < 11000, 1.0, np.where(f < 12300, 0.5 * (1 + np.cos(np.pi * (f - 11000) / 1300)), 0.0))
+    y = load(a.h)
+    postC = (1 / (1 - G5_of(th5, g5, hf5, 460) * np.exp(-1j * W * 460))) * allpass(20, -.7, eps5) * allpass(72, -.7, eps5) * allpass(230, -.7, eps5)
+    D_w = recursion_poly(G_perloop(vt), [(G5_of(np.r_[0, 0, 0, 0, vt[6]], vt[7], vt[8], 460), 460)])
+    res["CLA"] = sim_diagnostics(y, G_param(th5, "jot"), postC, D_w, B_cla, eps=eps5, normalise=False)
+    res["CLA_atoms_without_bandlimit"] = sim_diagnostics(y, G_param(th5, "jot"), postC, D_w, 1.0, eps=eps5, normalise=False)["omp"]
+    print("CLA", res["CLA"]["omp"], {k: np.round(v["excess"], 1).tolist() for k, v in res["CLA"]["predictor"].items()}, f"{time.time() - T0:.0f}s", flush=True)
+    variants = [("LTI", {}, 10.0), ("inj gain 3% / 0.2 s", dict(inj_gd=0.03), 10.0), ("inj gain 10% / 0.2 s", dict(inj_gd=0.1), 10.0),
+                ("inj gain 30% / 0.2 s", dict(inj_gd=0.3), 10.0), ("inj gain 10% / 0.05 s", dict(inj_gd=0.1, period=0.05), 10.0),
+                ("inj gain 10% / 1 s", dict(inj_gd=0.1, period=1.0), 10.0), ("inj positions +-1 / 0.2 s", dict(inj_J=1), 10.0),
+                ("inj full re-draw / 0.2 s", dict(inj_redraw=True), 10.0), ("inj full re-draw / 1 s", dict(inj_redraw=True, period=1.0), 10.0),
+                ("L read-out 1% / 0.2 s", dict(roL_gd=0.01), 10.0), ("L read-out 2% / 0.2 s", dict(roL_gd=0.02), 10.0),
+                ("L read-out 3% / 0.2 s", dict(roL_gd=0.03), 10.0), ("L read-out 10% / 0.2 s", dict(roL_gd=0.1), 10.0),
+                ("L read-out 2% / 1 s", dict(roL_gd=0.02, period=1.0), 10.0), ("L read-out 2% / 0.2 s, 30 s sweep", dict(roL_gd=0.02), 30.0),
+                ("inj 3% + L read-out 2% / 0.2 s", dict(inj_gd=0.03, roL_gd=0.02), 10.0), ("LTI, 30 s sweep", {}, 30.0)]
+    sims = {}; xs = {}
+    for name, kw, Tsw in variants:
+        if Tsw not in xs:
+            xs[Tsw] = ess(Tsw)
+        S = Synth246(Gw, post, seed=0); h = deconvolve(S.run(xs[Tsw], **kw), xs[Tsw])
+        sims[name] = sim_diagnostics(h, Gs_W, post_W, D, B_sim, ns_db=-105)
+        if name == "LTI":
+            sims[name]["omp_atoms_without_bandlimit"] = sim_diagnostics(h, Gs_W, post_W, D, 1.0, ns_db=-105)["omp"]
+        print(name, sims[name]["omp"], {k: np.round(v["excess"], 1).tolist() for k, v in sims[name]["predictor"].items()}, f"{time.time() - T0:.0f}s", flush=True)
+    res["sims"] = sims
+    with open(os.path.join(a.out, "stochastic.json"), "w") as fh:
         json.dump(res, fh, indent=1, default=float)
 
 
