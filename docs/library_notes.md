@@ -68,7 +68,7 @@ Non-Lin: SPAN 0–0.5 s, EARLY RT −3.0…10 s, LATE RT 0–2.0 s. The grid is 
 
 ## 5. The 48 kHz and 96 kHz sets are the same capture
 
-Tomkin said the library was recorded twice. The data say the two rate sets are renderings of one recording (**S**). Direct comparison in the capture domain (`tools/harness/crossrate.py`, 2,437 pairs):
+**Closed.** Tomkin was asked and said the library was recorded twice at the two rates. The data say otherwise: the two rate sets are renderings of one recording (**S**). We take the data as the truth, do not pursue the discrepancy further, and treat the 96 kHz set as the working set. The direction (which rate was derived from which) is unknown and does not matter for our purposes. Direct comparison in the capture domain (`tools/harness/crossrate.py`, 2,437 pairs):
 
 - Every pair is sample-aligned (lag 0.0) with a constant gain of 0.9994 and agrees to **−67.5 dB median in the first 0.3 s**.
 - The out-of-band tail (14.5–22 kHz after 0.5 s, about −150 dBFS) is **correlated between the rates** (median 0.79, minimum 0.37, above 0.9 in 974 pairs). Independent captures would have independent noise there.
@@ -76,4 +76,4 @@ Tomkin said the library was recorded twice. The data say the two rate sets are r
 - For 300 random pairs, the 48k file over the decimated 96k file has one fixed response in every band: |H| std 0.001–0.002 dB, phase std 0.01–0.03 mrad.
 - The 96k file is a flat 24-bit floor from 14 kHz to 47 kHz, as is the 48k file: neither carries interface noise above the rounding floor.
 
-**What this cannot show:** which file came from which, because the 96k file has no content above 14 kHz. Either way the 96k set contains all the information. The earlier hope of using 48k/96k pairs as repeat captures for time-variance tests is gone.
+**What this cannot show:** which file came from which, because the 96k file has no content above 14 kHz. Either way the 96k set contains all the information. The earlier hope of using 48k/96k pairs as repeat captures for time-variance tests is gone, and the question is closed.

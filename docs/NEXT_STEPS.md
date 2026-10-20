@@ -129,11 +129,12 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 
 ## 9. Questions for Tomkin (when convenient)
 
-1. **What exactly was recorded twice?** The two rate sets are the same capture (`library_notes.md` §5). Was the 48 kHz set exported from the 96 kHz master, or the reverse, or are the sweeps from one session processed twice?
-2. Sweep method: type, length, frequency range and level. Needed for any time-variance analysis and for noise-floor interpretation.
-3. Do they still have **the raw sweep recordings** (before deconvolution and before the trimming, fading and DC removal)? These would allow direct time-variance analysis and true noise floors.
-4. What are the **trimming, fade and `dc` steps** (the files are cut and faded per setting)?
-5. Which unit (serial or firmware, if known), and was the same unit used for every capture?
+*The "recorded twice" question is closed: Tomkin says the rates were recorded separately, the data say they are one capture (`library_notes.md` §5), and we go with the data.*
+
+1. Sweep method: type, length, frequency range and level. Needed for any time-variance analysis and for noise-floor interpretation.
+2. Do they still have **the raw sweep recordings** (before deconvolution and before the trimming, fading and DC removal)? These would allow direct time-variance analysis and true noise floors.
+3. What are the **trimming, fade and `dc` steps** (the files are cut and faded per setting)?
+4. Which unit (serial or firmware, if known), and was the same unit used for every capture?
 
 ---
 
