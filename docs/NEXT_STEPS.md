@@ -127,14 +127,17 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 
 ---
 
-## 9. Questions for Tomkin (when convenient)
+## 9. Questions for Tomkin (closed)
 
-*The "recorded twice" question is closed: Tomkin says the rates were recorded separately, the data say they are one capture (`library_notes.md` §5), and we go with the data.*
+Tomkin was asked and does not remember the details: the library was made a long time ago. Treat everything below as **unknown and unrecoverable**, and extrapolate from the data:
 
-1. Sweep method: type, length, frequency range and level. Needed for any time-variance analysis and for noise-floor interpretation.
-2. Do they still have **the raw sweep recordings** (before deconvolution and before the trimming, fading and DC removal)? These would allow direct time-variance analysis and true noise floors.
-3. What are the **trimming, fade and `dc` steps** (the files are cut and faded per setting)?
-4. Which unit (serial or firmware, if known), and was the same unit used for every capture?
+- **Sweep method** (type, length, range, level): unknown. The sweep processing gain is therefore unknown, so absolute noise floors and any mapping of time-variance to a rate are out of reach.
+- **Raw sweep recordings:** not available (assume gone). No direct time-variance analysis.
+- **Trim, fade and `dc` steps:** unknown. The files are cut and faded per setting; work from the labels and the measured structure (RT from the label; fades and zero tails flagged by the harness).
+- **Which unit and firmware, and whether one unit made every capture:** unknown. Indirect evidence: all 384 S files share one L/R timing offset (19.19–19.21 µs) and one S loop set, so one unit and one firmware are likely (**H**); the CLA unit differs by about 3 timing steps and a slightly different S&H pole (§4).
+- **Recorded twice:** the data say one capture (`library_notes.md` §5). Closed.
+
+Consequence for the working rules (§2): do not rely on tail levels or noise floors in the library as unit noise, do not expect any repeat-based test, and when a result depends on an unknown above, say so explicitly.
 
 ---
 
