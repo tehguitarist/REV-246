@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.npy
+analysis/library/*/cache/
+analysis/library/pytest_synthetic/
+.DS_Store

@@ -1,0 +1,147 @@
+# EMT 246: consolidated unit facts
+
+The single place for *what we know about how the unit works*. Details and evidence live in the linked docs; this sheet is updated whenever a finding changes.
+- `discovery` = EMT246_discovery.md
+- `research` = algorithm_research.md
+- `model` = model_s_results.md
+
+**Confidence:**
+- **C** = confirmed by a primary source or a direct measurement;
+- **S** = strong: several independent measurements agree;
+- **H** = hypothesis.
+
+Constraints: there is no hardware access, ROM dump or new capture, ever. Evidence comes from existing IRs, documents and photos only.
+
+*Last consolidated: October 2026.*
+
+---
+
+## 1. Hardware
+
+| Fact | Conf. | Source |
+|---|---|---|
+| **2 × TMS32010NL** DSPs (TI, date codes 8540/8618); processor board 7 246 123 | C | studiorepair photos (discovery §2.3a) |
+| **38.400 MHz oscillator ÷ 2 → 19.2 MHz CLKIN → 208.3 ns per instruction → 182 instructions per sample per DSP** | C (÷2 is S) | photos; TI TMS32010 User's Guide (max CLKIN 20.5 MHz, cycle = CLKIN/4) |
+| **fs = 38.4 MHz / 1456 = 26,373.63 Hz**, not the brochure's 26.4 kHz | S | integer cluster-tap grid; loop harmonics; the 728 = 4 × 182 arithmetic |
+| TMS32010 timing: IN/OUT 2 cycles; TBLR/TBLW 3; LT/LTA/LTD/MPY/APAC 1; 144-word on-chip RAM. A gain-weighted delay tap costs about 5–7 cycles, i.e. **about 50–70 taps per sample for the whole machine** | C (timings) / H (budget) | TI User's Guide |
+| DSP program: **6 × AM27S191 bipolar PROM (2 K × 8), "BGC 1A–6A" = 12 KB** (4 K words on DSP 1, 2 K on DSP 2) | C | photos; data sheet ("ROM 12 kByte") |
+| **2 empty 24-pin PROM sockets** beside BGC 5/6 | C (sockets) / H (purpose: the EMT 250 option) | photos; a 2020 listing mentions an "EMT 250 Option" |
+| Delay RAM: **4 × NEC μPD41464C-12 (64 K × 4 DRAM) = 64 K × 16-bit words** (128 KB = 2.48 s at fs) | C | photos; data sheet |
+| A spare MB81464 DRAM sits in a "Spare" position; 7 unpopulated 18-pin footprints | C | photos |
+| 2 × UM6116 2 K × 8 SRAM on the DSP board | C | photos. Coefficient/parameter RAM is **H** |
+| Address-generation logic (74LS193 counters, 74S188 PROMs, "BGP 1A/2A", "BGD 1A"), so delay addressing is partly in hardware | C (parts) / H (function) | photos |
+| Mainframe control: **Z80A + CTC + PIO, EPROM "BGX 1B"** (interface board 7 246 125). The step → coefficient tables are probably here | C / H | photos; data sheet |
+| Remote 246 S: Z80A, 27256 EPROM "BGR 1A", 6116 RAM, ICM7218B display driver, MK48Z02 memory module, quadrature opto controllers | C | manual pp. 65–74 |
+| Remote link: 5-pin DIN, 32-bit pulse packets (one pulse = 0, three = 1). **The unit won't run without the remote** | C / reported | manual p. 65; Gearspace |
+| Arithmetic: 32-bit accumulate, **16-bit storage of intermediate results**, no floating point | C | data sheet |
+
+## 2. Converters and analogue path
+
+| Fact | Conf. | Source |
+|---|---|---|
+| **Mono input** → amp → anti-alias LP (TL07x daughterboard) → S&H → **discrete 16-bit SAR ADC**: PCM53 DAC + 2 × 74LS503 SAR + LT1016 comparator | C | block diagram; photos (board 7 246 121) |
+| Output: **one PCM53 DAC → LF13333 switches → 2 × S&H → 2 identical active LP filters** (TL074 daughterboards) → amps | C | block diagram; photos (board 7 246 122) |
+| **L output is 18.6 µs (0.49 sample) later than R**, with identical magnitude response (±0.1 dB). Caused by the multiplexed DAC | C | IR measurement + hardware |
+| Overall band-limit: flat to 9 kHz, −1.9 dB at 11 k, −7.6 dB at 12 k, −57 dB at 13.2 k; energy above 13.2 k is −75 dB | S | IR |
+| Spec: 30 Hz–12 kHz (+1/−3 dB, DELAY program); reverb S/N 73 dB unweighted; THD ≤ 0.03 % | C | data sheet |
+| **Noise:** L's floor is about 6–9 dB above R's, broadband and slowly decaying (−88 → −91 dB over 1.1–1.8 s); R's floor is flat. Other reports also show L/R mismatches | S | IR; model §6.5; user |
+| Trimmers: input LEVEL, HF CMR, LF CMR, OFFSET; output LEVEL 1/2 | C | photo of the front flap |
+
+## 3. Controls and parameters
+
+| Fact | Conf. | Source |
+|---|---|---|
+| Sections and controls:<br>• PROGRAM (S M L D E N);<br>• MEMORY;<br>• LOWPASS `f (kHz)`;<br>• REFLECTIONS `DELAY (ms)` / `AMPL. (%)`;<br>• DECAY `LF×` / `RT (s)` / `HF×`.<br>One trough controller per section; one LED wedge bar per parameter | C | panel photos |
+| **Legend colour = program LED colour:**<br>• red legends = S/M/L/E;<br>• green = D (`L — DELAY — R`, `L — ECHO (%) — R`);<br>• yellow = N (`DELAY`, `SPAN (s)`, `EARLY — RT — LATE`) | S | panel; parameter card |
+| Step counts:<br>• RT: 16 steps per program (S 0.2–2.5 s, M 0.5–5, L 2–20);<br>• LF×: 0.1–2, 16 steps;<br>• HF×: 0.1–1, 10 steps;<br>• AMPL: 0–100 %, 11 steps;<br>• LP: 2–12 kHz, 8 steps;<br>• DELAY: 0–999 ms in 1 ms steps | C | data sheet. Exact step values are **unknown** |
+| Observed display values:<br>• LP 2.0 / 8.0 / 10 / 12;<br>• RT 1.0 (S), 3.6 and about 5 (L), 15 (L), L minimum 2;<br>• DELAY 10 / 120;<br>• AMPL 20 / about 50 / 80 | C (as read) | video; CLA images |
+| Display formats: program shows letter + name ("S SNARE1"); LP one decimal below 10 kHz; RT one decimal | C | video |
+| **HF factor is applied at 7 kHz as specified:** HF ×0.9 gives a measured RT(7k)/RT(1k) of 0.90–0.91 | S | CLA IR + confirmed settings |
+| LF ×1.0 gives a flat LF decay. The **LF reference is 50 Hz (data-sheet table) or 250 Hz (data-sheet diagram, card)**; unresolved | C (conflict) | data sheet; card |
+| Remote: lever 1 = LP; lever 2 = delay/ampl; lever 3 = RT/LF/HF. Holding a lever more than 1 s accelerates the change | C | Studio Magazin 99 |
+| Presets: 90 factory (F1–F90; card shows F1–F50; SNARE1 = F51), F91–F99 service, 99 user | C | data sheet; card; video |
+
+## 4. Programs
+
+| Program | What is known | Conf. |
+|---|---|---|
+| **S / M / L** (A/B/C) | "Completely new algorithm, colouration-free through optimised eigentone distribution". They share one unified algorithm with a novel **"stochastic control"** that densifies eigentones "without perceptible FM". They differ in the degree of stochastic control (eigentone/echo density), the speed of energy build-up, and the **early-reflection distribution**. S has the highest density and fastest build-up | C (claims) |
+| **E** | "Exactly" the EMT 250 program, with extended pre-delay; likely an option (empty PROM sockets) | C / H |
+| **D** | Delay/echo: 2 taps (L, R), 0–999 ms, feedback 16 steps (~0 to −60 dB per repeat) | C |
+| **N** (Non-Lin) | Two decay curves joined end to end: pre-delay → SPAN (0.1–0.5 s; prototype 0–2 s) early decay → late reverb. The **early section can be reversed**. Probably 4 parameters (DELAY, SPAN, EARLY RT, LATE RT) with no AMPL/LF/HF | C / H (parameter set) |
+| Digital-I/O variant | 4 × TMS320, fs locked to 44.1/48 kHz, 256 KB RAM, 32 KB ROM, so a different sample grid | C (catalogue 1988/89) |
+
+## 5. Program S algorithm (measured from the CLA IR)
+
+The CLA IR settings, from a numeric display with some dead segments: **SHORT RT, LP 12, DELAY 10 ms, AMPL 80 %, LF ×1.0, RT 1.0 s, HF ×0.9** (S).
+
+| Fact | Conf. | Source |
+|---|---|---|
+| **Time-invariant to measurement precision.** Fine-structure correlation is 0.67, against 0.60 for a static modal reference and 0.02 for noise. Loop modes are exactly harmonic. This must be reconciled with the 1986 "stochastic control" claim | S / open | discovery §1; research §7.2b |
+| **Pre-delay:** cluster tap 0 lands at the DELAY time (10 ms → 9.97–10.08 ms in the file; eugtone preserved absolute timing) | S | IR + settings |
+| **Cluster:**<br>• L taps at 0, 54, 194, 288 samples, signs + + + −;<br>• R taps at 0, 143, 194, 353, signs + + − +;<br>• all 8 equal in magnitude (±1.6 %);<br>• single integer samples;<br>• spacing fixed; DELAY shifts both groups together | S (pattern) / C (fixed spacing) | IR; Studio Magazin 99 |
+| Cluster level at AMPL 80 %: about +29 dB relative to early reverb level. Amplitude law unknown | S | IR |
+| **Late reverb = 4 uncoupled recirculating loops of 1321, 1389, 1461 and 1587 samples** (50.1–60.2 ms). They are integer and pure delays: the "+0.2" was a ~100 ppm capture clock offset. No all-pass inside the loops | S | autocorrelation, harmonic test, model §3.1 |
+| **Loop gains are length-scaled exactly at the RT setting:** gᵢ = 0.707439, 0.695463, 0.682337, 0.660021, giving per-loop RT₀ 0.9997–1.0017 s at RT 1.0. They are resolved to about ±8 Q15 LSB (1σ), so 3–4 bits short of pinning exact coefficients. Library RT sweeps would close the gap | S | model §9.1 |
+| **Loop and 460 parameters are shared by L and R:** parameters fitted on L alone predict R within 0.5 % in annihilator cost | S | model §8.2 |
+| **In the tail the algorithm matches to within the noise:**<br>• noise-compensated EDC within 0.2 dB in most octaves to −50 dB;<br>• decay rates within 1 %;<br>• mode frequencies within a few mHz;<br>• R's fine structure at its noise ceiling.<br>The *waveform* null is limited by the excitation (injection), not the loops | S | model §9.2 |
+| **Loop filters:** first order is sufficient here. At HF ×0.9 the extra loss is 0.37–0.40 dB per pass at 7 kHz (one-pole p ≈ 0.04). Shared or length-scaled coefficients is undecided | S / open | model §3.2 |
+| Modal density 0.218 modes/Hz. The lengths are not optimal on simple spacing metrics; three share a factor of 3 | C (arith.) | discovery §3.3 |
+| **Per-loop mode amplitudes are noise-like (spread ≈ 5 dB, Rayleigh-like)**, so not equalised. This argues against a pure all-pass diffuser read by single taps | S | topology T2 |
+| **First pass is dense** and carries non-recirculating content (−11/−7 dB of the first 1,400 samples). The reverb starts about 240 samples (L) and 570 (R) after tap 0. So there is multi-point injection or read-out, not a single write and read per loop | S / H | model §4 |
+| **5th recursion at 460 samples** (g ≈ 0.45, i.e. RT ≈ 0.15 s). It is the one structural addition that clearly helps: +13/+17 dB in-sample, +6/+10 dB held out. Its excitations show an all-pass-like −g + z⁻⁴⁶⁰ signature. Whether it sits in parallel or in series is unresolved | S (exists) / H (form) | model §3.3, §8.2–8.3 |
+| **R: once the input ends (about 0.45 s), the 4 loops + 460 stage predict the rest to within 4–6 dB of the noise floor.** This prediction uses only the 9 loop/460 numbers and the IR's own past, e.g. −45.5 dB at 450–650 ms. So the loops and the 460 stage are right | S | model §10.1 |
+| **Late input:** each loop receives its **own dense injection** that keeps arriving and decays smoothly (R ≈ 290 dB/s, RT ≈ 0.2 s; L ≈ 130 dB/s) until about 0.45 s. There are no spikes. Fine structure is uncorrelated across loops but correlated between L and R of the same loop. **Ruled out:** a shared input, a long EMT 250-style loop (lags 3.5–16 k), and extra 230/460/920 stages. The 460 stage's gain is flat across frequency, g ≈ 0.44–0.46, consistent with an all-pass | S | model §10.2–10.3 |
+| **Diffuser found: a common series all-pass chain AP(20) · AP(72) · AP(230), all at g ≈ −0.70**, with the 460 recursion as a plain comb (pole gain 0.445). The delays are sharp (±1 sample costs 4–10 dB). It was chosen on R and confirmed on L at the same gain, and it explains the recurring 20/52/72 and 230/460/690/920 lags. Its cost is about 8 multiplies and ≤ 4.1 k words. For a sparse model it is worth 10–13 dB on the held-out null. Input side vs read-out side is undecidable from one IR; input side is favoured | S (chain) / H (placement) | model §11 |
+| The diffuser does **not** generate the late input. The best generative held-out null is still about −29 dB in band (400–600 ms), and the taps in front of the diffuser are still thousands per channel. Next candidate: a small tap set shared across loops and channels (group-sparse) | S | model §11.2–11.3 |
+| **Hardware plausibility:** free excitation FIRs (2 × 8.4 k taps) are far beyond the ~50–70 taps per sample budget, so the real injection must be compact. The best guess is **per-loop diffusers** (short all-pass chains or nested all-passes), with lags 20/30/72/230 as candidate delays | H | model §10.4 |
+| **Injection is not a sparse tap set.** 1,719 integer taps per channel recover less than the dense model. Something dense (an unidentified diffuser) feeds the loops and **keeps delivering new input at 0.25–0.4 s**. This is now the main limit on the null | S | model §8.3–8.4 |
+| **Output:** L and R share lags **26 and 332 samples** in every loop, with **per-loop weights**. A strict common output distributor is rejected | S | model §5; T1 |
+| L/R correlation of the tail ≈ 0; the 1986 review's correlation meter showed slight anti-phase (100–110°) | S / C | IR; Studio Magazin 99 |
+| Echo density goes Gaussian at about 35 ms (96 kHz NED) after the cluster | S | IR |
+| **Best nulls so far (model Cs, raw 96 kHz domain, 20 Hz–11.3 kHz):**<br>• cluster / 0–50 ms: −50/−52 dB;<br>• 50–300 ms: −48 dB (in-sample);<br>• **held-out 400–600 ms: −27/−29 dB** (+21/+25 dB over noise);<br>• 600–1000 ms: −17/−19 dB.<br>The null is not yet at the noise floor anywhere, so this is **not yet proof of the true algorithm** | S | model §8 |
+| Cluster taps are equal to 0.1 % (R: 0.9999 / 1.0010 / −0.9992 / 0.9999 in kernel units). L sits about 0.06 dB above R. The freely fitted L offset is 0.492 samples | S | model §8.5 |
+| **Analogue chain** = band-limit FIR × a **2nd-order sub-20 Hz high-pass** (coupling capacitors **H**). That high-pass is what had limited the device-domain cluster null | S | model §8.5 |
+| **L-only tail excess:** +4 to +15 dB over noise (and 15–22 dB in the input-ended predictor at every cut-off time T), which no time-invariant change removes. It shows periodicities at loop-length *differences* (68, 126, 140, 198, 266 samples). This fits a **slow modulation of loop/read-out gains on L**, a candidate for the "stochastic control" | H | model §8.4 |
+| **No mode-line broadening** beyond the LTI decay at about 3 Hz resolution; modulation slower than about 1 Hz is not excluded | S (limit) | model §8.6 |
+| Noise model (in band): L −103 dB at 1.4 s, drifting −1.8 dB/s; R −110 dB, flat. The noise spectrum rises with frequency. Most of L's "decaying floor" is below 20 Hz | S | model §9.3 |
+
+## 6. Memory and compute budget (derived)
+
+- 64 K words of delay RAM. Maximum pre-delay is 26,347 words, leaving **about 39 K words** for the loops, cluster and diffusion.
+- S's loops use 5,758 words. M is expected at about 11.5 K; L is memory-capped at about 30–39 K.
+- 364 instructions per sample in total, i.e. about 50–70 weighted delay taps for the whole machine.
+
+All of this is **H**, derived from the parts and TI timings.
+
+## 7. Open questions (ranked)
+
+1. **The injection/diffusion structure** (now the main limit on the null). It is dense, not sparse taps, keeps feeding the loops until about 0.4 s, and involves the 460 stage (all-pass-like).
+2. **What the "stochastic control" is.** The best candidate is now slow gain modulation on L (an L-only excess at loop-length-difference periodicities). There are no repeat captures; use library duplicates, joint fits and within-IR linewidth (research §7.2b).
+3. **Exact step tables** for RT, LF, HF, AMPL and LP; the LF reference frequency (50 or 250 Hz); the HF ×1.0 behaviour.
+4. **Loop sets and cluster patterns for M and L.** The 1986 review says the early reflections differ per program.
+5. **Where the LP sits**, and the filter types and order of the loop filters (from LF/HF sweeps).
+6. **Fixed-point details** (rounding/truncation, coefficient grid), needed for bit-exactness.
+7. **N's structure** (FIR against truncated loops; how reversal works).
+
+## 8. Source index
+
+- **Documents:**
+  - data sheet (your PDF; emt-archiv.de);
+  - manual pp. 65–74 (remote boards);
+  - parameter card (studiorepair.com);
+  - Studio Magazin 96 and 99 (1986);
+  - EMT Courier (Jul 1985);
+  - EMT 252 brochure;
+  - TI TMS32010 User's Guide (1985);
+  - US 4,181,820 (the EMT 250 patent).
+- **Photos and video:**
+  - studiorepair.com internals gallery;
+  - panel photos;
+  - two CLA setting images;
+  - Foleytronics video PZj4ZSpi9P8.
+- **Measurements:**
+  - `analysis/shortRT/summary.json`;
+  - `tools/topology_tests.py`;
+  - `docs/model_s_results.md`;
+  - harness on the synthetic library.

@@ -1,0 +1,50 @@
+{
+  "fs_dev_num": 2400000,
+  "fs_dev_den": 91,
+  "_fs_dev_note": "19.2 MHz / 728 = 26373.626 Hz, measured from the eugtone IR",
+  "reference_kernel": "ref/kernel_eugtone_96k.npz",
+  "default_lr_offset_us": 18.6,
+  "analysis_window_s": 3.0,
+  "cluster_templates": {
+    "L": {"offsets": [0, 54, 194, 288], "signs": [1, 1, 1, -1]},
+    "R": {"offsets": [0, 143, 194, 353], "signs": [1, 1, -1, 1]}
+  },
+  "reference_unit": {
+    "_note": "Measured from eugtone_EMT246_CLA_shortRT.wav (CLA's unit, captured by eugtone).",
+    "lr_offset_us": 18.6,
+    "capture_clock_ppm": -99.2,
+    "noise_L_minus_R_db": 6.6
+  },
+  "known_loopsets": {
+    "S": [1321, 1389, 1461, 1587]
+  },
+  "parameters": {
+    "_note": "Front panel (remote EMT 246 S): LOWPASS f(kHz); REFLECTIONS DELAY(ms) / AMPL.(%); DECAY LFx / RT(s) / HFx. Step counts from the brochure.",
+    "rt":    {"label": "RT (s)",       "steps_per_program": 16, "ranges": {"S": [0.2, 2.5], "M": [0.5, 5.0], "L": [2.0, 20.0]}, "scale": "log",    "rel_tol": 0.025, "neutral": null},
+    "lf":    {"label": "LF x",         "steps": 16, "range": [0.1, 2.0],  "scale": "lin", "rel_tol": 0.07, "neutral": 1.0},
+    "hf":    {"label": "HF x",         "steps": 10, "range": [0.1, 1.0],  "scale": "lin", "rel_tol": 0.07, "neutral": 1.0},
+    "amp":   {"label": "AMPL (%)",     "steps": 11, "range": [0, 100],    "scale": "lin", "abs_tol_db": 0.6, "neutral": 0},
+    "delay": {"label": "DELAY (ms)",   "steps": 1000, "range": [0, 999],  "scale": "lin", "abs_tol": 0.3, "neutral": 0},
+    "lp":    {"label": "f (kHz)",      "steps": 8,  "range": [2, 12],     "scale": "lin", "rel_tol": 0.08, "neutral": 12}
+  },
+  "planned_sets": {
+    "_note": "Discovery study section 6. 'vary' is swept with everything else at neutral (rt is free unless stated).",
+    "core_rt":   {"programs": ["S", "M", "L"], "vary": "rt",    "need": 16},
+    "lf_law":    {"programs": ["S", "M", "L"], "vary": "lf",    "need": 16},
+    "hf_law":    {"programs": ["S", "M", "L"], "vary": "hf",    "need": 10},
+    "cluster":   {"programs": ["S", "M", "L"], "vary": "amp",   "need": 3},
+    "lowpass":   {"programs": ["S"],           "vary": "lp",    "need": 8},
+    "predelay":  {"programs": ["S"],           "vary": "delay", "need": 3}
+  },
+  "naming": [
+    {
+      "name": "synthetic-test",
+      "regex": "EMT246_(?P<program>[SMLN])_RT(?P<rt>[\\d.]+)_LF(?P<lf>[\\d.]+)_HF(?P<hf>[\\d.]+)_D(?P<delay>\\d+)_A(?P<amp>\\d+)(?:_LP(?P<lp>\\d+))?"
+    },
+    {
+      "name": "program-words",
+      "regex": "(?P<program>short|med(?:ium)?|long|non[- _]?lin)",
+      "map": {"program": {"short": "S", "med": "M", "medium": "M", "long": "L", "nonlin": "N", "non-lin": "N", "non lin": "N", "non_lin": "N"}}
+    }
+  ]
+}
