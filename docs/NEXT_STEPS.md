@@ -86,9 +86,14 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 `tools/analog/` simulates the transcribed input filter (7 246 131) and output filter (7 246 130) and compares them with a kernel; `EMT246_unit_facts.md` §2b has the details.
 
 - Chain = input filter (elliptic, 12.2 kHz, with a +5 dB HF boost) × output filter (elliptic, flat to 11 kHz) × **the output S&H lag: a discrete one-pole at the device rate, `y[n] = y[n−1] + (1−p)(x[n] − y[n−1])`, p = 0.325 (CLA) / 0.301 (Tomkin), 0.11 dB rms over 0.5–11 kHz**. p is set by a trimmer (P202), so it is a per-unit parameter.
-- Use it as the analogue stage when fitting the digital model, with p (and a small skirt shift, about 0.2 % in frequency) free per unit. This separates algorithm from analogue and makes the L/R and noise-floor questions cleaner.
-- Open: the input-side integrate/hold window (board 121, pp. 41–43), the finite-GBW question (ideal op-amps fit better than 3–5 MHz GBW models), and the unit-to-unit meaning of p.
-- **When the analogue gaps matter:** not before S's held-out nulls reach about −40 dB. Then they set the band edges: the worst bands now are 63 Hz (−37/−41 dB) and 8 kHz (−42/−40 dB) at 50–300 ms (`model_s_results.md` §9.3). To do then: the origin of the fitted sub-20 Hz high-pass (the schematic's coupling corners are all below 1 Hz) and the input integrate/hold window (pp. 41–43). Converter nonlinearity is not needed (THD ≤ 0.03 % = −70 dB).
+- Use it as the analogue stage when fitting the digital model, with p free per unit. A skirt shift is optional: it fits **+0.25 % (CLA) and −0.44 % (Tomkin)** and helps 11–12.3 kHz only at a 0.15–0.2 dB cost at 4–11 kHz (`analog_results.md` §2.3). This separates algorithm from analogue and makes the L/R and noise-floor questions cleaner.
+- **High-pass (closed, `analog_results.md` §3):** use the unit's coupling corners **3.35, 0.72, 0.23, 0.16 Hz** (fixed; the 3.35 Hz is C106/R117 on the input board) **plus one per-capture-chain term: Tomkin + 1.8 Hz (one corner), CLA + 2 × 6.65 Hz**. Not 15 + 15 Hz: that form is −14 dB (CLA) / −8.6 dB (Tomkin) wrong in the 63 Hz octave, which only a long free FIR hides. Expect the 63 Hz band to improve once a compact model uses the measured form (untested). For the plugin, only the unit's corners belong in the emulation.
+- **Input integrate/hold (closed, `analog_results.md` §2):** a leaky integrator, critically damped at τ = 1 µs, in a 9.1 µs window (p. 39 timing plot); −0.05 dB at 12 kHz. Available as `compare_kernel.py --input-sh` / `sample_hold.input_sh`, but not needed (≤ 0.02 dB in any band). It does not explain the skirt.
+- Open:
+  - the output staircase's zero-order hold is physically present but fits worse than the default (0.18–0.35 dB against 0.11 dB, `--zoh`). So p looks like an effective parameter, and something at 4–11 kHz (pre-emphasis transcription or op-amp model) is 0.2–0.4 dB off (`analog_results.md` §2.5);
+  - the per-section skirt shape (needs a longer kernel or a time-domain fit);
+  - the unit-to-unit meaning of p (output τ = (R203 + 2·P202)·C205, corrected).
+- **When the analogue gaps matter:** not before S's held-out nulls reach about −40 dB. Then they set the band edges: the worst bands now are 63 Hz (−37/−41 dB) and 8 kHz (−42/−40 dB) at 50–300 ms (`model_s_results.md` §9.3). The high-pass and the input window are now closed (above). What is left for the band edges is the ZOH/4–11 kHz question and the skirt. Converter nonlinearity is not needed (THD ≤ 0.03 % = −70 dB).
 
 ---
 

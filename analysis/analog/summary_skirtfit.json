@@ -1,0 +1,72 @@
+{
+ "ideal": {
+  "lag_corner_hz": 5936,
+  "rms_db_0p5_to_11k": 0.311,
+  "through_like": {
+   "10 kHz": -0.62,
+   "12 kHz": -5.14
+  },
+  "sandh_pole": 0.297,
+  "sandh_rms_db_0p5_to_11k": 0.359,
+  "sandh_bands_rms_db": {
+   "0.5-1 kHz": 0.051,
+   "1-2 kHz": 0.012,
+   "2-4 kHz": 0.078,
+   "4-8 kHz": 0.391,
+   "8-11 kHz": 0.508,
+   "11-12.3 kHz": 0.824
+  }
+ },
+ "GBW 3 MHz": {
+  "lag_corner_hz": 5340,
+  "rms_db_0p5_to_11k": 0.174,
+  "through_like": {
+   "10 kHz": -0.23,
+   "12 kHz": -1.22
+  },
+  "sandh_pole": 0.418,
+  "sandh_rms_db_0p5_to_11k": 0.877,
+  "sandh_bands_rms_db": {
+   "0.5-1 kHz": 0.11,
+   "1-2 kHz": 0.185,
+   "2-4 kHz": 0.679,
+   "4-8 kHz": 1.073,
+   "8-11 kHz": 0.914,
+   "11-12.3 kHz": 0.982
+  }
+ },
+ "GBW 5 MHz": {
+  "lag_corner_hz": 5565,
+  "rms_db_0p5_to_11k": 0.2,
+  "through_like": {
+   "10 kHz": -0.39,
+   "12 kHz": -2.89
+  },
+  "sandh_pole": 0.37,
+  "sandh_rms_db_0p5_to_11k": 0.407,
+  "sandh_bands_rms_db": {
+   "0.5-1 kHz": 0.08,
+   "1-2 kHz": 0.105,
+   "2-4 kHz": 0.352,
+   "4-8 kHz": 0.463,
+   "8-11 kHz": 0.46,
+   "11-12.3 kHz": 0.488
+  }
+ },
+ "kernel": {
+  "10 kHz": -0.14,
+  "12 kHz": -1.99
+ },
+ "manual_through_spec_db": {
+  "10 kHz": "-0.5 to -1",
+  "12 kHz": -2.5
+ },
+ "options": {
+  "input_sh": false,
+  "fit_ti": false,
+  "skirt_shift": false,
+  "zoh": false,
+  "ron_ohm": 0.0,
+  "fit_hi_hz": 12300.0
+ }
+}
