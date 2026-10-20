@@ -61,10 +61,18 @@ def cluster_taps(h, thresh=0.5, span=1200):
 
 
 # ---------- 4. decay ----------
+def _boxcar_same(e, w):
+    """np.convolve(e, ones(w)/w, "same") in O(n) (a running sum) instead of O(n*w)."""
+    n = len(e)
+    c = np.concatenate(([0.0], np.cumsum(e)))
+    k = np.arange((w - 1) // 2, (w - 1) // 2 + n)       # "same" window of the full convolution
+    return (c[np.minimum(k + 1, n)] - c[np.maximum(k + 1 - w, 0)]) / w
+
+
 def edc(s, fs, noise_ms=150):
     e = s ** 2
     nf = np.mean(e[-int(noise_ms / 1000 * fs):])
-    w = int(0.01 * fs); sm = np.convolve(e, np.ones(w) / w, "same")
+    w = int(0.01 * fs); sm = _boxcar_same(e, w)
     above = np.where(sm > nf * 2)[0]
     cut = above[-1] if len(above) else len(e)
     ee = np.clip(e[:cut] - nf, 0, None)

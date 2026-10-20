@@ -11,7 +11,8 @@ import soundfile as sf
 
 from core import Kernel, fs_dev
 
-LABELS = ["label_program", "label_rt", "label_lf", "label_hf", "label_delay", "label_amp", "label_lp"]
+LABELS = ["label_program", "label_rt", "label_lf", "label_hf", "label_delay", "label_amp", "label_lp",
+          "label_span", "label_early", "label_late"]
 MEASURED = {"rt": "rt_mid", "lf": "lf_ratio", "hf": "hf_ratio", "amp": "cluster_gain_db",
             "delay": "tap0_ms", "lp": "lp_corner_khz"}
 
@@ -67,6 +68,7 @@ def classify_pair(r, noise_ref_db, same_rate=True):
     if r["residual_db"] < noise_ref_db + 6:
         # across sample rates, a vendor's SRC passband ripple can leave a residual near the noise
         # floor, so a resampled copy and an independent capture can't be told apart this way
+        # (unless the vendor confirms each rate was captured separately: config separate_rate_captures)
         return "repeat" if same_rate else "repeat_or_resampled"
     if r["residual_db"] < -20:
         return "near"
@@ -100,7 +102,7 @@ def candidate_pairs(df):
     return sorted(pairs)
 
 
-def compare_pairs(df, sigs):
+def compare_pairs(df, sigs, separate_rate_captures=False):
     rows = []
     lab = label_key(df)
     for i, j in candidate_pairs(df):
@@ -112,7 +114,8 @@ def compare_pairs(df, sigs):
         rows.append({"a": df.at[i, "relpath"], "b": df.at[j, "relpath"], "ia": i, "ib": j,
                      "fs_a": df.at[i, "fs"], "fs_b": df.at[j, "fs"], "same_label": same_label,
                      "noise_ref_db": noise_ref,
-                     "class": classify_pair(r, noise_ref, df.at[i, "fs"] == df.at[j, "fs"]), **r})
+                     "class": classify_pair(r, noise_ref, df.at[i, "fs"] == df.at[j, "fs"] or
+                                               (separate_rate_captures and same_label)), **r})
     return pd.DataFrame(rows)
 
 

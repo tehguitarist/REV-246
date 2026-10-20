@@ -3,7 +3,7 @@
 Goal: recreate the EMT 246 digital reverb's S/M/L programs (Non-Lin as a bonus) as an efficient, ideally bit-accurate model, working **only from impulse responses and documents**. There is no hardware access.
 
 **Start here:**
-1. `docs/NEXT_STEPS.md`: status, what to do when the Tomkin IR library arrives, and every open check item.
+1. `docs/NEXT_STEPS.md`: status, the Tomkin/Kienast IR library intake, and every open check item.
 2. `docs/EMT246_unit_facts.md`: everything known about how the unit works, with confidence and sources.
 
 ## File map
@@ -27,6 +27,7 @@ Goal: recreate the EMT 246 digital reverb's S/M/L programs (Non-Lin as a bonus) 
 | `tools/deconv_grid.py` | Recovers the device-rate IR (19.2 MHz/728 ≈ 26,373.6 Hz) from a capture |
 | `tools/topology_tests.py` | Topology tests T1/T2 against synthetic controls |
 | `tools/model_s.py` | Program S model and studies. Stages: default, `--tighten`, `--tail`, `--diffuser`, `--allpass`, `--groups`, `--stochastic` |
+| `tools/analog/` | Analogue chain: `netlists.py` (input 7 246 131 and output 7 246 130 filters transcribed from the service manual), `mna.py` (AC solver, ideal or finite-GBW op-amps), `compare_kernel.py` (vs the reference kernel → `analysis/analog/`) |
 | `tools/harness/` | IR-library harness, stages A–C: `run.py` (CLI), `core.py` (per file), `library.py` (library level), `naming.py`, `report.py`, `synth.py` (synthetic test library), `config.json` (constants, templates, naming patterns) |
 | `tests/test_harness.py` | End-to-end harness tests: `.venv/bin/python -m pytest tests -q` |
 
@@ -34,12 +35,13 @@ Goal: recreate the EMT 246 digital reverb's S/M/L programs (Non-Lin as a bonus) 
 
 | Path | Contents |
 |---|---|
+| `irs/EMT 246 captures/` (gitignored; Tomkin Mastering, no redistribution of the files) | The Tomkin/Kienast library: 48 kHz and 96 kHz, `Short RT`, `Med RT`, `Long RT`, `Non-Lin`, plus its README, the operation card scan and a front-panel photo. Naming scheme in `NEXT_STEPS.md` §2.1 |
 | `irs/eugtone_EMT246_CLA_shortRT.wav` | The one hardware IR so far: CLA's setting, captured by eugtone (S, LP 12, DELAY 10, AMPL 80, LF 1.0, RT 1.0, HF 0.9). Third-party |
 | `ref/kernel_eugtone_96k.npz` | Reference analogue-chain kernel (one cluster tap) |
 | `analysis/shortRT/` | `analyze_ir.py` output for the CLA IR. `h_dev.npy` is regenerated, not committed |
 | `analysis/model_s/`, `analysis/model_s_*.log` | Model study outputs (JSON, params, plots, logs) |
 | `analysis/library/synthetic/` | Harness run on the synthetic test library |
-| `sources/` (local only, gitignored) | Third-party primary sources: data sheet, 252 brochure, catalogues, 245 service manual, EMT Courier, EMT 250 patent, Studio Magazin pages, magazine extracts, studiorepair internal photos. See `sources/README.md` |
+| `sources/` (local only, gitignored) | Third-party primary sources: data sheet, 252 brochure, catalogues, 245 service manual, **246S service manual (scans)**, EMT Courier, EMT 250 patent, Studio Magazin pages, magazine extracts, studiorepair internal photos. See `sources/README.md` |
 
 ## Setup and common commands
 
@@ -48,6 +50,8 @@ python3 -m venv .venv && .venv/bin/pip install numpy scipy soundfile matplotlib 
 .venv/bin/python tools/analyze_ir.py irs/<file>.wav --out analysis/<name>      # one IR, deep dive
 .venv/bin/python tools/harness/run.py <library_dir> --templates              # inspect naming
 .venv/bin/python tools/harness/run.py <library_dir> --name <lib>             # whole library, stages A–C
+.venv/bin/python tools/harness/run.py "irs/EMT 246 captures" --name tomkin --separate-rates   # both rates, separate captures
+.venv/bin/python tools/harness/run.py "irs/EMT 246 captures" --name trial --separate-rates --sample 60   # quick spread-out subset
 .venv/bin/python tools/model_s.py [--tighten|--tail|--diffuser|--allpass|--groups|--stochastic]
 .venv/bin/python -m pytest tests -q
 ```

@@ -1,6 +1,6 @@
 # EMT 246 analysis harness: test specification
 
-**Goal:** turn a large third-party IR library (primarily Tomkin Mastering, 2,400+ settings, 96 kHz) into a verified structural model of programs S/M/L. There is no ROM and no mainframe schematics, so the IRs are the only ground truth. The harness has two jobs:
+**Goal:** turn a large third-party IR library (primarily Tomkin Mastering, 2,400+ settings, 96 kHz) into a verified structural model of programs S/M/L. There is no ROM (the service manual's board schematics are now available but do not contain the algorithm) and no mainframe schematics, so the IRs are the only ground truth. The harness has two jobs:
 
 1. **Distrust the data first:** check labels, normalisation, alignment, clocks and capture artefacts.
 2. **Then extract the structure,** and prove it holds across *all* settings, not just the ones it was fitted on.

@@ -4,6 +4,8 @@ Usage:
   .venv/bin/python tools/harness/run.py <library_dir> --name tomkin            # full run
   .venv/bin/python tools/harness/run.py <library_dir> --templates               # show naming scheme
   .venv/bin/python tools/harness/run.py <library_dir> --name t --limit 50       # quick trial
+  .venv/bin/python tools/harness/run.py "irs/EMT 246 captures" --name tomkin --separate-rates   # both rates at once
+  .venv/bin/python tools/harness/run.py "irs/EMT 246 captures" --name trial --separate-rates --sample 60   # 60 settings x 2 rates
 
 Outputs go to analysis/library/<name>/ (see report.md there). Per-file results are cached, so a
 re-run after editing the naming patterns or library-stage code only redoes the cheap parts.
@@ -11,6 +13,7 @@ re-run after editing the naming patterns or library-stage code only redoes the c
 import argparse
 import json
 import os
+import re
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
@@ -35,6 +38,17 @@ def discover(root):
                 p = os.path.join(d, f)
                 out.append((p, os.path.relpath(p, root)))
     return sorted(out, key=lambda t: t[1])
+
+
+def sample_settings(files, n):
+    """Keep every file of n settings spread evenly over the sorted settings (a setting = the path with its
+    sample-rate folder removed, so both rates of a setting are kept together for the cross-rate tests)."""
+    key = lambda rel: re.sub(r"(^|[/\\\\])\d+\s*k(hz)?(?=[/\\\\])", r"\1", rel, flags=re.IGNORECASE).lstrip("/\\")
+    keys = sorted({key(r) for _, r in files})
+    if n >= len(keys):
+        return files
+    pick = {keys[int(i)] for i in np.linspace(0, len(keys) - 1, n)}
+    return [f for f in files if key(f[1]) in pick]
 
 
 def _work(args):
@@ -75,11 +89,20 @@ def main():
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--no-refine", action="store_true", help="skip pass 2 with library-derived kernels")
+    ap.add_argument("--separate-rates", action="store_true",
+                    help="same-label files at different sample rates are separate captures (sets config separate_rate_captures)")
+    ap.add_argument("--sample", type=int, default=None, metavar="N",
+                    help="only N settings, spread evenly, with every sample rate of each (use for quick cross-rate trials)")
     ap.add_argument("--templates", action="store_true", help="print filename templates and exit")
     a = ap.parse_args()
 
     cfg = load_config(a.config)
-    files = discover(a.library)[: a.limit]
+    if a.separate_rates:
+        cfg["separate_rate_captures"] = True
+    files = discover(a.library)
+    if a.sample:
+        files = sample_settings(files, a.sample)
+    files = files[: a.limit]
     if a.templates:
         for t, n, ex in name_templates([r for _, r in files]):
             print(f"{n:6d}  {t}\n        e.g. {ex}")
@@ -119,7 +142,7 @@ def main():
     sig = dict(enumerate(sigs))
 
     # A5–A7
-    pairs = lib.compare_pairs(df, sig)
+    pairs = lib.compare_pairs(df, sig, cfg.get("separate_rate_captures", False))
     pf = lib.pair_flags(df, pairs) if len(pairs) else {}
     for i, extra in pf.items():
         df.at[i, "flags"] = sorted(set(df.at[i, "flags"]) | set(extra))

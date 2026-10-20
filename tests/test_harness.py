@@ -91,3 +91,14 @@ def test_clock_and_latency(run):
     assert abs(lib["latency"]["slope"] - 1) < 0.001
     assert abs(lib["latency"]["intercept_ms"] + 20.0) < 0.1  # synthetic labels say D30, first tap at ~10 ms
     assert os.path.exists(os.path.join(out, "report.md"))
+
+
+def test_kienast_naming():
+    sys.path.insert(0, os.path.join(ROOT, "tools", "harness"))
+    from core import load_config
+    from naming import parse_name
+    cfg = load_config()["naming"]
+    s = parse_name("96kHz/Long RT/12_0_80_08_100_01_dc.wav", cfg)
+    assert (s["label_program"], s["label_amp"], s["label_lf"], s["label_rt"], s["label_hf"]) == ("L", 80, 0.8, 10.0, 0.1)
+    n = parse_name("48kHz/Non-Lin/12_0_05_-30_20_dc.wav", cfg)
+    assert (n["label_program"], n["label_span"], n["label_early"], n["label_late"]) == ("N", 0.5, -3.0, 2.0)

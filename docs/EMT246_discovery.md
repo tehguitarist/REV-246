@@ -553,7 +553,7 @@ Because the parameters are discrete and the structure looks separable, a few hun
 - **GroupDIY "EMT 246 schematic" thread (2017):** https://groupdiy.com/threads/emt-246-schematic.65233/
   - It linked a full service manual on mega.nz, which is now dead.
   - It also points to schematics posted by "Mr. Harrison" on Gearspace: https://gearspace.com/threads/whats-a-good-price-for-an-emt-246-with-remote-these-days.982513/
-  - **Resolved:** the manual photos used in this study are the ones Mr. Harrison posted there. They cover the remote/panel boards (pp. 65–74) only. No mainframe DSP-board schematics are known to exist publicly.
+  - **Update Oct 2026: the user obtained the full EMT 246S service manual (see `sources/README.md`), including mainframe board schematics.** Earlier: the manual photos used in this study are the ones Mr. Harrison posted there. They cover the remote/panel boards (pp. 65–74) only. No mainframe DSP-board schematics are known to exist publicly.
 - **Other leads:**
   - The 2020 Reverb seller "MadSparrow Shop" (Guillaume) had a copy of the service manual.
   - The EMT 250 service manual is public: https://audiocircuit.dk/downloads/emt/EMT-250-rev-sm.pdf. It is useful for the analogue and converter design lineage.

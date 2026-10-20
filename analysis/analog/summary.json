@@ -1,0 +1,34 @@
+{
+ "ideal": {
+  "lag_corner_hz": 5936,
+  "rms_db_0p5_to_11k": 0.311,
+  "through_like": {
+   "10 kHz": -0.62,
+   "12 kHz": -5.14
+  }
+ },
+ "GBW 3 MHz": {
+  "lag_corner_hz": 5340,
+  "rms_db_0p5_to_11k": 0.174,
+  "through_like": {
+   "10 kHz": -0.23,
+   "12 kHz": -1.22
+  }
+ },
+ "GBW 5 MHz": {
+  "lag_corner_hz": 5565,
+  "rms_db_0p5_to_11k": 0.2,
+  "through_like": {
+   "10 kHz": -0.39,
+   "12 kHz": -2.89
+  }
+ },
+ "kernel": {
+  "10 kHz": -0.14,
+  "12 kHz": -1.99
+ },
+ "manual_through_spec_db": {
+  "10 kHz": "-0.5 to -1",
+  "12 kHz": -2.5
+ }
+}
