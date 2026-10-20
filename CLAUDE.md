@@ -10,7 +10,11 @@ The full file map is in `README.md`.
 ## Hard constraints
 
 - **No hardware access, ever.** There is no unit, no ROM/PROM dump and no new captures; repeat captures of a setting only exist where libraries already contain them. Evidence comes from existing IR libraries, documents and photos. Don't propose capture sessions or ROM dumps.
-- **Accuracy bar:** the user wants a null of −50 to −60 dB against hardware IRs at minimum, ideally near bit-identical. Always report nulls:
+- **Accuracy bar:** a null of **−50 dB minimum for every program** against hardware IRs, wherever a static IR can support it; ideally −60 dB or near bit-identical. Where it can't, **accuracy over null** (`docs/NEXT_STEPS.md` §2):
+  - **S:** −50 dB minimum, held out, up to each file's fade, with a clock ratio fitted per capture (repeat captures agree to about −57 dB, so about −60 dB is the most Tomkin can confirm). Stretch proof: about −70 dB on the CLA IR's R channel in its first ~300 ms (noise floor −76 dB there).
+  - **M and L:** −50 dB minimum on the cluster and the gap before the reverb starts. Their reverb is time-variant (two captures of one setting agree only to −27…−38 dB in the first 0.15 s), so for the reverb prove accuracy instead: the structure, per-band decay and spectrum, and the capture-to-capture decorrelation curve (`docs/ml_structure.md` §4–5).
+
+  Always report nulls:
   - as **held-out** predictions (time windows or settings not used in the fit);
   - with **excess over the noise floor**;
   - with the parameter count.

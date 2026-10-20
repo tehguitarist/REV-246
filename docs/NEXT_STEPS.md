@@ -45,6 +45,16 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 - **Work on the 96 kHz set only.** The 48 kHz files are the same capture and give no held-out evidence. Held-out tests must be other settings (or the CLA IR, a different unit), never the other rate.
 - **RT comes from the label, not the file** (files are trimmed and faded). The library shows no capture noise: tails reach the 24-bit floor (about −88 dB below the 50–300 ms reverb) unless Tomkin's fade comes first, which it usually does (`ml_structure.md` §4.2). CLA's floor is −71/−77 dB on the same reference.
 - **Fit a clock ratio per capture** when nulling against library files (a few ppm; `ml_structure.md` §4.1). Without it, S repeat captures null only to −34 dB at 0.6–1 s; with it, to about −57 dB. That −57 dB is the most any model can demonstrate against one Tomkin capture.
+- **Null target (decided October 2026):** **−50 dB minimum for every program wherever a static IR can support it; otherwise accuracy over null.**
+
+  | Program, part | Target | Why this is the limit |
+  |---|---|---|
+  | **S**, up to each file's fade | **−50 dB minimum** held out, clock ratio fitted per capture; about −60 dB is "at the measurement ceiling" | Repeat captures agree to about −57 dB with the clock fitted (`ml_structure.md` §4.1); a perfect model against one capture should land about 3 dB deeper |
+  | **S against CLA**, R, first ~300 ms | about **−70 dB**, the cross-unit stretch proof (digital part fitted on Tomkin only; only per-unit analogue parameters fitted on CLA, counted) | CLA's noise-limited null is −76 dB there, −54 dB by 400–600 ms; L is noisier |
+  | **M and L**, cluster and the gap before the reverb (about 18 ms / 36 ms) | **−50 dB minimum** | The cluster is deterministic |
+  | **M and L**, reverb | **Accuracy over null** (below) | Time-variant: two captures agree only to −27…−38 dB at 0.05–0.15 s (M) and −3 to −7 dB after 1 s, so no model can reach −50 dB against one capture |
+
+  **M/L accuracy metrics:** (1) structure: the five-tap recursion, the cluster and onsets, and the mechanism of the stochastic control; (2) per-band decay and spectrum across the library settings; (3) **the capture-to-capture decorrelation curve**: the model, rendered twice with different random states through a simulated sweep, must differ the way Tomkin's AMPL pairs do (−14 → −9 → −7 dB over 0.15–1 s, flat across frequency). Stretch only: if the stochastic control is a deterministic pseudo-random generator, one seed per capture could restore waveform nulls; that also needs the (unknown) sweep simulated.
 - **Report nulls** held out, with excess over the noise floor and the parameter count (`CLAUDE.md`). Beware that the library's tails are faded or gated, so "noise floor" there is processing, not the unit.
 - **The harness pair classes are unreliable** (`library_notes.md` §3); use `crossrate.csv` for anything cross-rate.
 - **Cross-unit check is available:** the CLA IR (S, LP 12, DELAY 10, AMPL 80, LF 1.0, RT 1.0, HF 0.9) is a different unit; 190 library files share its exact S loop set, so the firmware matches. The nearest library settings (S, LF 1.0, RT 1.0, HF 1.0, AMPL 90) are not identical, so use it as a structural check (spec G7), not a null.
@@ -64,7 +74,7 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 | Q6 | **HF ×1.0: residual fixed damping?** | HF sweeps including the max step (S has 1.0, M 0.9, L 1.0) |
 | Q7 | **Are the loop filters shared or length-scaled? First order, or higher?** | HF 0.1 and LF 2 extremes (`model_s_results` §3.2) |
 | Q8 | **Is the 460 stage parallel or series? Does its gain vary with any control?** | Across RT and HF steps |
-| Q9 | **Exact coefficients (Q15 snapping)** for bit-exactness | Joint fits across many IRs; one IR resolves loop gains to about ±8 LSB |
+| Q9 | **Exact coefficients (Q15 snapping)** for bit-exactness | Joint fits across many IRs; one IR resolves loop gains to about ±8 LSB. **Needed for −50 dB in tails, not only for bit-exactness:** coefficient errors compound every loop pass (±8 LSB at about 50 passes/s ≈ 1.2 % after 1 s, about −38 dB) |
 | Q10 | **Fixed-point behaviour** (16-bit storage; truncation or rounding) | **Target: the REVERB program's noise is 15 dB above DELAY's** (73 vs 88 dB re nominal, unweighted rms; nominal = about −6 dBFS). Simulate truncation against rounding in the loops and compare the added noise; the TMS32010 has no rounding mode, so truncation is likely (**H**). Only meaningful once the model nears −60 dB |
 | Q11 | **Absolute timing: pre-delay = DELAY exactly?** | Not testable from the library (DELAY is always 0); only the CLA IR has a delay (10 ms) |
 | Q12 | **The LP's type and order** (downstream, digital?) | No library data (LP always 12). The through path and the kernel agree at 12 kHz, so the LP at its 12 kHz step adds little. Other libraries (§7) |
@@ -78,18 +88,20 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 - Chain = input filter (elliptic, 12.2 kHz, with a +5 dB HF boost) × output filter (elliptic, flat to 11 kHz) × **the output S&H lag: a discrete one-pole at the device rate, `y[n] = y[n−1] + (1−p)(x[n] − y[n−1])`, p = 0.325 (CLA) / 0.301 (Tomkin), 0.11 dB rms over 0.5–11 kHz**. p is set by a trimmer (P202), so it is a per-unit parameter.
 - Use it as the analogue stage when fitting the digital model, with p (and a small skirt shift, about 0.2 % in frequency) free per unit. This separates algorithm from analogue and makes the L/R and noise-floor questions cleaner.
 - Open: the input-side integrate/hold window (board 121, pp. 41–43), the finite-GBW question (ideal op-amps fit better than 3–5 MHz GBW models), and the unit-to-unit meaning of p.
+- **When the analogue gaps matter:** not before S's held-out nulls reach about −40 dB. Then they set the band edges: the worst bands now are 63 Hz (−37/−41 dB) and 8 kHz (−42/−40 dB) at 50–300 ms (`model_s_results.md` §9.3). To do then: the origin of the fitted sub-20 Hz high-pass (the schematic's coupling corners are all below 1 Hz) and the input integrate/hold window (pp. 41–43). Converter nonlinearity is not needed (THD ≤ 0.03 % = −70 dB).
 
 ---
 
 ## 5. Suggested order of work
 
 1. ~~**M and L structure (Q3).**~~ Done (`ml_structure.md`).
-2. **Decide the null target** with the measured ceilings: S about −57 dB against Tomkin (clock fitted, up to each file's fade), −60 dB or better against CLA only in its first ~300 ms; M/L tails not repeatable past the first recirculation (`ml_structure.md` §4–5).
+2. ~~**Decide the null target.**~~ Decided (§2): −50 dB minimum wherever a static IR supports it; accuracy over null for M/L reverb. No hardware work blocks the next step.
 3. **Path B generalisation on S (Q1)** at held-out settings, with the analogue stage from §4. If it holds, the same machinery applies to M and L.
 4. **Injection/read-out (Q2)** with the access-count constraint; joint fit across settings.
 5. **M/L time variance (Q3b)**, then the M/L loop gains and filters (Q4–Q7 for M/L) from the deterministic part.
 6. **Control laws (Q4–Q8)** from the fits.
-7. **Fixed-point noise (Q10)** and exactness (Q9) once nulls reach about −50 dB.
+7. **Exact coefficients (Q9) and the analogue band edges (§4)** once S's held-out nulls reach about −40 dB; both are needed for −50 dB in every band and in the tails. **Fixed-point noise (Q10)** after that.
+   - Alongside Q3b (step 5): read the unread service-manual pages (processor B, the control-CPU side) for how and how often the tap-offset memory is rewritten; that bounds the M/L modulation rate.
 8. **Non-Lin (§6)** last.
 
 ---
