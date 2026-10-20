@@ -8,6 +8,14 @@ Labels: **[M]** measured here, **[A]** assumption, **[H]** hypothesis.
 
 ![model vs measured](../analysis/model_s/model_s.png)
 
+> **Current status (after round 13):** §1–7 describe the first model (B). The current state is in §8–13:
+> - best nulls: cluster −50/−52 dB; held-out 400–600 ms about −28 dB; R tail predicted within 4–6 dB of noise after 0.45 s (§10.1);
+> - diffuser found (§11);
+> - group-sparse and long-line taps are negative (§12);
+> - time variance: R is LTI within about 3 %, L fits about 1 % read-out jitter, and the late input is withdrawn (§13).
+>
+> Open items are listed in `NEXT_STEPS.md`.
+
 ## 1. Summary
 
 - **What fits.**

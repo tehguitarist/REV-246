@@ -1,5 +1,13 @@
 # EMT 246 algorithm research: lineage, classic structures, and a recreation plan
 
+> **Status note (Oct 2026):** the hypotheses here were later tested against the CLA IR (`model_s_results.md` §8–13). Since then:
+> - a diffuser AP20 · AP72 · AP230 + comb460 has been found;
+> - randomised injection is ruled out;
+> - the "late input" is explained;
+> - the topology ranking in §7.1/§7.2a is out of date.
+>
+> Current facts are in `EMT246_unit_facts.md`.
+
 *Scope: what the literature, patents and documented hardware say about how the 246's S/M/L programs (and, more briefly, program N) were most likely built, and how to identify and fit a model from IRs at the device rate (fs = 19.2 MHz / 728 = 26,373.6 Hz). This document is a companion to `EMT246_discovery.md` and `analysis_harness_spec.md`.*
 
 **Labels used on every claim:**

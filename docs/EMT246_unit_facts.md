@@ -124,6 +124,8 @@ All of this is **H**, derived from the parts and TI timings.
 
 ## 7. Open questions (ranked)
 
+All of these need library IRs. The tests for each are in `NEXT_STEPS.md` §2.2.
+
 1. **The remaining injection/read-out structure.** Sparse fits plateau at about −23 dB where a matching synthetic reaches −46 dB, so something structural is still missing. The diffuser (AP20/72/230 + comb460) is found; the late input is explained.
 2. **What the "stochastic control" is.** Injection randomisation is ruled out (R is LTI to about 3 %). The remaining candidate is about 1 % slow gain jitter on L's read-out, or the capture chain. Library test: is it L-only and constant across captures?
 3. **Exact step tables** for RT, LF, HF, AMPL and LP; the LF reference frequency (50 or 250 Hz); the HF ×1.0 behaviour.

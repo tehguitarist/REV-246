@@ -1,5 +1,7 @@
 # EMT 246 reverb: discovery and viability study
 
+> **Status note (Oct 2026):** this is the original study, with corrections added inline. Current findings live in `EMT246_unit_facts.md`, and current status and next steps in `NEXT_STEPS.md`. Where they differ, those two win.
+
 *Scope: programs S/M/L (A/B/C in the brochure): RT, LF and HF decay, reflection cluster (delay and amplitude), and lowpass. Program E (the EMT 250 algorithm) and program D (delay/echo) are out of scope. Program N (Non-Lin) is an open scope question; see §9.*
 
 *Confidence labels used throughout:* **[confirmed]** means measured or printed in a primary source. **[strong]** means several independent measurements agree. **[hypothesis]** means it is consistent with the data but needs more IRs or documents. Every number from the single IR should be re-checked once more captures are available.
@@ -446,6 +448,8 @@ Because the parameters are discrete and the structure looks separable, a few hun
 
 ## 8. Recommended next steps
 
+> Superseded by `NEXT_STEPS.md`. Tomkin will supply **separately captured 96 kHz and 48 kHz** files, including complete Non-Lin. The list below is kept for history.
+
 1. **Buy the Tomkin library** (about €69, 2,400+ settings), plus any other 246 IRs available. Drop them in `irs/` and run `analyze_ir.py` on all of them.
    - The first questions to answer are: are the loop lengths the same across RT steps, and what are the loop sets for M and L?
 2. **Write a batch comparator.** It should line up loop sets, cluster patterns and decay laws across IRs and flag outliers.
@@ -458,7 +462,7 @@ Because the parameters are discrete and the structure looks separable, a few hun
 
 - ~~Is the panel photo the CLA setting?~~ No. A screenshot of CLA's unit (§3.2) shows a different setting: AMPL high, HF at max. Only the LED bars are readable, not the digits.
 
-- Is program **N (Non-Lin)** in scope? It uses different controls (early/late RT, span).
+- ~~Is program N in scope?~~ **Yes, as a bonus** after S/M/L (`NEXT_STEPS.md` §2.4).
 - ~~How was the eugtone capture aligned?~~ Unknown. This doesn't block anything: the harness recovers latency from the library itself by regressing first-tap time against the pre-delay setting (harness spec, B3).
 - Are there other EMT 246 IRs you own, and what metadata comes with them?
 
