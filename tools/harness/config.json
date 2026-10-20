@@ -5,7 +5,7 @@
   "reference_kernel": "ref/kernel_eugtone_96k.npz",
   "default_lr_offset_us": 18.6,
   "separate_rate_captures": false,
-  "_separate_rate_note": "true when the vendor confirms each sample rate was captured separately: same-label cross-rate pairs are then 'repeat', not 'repeat_or_resampled'. Set per run with a copy of this file via --config.",
+  "_separate_rate_note": "true only when each sample rate is a separate recording: same-label cross-rate pairs are then 'repeat', not 'repeat_or_resampled'. Keep false for the Tomkin library (one capture rendered at two rates, see docs/library_notes.md). Set per run with --separate-rates or a copy of this file via --config.",
   "analysis_window_s": 3.0,
   "cluster_templates": {
     "L": {"offsets": [0, 54, 194, 288], "signs": [1, 1, 1, -1]},

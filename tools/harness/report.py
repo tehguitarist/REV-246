@@ -24,7 +24,7 @@ FLAG_HELP = {
     "duplicate_file": "same capture as a same-label file at the same rate",
     "has_repeat_capture": "an independent capture of the same setting exists (useful for E1)",
     "unlabelled_duplicate_of_labelled_file": "no labels, but same content as a labelled file (labels can be inferred)",
-    "other_rate_version": "same setting exists at another sample rate (resampled copy or separate capture; not separable by residual)",
+    "other_rate_version": "same setting exists at another sample rate (resampled copy or separate capture; not separable by this residual, see tools/harness/crossrate.py)",
     "clock_outlier": "capture clock differs from the library median by > 30 ppm (different interface/session, or resampled)",
     "lr_offset_outlier": "L/R output offset differs from the library median by > 2 us",
 }

@@ -448,7 +448,7 @@ Because the parameters are discrete and the structure looks separable, a few hun
 
 ## 8. Recommended next steps
 
-> Superseded by `NEXT_STEPS.md`. Tomkin will supply **separately captured 96 kHz and 48 kHz** files, including complete Non-Lin. The list below is kept for history.
+> Superseded by `NEXT_STEPS.md` and `library_notes.md`. (Tomkin described the 96 kHz and 48 kHz files as separate recordings; the data show they are the same capture, `library_notes.md` §5.) The list below is kept for history.
 
 1. **Buy the Tomkin library** (about €69, 2,400+ settings), plus any other 246 IRs available. Drop them in `irs/` and run `analyze_ir.py` on all of them.
    - The first questions to answer are: are the loop lengths the same across RT steps, and what are the loop sets for M and L?
@@ -462,7 +462,7 @@ Because the parameters are discrete and the structure looks separable, a few hun
 
 - ~~Is the panel photo the CLA setting?~~ No. A screenshot of CLA's unit (§3.2) shows a different setting: AMPL high, HF at max. Only the LED bars are readable, not the digits.
 
-- ~~Is program N in scope?~~ **Yes, as a bonus** after S/M/L (`NEXT_STEPS.md` §2.4).
+- ~~Is program N in scope?~~ **Yes, as a bonus** after S/M/L (`NEXT_STEPS.md` §6).
 - ~~How was the eugtone capture aligned?~~ Unknown. This doesn't block anything: the harness recovers latency from the library itself by regressing first-tap time against the pre-delay setting (harness spec, B3).
 - Are there other EMT 246 IRs you own, and what metadata comes with them?
 

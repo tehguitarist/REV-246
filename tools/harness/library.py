@@ -68,7 +68,7 @@ def classify_pair(r, noise_ref_db, same_rate=True):
     if r["residual_db"] < noise_ref_db + 6:
         # across sample rates, a vendor's SRC passband ripple can leave a residual near the noise
         # floor, so a resampled copy and an independent capture can't be told apart this way
-        # (unless the vendor confirms each rate was captured separately: config separate_rate_captures)
+        # (unless each rate is known to be a separate recording: config separate_rate_captures; not the case for the Tomkin library, where crossrate.py shows one capture at both rates)
         return "repeat" if same_rate else "repeat_or_resampled"
     if r["residual_db"] < -20:
         return "near"

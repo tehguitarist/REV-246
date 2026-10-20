@@ -1,6 +1,6 @@
 # EMT 246 analysis harness: test specification
 
-**Goal:** turn a large third-party IR library (primarily Tomkin Mastering, 2,400+ settings, 96 kHz) into a verified structural model of programs S/M/L. There is no ROM (the service manual's board schematics are now available but do not contain the algorithm) and no mainframe schematics, so the IRs are the only ground truth. The harness has two jobs:
+**Goal:** turn a large third-party IR library (primarily Tomkin Mastering, 2,400+ settings, 96 kHz and 48 kHz; in hand: see `library_notes.md`) into a verified structural model of programs S/M/L. There is no ROM (the service manual's board schematics are now available but do not contain the algorithm) and no mainframe schematics, so the IRs are the only ground truth. The harness has two jobs:
 
 1. **Distrust the data first:** check labels, normalisation, alignment, clocks and capture artefacts.
 2. **Then extract the structure,** and prove it holds across *all* settings, not just the ones it was fitted on.
@@ -108,7 +108,7 @@ Separate structure. Tomkin covers it fully. It needs gate/envelope-shape analysi
 
 ## Implementation status (stages A–C)
 
-Implemented in `tools/harness/`; tested end to end by `tests/test_harness.py` (14 tests).
+Implemented in `tools/harness/`; tested end to end by `tests/test_harness.py` (15 tests).
 
 | Module | Contents |
 |---|---|
@@ -116,7 +116,8 @@ Implemented in `tools/harness/`; tested end to end by `tests/test_harness.py` (1
 | `naming.py` | C1 parser and the `--templates` helper |
 | `library.py` | A5–A7, B2–B5 and C3–C5 |
 | `report.py` | Writes `report.md` and the plots |
-| `run.py` | CLI |
+| `run.py` | CLI (`--sample`, `--separate-rates`) |
+| `crossrate.py` | Direct cross-rate comparison in the capture domain (the A7 result for the Tomkin library: the rates are the same capture, `library_notes.md` §5) |
 | `synth.py` | Builds the synthetic test library |
 | `config.json` | Device constants, cluster templates, known loop sets, parameter step tables, planned sets, naming patterns |
 
@@ -137,7 +138,7 @@ Implemented in `tools/harness/`; tested end to end by `tests/test_harness.py` (1
 - `coverage_<program>_rt_x_<param>.csv`
 - `labels_vs_measured.png`, `calibration.png`
 
-Per-file results are cached, so re-running after a config or naming change is fast. Speed is about 0.5 s per file per pass with all cores in use. The run makes two passes: one with the reference kernel, then one with the library's own kernel.
+Per-file results are cached, so re-running after a config or naming change is fast. Speed is about 0.1 s per file per pass with 10 cores. The run makes two passes: one with the reference kernel, then one with the library's own kernel.
 
 **Synthetic test library:** 25 files derived from the reference IR. Faults detected:
 - swapped and inverted channels;
@@ -151,7 +152,7 @@ Per-file results are cached, so re-running after a config or naming change is fa
 The delay regression recovers slope 1.000 and the −20 ms intercept; the cluster gain law is measured to 0.02 dB.
 
 **Deviations from the spec and known limits:**
-- **A7:** across sample rates, a resampled copy and an independent capture can't be told apart by residual, because SRC ripple sits near the noise floor. Such pairs are tagged `other_rate_version`. Use same-rate repeats for E1.
+- **A7:** across sample rates, a resampled copy and an independent capture can't be told apart by the harness's residual classes, because SRC ripple sits near the noise floor and tails may be zeroed. Use `crossrate.py` (estimation-error sharing, a fixed transfer function, out-of-band tail correlation). Result for the Tomkin library: the same capture at both rates. Such pairs are tagged `other_rate_version`. Use same-rate repeats for E1.
 - **Pair comparisons** run below about 10 kHz in the device domain. Above that, deconvolving the steep converter roll-off amplifies noise differently for each kernel.
 - **LF and HF ratios** are measured in a 44–88 Hz band and a 5.9–8.3 kHz band, not exactly at 50 Hz and 7 kHz. Compare against labels through the step tables rather than expecting equality. The per-harmonic method in D9 will be exact.
 - **Amplitude under normalisation:** if files look level-normalised (A6), amplitude falls back to `cluster_to_reverb_db`. That measure is confounded by the reverb settings, so C4 only compares it between files with the same RT/LF/HF labels.

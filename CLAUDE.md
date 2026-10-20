@@ -1,8 +1,9 @@
 # Agent guide: REV-246 (EMT 246 reverb reverse engineering)
 
 **Read first:**
-1. `docs/NEXT_STEPS.md`: current status and the open check items.
-2. `docs/EMT246_unit_facts.md`: the single source of truth for findings.
+1. `docs/NEXT_STEPS.md`: current status, working rules and the open questions.
+2. `docs/library_notes.md`: the Tomkin IR library, its naming and harness results.
+3. `docs/EMT246_unit_facts.md`: the single source of truth for findings.
 
 The full file map is in `README.md`.
 
@@ -15,6 +16,7 @@ The full file map is in `README.md`.
   - with the parameter count.
 
   An in-sample null from many free parameters is not evidence of the true algorithm.
+- **Tomkin library: work on the 96 kHz set only.** The 48 kHz files are the same capture rendered at another rate (`docs/library_notes.md` §5), so they carry no extra information and must not be used as a held-out set or as repeat captures. Leave `--separate-rates` off. Files are trimmed and faded per setting: take RT from the label, not the file.
 - **Efficiency matters.** The original ran on 2 × TMS32010 (about 50–70 weighted delay taps per sample). Prefer compact structural models over free FIRs.
 
 ## Conventions

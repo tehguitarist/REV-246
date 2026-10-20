@@ -4,8 +4,8 @@ Usage:
   .venv/bin/python tools/harness/run.py <library_dir> --name tomkin            # full run
   .venv/bin/python tools/harness/run.py <library_dir> --templates               # show naming scheme
   .venv/bin/python tools/harness/run.py <library_dir> --name t --limit 50       # quick trial
-  .venv/bin/python tools/harness/run.py "irs/EMT 246 captures" --name tomkin --separate-rates   # both rates at once
-  .venv/bin/python tools/harness/run.py "irs/EMT 246 captures" --name trial --separate-rates --sample 60   # 60 settings x 2 rates
+  .venv/bin/python tools/harness/run.py "irs/EMT 246 captures/96kHz" --name tomkin96   # the Tomkin working set
+  .venv/bin/python tools/harness/run.py "irs/EMT 246 captures" --name trial --sample 60   # 60 settings x 2 rates
 
 Outputs go to analysis/library/<name>/ (see report.md there). Per-file results are cached, so a
 re-run after editing the naming patterns or library-stage code only redoes the cheap parts.
@@ -90,7 +90,7 @@ def main():
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--no-refine", action="store_true", help="skip pass 2 with library-derived kernels")
     ap.add_argument("--separate-rates", action="store_true",
-                    help="same-label files at different sample rates are separate captures (sets config separate_rate_captures)")
+                    help="same-label files at different sample rates are separate captures (sets config separate_rate_captures); only for libraries whose rates really are separate recordings, NOT the Tomkin library")
     ap.add_argument("--sample", type=int, default=None, metavar="N",
                     help="only N settings, spread evenly, with every sample rate of each (use for quick cross-rate trials)")
     ap.add_argument("--templates", action="store_true", help="print filename templates and exit")

@@ -362,7 +362,7 @@ Our CLA IR shows exactly harmonic loop modes and stable spectral fine structure.
 3. **The production firmware differs from the tested prototype**, or the reviewer described the design philosophy rather than a literal modulation.
 
 **Tests:**
-- ~~Repeat captures~~ (not possible: no hardware). Instead, use separate-capture duplicates if any library has them (harness A7 → E1), or joint fits across library IRs that share structure. A residual well above the noise floor that concentrates at mode frequencies means (1) or (2). Within one IR, mode linewidth in excess of what the decay predicts would point to time variance.
+- ~~Repeat captures~~ (not possible: no hardware). Instead, use separate-capture duplicates if any library has them (harness A7 → E1; **the Tomkin 48k/96k sets turned out to be one capture**, so none exist there), or joint fits across library IRs that share structure. A residual well above the noise floor that concentrates at mode frequencies means (1) or (2). Within one IR, mode linewidth in excess of what the decay predicts would point to time variance.
 - Per-mode amplitude and phase stability across repeats (E2).
 - Compare S, M and L for degree, since "Grad der Stochastik" differs per program.
 - If confirmed, model it as randomised read-out gains or tap positions on top of the static loops. That is cheap and keeps the measured harmonic structure.
