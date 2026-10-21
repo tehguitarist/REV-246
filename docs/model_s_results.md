@@ -1216,3 +1216,33 @@ Code: `.venv/bin/python tools/q2_injection.py --stage tied --mode tied|tapgain -
 - **Next:** find that feed. Two tests:
   - a free dense excitation per loop on top of the tied taps, with a longer window, to see how far it extends and how fast it decays;
   - its relation across loops: a shared source shows as correlation after each loop's own taps are divided out.
+
+### 16.7 The missing part: how far it reaches, and a common kernel with the diffuser's fingerprint (`tied --dense`) **[S for the extent; H for the reading]**
+
+**Extent (bench).** The tied taps plus free coefficients over the first L_d samples of every excitation (hybrid), flat settings, RT 0.8 / 1.8 held out, 600 iterations, R, fade-compensated, [excess over the repeat-capture null]:
+
+| Dense part | Free parameters | 50–150 ms | 150–300 ms | 300–600 ms | 600–1000 ms |
+|---|---|---|---|---|---|
+| none | 9 | −32.1 [+19.0] | −32.0 [+20.9] | −31.8 [+16.2] | −30.8 [+4.0] |
+| first 500 samples | 4,009 | −34.8 [+16.4] | −34.5 [+18.5] | −33.9 [+14.1] | −32.0 [+2.9] |
+| 1000 | 8,009 | −38.4 [+12.8] | −38.7 [+14.2] | −37.4 [+10.6] | −33.6 [+1.4] |
+| 1500 | 12,009 | −47.7 [+3.1] | −47.4 [+5.2] | −44.1 [+3.0] | −36.1 [−1.1] |
+| **2000** | 16,009 | **−53.3 [−2.3]** | **−52.9 [−0.6]** | **−47.6 [−1.3]** | −37.1 [−1.6] |
+| 3000 | 24,009 | −54.1 [−2.4] | −54.7 [−1.8] | −48.7 [−1.7] | −37.6 [−1.6] |
+| 5000 (window Pᵢ + 4000) | 40,009 | −54.4 [−2.2] | −55.4 [−1.8] | −49.9 [−2.0] | −37.8 [−1.7] |
+
+- **The missing part ends about 2,000 samples into the window (about lag 2,230 after tap 0):** beyond that, longer dense parts add ≤ 1.3 dB, inside the margin below the ceiling. That is the taps' own span (L taps to 1,780, R to 2,112). With it, the model is at the measurement ceiling, like the fully free injection. The tap magnitude drifts from 0.300 to 0.280 as the dense part grows.
+
+**Profile of the fitted dense part (L_d 2000, offline on the fit):**
+- −27 dB re the taps, flat over lags 230–about 2,000, then falling by 13–27 dB;
+- 22–24 % of its energy (L) within ±4 samples of the taps (2 % of the window);
+- the dense parts of different loops do not correlate at lag 0 (−0.15…+0.02);
+- R's follows L's at lags 26 (+0.32…+0.58) and 332 (+0.30…+0.37): it is on the line both read-outs read, not on a separate output path.
+
+**It is one kernel, read through each loop's own taps.**
+- One short signal sᵢ per loop (lags −60…300), read through that loop's own taps (R with its 26/332 shifts) and fitted to L and R jointly, explains **57–65 %** of the dense part, against 14–21 % through another loop's taps and 11–15 % with random signs (lengths 700 / 1200: 64–74 % / 69–78 %, controls 20–54 %).
+- **The four kernels are the same: correlation +0.92…+0.94 at lag 0 for all six loop pairs.**
+- Each is −30 dB re the tap. Its largest values sit at **lags 20, 72 and 230 (the diffuser's all-pass delays)** and at ±1–2 samples around 0. **About 31 % of its energy lies before lag 0.**
+- (The common-kernel test of §16.6 missed it: on the noisier free-minus-tied leftover, with an un-band-limited kernel, it gained only 0.4–1.4 dB.)
+
+**Reading (H):** the diffuser model is slightly off. A gain error in an all-pass needs exactly this kind of correction: two-sided (the inverse of the modelled all-pass is anti-causal), at the all-pass delays, and common to all loops. The ±1–2 sample part may be a small fractional-delay or tap-shape term. The AP gains (−0.70 for all three) were fitted on one IR to about ±0.02 (§11.1). **Next:** fit g20, g72, g230 (and AP230's damping step, fixed at b = 0 on flat settings) with the 5-tap model on the flat settings, and score held out.
