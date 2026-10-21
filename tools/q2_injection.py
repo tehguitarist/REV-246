@@ -49,6 +49,7 @@ Stages:
            or tapgain (8 + 40 tap gains). Fitted on the flat training settings (RT 0.8 / 1.8 held out), one clock round;
            --score all scores every capture of all 128 settings with the laws. --g460 0.42,0.445 scans. --dense L adds free
            coefficients over the first L samples of every excitation (hybrid: how far the missing dense feed reaches).
+  (any)    Q2_HP=1 in the environment undoes the measured analogue high-pass on every capture (see hp_undo).
   diffuser the diffuser's all-pass gains (g20, g72, g230) refitted with the 5-tap tied model on the flat training settings
            (Nelder-Mead on the training cost; the 9 linear parameters solved exactly per evaluation); then scored held out
            and, with --score all, on all 128 settings with the laws. --maxfev for a smoke test.
@@ -75,6 +76,34 @@ import q1_generalise as q1  # noqa: E402
 
 FS, PRE = q1.FS, q1.PRE
 Q1 = os.path.join(ROOT, "analysis", "q1")
+
+# ---------------------------------------------------------------- optional: undo the analogue high-pass on the data
+# Q2_HP=1 in the environment: every capture q1.load returns is divided by the measured sub-20 Hz high-pass (the unit's
+# coupling corners plus the Tomkin capture chain's 1.8 Hz, analog_results.md §3.3-3.5), above HP_FMIN, so the
+# purely digital model and the data no longer differ by it (cluster and reverb alike). Set before workers start.
+HP_CORNERS = [3.35, 0.72, 0.23, 0.16, 1.80]
+HP_FMIN = 10.0
+
+
+def hp_undo(h):
+    sys.path.insert(0, os.path.join(HERE, "analog"))
+    from sample_hold import highpass
+    n = len(h)
+    N = 1 << int(np.ceil(np.log2(n + 4096)))
+    f = np.fft.rfftfreq(N, 1 / FS)
+    H = highpass(f, HP_CORNERS)
+    inv = np.where(f >= HP_FMIN, 1 / np.where(f > 0, H, 1), 1.0)
+    return np.fft.irfft(np.fft.rfft(h, N, axis=0) * inv[:, None], N, axis=0)[:n]
+
+
+if os.environ.get("Q2_HP") == "1" and not getattr(q1, "_hp_patched", False):
+    _load = q1.load
+
+    def _load_hp(out, name, band=False):
+        h = hp_undo(_load(out, name))
+        return sosfiltfilt(q1.ms.BAND, h, axis=0) if band else h
+    q1.load = _load_hp
+    q1._hp_patched = True
 T_FIT = 0.25                    # time test: fit window 0-T_FIT s after tap 0
 WINDOWS = [(0, 50), (50, 150), (150, 300), (300, 600), (600, 1000), (1000, 1500)]
 OCT = [125, 250, 500, 1000, 2000, 4000, 8000]
@@ -935,6 +964,11 @@ def ap230_stage(g230, only=None):
     return path
 
 
+def _prep_job_q2(a):
+    """q1._prep_job run from this module, so that a Q2_HP patch of q1.load is active in the worker."""
+    return q1.prep(*a[:5], weight=a[5], shift=a[6])
+
+
 def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None, ap230=None, dtap=False):
     from concurrent.futures import ProcessPoolExecutor
     from scipy.optimize import minimize
@@ -953,7 +987,7 @@ def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None, ap23
     taps = tap_table()
     fl = [(k, amp, nm) for k in train for amp, nm in files_of(info[k]) if amp in q1.TRAIN_AMPL]
     with ProcessPoolExecutor(workers) as ex:
-        ys = list(ex.map(q1._prep_job, [(Q1, nm, info[k]["rt"], eps0[nm], fade[nm], True, 0.0) for k, _, nm in fl], chunksize=4))
+        ys = list(ex.map(_prep_job_q2, [(Q1, nm, info[k]["rt"], eps0[nm], fade[nm], True, 0.0) for k, _, nm in fl], chunksize=4))
     hist = []
 
     def solve(gs, d=0.0):
@@ -991,6 +1025,7 @@ def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None, ap23
                                       options={"xatol": 0.005, "maxiter": maxfev}).x)
     cost, v, diff = solve(gbest, dbest)
     tag = ("diffuser_tied" + ("" if gfix is None else f"_fix{gfix:g}") + ("_ap230new" if ap230 else "") + ("_dtap" if dtap else "")
+           + ("_hp" if os.environ.get("Q2_HP") == "1" else "")
            + ("_smoke" if maxfev < 20 and (gfix is None or dtap) else ""))
     keys = test + sorted(np.random.default_rng(0).choice(train, min(8, len(train)), replace=False).tolist())
     if score == "all":
