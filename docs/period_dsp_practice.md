@@ -1,18 +1,24 @@
 # Period DSP practice and the program-S injection: hypotheses for the Q2 bench
 
-*Research note, October 2026. Reading and reasoning only: nothing here was fitted or run. It collects how 1978–1990 reverbs and the TMS32010 were actually used, and turns that into candidate structures for the dense per-loop injection/read-out that Q2 found (`tools/q2_injection.py`, `branches` stage). Every candidate ends in a test recipe for the bench. None of them is a finding yet.*
+*Research note, October 2026. §0–§6 are reading and reasoning: they collect how 1978–1990 reverbs and the TMS32010 were actually used, and turn that into candidate structures for the dense per-loop injection/read-out that Q2 found (`tools/q2_injection.py`, `branches` stage), each with a test recipe. §7 gives the first offline results (`tools/q2_candidates.py`), in-sample only and pending the held-out bench.*
+
+> **Update (October 2026, §7, in-sample):** K1 holds. The frozen flat injection is **five equal-magnitude signed taps per loop**. R uses the same taps shifted by 26 or 332, and the loop paths carry a factor that cancels the bench's comb460. One tied model explains **98.7 %** of the in-band energy of all eight excitations, with about 60 discrete and 2 continuous parameters (against 27.9 k free coefficients). K2–K7 are not needed for flat settings or are not supported. Not yet confirmed on the held-out bench.
 
 **Labels** (as in `EMT246_unit_facts.md`):
 - **C** = confirmed by a primary source (document read) or a direct measurement in this repo;
 - **S** = strong: several measurements or several independent sources agree;
 - **H** = hypothesis.
 
-Sources are numbered [Pn] and listed in §7 with URLs. Measured facts cite the repo doc and section.
+Sources are numbered [Pn] and listed in §8 with URLs. Measured facts cite the repo doc and section.
 
 ---
 
 ## 0. Summary
 
+- **First results (§7, in-sample):**
+  - K1 is confirmed offline: 5 sign-only taps of one magnitude per loop. Each R tap is an L tap delayed by 26 or 332. The loop feeds bypass comb460, and the first-pass FIR is almost empty.
+  - In the hardware's terms that is about 20 reads, two shared output delay lines and no multiplies: about 24 accesses, inside the budget.
+  - The bench test (held-out nulls with the tied model) is next.
 - **What has to be generated:** one fixed excitation per loop and output channel, about Pᵢ + 1000 samples long, starting 230 samples after cluster tap 0. It is the same at every RT step (flat filters), carries no Gᵢ factor, differs for every loop, and relates L to R by the 26/332 lags (§1). The hardware has about 20–35 memory accesses and about 130–170 instruction cycles left for it (§2).
 - **Two cheap ways a fixed overhang past Pᵢ arises (§1.2):**
   - **Read taps past the feedback point.** In a base + offset memory a loop line can be longer than its loop. Feedback is read at Pᵢ, and output taps read older samples of the same stream out to Pᵢ + 1000. Each such tap is a fixed numerator term, does not depend on RT, and costs one read. This is the EMT 250 patent's tapped long loop and the BBC rule "feedback from the last tap only, density from extra taps" [P3, P10]. **H** for the 246.
@@ -23,7 +29,7 @@ Sources are numbered [Pn] and listed in §7 with URLs. Measured facts cite the r
   3. **K3, a tapped injection line per loop, convolved with the tapped read-out** (Matsushita 1982, Moorer 1979, Kendall–Martens 1984). Support = injection span + read span. **Test:** a shared convolutive factor between L and R of a loop.
   4. **K4, read-out taps on both sides of a loop filter placed partway along the line** (Dattorro/Lexicon tank). Explains why one fixed excitation fails once HF/LF move (the `all` subset sits at −29 dB). It does not explain the overhang. **Test:** one `branches` run per split with a filter-only branch.
   5. **K5, a nested all-pass per loop** (Gerzon 1972). **K6, a per-channel decorrelator** (Schroeder–Logan). **K7, HF/LF tap tables.** Lower; tests given.
-- **Sources** (§3, §7): TI's TMS32010 documents; period patents (EMT, Quad Eight, Yamaha, Matsushita, Kendall–Martens, and German DE/AT filings from DEPATISnet); the literature from Schroeder to Dattorro; EMT's own brochures and manuals; Valhalla DSP. Together they give EMT-lineage precedents for every top candidate, but **nothing describes the 246's algorithm itself**: EMT never patented it.
+- **Sources** (§3, §8): TI's TMS32010 documents; period patents (EMT, Quad Eight, Yamaha, Matsushita, Kendall–Martens, and German DE/AT filings from DEPATISnet); the literature from Schroeder to Dattorro; EMT's own brochures and manuals; Valhalla DSP. Together they give EMT-lineage precedents for every top candidate, but **nothing describes the 246's algorithm itself**: EMT never patented it.
 - **What this rules out** (§5):
   - chained or series long loops and loop-sum feedback (RT-independence);
   - a free dense FIR (budget);
@@ -310,6 +316,7 @@ Ranking is by plausibility given §1–§3 and by how cheaply the bench can test
   - Hold out by the RT, HF and LF splits. Judge against the per-setting free injection's excess (the LF/HF law errors set a floor there), not against the repeat-capture ceiling.
   - At the strongest settings, part of the residual may be fixed-point error in the loop filters (§5, [P33]). If the filter branch closes the gap except at LF 0.1 / HF 0.2, that is not by itself evidence against K4.
 - **Would falsify it.** The filter branch adds less than the gain branch, or nothing.
+- **Status:** not supported. A filters-only branch gains about 1 dB on the full library (`model_s_results.md` §15.8; §7.6).
 
 ### K5. A nested all-pass per loop: rank 5
 
@@ -333,6 +340,7 @@ Ranking is by plausibility given §1–§3 and by how cheaply the bench can test
 - **Mapping.** F1 says nothing moves with RT on flat settings, so tables could only act on HF/LF (F4).
 - **Prediction.** The per-setting free injections (`analysis/q2/v/`) change in discrete steps that line up with the HF or LF step index, concentrated in a few taps or one stage gain.
 - **Test recipe.** Add a step-index basis to the `regress` stage. Do this only after K4, since the LF/HF law errors confound it.
+- **Status:** not supported. The flat-trained frozen injection predicts all 128 settings with the plain laws (`model_s_results.md` §15.9; §7.6).
 
 ### Not ranked (period practice, already tested here)
 
@@ -389,6 +397,8 @@ This note does **not** rule out K1–K7.
 
 ## 6. Order of work on the bench
 
+*Steps 1–3 and the offline half of 5 are done (§7); the bench steps are listed in §7.8.*
+
 1. **K1 sparsity, offline**, on `branches_flat_0_ext1700.npy`, with both controls. Minutes. This is the decisive first test: sparse means tapped read-out (and maybe K3); dense means a recursive generator (K2/K5).
 2. **If sparse:** K3's sumset check on the selected taps, then the K1 bench (fixed positions, gains fitted across settings, held out by RT).
 3. **If dense:** K2's envelope/autocorrelation screen and dictionary deconvolution, then K5. Then the K2 bench with a per-loop Eᵢ.
@@ -403,7 +413,119 @@ Report every bench result as the repo requires: held out, compensated, with the 
 
 ---
 
-## 7. Sources
+## 7. First results: offline tests on the frozen flat injection (in-sample, pending the bench)
+
+**What was run.**
+- Tool: `.venv/bin/python tools/q2_candidates.py` → `analysis/q2/k1_sparsity.{json,log}`, `k2_stages.{json,log}`, `structure.{json,log}`. Runtime about 1 minute.
+- Input: the frozen flat injection `analysis/q2/branches_flat_0_ext1700.npy`, 600 iterations, held-out flat nulls −54.3 / −54.0 / −48.8 dB (`model_s_results.md` §15.7).
+- Scoring: every score is in band, using the bench's fit band |LFBAND|² (20 Hz–11 kHz) and band-limited atoms. Nothing is fitted to captures here.
+- **Status: all of this is in-sample.** It describes the 27.9 k free coefficients. It is not evidence of the algorithm until the bench reproduces the held-out nulls with the compact model (§7.8).
+
+### 7.1 K1: the excitations are sparse (S, in-sample)
+
+In-band energy explained at K atoms (range over the 8 excitations: 4 loops × L, R):
+
+| K | 1 | 2 | 4 | 8 | 16 | 64 |
+|---|---|---|---|---|---|---|
+| Excitations, integer taps | 16.5–19.9 % | 33–38 % | 66–69 % | 92.0–93.6 % | **98.3–99.4 %** | 98.6–99.5 % |
+| Excitations, with adjacent-pair atoms | same, except 1587: 22–23 / 39–44 / 71–75 / 96–99 % | | | | 98.3–99.4 % | 98.6–99.5 % |
+| Control: phase-randomised (same spectrum) | 0.6 % | 1.0–1.2 % | 2.0–2.2 % | 3.7–4.0 % | 6.6–7.2 % | 19.7–21.9 % |
+| Control: 4 known taps + 1 % noise | – | – | 99.0 %, all 4 positions found exactly (fractional ones included), every run | | | |
+
+- **The sixteen atoms are ten taps:**
+  - **5 main taps of one magnitude** (0.28–0.30 in the bench's units), signs only;
+  - **5 partners, each 460 samples after a main tap**, at about −0.44 of it.
+
+  The partners are a factor (1 − g z⁻⁴⁶⁰) on every loop path, which cancels the bench's comb460 (§7.3). Adjacent-pair atoms help only in loop 1587, where a partner lands one sample from a main tap (567 / 568).
+- **Divided by (1 − g z⁻⁴⁶⁰)**, five integer taps explain **97.96–99.25 %** per excitation. The best g is 0.435–0.44: the scan is flat to ±0.02, and the bench's comb gain is 0.445. The next atom is 25–35 dB below the main taps.
+- **R is L shifted, tap by tap:** every R tap is an L tap delayed by **26 or 332** samples, with the same sign. The split between the two lags differs per loop (26 / 332 counts):
+
+  | Loop | 1321 | 1389 | 1461 | 1587 |
+  |---|---|---|---|---|
+  | 26 / 332 | 2 / 3 | 3 / 2 | 2 / 3 | 3 / 2 |
+
+  That is the earlier "lags 26 and 332 with per-loop weights" (`model_s_results.md` §5), resolved.
+- **Tied model.** One magnitude a for all 40 taps, L taps and signs from OMP, R = L + 26 or 332, and the comb factor:
+
+  > xᵢᶜ = a · Σₖ sₖ δ[tₖ + c·uₖ] · (1 − g z⁻⁴⁶⁰)
+
+  It explains **98.66 %** in band overall (residual −18.7 dB re the excitations; 98.16–99.34 % per excitation). Parameters: 20 positions, 20 signs, 20 shift labels, a, g460.
+- **The L taps (lag after cluster tap 0, sign) and R shifts:**
+
+  | Loop | L taps | R shifts | Span |
+  |---|---|---|---|
+  | 1321 | 276 −, 913 −, 971 +, 1256 −, 1514 + | 332, 26, 332, 332, 26 | 1238 |
+  | 1389 | 624 −, 768 −, 826 −, 1129 −, 1449 − | 26, 26, 332, 26, 332 | 825 |
+  | 1461 | 244 +, 677 −, 1069 +, 1368 +, 1521 + | 332, 26, 26, 332, 332 | 1277 |
+  | 1587 | 338 +, 797 −, 984 +, 1319 +, 1780 − | 332, 26, 332, 26, 26 | 1442 |
+
+- **The "overhang" is explained:** every loop's five taps span **less than one loop length**. What ran past Pᵢ in the free excitations was the +460 partners and R's +332 shifts. Reads past the feedback point (§1.2a) are not needed.
+- **Reading in hardware terms (H):**
+  - per loop, 5 reads of the loop line, added or subtracted with no multiply (3 cycles each);
+  - the sum goes to L;
+  - each tap is also routed to one of **two output delay lines of 26 and 332 samples, shared by all loops**, whose outputs form R.
+
+  That is about 20 reads + 4 accesses ≈ 24 accesses, inside the 20–35 left (F9). It is the EMT 250's tapped read-out plus its "output discorrelator and distributor" (delays t17–t19) [P3], and matches the 1977 drawing's "taps per comb into short delay lines" [P31]. The equal magnitude matches the 246's cluster (equal taps, signs only) and Dattorro's ±0.6 output taps [P9].
+
+### 7.2 K2 / K5: no recursive stage per loop (S, in-sample)
+
+Scan over every delay M = 2…1700 and g ∈ ±{0.3, 0.45, 0.6, 0.7, 0.8}, in four forms (extra comb, fed before a comb, extra all-pass, fed before an all-pass). Each candidate was scored with a fast 5-tap proxy, then by exact OMP on the best few.
+- **On the raw excitations, the scan finds the comb factor blind.** In all 8, the best re-expression is "fed before a comb", M = 460, g = +0.45 (the grid point nearest 0.435). It explains 97.96–99.24 % with 5 taps, against 82.1–84.6 % for the raw excitations. Every runner-up is the same M = 460 at another gain.
+- **On the comb-divided excitations, nothing helps.** The best candidate is 90.6–93.6 %, below the 97.96–99.25 % of the taps alone.
+- **K5 (nested all-pass)** was therefore not scanned: no single stage improves on the taps, and the residual is small and unstructured (§7.5).
+- **Reading:** no per-loop recursive generator exists. The one "stage" the data ask for is K2b in its simplest form: the loops are fed from a point that the bench's comb460 does not cover (§7.3).
+
+### 7.3 First-pass FIR and comb460 (in-sample; H for the reading)
+
+- **The first-pass FIR F is almost empty.** Its in-band energy is 0.3 % of a typical excitation's. It is not sparse (34–43 % at 32 taps, raw or comb-divided, against 17 % for its phase control). With the long window, every early arrival is carried by the loop excitations.
+- **So no 460 recursion is left in the model's output.** The cluster does not pass `post`, F is negligible, and every loop excitation carries (1 − g z⁻⁴⁶⁰) with g within ±0.02 of the bench's 0.445.
+- **Implication to test (H):** the "fifth recursion at 460 samples" (`EMT246_unit_facts.md` §5; `model_s_results.md` §3.3, §8.2, §11) may be a stand-in from the short-window era, not part of the unit. On the bench, removing comb460 from `post` should then change nothing in the nulls (with the long window and the excitations refitted). That is a cheap, decisive check. Until it runs, the unit-facts row stays as it is.
+
+### 7.4 K3: no structure among the tap positions (in-sample)
+
+- No pairwise difference repeats within a loop (0 of 40).
+- Two differences are shared across loops (58: 1321 and 1389; 825: 1389 and 1461), against 0.65 expected by chance (95th percentile 2).
+- So the five taps are not a sumset of an injection set and a read set. Each loop is written at one point and read at five. Multi-point injection (K3, Stautner–Puckette writes) is not needed.
+- **H, unexplained:** loop 1587 has two tap pairs 459 and 461 samples apart, near the 460 lag. It could be coincidence, or a sign that the tap offsets are tied to the 460 line in the memory layout.
+
+### 7.5 K6 and the residual (in-sample)
+
+- **K6, one per-channel distributor for all loops** (R = (c0 + c26 z⁻²⁶ + c332 z⁻³³²) · L), explains only **48–52 %** of R. With c refitted per loop it explains 51–54 %. The per-tap 26 / 332 labels explain **98.2–99.3 %**. So R is not a filtered copy of L: the routing is per tap, onto two shared delay lines (§7.1). This also explains why §5 of `model_s_results.md` rejected a strict common distributor.
+- **Where the tied model's residual sits:**
+  - 10–15 % of the residual lies within ±8 samples of a tap or its partner, a window of 4–6 % of the samples. So small gain or position errors contribute somewhat.
+  - The rest is spread in time and roughly flat across octaves (−15…−27 dB re each octave of the excitation).
+  - That looks like estimation noise in the free fit rather than a missing stage (H). The bench decides: if the tied model's held-out nulls equal the free injection's, the residual was noise.
+
+### 7.6 K4 and K7, from the other Q2 runs
+
+These need the bench. The other Q2 session ran the relevant variants (`model_s_results.md` §15.8–15.9):
+- **K4 (read taps on both sides of a mid-line filter): not supported (S).** A branch through the filters only gains about 1 dB on the full library.
+- **K7 (per-setting tables for the injection): not supported (S).** Trained on 6 flat settings and frozen, the injection predicts all 128 settings with the plain laws better than any injection trained on the whole library. What remains at LF 0.1, HF 0.2 and short RT is in the loop filters, not the injection.
+
+### 7.7 Scorecard
+
+| Candidate | Result (in-sample unless noted) |
+|---|---|
+| **K1** tapped read-out | **Holds:** 5 equal signed taps per loop, 98.7 % with one tied model; no reads past the feedback point needed |
+| K2 recursive pre-stage | Not needed; the blind scan only finds the comb460 cancellation (K2b: loops fed before comb460) |
+| K3 tapped injection × read-out | Not needed: no sumset or shared-difference structure |
+| K4 taps around a mid-line filter | Not supported (bench, §15.8: about 1 dB) |
+| K5 nested all-pass | Not needed (no single stage helps; not scanned) |
+| K6 common per-channel decorrelator | Rejected as a filter (≈ 50 %); replaced by per-tap routing to two shared 26 / 332 delay lines |
+| K7 per-setting injection tables | Not supported (bench, §15.9) |
+
+### 7.8 Next on the bench (to turn this into evidence)
+
+1. **Sparse-tap mode in `q2_injection.py --stage branches`:** fixed tap positions, signs and 26 / 332 labels, with a and g460 (or free per-tap gains as a check) fitted on the flat training settings. Report held-out compensated nulls against the free injection's −54.3 / −54.0 / −48.8 dB, with the excess over the repeat-capture null and the parameter count (about 60 discrete + 2 continuous).
+2. **comb460 out of `post`** with the long window: nothing should change (§7.3).
+3. **All 128 settings** with the tied injection frozen and the laws, as in §15.9.
+4. **Cross-program check (F8):** the same taps, delays scaled ×2 / ×4 (with the R lags 52 / 664 and 104 / 1328), against M and L's first recirculation.
+5. **Then update** `EMT246_unit_facts.md` §5 (injection/read-out, the 460 row) and the hardware budget (§6) if the bench confirms.
+
+---
+
+## 8. Sources
+
 
 **Read for this note** = primary text read by the research (scan, OCR or text layer). **Secondary** = description only. Patent texts were read from Google Patents' OCR, which has errors (for example "300 ns" for "300 ms"); check figures against the official PDFs.
 

@@ -1,0 +1,28 @@
+[k3] pairwise differences of each loop's 5 L taps
+  1321: taps [46, 683, 741, 1026, 1284]  differences [58, 258, 285, 343, 543, 601, 637, 695, 980, 1238]
+  1389: taps [394, 538, 596, 899, 1219]  differences [58, 144, 202, 303, 320, 361, 505, 623, 681, 825]
+  1461: taps [14, 447, 839, 1138, 1291]  differences [153, 299, 392, 433, 452, 691, 825, 844, 1124, 1277]
+  1587: taps [108, 567, 754, 1089, 1550]  differences [187, 335, 459, 461, 522, 646, 796, 981, 983, 1442]
+  repeated differences within a loop: 0; shared across loops: [(58, [1321, 1389]), (825, [1389, 1461])] (chance: mean 0.65, 95th pct 2); differences 1 apart: [(980, 981)]
+
+[k6] one distributor for all loops: R_i = (c0 + c26 z^-26 + c332 z^-332) L_i, c common, vs the per-tap labels
+  common c0 / c26 / c332 = +0.005 / +0.504 / +0.497
+  1321 R explained: common distributor 49.4 %, per-loop c 51.5 % (c = +0.00 / +0.40 / +0.60), per-tap 26/332 labels 98.7 %
+  1389 R explained: common distributor 49.9 %, per-loop c 51.7 % (c = -0.00 / +0.60 / +0.40), per-tap 26/332 labels 98.2 %
+  1461 R explained: common distributor 48.2 %, per-loop c 50.5 % (c = +0.01 / +0.39 / +0.60), per-tap 26/332 labels 98.4 %
+  1587 R explained: common distributor 51.5 %, per-loop c 53.9 % (c = +0.01 / +0.62 / +0.39), per-tap 26/332 labels 99.3 %
+
+[fir] first-pass FIR F (1,400 taps from 230 after tap 0, through post only): in-band energy explained at K
+  L  energy re a mean x_i 0.003   raw 4:  9.5 8: 14.8 16: 23.5 32: 35.4   comb-divided 4:  9.1 8: 14.0 16: 22.1 32: 33.5   phase ctrl 4:  3.1 8:  5.6 16: 10.0 32: 16.8
+  R  energy re a mean x_i 0.003   raw 4: 14.5 8: 22.4 16: 31.6 32: 43.4   comb-divided 4: 13.2 8: 20.3 16: 28.8 32: 40.3   phase ctrl 4:  3.0 8:  5.6 16: 10.0 32: 17.1
+
+[resid] tied-model residual: share within +-8 samples of a tap or its +460 partner, and by octave (re the excitation's own octave)
+  1321 L  near taps 10.1 % of the residual (window 5.6 % of samples)   octaves  -18.0  -23.5  -18.5  -14.5  -18.3  -21.9  -19.4
+  1321 R  near taps  9.8 % of the residual (window 5.6 % of samples)   octaves  -21.6  -24.1  -16.0  -15.4  -20.0  -21.7  -18.7
+  1389 L  near taps 10.2 % of the residual (window 5.5 % of samples)   octaves  -15.7  -18.5  -18.2  -15.2  -17.1  -21.6  -16.6
+  1389 R  near taps 10.4 % of the residual (window 4.6 % of samples)   octaves  -19.1  -18.8  -15.2  -16.3  -18.2  -20.1  -17.1
+  1461 L  near taps  9.9 % of the residual (window 5.1 % of samples)   octaves  -15.3  -24.2  -18.1  -22.4  -17.0  -20.6  -17.1
+  1461 R  near taps 11.2 % of the residual (window 5.4 % of samples)   octaves  -19.7  -20.3  -14.8  -22.2  -19.6  -20.6  -16.7
+  1587 L  near taps 14.5 % of the residual (window 4.2 % of samples)   octaves  -16.2  -22.3  -21.7  -22.0  -23.5  -24.8  -20.9
+  1587 R  near taps 14.0 % of the residual (window 4.7 % of samples)   octaves  -19.5  -23.2  -25.6  -24.3  -26.8  -25.2  -20.1
+  octave bands (Hz): [(20, 177), (177, 354), (354, 707), (707, 1414), (1414, 2828), (2828, 5657), (5657, 11314)]

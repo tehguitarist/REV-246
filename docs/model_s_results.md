@@ -1113,4 +1113,62 @@ The flat-only injection (§15.7, 600 iterations, 6 training settings) frozen; pe
 
 1. **Per-loop loop-filter parameters:** refit with the injection frozen and 5 numbers per loop (20 per setting) instead of 5 shared ones, then look at the per-loop deviations from length scaling (for example Q15-quantised coefficient tables, **H**). Then new laws or tables, and a final shared fit on all settings to confirm.
 2. **Short RT (0.6–1.0)** is +10…+16 dB at 50–150 ms even with refitted loops; check whether it is the loops (per-loop refit) or the AP230 step (b > 0 only there).
-3. **The compact injection structure:** one fixed excitation per loop and channel, about Pᵢ + 1000…1700 samples long, setting-independent, 27.9 k free coefficients today against about 20–35 memory accesses in the hardware. Candidates from period practice: `docs/period_dsp_practice.md` (in progress in a separate session).
+3. **The compact injection structure:** one fixed excitation per loop and channel, about Pᵢ + 1000…1700 samples long, setting-independent, 27.9 k free coefficients today against about 20–35 memory accesses in the hardware. Candidates from period practice: `docs/period_dsp_practice.md`. **Offline result (§16, in-sample):** five equal signed taps per loop, R = L taps + 26 / 332, loop feeds bypass comb460; 98.7 % of the in-band energy with about 60 discrete + 2 continuous parameters. Bench check pending (§16.4).
+
+## 16. The frozen flat injection is five equal signed taps per loop (offline, in-sample, pending the bench) **[M, in-sample]**
+
+Code: `.venv/bin/python tools/q2_candidates.py` → `analysis/q2/k1_sparsity.{json,log}`, `k2_stages.{json,log}`, `structure.{json,log}` (about 1 minute). Input: the frozen flat injection of §15.7 (`branches_flat_0_ext1700.npy`, 600 iterations). These are the offline tests of the candidates in `docs/period_dsp_practice.md` §4; details and the scorecard are in its §7.
+
+**Scoring.** Every score is in band: the bench's fit band |LFBAND|² (20 Hz–11 kHz) and band-limited atoms. Nothing is fitted to captures, so **every number here describes the 27.9 k free coefficients, not held-out data**.
+
+> **Status:** a compact structure is found in the free injection. It counts as evidence only once the bench reproduces the held-out nulls with it (§16.4).
+
+### 16.1 Sparsity
+
+In-band energy explained by K OMP atoms, range over the 8 excitations (4 loops × L, R):
+
+| | K = 4 | K = 8 | K = 16 | K = 64 |
+|---|---|---|---|---|
+| Excitations | 66–75 % | 92–99 % | **98.3–99.4 %** | 98.6–99.5 % |
+| Phase-randomised control | 2.0–2.2 % | 3.7–4.0 % | 6.6–7.2 % | 19.7–21.9 % |
+| Known-tap control (4 taps + 1 % noise) | 99.0 %, all positions found every run | | | |
+
+### 16.2 Structure
+
+- **Five equal-magnitude taps per loop and channel, signs only.** All 40 are at 0.28–0.30 in the bench's units; the next atom is 25–35 dB smaller.
+- **Every tap has a partner 460 samples later at about −0.44.** That is a (1 − g z⁻⁴⁶⁰) factor that cancels the bench's comb460 on every loop path.
+  - A blind scan of single recursive stages (M = 2…1700, comb and all-pass forms, 10 gains) picks "fed before a comb, M = 460" in all 8 excitations: 97.96–99.24 % with 5 taps, against 82–85 % raw.
+  - After dividing it out, no further stage helps (best 90.6–93.6 %).
+  - The best g is 0.435–0.44, flat to ±0.02; the bench uses 0.445.
+- **Every R tap is an L tap delayed by 26 or 332 samples, same sign**, with a per-loop split (2/3, 3/2, 2/3, 3/2 taps at 26/332 for loops 1321/1389/1461/1587).
+  - One distributor common to all loops (R = (c0 + c26 z⁻²⁶ + c332 z⁻³³²) L) explains only 48–52 % of R. The per-tap labels explain 98.2–99.3 %.
+  - This resolves §5's "same lags, per-loop weights" and its rejection of a strict common distributor.
+- **Tied model.** One magnitude for all taps, L taps and signs, R = L + 26 or 332, and the comb factor. It explains **98.66 %** in band (residual −18.7 dB re the excitations; 98.16–99.34 % per excitation). Parameters: 20 positions, 20 signs, 20 shift labels, magnitude, g460 (about 60 discrete + 2 continuous, against 27.9 k).
+- **L taps (lag after cluster tap 0, sign) and R shifts:**
+
+  | Loop | L taps | R shifts |
+  |---|---|---|
+  | 1321 | 276 −, 913 −, 971 +, 1256 −, 1514 + | 332, 26, 332, 332, 26 |
+  | 1389 | 624 −, 768 −, 826 −, 1129 −, 1449 − | 26, 26, 332, 26, 332 |
+  | 1461 | 244 +, 677 −, 1069 +, 1368 +, 1521 + | 332, 26, 26, 332, 332 |
+  | 1587 | 338 +, 797 −, 984 +, 1319 +, 1780 − | 332, 26, 332, 26, 26 |
+
+- **Each loop's taps span less than one loop length** (825–1442 samples). The "support to Pᵢ + 1000" of §15.7 is the +460 partners plus R's +332 shifts.
+- **No structure among the tap positions:**
+  - no repeated pairwise differences within a loop;
+  - 2 shared across loops, against 0.65 expected by chance;
+  - so one write point and five read points per loop, not multi-point injection.
+- **The first-pass FIR is almost empty** (0.3 % of a typical excitation's in-band energy, not sparse).
+- **The tied residual** sits 10–15 % within ±8 samples of the taps and is otherwise spread and flat by octave (−15…−27 dB). It looks like estimation noise in the free fit (**H**).
+
+### 16.3 Readings (H)
+
+- **Hardware form.** Per loop, 5 reads of the loop line, added with signs (no multiply). L is their sum. Each tap is also routed to one of two output delay lines (26 and 332 samples) shared by all loops, whose outputs form R. That is about 24 memory accesses, inside the 20–35 left by the identified structure (`EMT246_unit_facts.md` §6). It is the EMT 250 patent's tapped read-out plus its output "discorrelator and distributor" (`period_dsp_practice.md` §7.1).
+- **comb460.** With the loop feeds cancelling it and F empty, nothing in the model's output passes a 460 recursion. The "fifth recursion at 460 samples" (§3.3, §8, §11; unit facts §5) may be a stand-in from the short-window fits. The unit-facts row stays until the bench check below.
+
+### 16.4 Bench checks needed
+
+1. **A sparse-tap mode in `branches`:** fixed positions, signs and 26/332 labels, fitting the magnitude (and g460, or free per-tap gains as a check) on the flat training settings. Report held-out compensated nulls against §15.7's −54.3 / −54.0 / −48.8 dB, with the excess over the repeat-capture null and the parameter count.
+2. **comb460 removed from `post`** with the long window: the nulls should not change.
+3. **All 128 settings** with the tied injection frozen (as §15.9).
+4. **M and L's first recirculation** with the delays ×2 / ×4.
