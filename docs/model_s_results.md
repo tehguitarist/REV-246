@@ -1315,3 +1315,22 @@ Code: `.venv/bin/python tools/q2_injection.py --stage ap230 --g230 -0.70710678` 
 - **Not the unmodelled analogue high-pass:** undoing the measured high-pass (the unit's 3.35 / 0.72 / 0.23 / 0.16 Hz corners and the Tomkin chain's 1.8 Hz, `analog_results.md` §3.5) on every capture (`Q2_HP=1`) makes the compact model **3.6–3.9 dB worse** (−39.8 / −40.5 / −41.0 dB) and its training fit worse. The device-domain data do not carry that high-pass as a plain factor; presumably the deconvolution kernel already absorbs part of it (**H**).
 
 **Reading (H):** a free injection can absorb any systematic error the library captures share (for example the deconvolution kernel's, identical in every file). That carries over to held-out settings too, so part of the free model's last 8 dB may be the measurement chain, not the algorithm. **Test:** the CLA IR, a different unit and capture chain. If the 9-parameter model predicts CLA as well as the free injection does (§14.7: −32 / −30 dB at 50–300 ms, R / L), or better, the free model's extra over the compact one is library-specific.
+
+### 16.12 Cross-unit check: the compact model predicts the CLA IR (`cla` stage) **[S]**
+
+Code: `.venv/bin/python tools/q2_injection.py --stage cla` → `analysis/q2/cla_compare.{json,log}`. As §14.7: the CLA IR (another unit and capture chain; LF 1.0, RT 1.0, HF 0.9, a step the library lacks; AMPL 80) predicted by library-trained models. Fitted on CLA: only the clock ratio, a common shift and one gain. The Q1 reference reproduces `analysis/q1/cla.json` exactly. 100 Hz–10 kHz, L / R:
+
+| Model (library-trained) | Free parameters | 0–50 ms | 50–150 ms | 150–300 ms | 300–600 ms | 600–1000 ms |
+|---|---|---|---|---|---|---|
+| Q1 shared x0 + G·x1 (§14.7) | 30,640 | −35.0 / −35.6 | −33.0 / −30.2 | −29.9 / −28.0 | −25.5 / −23.5 | −21.6 / −20.4 |
+| 5 taps, diffuser −0.70 | 9 | −36.1 / −36.6 | −31.4 / −31.5 | −30.7 / −31.3 | −30.4 / −31.1 | −27.2 / −30.7 |
+| **5 taps, diffuser −1/√2** | **9** | **−37.9 / −38.9** | **−37.0 / −37.5** | **−36.4 / −37.4** | **−35.9 / −37.2** | **−29.0 / −34.9** |
+| Free flat injection (§15.7) | 27,924 | −37.7 / −39.9 | −38.4 / −41.7 | −38.2 / −41.3 | −37.6 / −40.4 | −29.5 / −35.9 |
+
+Fitted on CLA: clock 97.5–98.4 ppm, shift −0.005…−0.001 sample, gain +0.91…+1.01 dB for all four. CLA's noise-limited nulls are −67 / −76 dB at 50–300 ms (§8.2, §9.3), so none of these is noise-limited.
+
+- **The free injection's lead over the compact model shrinks from 8–10 dB on the library to 1.4–1.8 dB on L and 3.2–4.2 dB on R on another unit.** So most of that lead was library-specific: the free FIR also fits the library's shared measurement chain (one deconvolution kernel and one capture chain for every file), which carries over to held-out library settings but not to another unit. **H** for the mechanism, **S** for the size.
+- **A smaller part, larger in R, does transfer:** 1.5–4 dB the compact model still lacks. R's read-out (the 26 / 332 distributor) is the first place to look.
+- **The −1/√2 all-pass gain transfers in full:** +5…+6 dB on CLA against the −0.70 diffuser, with nothing fitted on CLA. It belongs to the unit's algorithm (now **S** on two units).
+- **The 9-parameter model beats Q1's 30,640-parameter model on CLA by 4–14 dB** after 50 ms, and in the 0–50 ms window by 3 dB.
+- **Bearing on the null target:** against the library alone, the compact model's excess over the repeat-capture null (+8 dB on flat settings, §16.8) overstates its error as a model of the unit. The cross-unit gap to the best available (free) model is 1.4–4 dB. Against CLA, all models are 30–40 dB above CLA's noise floor, which is what limits the −70 dB stretch target (`NEXT_STEPS.md` §2) there.

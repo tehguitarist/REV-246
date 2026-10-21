@@ -49,6 +49,10 @@ Stages:
            or tapgain (8 + 40 tap gains). Fitted on the flat training settings (RT 0.8 / 1.8 held out), one clock round;
            --score all scores every capture of all 128 settings with the laws. --g460 0.42,0.445 scans. --dense L adds free
            coefficients over the first L samples of every excitation (hybrid: how far the missing dense feed reaches).
+  cla      cross-unit check (as q1's cla stage): the CLA IR (another unit and capture chain; HF 0.9, not a library step)
+           predicted by library-trained models, fitted on CLA only the clock ratio, a common shift and one gain; nulls in
+           100 Hz-10 kHz and 20 Hz-11 kHz -> cla_compare.json. Models: q1's shared injection (reference), the free flat
+           injection, the compact 5-tap / -1/sqrt(2) model, and the 5-tap model with q1's -0.70 diffuser.
   (any)    Q2_HP=1 in the environment undoes the measured analogue high-pass on every capture (see hp_undo).
   diffuser the diffuser's all-pass gains (g20, g72, g230) refitted with the 5-tap tied model on the flat training settings
            (Nelder-Mead on the training cost; the 9 linear parameters solved exactly per evaluation); then scored held out
@@ -1178,6 +1182,53 @@ def loops_stage(workers, only=None, frozen=COMPACT, ap230="ap230_g0.7071.json"):
                                                 for lp in ("law", "refit", "perloop")))
 
 
+CLA_MODELS = {
+    "q1 shared x0+Gx1 (reference)": dict(v=os.path.join(Q1, "v_rt_x0+Gx1.npy"), law=os.path.join(Q1, "split_rt_x0+Gx1.json"), ext=300, through_g=True),
+    "free flat injection (27,924)": dict(v="branches_flat_0_ext1700.npy", law="branches_flat_0_ext1700.json", ext=1700),
+    "5 taps, diffuser -0.70 (9)": dict(v="tied_tied_g0.445.npy", law=None, ext=1700),
+    "5 taps, diffuser -1/sqrt(2) (9)": dict(v=COMPACT + ".npy", law=None, ext=1700, diff=COMPACT + ".json"),
+}
+
+
+def cla_compare(names=None):
+    import model_s as m
+    fits = json.load(open(os.path.join(Q1, "loops.json")))
+    h = np.load(q1.CLA_DEV)[m.K0 - PRE:m.K0 + int(1.9 * FS)]
+    yb = sosfiltfilt(q1.LFBAND, h, axis=0)
+    n = len(yb) - 600
+    ws = W_COMP[:6] + [(400, 600)]
+    out = {}
+    for name, spec in CLA_MODELS.items():
+        if names and name not in names:
+            continue
+        q1.EXT = spec["ext"]
+        if spec["law"]:
+            law = json.load(open(spec["law"] if os.path.isabs(spec["law"]) else os.path.join(OUT, spec["law"])))["law"]
+        else:
+            law = q1.fit_laws(fits)
+        law["lf"] = {float(k): x for k, x in law["lf"].items()}
+        v = np.load(spec["v"] if os.path.isabs(spec["v"]) else os.path.join(OUT, spec["v"]))
+        if spec.get("through_g"):
+            G = q1.group_spectra(q1.CLA_LAB, law, q1.grid_n(q1.CLA_LAB["rt"]), through_g=True)
+        else:
+            diff = json.load(open(os.path.join(OUT, spec["diff"])))["diff"] if spec.get("diff") else None
+            G = branch_spectra(q1.CLA_LAB, law, [0.0], 0.0, diff)
+        J = q1.Joint([dict(G, files=[dict(y=np.zeros((n, 2)), w=np.ones(n), amp=q1.CLA_LAB["amp"])])])
+        mdl = J.render(v, G, n, q1.CLA_LAB["amp"])
+        _, (eg, shg, gain) = q1._clock_job((yb, mdl, 1.0, 98.4, True))
+        y = q1.apply_clock(yb, eg, shg)[:n] / gain
+        out[name] = dict(eps_ppm=eg, shift=shg, gain_db=float(20 * np.log10(gain)),
+                         null_100_10k=q1.nulls(y, mdl, 1.5, ws, narrow=True), null_20_11k=q1.nulls(y, mdl, 1.5, ws))
+        r = out[name]
+        print(f"{name:34s} clock {eg:6.1f} ppm, shift {shg:+.3f}, gain {r['gain_db']:+.2f} dB | 100 Hz-10 kHz L / R: " + "; ".join(
+            f"{w}: {x[0]:.1f}/{x[1]:.1f}" for w, x in r["null_100_10k"].items() if x), flush=True)
+    path = os.path.join(OUT, "cla_compare.json")
+    old = json.load(open(path)) if os.path.exists(path) else {}
+    old.update(out)
+    json.dump(old, open(path, "w"), indent=1)
+    return out
+
+
 W_COMP = [(0, 50), (50, 150), (150, 300), (300, 600), (600, 1000), (1000, 1500), (1500, 2500)]
 
 
@@ -1288,7 +1339,7 @@ OUT = os.path.join(ROOT, "analysis", "q2")
 def main():
     global OUT
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "ap230", "loops", "report"])
+    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "ap230", "loops", "cla", "report"])
     ap.add_argument("--g230", type=float, default=-0.7071067812, help="ap230: the all-pass gain for the step measurement")
     ap.add_argument("--ap230", default=None, help="diffuser: an AP230 step table from the ap230 stage (default: q1's)")
     ap.add_argument("--maxfev", type=int, default=120, help="diffuser: Nelder-Mead evaluations")
@@ -1326,6 +1377,8 @@ def main():
                    a.gfix, a.ap230)
     if a.stage == "diffuser":
         diffuser_stage(a.workers, a.score, a.maxfev, gfix=a.gfix, ap230=a.ap230, dtap=a.dtap)
+    if a.stage == "cla":
+        cla_compare([a.only] if a.only else None)
     if a.stage == "loops":
         loops_stage(a.workers, only)
     if a.stage == "ap230":
