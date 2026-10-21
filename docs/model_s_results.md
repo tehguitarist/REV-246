@@ -1284,3 +1284,23 @@ Code: `.venv/bin/python tools/q2_injection.py --stage ap230 --g230 -0.70710678` 
 - The first pass fits 1.4–2.1 dB better where b > 0 (b 0.50: −39.0 against −36.9 dB; b 0.33: −41.0 against −39.6), but still only to −39…−41 dB, against a median −48.9 dB over all settings. So the two-tap form (1 − b) + b z⁻¹ of AP230's damping is probably only approximately right (**H**).
 - **Rescored with the new table, the compact model is unchanged** (all 128: −42.0 / −38.4 / −35.0 dB, within 0.1 dB of §16.8). The step values are not what limits short RT.
 - **RT 1.0 is the worst step** (+19 / +26 / +27 dB, against +14…+19 at RT 0.6 / 0.8 and +5…+12 at RT ≥ 1.4). It is the first step below the RT ≥ 1.4 files the loop laws were fitted on, which points at the laws. **Next:** the per-loop loop-filter refit with the compact injection frozen (§15.9's `filters` stage, now with `FROZEN` = the §16.8 model).
+
+### 16.10 Loops refitted with the compact injection; tap timing and shape (`loops`, `diffuser --dtap`, `tied --mode kernel8`) **[S, negative results]**
+
+**Loop refit with the compact injection frozen** (`loops` stage: law loops, 5 shared numbers, 5 per loop; all 128 settings, R, fade-compensated):
+
+| Loops | 50–150 ms | 150–300 ms | 300–600 ms | 600–1000 ms |
+|---|---|---|---|---|
+| Laws | −42.1 | −38.7 | −35.2 | −32.6 |
+| 5 shared | −42.5 | −39.1 | −34.4 | −28.9 |
+| 5 per loop (20) | −42.7 | −39.5 | −34.7 | −28.7 |
+
+- Refitting gains ≤ 0.8 dB early and **loses 0.5–3.9 dB after 300 ms**. With the compact injection still 8–12 dB off on flat settings, the loop parameters absorb the injection's error early at the cost of the decay. So these per-setting loop values are not a clean measurement of the loops. Per-loop deviations and coefficient grids need the free (ceiling-level) injection frozen instead (§15.9's `filters` stage with a per-loop form).
+- The law-loop nulls match §16.8 to 0.1–0.3 dB. The excess figures in `loops_compact.log` are about 3 dB higher than §16.8's, because that stage takes its repeat-capture reference from the free-model fits (`nulls_free.json`), which null 2–3 dB deeper than the joint-split reference `branch_report` uses. Both are model-assisted clock fits; compare excesses only within one reference.
+
+**Tap timing and shape: no correction found** (flat settings, RT 0.8 / 1.8 held out, against −43.5 / −44.4 / −44.1 dB for the compact model):
+- **A common fractional delay of all loop paths** relative to the cluster (`diffuser --dtap`, 1 parameter): best δ = +0.0006 samples, and the nulls are unchanged (−43.6 / −44.4 / −44.2). The training cost is sharp: ±0.06 samples costs 10 dB. The loop paths and the cluster share one sample grid.
+- **Per-channel offsets** (offline, on the §16.7 hybrid fit): L's and R's near-tap kernels have the same shape and each implies about −0.002 samples. There is no L/R timing difference (such as a two-DSP hand-off).
+- **One short kernel shared by every tap** (lags −8…8, 17 numbers, in place of the single magnitude): **worse** held out (−40.2 / −40.6 / −40.9 dB). The fitted kernel is an alternating sequence decaying from the centre, i.e. energy at the band edge: training-capture deconvolution ringing (§13), not a read-path filter. The ±1–2-sample part of §16.7's kernel was most likely the same.
+
+**What is left in the compact model's +8 dB on flat settings is therefore not timing, read shape, the all-pass gains or the AP230 steps.** Next candidates: recompute the dense remainder (§16.7) with the −1/√2 diffuser, to see what structure is left; the comb460 / first-pass question (§16.5 item 2); and the AP230 damping form.

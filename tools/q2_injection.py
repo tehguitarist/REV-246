@@ -56,6 +56,9 @@ Stages:
            from the first pass (240-1550 samples after tap 0) of the AMPL-0 capture against the b = 0 reference setting,
            x = ref . AP230(b) / AP230(0) -> ap230_g<g>.json (same layout as q1's ap230.json). --only for a smoke test.
            The diffuser stage takes it with --ap230 <file>.
+  loops    the loop refit again, with the compact injection frozen (--frozen, default the 5-tap / -1/sqrt(2) model of
+           model_s_results 16.8-16.9, its diffuser and AP230 table): per setting the law loops, 5 shared numbers ('refit',
+           as `filters`), and 5 numbers per loop ('perloop', 20 per setting) -> loops_<tag>.json. --only for a smoke test.
   breport  excess of branch runs over the repeat-capture null (from the nulls stage of the same split), by control.
   joint    q1's held-out bench (run_split: shared injection x0 + G.x1, laws, AP230 table) re-run with the
            corrected windows, so Q2 candidates are compared against a fade-free baseline. --only limits it to a
@@ -533,7 +536,8 @@ def branch_spectra(lab, law, alphas, b230, diff=None):
         from scipy.signal import sosfreqz
         G["PB"] = diffuser_post(w, b230, diff) * np.abs(sosfreqz(q1.LFBAND, worN=w)[1]) ** 2
         z = lambda M: np.exp(-1j * w * M)
-        G["R"] = [G["PB"] / (1 - Gi * z(Pi)) for Gi, Pi in zip(q1.G_law(lab, law, w), q1.P)]
+        dt = np.exp(-1j * w * diff.get("dtap", 0.0))       # common fractional delay of the loop paths (re the cluster)
+        G["R"] = [G["PB"] * dt / (1 - Gi * z(Pi)) for Gi, Pi in zip(q1.G_law(lab, law, w), q1.P)]
     fac = loop_factors(lab, law, w)
     G["R"] = [r * branch_factor(a, *f) for a in alphas for r, f in zip(G["R"][:4], fac)]
     return G
@@ -788,7 +792,8 @@ def tied_map(J, taps, g460, mode, dense=0):
         for i, L in enumerate(J.Lx):
             off[(c, i)] = o
             o += L
-    ntap = 8 + (1 if mode == "tied" else len(taps))
+    K = int(mode[6:]) if mode.startswith("kernel") else 0       # "kernelK": one kernel at lags -K..K shared by every tap
+    ntap = 8 + (1 if mode == "tied" else 2 * K + 1 if mode.startswith("kernel") else len(taps))
     ncol = ntap + dense * 8
     M = lil_matrix((J.size(), ncol))
     if dense:
@@ -802,14 +807,19 @@ def tied_map(J, taps, g460, mode, dense=0):
     for k in range(8):
         M[k, k] = 1.0
     for n, (i, c, t, sg, j) in enumerate(taps):
+        assert 0 <= t - K and t + K + 460 < J.Lx[i], "tap outside the excitation window"
+        if mode.startswith("kernel"):
+            for k in range(-K, K + 1):
+                M[off[(c, i)] + t + k, 8 + K + k] += sg
+                M[off[(c, i)] + t + k + 460, 8 + K + k] -= g460 * sg
+            continue
         col = 8 if mode == "tied" else 8 + n
-        assert 0 <= t and t + 460 < J.Lx[i], "tap outside the excitation window"
         M[off[(c, i)] + t, col] += sg
         M[off[(c, i)] + t + 460, col] -= g460 * sg
     return M.tocsr()
 
 
-def tied_stage(mode, g460s, workers, iters, rounds, ext, score, dense=0):
+def tied_stage(mode, g460s, workers, iters, rounds, ext, score, dense=0, gfix=None, ap230=None):
     from concurrent.futures import ProcessPoolExecutor
     from scipy.sparse.linalg import LinearOperator, lsqr
     q1.EXT = ext
@@ -822,9 +832,12 @@ def tied_stage(mode, g460s, workers, iters, rounds, ext, score, dense=0):
     test = [k for k in flat if info[k]["rt"] in (0.8, 1.8)]
     train = [k for k in flat if k not in test]
     lab = {k: dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]) for k in info}
+    if ap230:
+        ap = json.load(open(ap230))
     b230 = {k: ap["steps"][ap["settings"][k]["step"]] for k in info}
     taps = tap_table()
     eps = dict(eps0)
+    dif = None if gfix is None else dict(g20=gfix, g72=gfix, g230=gfix, g460=0.445)
 
     def build():
         fl = [(k, amp, nm) for k in train for amp, nm in files_of(info[k]) if amp in q1.TRAIN_AMPL]
@@ -832,12 +845,13 @@ def tied_stage(mode, g460s, workers, iters, rounds, ext, score, dense=0):
             ys = list(ex.map(q1._prep_job, [(Q1, nm, info[k]["rt"], eps[nm], fade[nm], True, 0.0) for k, _, nm in fl], chunksize=4))
         gs = []
         for k in train:
-            G = branch_spectra(lab[k], law, [0.0], b230[k])
+            G = branch_spectra(lab[k], law, [0.0], b230[k], dif)
             G["files"] = [dict(y=y, w=w, amp=amp, name=nm) for (k2, amp, nm), (y, w) in zip(fl, ys) if k2 == k]
             gs.append(G)
         return q1.Joint(gs)
     for g460 in g460s:
-        tag = f"tied_{mode}_g{g460:g}" + (f"_dense{dense}_ext{ext}" if dense else "") + ("_smoke" if iters < 30 else "")
+        tag = (f"tied_{mode}_g{g460:g}" + (f"_dense{dense}_ext{ext}" if dense else "") + ("" if gfix is None else f"_ap{abs(gfix):.4f}")
+               + ("_smoke" if iters < 30 else ""))
         th = None
         for rd in range(rounds + 1):
             J = build()
@@ -859,7 +873,7 @@ def tied_stage(mode, g460s, workers, iters, rounds, ext, score, dense=0):
         keys = test + sorted(np.random.default_rng(0).choice(train, min(8, len(train)), replace=False).tolist())
         if score == "all":
             keys = list(info)
-        jobs = [(k, amp, branch_spectra(lab[k], law, [0.0], b230[k]), v, amp, nm, fade[nm], eps0[nm], ends[nm], ext)
+        jobs = [(k, amp, branch_spectra(lab[k], law, [0.0], b230[k], dif), v, amp, nm, fade[nm], eps0[nm], ends[nm], ext)
                 for k in keys for amp, nm in files_of(info[k])]
         with ProcessPoolExecutor(workers) as ex:
             sc = list(ex.map(_score_job, jobs))
@@ -868,8 +882,8 @@ def tied_stage(mode, g460s, workers, iters, rounds, ext, score, dense=0):
         json.dump(dict(mode=mode, g460=g460, ext=ext, split="rt", law=law, train=train, test=test, params=nfree,
                        theta=th.tolist(), rows=rows), open(os.path.join(OUT, tag + ".json"), "w"), indent=0)
         np.save(os.path.join(OUT, tag + ".npy"), v)
-        print(f"[{tag}] {nfree} free parameters; magnitude(s) {np.round(th[8:8 + (1 if mode == 'tied' else len(taps))], 4).tolist()[:6]}"
-              f"{' ...' if mode != 'tied' else ''}", flush=True)
+        print(f"[{tag}] {nfree} free parameters; tap magnitude / kernel {np.round(th[8:8 + (1 if mode == 'tied' else 17 if mode.startswith('kernel') else len(taps))], 4).tolist()[:17]}",
+              flush=True)
         branch_report([tag], sel=lambda r: r["key"] in test)
         if score == "all":
             print("  all 128 settings (flat training settings included):")
@@ -921,7 +935,7 @@ def ap230_stage(g230, only=None):
     return path
 
 
-def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None, ap230=None):
+def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None, ap230=None, dtap=False):
     from concurrent.futures import ProcessPoolExecutor
     from scipy.optimize import minimize
     q1.EXT = ext
@@ -942,8 +956,8 @@ def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None, ap23
         ys = list(ex.map(q1._prep_job, [(Q1, nm, info[k]["rt"], eps0[nm], fade[nm], True, 0.0) for k, _, nm in fl], chunksize=4))
     hist = []
 
-    def solve(gs):
-        diff = dict(g20=gs[0], g72=gs[1], g230=gs[2], g460=g460)
+    def solve(gs, d=0.0):
+        diff = dict(g20=gs[0], g72=gs[1], g230=gs[2], g460=g460, dtap=float(d))
         groups = []
         for k in train:
             G = branch_spectra(lab[k], law, [0.0], b230[k], diff)
@@ -956,8 +970,8 @@ def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None, ap23
         th, *_ = np.linalg.lstsq(A, y, rcond=None)
         r = y - A @ th
         cost = float(r @ r / (y @ y))
-        hist.append(dict(g=list(map(float, gs)), cost_db=10 * np.log10(cost), a=float(th[8])))
-        print(f"  g20 {gs[0]:+.4f} g72 {gs[1]:+.4f} g230 {gs[2]:+.4f}: training cost {10 * np.log10(cost):.2f} dB, a {th[8]:.4f}", flush=True)
+        hist.append(dict(g=list(map(float, gs)), dtap=float(d), cost_db=10 * np.log10(cost), a=float(th[8])))
+        print(f"  g20 {gs[0]:+.4f} g72 {gs[1]:+.4f} g230 {gs[2]:+.4f} dtap {d:+.4f}: training cost {10 * np.log10(cost):.2f} dB, a {th[8]:.4f}", flush=True)
         return cost, M @ th, diff
     g0 = np.array([-0.70, -0.70, -0.70])
     c0 = solve(g0)[0]
@@ -968,30 +982,165 @@ def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None, ap23
         gbest = res.x
     else:
         gbest = np.full(3, gfix)                             # all three fixed (no gain fitted)
-    cost, v, diff = solve(gbest)
-    tag = "diffuser_tied" + ("" if gfix is None else f"_fix{gfix:g}") + ("_ap230new" if ap230 else "") + ("_smoke" if gfix is None and maxfev < 20 else "")
+    dbest = 0.0
+    if dtap:                                                 # common fractional delay of the loop paths, gains as above
+        from scipy.optimize import minimize_scalar
+        coarse = {d: solve(gbest, d)[0] for d in (-1.0, -0.5, -0.25, 0.0, 0.25, 0.5, 1.0)}
+        d0 = min(coarse, key=coarse.get)
+        dbest = float(minimize_scalar(lambda d: solve(gbest, d)[0], bounds=(d0 - 0.25, d0 + 0.25), method="bounded",
+                                      options={"xatol": 0.005, "maxiter": maxfev}).x)
+    cost, v, diff = solve(gbest, dbest)
+    tag = ("diffuser_tied" + ("" if gfix is None else f"_fix{gfix:g}") + ("_ap230new" if ap230 else "") + ("_dtap" if dtap else "")
+           + ("_smoke" if maxfev < 20 and (gfix is None or dtap) else ""))
     keys = test + sorted(np.random.default_rng(0).choice(train, min(8, len(train)), replace=False).tolist())
     if score == "all":
         keys = list(info)
     rows = []
-    for name, dd in (("refit", diff), ("q1 diffuser", dict(g20=-0.7, g72=-0.7, g230=-0.7, g460=g460))):
-        vv = v if name == "refit" else solve(g0)[1]
+    base = dict(g20=-0.7, g72=-0.7, g230=-0.7, g460=g460) if not dtap else dict(g20=gbest[0], g72=gbest[1], g230=gbest[2], g460=g460, dtap=0.0)
+    for name, dd in (("refit", diff), ("q1 diffuser" if not dtap else "no dtap", base)):
+        vv = v if name == "refit" else solve(g0 if not dtap else gbest)[1]
         jobs = [(k, amp, branch_spectra(lab[k], law, [0.0], b230[k], dd), vv, amp, nm, fade[nm], eps0[nm], ends[nm], ext)
                 for k in keys for amp, nm in files_of(info[k])]
         with ProcessPoolExecutor(workers) as ex:
             sc = list(ex.map(_score_job, jobs))
         sub = [dict(key=k, amp=amp, held_out=k not in train, diffuser=name, **lab[k], **r) for k, amp, r in sc]
         rows += sub
-        json.dump(dict(diff=dd, train=train, test=test, split="rt", params=9 + (3 if name == "refit" and gfix is None else 0), rows=sub, hist=hist),
+        json.dump(dict(diff=dd, train=train, test=test, split="rt", params=9 + (3 if name == "refit" and gfix is None else 0) + (1 if name == "refit" and dtap else 0), rows=sub, hist=hist),
                   open(os.path.join(OUT, tag + ("" if name == "refit" else "_q1diff") + ".json"), "w"), indent=0)
     np.save(os.path.join(OUT, tag + ".npy"), v)
-    print(f"[{tag}] g20 {diff['g20']:+.4f}  g72 {diff['g72']:+.4f}  g230 {diff['g230']:+.4f}; training cost {10 * np.log10(c0):.2f} -> "
+    print(f"[{tag}] g20 {diff['g20']:+.4f}  g72 {diff['g72']:+.4f}  g230 {diff['g230']:+.4f}  dtap {diff.get('dtap', 0.0):+.4f}; training cost {10 * np.log10(c0):.2f} -> "
           f"{10 * np.log10(cost):.2f} dB ({len(hist)} evaluations)")
     for t_ in (tag, tag + "_q1diff"):
         branch_report([t_], sel=lambda r: r["key"] in test)
         if score == "all":
             print("  all 128 settings:")
             branch_report([t_])
+
+
+COMPACT = "diffuser_tied_fix-0.707107_ap230new"     # 5 taps per loop, all-pass gains -1/sqrt(2) (model_s_results 16.8-16.9)
+
+
+def make_G(lab, law, Gs, b230, diff, w=None):
+    """Group spectra with the diffuser override and given loop responses Gs."""
+    G = branch_spectra(lab, law, [0.0], b230, diff)
+    w = 2 * np.pi * np.fft.rfftfreq(G["N"])
+    z = lambda M: np.exp(-1j * w * M)
+    dt = np.exp(-1j * w * diff.get("dtap", 0.0))
+    G["R"] = [G["PB"] * dt / (1 - Gi * z(Pi)) for Gi, Pi in zip(Gs, q1.P)]
+    return G
+
+
+def _loops_setting(a):
+    """Per setting: law loops, 5 shared loop numbers and 5 per loop, fitted with the compact injection frozen."""
+    from scipy.optimize import least_squares
+    key, lab, b230, law, v, ext, caps, ends, v0, diff = a
+    q1.EXT = ext
+    law["lf"] = {float(k): x for k, x in law["lf"].items()}
+    G0 = branch_spectra(lab, law, [0.0], b230, diff)
+    N = G0["N"]
+    w = 2 * np.pi * np.fft.rfftfreq(N)
+    z = lambda M: np.exp(-1j * w * M)
+    J = q1.Joint([dict(G0, files=[dict(y=np.zeros((4096, 2)), w=np.ones(4096), amp=0)])])
+    cl, f, xs = J.split(v)
+    F, X = J._spectra(f, xs, N)
+    C = J.cluster(cl)
+
+    def reverb(Gs):
+        R = np.array([G0["PB"] / (1 - Gi * z(Pi)) for Gi, Pi in zip(Gs, q1.P)])
+        return np.fft.irfft(F * G0["PB"][None] + np.einsum("cik,ik->ck", X, R), N, axis=1).T
+    data = []
+    r_law = reverb(q1.G_law(lab, law, w))
+    for c in caps:
+        yb = _band(c["file"])
+        n = min(len(yb), N, len(C))
+        mdl = (c["amp"] / 90) * C[:n] + r_law[:n]
+        _, (e, sh, gain) = q1._clock_job((yb[:n], mdl, max(c["fade2"], 0.15), c["eps"], c["amp"] == 0))
+        y = q1.apply_clock(yb[:n], e, sh) / gain
+        i0, i1 = PRE + int(0.05 * FS), min(PRE + int(max(c["fade2"], 0.15) * FS), n)
+        t = (np.arange(i0, i1) - PRE) / FS
+        wt = 10 ** (1.5 * np.minimum(t, q1.T_CAP) / lab["rt"])[:, None]
+        data.append(dict(c, y=y, n=n, i0=i0, i1=i1, wt=wt / np.sqrt(np.sum((y[i0:i1] * wt) ** 2))))
+    idx = [0, 4] + ([1, 2, 3] if lab["lf"] != 1.0 else [])
+    lo = np.array([0.05, 0.02, 0.2, -0.5, 0.05, -300]); hi = np.array([20, 20, 5, 0.99999, 1.0, 300])
+    xsc = np.array([0.001 * lab["rt"], 0.01, 0.01, 0.001, 0.01, 1.0])[idx]
+    vv = np.array(v0, float); vv[5] = 0.0; vv[4] = min(vv[4], 1.0)
+
+    def err(Gs):
+        r = reverb(Gs)
+        return np.concatenate([(((d["amp"] / 90) * C[:d["n"]] + r[:d["n"]])[d["i0"]:d["i1"]] - d["y"][d["i0"]:d["i1"]]) * d["wt"] for d in data]).ravel()
+
+    def shared(u):
+        p = vv.copy(); p[idx] = u
+        return q1.G_loops(p, w)
+
+    def perloop(u):
+        out = []
+        for i in range(4):
+            p = vv.copy(); p[idx] = u[i * len(idx):(i + 1) * len(idx)]
+            out.append(q1.G_loops(p, w)[i])
+        return out
+    c_law = float(np.sum(err(q1.G_law(lab, law, w)) ** 2))
+    f1 = least_squares(lambda u: err(shared(u)), vv[idx], bounds=(lo[idx], hi[idx]), x_scale=xsc, diff_step=1e-6, max_nfev=80)
+    u2 = np.tile(f1.x, 4)
+    f2 = least_squares(lambda u: err(perloop(u)), u2, bounds=(np.tile(lo[idx], 4), np.tile(hi[idx], 4)), x_scale=np.tile(xsc, 4),
+                       diff_step=1e-6, max_nfev=300)
+    out = []
+    for name, Gs in (("law", q1.G_law(lab, law, w)), ("refit", shared(f1.x)), ("perloop", perloop(f2.x))):
+        G = make_G(lab, law, Gs, b230, diff)
+        for c in caps:
+            out.append(dict(key=key, **lab, amp=c["amp"], file=c["file"], loops=name,
+                            **score_capture(G, v, c["amp"], c["file"], c["fade2"], c["eps"], ends[c["file"]], ext)))
+    per = []
+    for i in range(4):
+        p = vv.copy(); p[idx] = f2.x[i * len(idx):(i + 1) * len(idx)]
+        per.append(p[:5].tolist())
+    p_sh = vv.copy(); p_sh[idx] = f1.x
+    print(f"{key}: cost law {c_law:.3g} -> shared {2 * f1.cost:.3g} -> per loop {2 * f2.cost:.3g}", flush=True)
+    return dict(key=key, **lab, free=idx, v_shared=p_sh[:5].tolist(), v_perloop=per, cost_law=c_law, cost_shared=float(2 * f1.cost),
+                cost_perloop=float(2 * f2.cost), nfev=[int(f1.nfev), int(f2.nfev)], rows=out)
+
+
+def loops_stage(workers, only=None, frozen=COMPACT, ap230="ap230_g0.7071.json"):
+    from concurrent.futures import ProcessPoolExecutor
+    info, fade, law, ap, eps0 = q1_tables()
+    ap = json.load(open(os.path.join(OUT, ap230)))
+    ends = json.load(open(os.path.join(OUT, "ramp.json")))
+    fits = json.load(open(os.path.join(Q1, "loops.json")))
+    d = json.load(open(os.path.join(OUT, frozen + ".json")))
+    v = np.load(os.path.join(OUT, frozen + ".npy"))
+    law = q1.fit_laws(fits)
+    keys = [k for k in info if only is None or k in only]
+    jobs = []
+    for k in keys:
+        g = info[k]
+        caps = [dict(amp=a, file=nm, eps=eps0[nm], fade2=fade[nm]) for a, nm in files_of(g)]
+        v0 = np.median([r["v"] for r in fits if r["file"] in {c["file"] for c in caps}], 0)
+        jobs.append((k, dict(lf=g["lf"], rt=g["rt"], hf=g["hf"]), ap["steps"][ap["settings"][k]["step"]], json.loads(json.dumps(law)),
+                     v, 1700, caps, ends, v0, d["diff"]))
+    with ProcessPoolExecutor(workers) as ex:
+        res = list(ex.map(_loops_setting, jobs))
+    path = os.path.join(OUT, "loops_compact" + ("_smoke" if only else "") + ".json")
+    json.dump(res, open(path, "w"), indent=0)
+    rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, "nulls_free.json")))}
+    ws = ["50-150", "150-300", "300-600", "600-1000"]
+
+    def ex_(rows, w):
+        e = [r["null_comp"][w][1] - rep[(r["key"], r["amp"])]["repeat_comp"][w][1] for r in rows
+             if r["null_comp"].get(w) and rep.get((r["key"], r["amp"])) and rep[(r["key"], r["amp"])]["repeat_comp"].get(w)]
+        return np.median(e) if e else np.nan
+    rows = [r for s_ in res for r in s_["rows"]]
+    print(f"\n## Loops refitted with the compact injection frozen ({frozen}); {len(res)} settings; R, compensated; null [excess over repeat]")
+    for lp in ("law", "refit", "perloop"):
+        rr = [r for r in rows if r["loops"] == lp]
+        print(f"- {lp:7s}: " + "; ".join(f"{w}: {np.median([r['null_comp'][w][1] for r in rr if r['null_comp'].get(w)]):.1f} [{ex_(rr, w):+.1f}]" for w in ws))
+        for c in ("rt", "hf", "lf"):
+            vals = sorted({r[c] for r in rr})
+            if len(vals) > 1:
+                print(f"    by {c}: " + "; ".join(f"{v_}: " + "/".join(f"{ex_([r for r in rr if r[c] == v_], w):+.1f}" for w in ws[:3]) for v_ in vals))
+    if len(res) <= 12:
+        for s_ in res:
+            print(f"  {s_['key']:12s} " + "  ".join(f"{lp}: " + "/".join(f"{ex_([r for r in s_['rows'] if r['loops'] == lp], w):+.1f}" for w in ws[:3])
+                                                for lp in ("law", "refit", "perloop")))
 
 
 W_COMP = [(0, 50), (50, 150), (150, 300), (300, 600), (600, 1000), (1000, 1500), (1500, 2500)]
@@ -1104,12 +1253,13 @@ OUT = os.path.join(ROOT, "analysis", "q2")
 def main():
     global OUT
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "ap230", "report"])
+    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "ap230", "loops", "report"])
     ap.add_argument("--g230", type=float, default=-0.7071067812, help="ap230: the all-pass gain for the step measurement")
     ap.add_argument("--ap230", default=None, help="diffuser: an AP230 step table from the ap230 stage (default: q1's)")
     ap.add_argument("--maxfev", type=int, default=120, help="diffuser: Nelder-Mead evaluations")
+    ap.add_argument("--dtap", action="store_true", help="diffuser: also fit one common fractional delay of the loop paths")
     ap.add_argument("--gfix", type=float, default=None, help="diffuser: fix all three all-pass gains (no fit), e.g. -0.70710678")
-    ap.add_argument("--mode", default="tied", choices=["tied", "tapgain"], help="tied: one magnitude; tapgain: one gain per tap")
+    ap.add_argument("--mode", default="tied", help="tied: one magnitude; tapgain: one gain per tap; kernelK: one kernel at lags -K..K for every tap")
     ap.add_argument("--g460", default="0.445", help="tied: comma-separated g460 values (0.445 = the post comb cancelled)")
     ap.add_argument("--dense", type=int, default=0, help="tied: free dense coefficients over the first N samples of each excitation")
     ap.add_argument("--score", default="test", choices=["test", "all"], help="tied: score the flat test settings, or all 128")
@@ -1137,9 +1287,12 @@ def main():
         for sp in a.splits.split(","):
             branches_stage([x if x.isalpha() or x.startswith("g") else float(x) for x in a.alphas.split(",")], a.subset, a.workers, a.iters, a.rounds, a.ext, sp)
     if a.stage == "tied":
-        tied_stage(a.mode, [float(x) for x in a.g460.split(",")], a.workers, a.iters, a.rounds, a.ext if a.ext != 300 else 1700, a.score, a.dense)
+        tied_stage(a.mode, [float(x) for x in a.g460.split(",")], a.workers, a.iters, a.rounds, a.ext if a.ext != 300 else 1700, a.score, a.dense,
+                   a.gfix, a.ap230)
     if a.stage == "diffuser":
-        diffuser_stage(a.workers, a.score, a.maxfev, gfix=a.gfix, ap230=a.ap230)
+        diffuser_stage(a.workers, a.score, a.maxfev, gfix=a.gfix, ap230=a.ap230, dtap=a.dtap)
+    if a.stage == "loops":
+        loops_stage(a.workers, only)
     if a.stage == "ap230":
         ap230_stage(a.g230, only)
     if a.stage == "filters":
