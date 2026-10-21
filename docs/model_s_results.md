@@ -1189,3 +1189,30 @@ Details: `docs/period_dsp_practice.md` §7.6.
 3. **All 128 settings** with the tied injection frozen (as §15.9).
 4. **M and L's first recirculation** with the delays ×2 / ×4.
 5. **Per-setting fits with the tied model and the long window**, which removes the first-pass FIR / excitation split of §16.4 and is the clean K4/K7 check.
+
+### 16.6 On the bench: the taps hold, but a dense feed is missing (`tied` stage) **[S for the taps; open for the rest]**
+
+Code: `.venv/bin/python tools/q2_injection.py --stage tied --mode tied|tapgain --g460 … [--score all]` → `analysis/q2/tied_*.json` (log `tied_all.log`). The tap table is read from `k1_sparsity.json`. Excitations are built from the taps: L at the tabled lags, R at lag + 26 or 332, each tap followed by −g460 at +460, which cancels the post comb460 (0.445 = "comb removed"). The first-pass FIR is 0. Fitted on the flat training settings (as §15.7), RT 0.8 / 1.8 held out, fade-compensated; excess over the repeat-capture null in brackets, R.
+
+| Model | Free parameters | 50–150 ms | 150–300 ms | 300–600 ms | 600–1000 ms |
+|---|---|---|---|---|---|
+| Tied, g460 0.445 | 9 (8 cluster gains + 1 magnitude) | −32.1 [+19.0] | −32.0 [+20.9] | −31.8 [+16.2] | −30.8 [+4.0] |
+| Tied, g460 0.42 / 0.40 | 9 | −29.6 / −25.8 | −29.1 / −24.9 | −29.2 / −24.9 | −28.5 / −24.6 |
+| Free gain per tap, g460 0.445 | 48 | −32.3 [+18.9] | −32.0 [+20.9] | −31.8 [+16.3] | −30.7 [+4.1] |
+| *Free injection (§15.7, 600 iterations)* | *27,924* | *−54.3* | *−54.0* | *−48.8* | *−37.4* |
+| Tied, flat-trained, **all 128 settings** with the laws (one clock round) | 9 | −32.0 [+20.1] | −31.2 [+22.5] | −30.8 [+17.0] | −30.2 [+9.2] |
+| *Free injection, all 128 with the laws (§15.9)* | *27,924* | *−48.5 [+8.0]* | *−43.0 [+12.3]* | *−38.9 [+10.6]* | *−34.6 [+5.1]* |
+
+- **Confirmed on held-out data:** the five taps per loop are **equal in size** (free per-tap gains come out at 0.299–0.301 and change nothing), **R = L + 26 or 332** as tabled, and **no comb460 on the loop paths** (exact cancellation, g460 = 0.445, is best; 0.42 / 0.40 are 2.5 / 6 dB worse). LSQR is converged (10 and 100 iterations agree). The magnitude (0.300) matches the offline 0.2945.
+- **But the tied model reaches only about −32 dB, uniformly** (+16…+27 dB over the repeat-capture null at every RT, HF and LF step), against −54 dB (flat) and −48.5 / −43 dB (all 128) for the free injection. What it lacks is the free injection's dense part: about 1.3 % of the excitation energy (§16.2, residual −18.7 dB), worth about 20 dB of held-out null. It generalises across RT, so it is real, not estimation noise.
+- **What the dense part is not** (offline, on the frozen free injection, scratch scripts):
+  - per-tap gain errors (above);
+  - one correction kernel common to all loops, as a diffuser-gain error would give: a 64 / 600 / 1,200-tap kernel takes the residual from −18.7 to only −19.1 / −19.8 / −20.1 dB, and fitted on loops 1321 / 1389 it improves 1461 / 1587 by 0.1–0.3 dB;
+  - taps read from inside the diffuser chain: expressed on the AP230, AP230·AP72 or whole-chain input, 16 integer taps explain 7–10 % of it (output: 10 %; phase control 1 %).
+- **What it looks like:**
+  - spread evenly over the whole excitation window (lags 230 to about 2,800 after tap 0), falling only a few dB by its end, so it may continue past the window;
+  - R's part follows L's through the 26/332 shifts for 31–42 % of its energy (random lag pairs 0–7 %), so at least part of it enters on the write side, before the read-out distributor.
+- **Readings (H):** a weak, long, dense feed into each loop, for example something recursive ahead of the loops, or leakage between loops below what the tail tests of §15.4 could see.
+- **Next:** find that feed. Two tests:
+  - a free dense excitation per loop on top of the tied taps, with a longer window, to see how far it extends and how fast it decays;
+  - its relation across loops: a shared source shows as correlation after each loop's own taps are divided out.

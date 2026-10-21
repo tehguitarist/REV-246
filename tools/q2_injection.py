@@ -43,6 +43,11 @@ Stages:
            repeat-capture null, with the law loops (same frozen injection) for comparison. Second form 'refit+eq': the same
            plus a loop-path EQ (first-order LF shelf and HF one-pole on the loop branches only; 3 numbers), in case the
            LF / HF controls also act outside the recursion. --only for a smoke test.
+  tied     the offline 5-tap structure (model_s_results §16, analysis/q2/k1_sparsity.json) on the bench: excitations built
+           from the tabled taps (L at their lags, R at lag + 26 or 332, each tap followed by -g460 at +460, which cancels the
+           post comb460; g460 = 0.445 is "comb removed"), first-pass FIR 0. --mode tied (8 cluster gains + one magnitude)
+           or tapgain (8 + 40 tap gains). Fitted on the flat training settings (RT 0.8 / 1.8 held out), one clock round;
+           --score all scores every capture of all 128 settings with the laws. --g460 0.42,0.445 scans.
   breport  excess of branch runs over the repeat-capture null (from the nulls stage of the same split), by control.
   joint    q1's held-out bench (run_split: shared injection x0 + G.x1, laws, AP230 table) re-run with the
            corrected windows, so Q2 candidates are compared against a fade-free baseline. --only limits it to a
@@ -740,6 +745,106 @@ def filters_report(res):
                                                 for lp in ("law", "refit", "refit+eq")))
 
 
+# ---------------------------------------------------------------- the 5-tap structure on the bench
+def tap_table(path=None):
+    """(loop index, channel, excitation index, sign) per tap from k1_sparsity.json (lags from cluster tap 0)."""
+    t = json.load(open(path or os.path.join(OUT, "k1_sparsity.json")))["tied"]
+    taps = []
+    for i, Pi in enumerate(q1.P):
+        e = t[str(Pi)]
+        for j, ((lag, sg), sh) in enumerate(zip(e["L_taps"], e["R_shift"])):
+            taps.append((i, 0, lag - q1.S0, sg, j))
+            taps.append((i, 1, lag + sh - q1.S0, sg, j))
+    return taps
+
+
+def tied_map(J, taps, g460, mode):
+    """Sparse matrix M: full Joint parameter vector = M theta. theta = 8 cluster gains + (one magnitude | one gain per tap)."""
+    from scipy.sparse import lil_matrix
+    off = {}
+    o = 8 + 2 * q1.LFIR
+    for c in (0, 1):
+        for i, L in enumerate(J.Lx):
+            off[(c, i)] = o
+            o += L
+    ncol = 8 + (1 if mode == "tied" else len(taps))
+    M = lil_matrix((J.size(), ncol))
+    for k in range(8):
+        M[k, k] = 1.0
+    for n, (i, c, t, sg, j) in enumerate(taps):
+        col = 8 if mode == "tied" else 8 + n
+        assert 0 <= t and t + 460 < J.Lx[i], "tap outside the excitation window"
+        M[off[(c, i)] + t, col] += sg
+        M[off[(c, i)] + t + 460, col] -= g460 * sg
+    return M.tocsr()
+
+
+def tied_stage(mode, g460s, workers, iters, rounds, ext, score):
+    from concurrent.futures import ProcessPoolExecutor
+    from scipy.sparse.linalg import LinearOperator, lsqr
+    q1.EXT = ext
+    info, fade, _, ap, eps0 = q1_tables()
+    ends = json.load(open(os.path.join(OUT, "ramp.json")))
+    fits = json.load(open(os.path.join(Q1, "loops.json")))
+    law = q1.fit_laws(fits)
+    law["lf"] = {float(k): x for k, x in law["lf"].items()}
+    flat = [k for k, g in info.items() if g["lf"] == 1.0 and g["hf"] == 1.0]
+    test = [k for k in flat if info[k]["rt"] in (0.8, 1.8)]
+    train = [k for k in flat if k not in test]
+    lab = {k: dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]) for k in info}
+    b230 = {k: ap["steps"][ap["settings"][k]["step"]] for k in info}
+    taps = tap_table()
+    eps = dict(eps0)
+
+    def build():
+        fl = [(k, amp, nm) for k in train for amp, nm in files_of(info[k]) if amp in q1.TRAIN_AMPL]
+        with ProcessPoolExecutor(workers) as ex:
+            ys = list(ex.map(q1._prep_job, [(Q1, nm, info[k]["rt"], eps[nm], fade[nm], True, 0.0) for k, _, nm in fl], chunksize=4))
+        gs = []
+        for k in train:
+            G = branch_spectra(lab[k], law, [0.0], b230[k])
+            G["files"] = [dict(y=y, w=w, amp=amp, name=nm) for (k2, amp, nm), (y, w) in zip(fl, ys) if k2 == k]
+            gs.append(G)
+        return q1.Joint(gs)
+    for g460 in g460s:
+        tag = f"tied_{mode}_g{g460:g}" + ("_smoke" if iters < 30 else "")
+        th = None
+        for rd in range(rounds + 1):
+            J = build()
+            M = tied_map(J, taps, g460, mode)
+            op = LinearOperator((len(J.target()), M.shape[1]), matvec=lambda t: J.forward(M @ t),
+                                rmatvec=lambda z: M.T @ J.adjoint(z), dtype=float)
+            th = lsqr(op, J.target(), iter_lim=iters, atol=1e-12, btol=1e-12, x0=th)[0]
+            v = M @ th
+            if rd < rounds:
+                jobs, names = [], []
+                for G in J.groups:
+                    for fl_ in G["files"]:
+                        yb = _band(fl_["name"])
+                        jobs.append((yb, J.render(v, G, min(len(yb), G["N"]), fl_["amp"]), fade[fl_["name"]], eps[fl_["name"]], False))
+                        names.append(fl_["name"])
+                with ProcessPoolExecutor(workers) as ex:
+                    cl = list(ex.map(q1._clock_job, jobs))
+                eps.update({nm: c_[0][0] for nm, c_ in zip(names, cl)})
+        keys = test + sorted(np.random.default_rng(0).choice(train, min(8, len(train)), replace=False).tolist())
+        if score == "all":
+            keys = list(info)
+        jobs = [(k, amp, branch_spectra(lab[k], law, [0.0], b230[k]), v, amp, nm, fade[nm], eps0[nm], ends[nm], ext)
+                for k in keys for amp, nm in files_of(info[k])]
+        with ProcessPoolExecutor(workers) as ex:
+            sc = list(ex.map(_score_job, jobs))
+        rows = [dict(key=k, amp=amp, held_out=k not in train, **lab[k], **r) for k, amp, r in sc]
+        nfree = M.shape[1]
+        json.dump(dict(mode=mode, g460=g460, ext=ext, split="rt", law=law, train=train, test=test, params=nfree,
+                       theta=th.tolist(), rows=rows), open(os.path.join(OUT, tag + ".json"), "w"), indent=0)
+        np.save(os.path.join(OUT, tag + ".npy"), v)
+        print(f"[{tag}] {nfree} free parameters; magnitude(s) {np.round(th[8:], 4).tolist()[:6]}{' ...' if nfree > 14 else ''}", flush=True)
+        branch_report([tag], sel=lambda r: r["key"] in test)
+        if score == "all":
+            print("  all 128 settings (flat training settings included):")
+            branch_report([tag])
+
+
 W_COMP = [(0, 50), (50, 150), (150, 300), (300, 600), (600, 1000), (1000, 1500), (1500, 2500)]
 
 
@@ -850,7 +955,10 @@ OUT = os.path.join(ROOT, "analysis", "q2")
 def main():
     global OUT
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "report"])
+    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "report"])
+    ap.add_argument("--mode", default="tied", choices=["tied", "tapgain"], help="tied: one magnitude; tapgain: one gain per tap")
+    ap.add_argument("--g460", default="0.445", help="tied: comma-separated g460 values (0.445 = the post comb cancelled)")
+    ap.add_argument("--score", default="test", choices=["test", "all"], help="tied: score the flat test settings, or all 128")
     ap.add_argument("--tags", default="", help="breport: comma-separated branch run names (files in OUT without .json)")
     ap.add_argument("--alphas", default="0,1", help="branches: per branch an exponent of G_i, or g / H / HL / HH / gHL / gHH")
     ap.add_argument("--ext", type=int, default=300, help="branches: excitation length P_i + ext (q1: 300)")
@@ -874,6 +982,8 @@ def main():
     if a.stage == "branches":
         for sp in a.splits.split(","):
             branches_stage([x if x.isalpha() or x.startswith("g") else float(x) for x in a.alphas.split(",")], a.subset, a.workers, a.iters, a.rounds, a.ext, sp)
+    if a.stage == "tied":
+        tied_stage(a.mode, [float(x) for x in a.g460.split(",")], a.workers, a.iters, a.rounds, a.ext if a.ext != 300 else 1700, a.score)
     if a.stage == "filters":
         filters_stage(a.workers, only)
     if a.stage == "breport":
