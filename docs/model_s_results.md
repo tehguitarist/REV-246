@@ -1401,3 +1401,18 @@ Aim: separate the two readings of §16.12 (library-specific fitting by the free 
   - At LF 0.1 / RT 0.8 (held out from the β fit), +10.9 / +18.7 / +16.2 dB beats the free per-setting refits (5 numbers +15.4 / +23.5 / +20.8; 20 numbers +15.0 / +22.9 / +20.6).
 - **What remains:** LF 0.1 at short RT (+15 / +20 / +19 dB). Its low end decays within one or two passes, and most of those files are fade-dominated. Also HF 0.2 at RT 0.8–1.4 below the cap (§16.15).
 - **Reading (H):** a control CPU that clips the LF shelf coefficient at its range limit and recomputes the broadband gain from what the clipped shelf leaves. A rule of that kind would make the top-end correction proportional to the clip.
+
+### 16.17 HF 0.2 at RT 0.6–1.0: the excess follows AP230's damping step, not the loop laws **[S for the association; open for the cause]**
+
+- **Where it sits** (free injection frozen, loops refitted per setting, excess over the repeat-capture null at 50–150 ms, LF 0.4 / 1.0 / 2.0): where AP230's step is on (b > 0: HF 0.2 / RT 0.6–1.0, HF 0.4 / RT 0.6–0.8, HF 0.6 / RT 0.6) it stays **+10…+18 dB even with free per-setting loops**. The same HF step one RT step later (b = 0) reaches +1…+9 dB, e.g. HF 0.4: RT 0.8 (b 0.17) +10.9, RT 1.0 (b 0) +5.9. A loop refit cannot fix an error that enters through the input diffuser, and the frozen injection was trained on b = 0 settings only. HF 0.2 at long RT (b = 0) keeps a smaller +8…+9 dB of its own.
+- **The first pass where b > 0** (240–1,550 samples after tap 0, AMPL-0 captures against the b = 0 reference, g = −1/√2) fits to only −43.3 / −41.0 / −39.0 dB for b = 0.17 / 0.33 / 0.50, against a median −48.9 dB at b = 0. Nothing linear improves it:
+  - a series 9-tap filter or one-pole outside AP230: ≤ 0.5 dB;
+  - a free AP230 gain: ≤ 0.2 dB (it stays at −0.706);
+  - separate two-tap dampings in AP20 / AP72 / AP230: AP20 and AP72 come out at b ≈ 0.0001;
+  - the same damping in all three all-passes: −8…−16 dB;
+  - a one-pole in AP230's loop in place of the two-tap: −15…−30 dB;
+  - AP230's delay ±1 sample: −4…−15 dB.
+
+  The residual is spread through the diffuser output, not concentrated at the read taps (17–20 % of it within ±6 samples of the taps' first appearances, against a 24 % time share). Q1's free 19-tap loop filter also converged to the two taps (§14.3).
+- **Time variance ruled out (a correction):** a first test suggested the first pass decorrelates between captures as b grows (repeat null −36 / −35 / −29 / −20 dB for b = 0 / 0.17 / 0.33 / 0.50). That was an artefact of the raw tail-fit clock ratios (`loops.json`), which are off by up to 357 ppm for about 10 % of files (median 0.8 ppm), the short-RT ones. With the fitted clocks of the nulls stage the first-pass repeat null is −36.1 / −38.0 / −35.5 / −35.4 dB (no trend), and the reverb windows agree to −59…−60 dB at b = 0.17 / 0.33. **Program S is time-invariant at b > 0 as well.** For any capture-to-capture comparison use fitted clocks, not the raw tail fits.
+- **So:** the two-tap AP230 damping is the best LTI form found, and its −39…−43 dB first pass is what limits the b > 0 settings. The cause is open: a form not tried, or something in how the step is realised (**H**).
