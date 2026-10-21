@@ -822,6 +822,8 @@ Code: `.venv/bin/python tools/q1_generalise.py` (stages `data`, `loops`, `laws`,
 > - **Where it fails:** at large damping per loop pass (RT 0.3 s, HF 0.2, LF 0.1), from the first recirculation on. Not the laws (refitting them gains ≤ 1.5 dB) and not the loop-filter form: the injection/read-out geometry, i.e. Q2 (§14.6).
 > - **The same injection predicts the CLA unit** (−32 / −30 dB at 50–300 ms, nothing digital fitted on CLA; §14.7).
 
+> **Correction (§15.1):** these windows end inside Tomkin's fade for files shorter than about 1.5 s (RT ≤ 1.0; 335 of 512 windows). With corrected windows the held-out nulls change by ≤ 1.5 dB and the conclusions stand; §15 adds fade compensation.
+
 ### 14.1 Set-up
 
 - **Data:** the 512 library S files (8 RT × 4 LF × 4 HF × 4 AMPL), from the device-rate cache of `ml_structure.py`.
@@ -978,3 +980,76 @@ The CLA IR (another unit; LF 1.0, RT 1.0, **HF 0.9, a step the library doesn't h
 - **Q8 partly:** the 460 stage needs no control dependence in the first pass (AP230 is the only stage that changes, §14.3).
 - **§11's open placement:** AP230 is on the input side (§14.3).
 - **Parameter count:** 30,640 shared injection parameters (the Q2 target: replace them with a structure), 13 law numbers, a 4-step table (2 bits per RT/HF cell), and per capture a clock ratio, a per-channel sub-sample alignment and optionally a gain.
+
+## 15. Q2 groundwork: fade-free windows, fade compensation, and what a per-setting injection reaches (Tomkin 96 kHz, program S)
+
+Code: `.venv/bin/python tools/q2_injection.py --stage windows|ramp|free|joint|nulls|report` → `analysis/q2/` (`fade2.json`, `ramp.json`, `free.json`, `split_*.json`, `v_*.npy`, `nulls_*.json`, logs `*.log`). It reuses `tools/q1_generalise.py` and its `analysis/q1` cache, laws, AP230 table and clock fits. The per-setting free injections (`analysis/q2/v/`, 8.5 MB) are not committed; `--stage free` regenerates them in about 60 min (5 workers). Every long stage was smoke-tested on 2–7 settings first (`--only`).
+
+> **Status (October 2026): groundwork done, Q2 itself open.**
+> - **Q1's windows ran into Tomkin's fade** on 335 of 512 files (§15.1). Corrected; Q1's conclusions stand (the shared injection is still 21–28 dB above the repeat-capture null).
+> - **The fade is a fixed 0.700 s linear ramp** ending 0.65 ms before each raw file's end, and is now compensated in every null without a free parameter (§15.2). The model is never faded.
+> - **A free injection per setting** (loops from the laws) reaches **−53 / −46 / −41 dB** (50–150 / 150–300 / 300–600 ms, R, other captures), **+3…+10 dB over the repeat-capture null**; the shared injection reaches −28 / −25 / −24 dB (§15.3). So **15–20 dB of the gap is how the injection depends on the setting**: that is Q2.
+> - The rest is the **loop filters at their extremes**: LF 0.1 (+10…+18 dB), HF 0.2 (+5…+11), LF 0.4 / HF 0.4 (+4…+8); HF 1.0 / LF 1.0 are at the ceiling (§15.3–15.4).
+
+### 15.1 Q1's windows included the fade
+
+- q1's `fade_times` ends each window at min(fade seen against the AMPL partners, last non-zero sample − min(0.70 s, **45 % of the file**), the level 60 dB down). For files shorter than about 1.5 s the 45 % branch puts the end inside Tomkin's fade, which starts 0.70 s before the last sample in every file (§15.2).
+- Median window end against fade start: RT 0.3 0.41 / 0.23 s, RT 0.6 0.49 / 0.34, RT 0.8 0.59 / 0.46, RT 1.0 0.65 / 0.56; RT ≥ 1.4 unaffected. The fit weight 10^(1.5t/RT) gives those faded samples the largest weights.
+- **Check (loops only, per-file annihilator fits of §14.2, 100 Hz–10 kHz):** in 50 ms blocks from 0.40 s, the residual leaves the repeat-capture difference (AMPL 0 − AMPL 30 through the same annihilator) at a median +0.005 s from the fade start (IQR −0.055…+0.096 s, 105 of 128 settings). In 52 of 128 settings q1's window ended after that point.
+- **Fix:** `fade2.json` = min(q1's end, last non-zero − 0.70 s): 335 of 512 windows shortened, median 0.175 s (max 0.33 s). Three AMPL-0 files (RT 0.3–0.6) have nothing before the fade.
+- **Q1's result stands** with corrected windows (`joint` stage = q1's `run_split`, same settings; held out, 100 Hz–10 kHz, cut at the fade, L / R): RT split −31.9 / −27.9, −27.4 / −25.1, −26.6 / −24.4, −28.9 / −26.1 dB at 50–150 / 150–300 / 300–600 / 600–1000 ms; HF split −32.7 / −28.6, −29.9 / −27.5, −29.5 / −26.2, −28.4 / −26.1; LF split −30.7 / −27.8, −26.3 / −25.2, −23.8 / −22.9, −22.3 / −21.4. Against §14.5 (−30.7 / −27.4 at 50–300 ms in the RT split) the change is ≤ 1.5 dB. The §14.6 reading "fails as the per-pass damping grows" is partly the fade for RT ≤ 1.0 (late windows); §15.3 separates it.
+
+### 15.2 The fade, and its compensation
+
+- **Shape (S):** the gain of each file against an AMPL partner that is still unfaded (20 ms LS gains, both re-gridded by their clock) is a **linear amplitude ramp to zero**: 127 file/partner pairs agree within ±0.1 dB (10th–90th percentile); raised-cosine, dB-linear and quarter-sine shapes fit 0.7–5.9 dB rms worse than linear (0.58 dB rms, in 10 ms blocks).
+- **Length and end (S):** per-file fits give L = 0.699 s (IQR 0.693–0.703); L and the end time trade exactly on the partial ramps a partner shows (correlation +1.00). With **L = 0.700 s** fixed, the ramp ends **0.65 ms before the raw 96 kHz file's end** (IQR −0.90…−0.36 ms, 5–95 % −1.2…+0.4 ms; L and R agree within ±0.6 ms). The raw files carry a median 129 (max 272) zero samples after the last non-zero one, so the last non-zero sample is not a usable anchor (a shared ramp anchored there fits only to 0.4–0.5 % rms per file).
+- **Compensation (`ramp`, `nulls` stages):** each raw file's end is mapped onto q1's device grid per channel (ml_structure's `to_device_grid` anchor, then q1's `shift_LR`, then each capture's clock and shift). The model is rendered unfaded; nulls compare the data with model × ramp. Clock and gain are still fitted before the fade (for the three fully faded files: against model × ramp). Windows run on to where the ramp falls below 0.1 or the compensated level is 60 dB below 50–300 ms. The repeat-capture null is compensated the same way, by cross-multiplying (y_a·g_b against y_b·g_a). **No free parameter:** the ramp scatter (±0.3 ms) is worth about 0.04 % in gain (−68 dB).
+- **Rejected:** fitting the ramp end per capture against the model. Where the model nulls only to −25 dB, the least-squares gain shrinks and drags the end to its bound (−30 ms in half the smoke-test captures).
+- **Check:** before the fade the compensated repeat-capture null equals the cut one (−55.1 / −54.1 against −55.5 / −54.1 dB at 150–300 ms, smoke test; identical at 50–150 ms in every run).
+
+### 15.3 Per-setting free injection against the shared one
+
+**Set-up (`free` stage).** Per setting, a free injection of its own (variant x: excitations Pᵢ + 300, the 1,400-tap first-pass FIR, the cluster gains; 14.3 k parameters per setting), loops and AP230 step from the laws and table (all files), one clock-refit round. Three tests: in-sample (all four captures, fitted up to the fade); **other captures** (fitted on AMPL 30 + 90, nulled on AMPL 0 and 60: same reverb, independent capture noise); **time held out** (fitted on 0–250 ms, predicted to the fade). The repeat-capture null per setting uses the same clock and gain fits.
+
+Held-out medians, 100 Hz–10 kHz, L / R; compensated = fade compensated (§15.2), cut = windows end at the fade:
+
+| Window (ms) | Shared injection, compensated: RT / HF / LF split (R) | Free per setting, other captures (cut) | Free per setting, time held out (cut) | Free per setting, compensated (in-sample before the fade, held out in time after it) | Repeat-capture null, compensated (R; range over the four runs) |
+|---|---|---|---|---|---|
+| 0–50 | −37.9 / −37.7 / −37.0 | −40.3 / −42.1 | −41.7 / −44.4 | −41.7 / −44.0 | – |
+| 50–150 | −27.9 / −28.6 / −27.8 | −52.0 / −53.2 | −53.5 / −54.9 | −52.0 / −53.0 | −49.2…−56.1 |
+| 150–300 | −25.1 / −25.3 / −24.5 | −48.9 / −48.2 | −46.6 / −46.1 | −46.6 / −45.5 | −51.3…−54.6 |
+| 300–600 | −23.5 / −25.5 / −21.0 | −45.7 / −45.4 | −38.4 / −39.3 | −41.7 / −41.4 | −42.7…−47.7 |
+| 600–1000 | −21.8 / −24.1 / −18.6 | −42.0 / −42.2 | −37.9 / −39.3 | −37.4 / −37.3 | −34.0…−40.2 |
+| 1000–1500 | −22.6 / −23.5 / −17.1 | −40.3 / −40.3 | −37.1 / −38.8 | −33.9 / −33.9 | −31.7…−35.1 |
+| 1500–2500 | −22.7 / −22.5 / −16.1 | – | – | −31.2 / −31.2 | −26.6…−30.6 |
+
+- **Excess over the repeat-capture null (R):** shared injection, compensated: +21…+28 dB up to 600 ms, +14 dB at 600–1000 ms, +10…+13 dB at 1–1.5 s. Free per setting, other captures (cut): +2.7 / +6.8 / +5.6 / +1.5 dB at 50–150 / 150–300 / 300–600 / 600–1000 ms; compensated +3.4 / +9.6 / +9.4 / +3.3 dB. Fade compensation extends the windows by a median 0.63 s (to 417 against 245 captures at 600–1000 ms for the free models).
+- **Parameters:** shared injection 30,640 + 13 law numbers + the AP230 table; free per setting 14.3 k per setting (a diagnostic, not a model); per capture a clock ratio, a sub-sample alignment and a gain; the fade ramp has none.
+- **Excess of the free injection by control** (R, other captures, cut; 50–150 / 150–300 / 300–600 ms):
+
+  | | | | | |
+  |---|---|---|---|---|
+  | LF | 0.1: +10.1 / +18.4 / +12.8 | 0.4: +3.9 / +7.2 / +6.5 | 1.0: −0.2 / +2.3 / +0.7 | 2.0: −0.2 / +3.9 / +2.8 |
+  | HF | 0.2: +4.6 / +11.1 / +9.7 | 0.4: +3.3 / +7.9 / +6.3 | 0.6: +1.6 / +3.0 / +2.1 | 1.0: −1.2 / +0.2 / −0.2 |
+  | RT | 0.3: +1.2 / +12.2 / – | 1.0: +3.8 / +7.1 / +6.5 | 1.8: +2.6 / +6.0 / +5.6 | 2.5: −0.1 / +4.2 / +2.2 |
+
+  By octave (150–300 ms) LF 0.1 is worst at low frequencies (+35 dB at 125 Hz, +27 at 250, +20 at 1 kHz, +12 at 8 kHz) and HF 0.2 at 8 kHz (+16 dB).
+- **Reading:**
+  - With flat filters (HF 1.0, LF 1.0) a free injection per setting is **at the repeat-capture null**: the loops and diffuser are right there, and so is the injection *per setting*.
+  - **The shared injection is 15–20 dB worse than a per-setting one at every RT, HF and LF.** That gap is how the injection/read-out depends on the controls, which one fixed x0 + G·x1 does not capture. This is Q2 proper.
+  - The remaining per-setting excess follows the **strength of the LF and HF filters**, not RT: the laws (or the filter forms) are off at LF 0.1 / 0.4 and HF 0.2 / 0.4. RT 0.3 has almost no data outside the fade (+12 dB at 150–300 ms, few windows).
+
+### 15.4 Loop-only checks in the tail (diagnostics, scratch scripts, not in the tool)
+
+On the AMPL-0 captures, with the §14.2 per-file loop fits, 100 Hz–10 kHz, after 0.40 s and before the fade:
+- **The four loops reach the repeat-capture difference** (median excess −3…+3 dB) at every RT and HF and at LF 0.4 / 1.0 / 2.0. Exceptions that depart before the fade: **LF 0.1** at RT ≥ 0.8 (+8…+20 dB), **HF 0.2 at RT 2.2–2.5** (+9 dB), and LF 2.0 at RT 0.8–1.0 with HF 0.2–0.4 (+10…+30 dB). These are filter-form or law questions (Q5, Q7), not the injection.
+- **The tail residuals are deterministic:** residuals of different captures of one setting correlate at +0.89…+0.93 (RT 2.5 / HF 1.0, 0.35–1.0 s) and +0.996 (RT 1.0 / HF 0.2).
+- **Not loop coupling:** second-order coupling terms z^−(Pᵢ+Pⱼ) (six coefficients, also with a 5-tap spread, plus triples) and own-loop terms remove ≤ 0.8 dB, the same as random lags, at HF 0.2, LF 0.1 and HF 1.0. Free per-loop gain and delay in 100–1000 Hz don't help at HF 0.2 either (−21.7 against −20.8 dB at RT 1.0).
+- **AP230 stays on the input side:** a recursion at lag 230 (g −0.70) or 460 (+0.50) explains 14–17 dB of the loops-only residual over 0.32 s to the fade at HF 1.0, but per 100 ms block only in 0.3–0.4 s (−31 → −60 dB): the input diffuser's own ringing. From 0.4 s on, the loops alone are at the repeat-capture difference.
+- A residual that looks like a late input lasting to 0.25 s, sharply ended at 6,475 (L) / 6,807 (R) samples, is the product annihilator's own length (excitation support + ΣPⱼ), not new structure.
+
+### 15.5 What is left for Q2
+
+1. **How the injection depends on the setting** (the 15–20 dB). The per-setting free injections are the data: compare them across settings, per loop and channel, at the loop-mode frequencies (the pole residues do not depend on where the excitation window starts), and regress on candidate factors: 1, Gᵢ, fractional powers Gᵢ^α (taps spread along the line), the gain and the HF / LF filters separately (filters at different points), Gⱼ of other loops, RT itself. The basis that wins held-out (leave-settings-out) is the structure; then build it into the `joint` bench and report held-out compensated nulls with parameter counts.
+2. **Loop filters at the extremes** (LF 0.1 / 0.4, HF 0.2 / 0.4): the shelf and one-pole laws or forms; fit them with the per-setting free injection (variable projection) instead of the tail annihilator, which short files can't support.
+3. Constraints unchanged: one set of taps for every setting, about 20–35 memory accesses, the x0 + G·x1 branch, the 26/332 read-out lags.
