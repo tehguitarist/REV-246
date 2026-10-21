@@ -985,7 +985,9 @@ The CLA IR (another unit; LF 1.0, RT 1.0, **HF 0.9, a step the library doesn't h
 
 Code: `.venv/bin/python tools/q2_injection.py --stage windows|ramp|free|joint|nulls|report` → `analysis/q2/` (`fade2.json`, `ramp.json`, `free.json`, `split_*.json`, `v_*.npy`, `nulls_*.json`, logs `*.log`). It reuses `tools/q1_generalise.py` and its `analysis/q1` cache, laws, AP230 table and clock fits. The per-setting free injections (`analysis/q2/v/`, 8.5 MB) are not committed; `--stage free` regenerates them in about 60 min (5 workers). Every long stage was smoke-tested on 2–7 settings first (`--only`).
 
-> **Status (October 2026): groundwork done, Q2 itself open.**
+> **Status (October 2026): the injection is found to be one fixed, setting-independent excitation per loop that Q1's window cut short (§15.7–15.9); its compact structure and the loop filters at strong settings are open.**
+>
+> **Earlier status (groundwork):**
 > - **Q1's windows ran into Tomkin's fade** on 335 of 512 files (§15.1). Corrected; Q1's conclusions stand (the shared injection is still 21–28 dB above the repeat-capture null).
 > - **The fade is a fixed 0.700 s linear ramp** ending 0.65 ms before each raw file's end, and is now compensated in every null without a free parameter (§15.2). The model is never faded.
 > - **A free injection per setting** (loops from the laws) reaches **−53 / −46 / −41 dB** (50–150 / 150–300 / 300–600 ms, R, other captures), **+3…+10 dB over the repeat-capture null**; the shared injection reaches −28 / −25 / −24 dB (§15.3). So **15–20 dB of the gap is how the injection depends on the setting**: that is Q2.
@@ -1036,7 +1038,7 @@ Held-out medians, 100 Hz–10 kHz, L / R; compensated = fade compensated (§15.2
   By octave (150–300 ms) LF 0.1 is worst at low frequencies (+35 dB at 125 Hz, +27 at 250, +20 at 1 kHz, +12 at 8 kHz) and HF 0.2 at 8 kHz (+16 dB).
 - **Reading:**
   - With flat filters (HF 1.0, LF 1.0) a free injection per setting is **at the repeat-capture null**: the loops and diffuser are right there, and so is the injection *per setting*.
-  - **The shared injection is 15–20 dB worse than a per-setting one at every RT, HF and LF.** That gap is how the injection/read-out depends on the controls, which one fixed x0 + G·x1 does not capture. This is Q2 proper.
+  - **The shared injection is 15–20 dB worse than a per-setting one at every RT, HF and LF.** *(Superseded by §15.7–15.9: the gap was Q1's too-short excitation window and the loop laws spoiling the shared fit, not a setting-dependent injection.)*
   - The remaining per-setting excess follows the **strength of the LF and HF filters**, not RT: the laws (or the filter forms) are off at LF 0.1 / 0.4 and HF 0.2 / 0.4. RT 0.3 has almost no data outside the fade (+12 dB at 150–300 ms, few windows).
 
 ### 15.4 Loop-only checks in the tail (diagnostics, scratch scripts, not in the tool)
@@ -1048,8 +1050,67 @@ On the AMPL-0 captures, with the §14.2 per-file loop fits, 100 Hz–10 kHz, aft
 - **AP230 stays on the input side:** a recursion at lag 230 (g −0.70) or 460 (+0.50) explains 14–17 dB of the loops-only residual over 0.32 s to the fade at HF 1.0, but per 100 ms block only in 0.3–0.4 s (−31 → −60 dB): the input diffuser's own ringing. From 0.4 s on, the loops alone are at the repeat-capture difference.
 - A residual that looks like a late input lasting to 0.25 s, sharply ended at 6,475 (L) / 6,807 (R) samples, is the product annihilator's own length (excitation support + ΣPⱼ), not new structure.
 
-### 15.5 What is left for Q2
+### 15.5 The per-setting injections, mode by mode (`residues`, `regress` stages): noise-limited
 
-1. **How the injection depends on the setting** (the 15–20 dB). The per-setting free injections are the data: compare them across settings, per loop and channel, at the loop-mode frequencies (the pole residues do not depend on where the excitation window starts), and regress on candidate factors: 1, Gᵢ, fractional powers Gᵢ^α (taps spread along the line), the gain and the HF / LF filters separately (filters at different points), Gⱼ of other loops, RT itself. The basis that wins held-out (leave-settings-out) is the structure; then build it into the `joint` bench and report held-out compensated nulls with parameter counts.
-2. **Loop filters at the extremes** (LF 0.1 / 0.4, HF 0.2 / 0.4): the shelf and one-pole laws or forms; fit them with the per-setting free injection (variable projection) instead of the tail annihilator, which short files can't support.
-3. Constraints unchanged: one set of taps for every setting, about 20–35 memory accesses, the x0 + G·x1 branch, the 26/332 read-out lags.
+- **Idea:** with fixed taps, a loop's pole residue can depend on the setting only through ℓ = ln Gᵢ(ωₖ) at that mode, as an analytic function (a sum of e^(−Dℓ/P), one term per effective tap delay D). Regressing the 128 per-setting residues per mode on candidate bases (polynomials in ℓ; in the gain and filters separately; plus other loops' ℓⱼ; plus conj(ℓ)) would say what the dependence is. Residues are referenced to the end of the excitation support, ρ = R·e^(Tℓ/P), T = S0 + Pᵢ + 300, and weighted by mode energy 1/(1 − |z|²). With the origin at tap 0, heavily damped modes are extrapolated back by up to e³, and their estimation noise (one residue reached 2,740 against a typical 0.3) swamps the fit.
+- **Validation:** residues of the shared fixed-tap model (Q1's x0 + G·x1) are fitted by a degree-5 polynomial in ℓ to −46…−47 dB held out.
+- **Real data:** every basis stops at about −15 dB, in-sample as well as held out (degree-5 polynomial in ℓ: −14.4 / −16.0 / −19.1 dB held out in the RT / HF / LF splits; gain, LF and HF separately: −17.7 / −14.5 / −9.9; with the other loops: −15.9 / −16.3 / −19.9). That plateau is **estimation noise in single residues**, not structure. The free and shared fits null the same data to better than −45 dB yet differ by −15…−19 dB in residues: with four interleaved loops and finite windows, many residue combinations barely change the IR. **Mode-by-mode comparison can't resolve this question; it has to be judged on the IR.**
+
+### 15.6 What doesn't close the shared-vs-per-setting gap (diagnostics on 7 held-out RT-split settings, scratch scripts)
+
+Fitted per capture on 50–150 / 150–300 ms against the shared x0 + G·x1 model, judged later: a fractional delay and gain of the whole reverb (0 dB; fitted delays 0.000 samples), a 41-tap EQ (0.2 dB), one gain per loop branch (≤ 0.4 dB), a 5-tap filter per loop branch (≤ 2 dB), against 17–19 dB for a free per-setting injection. So the per-setting differences are not an overall shift, level or EQ, nor a per-loop level.
+
+### 15.7 The excitation window was too short (`branches` stage) **[S]**
+
+Shared injection with one branch per exponent α (each loop's branch through Gᵢ^α; Q1's x0 + G·x1 is α = 0, 1), excitation window Pᵢ + `ext` samples from 230 after tap 0, fitted on the flat settings (LF 1.0, HF 1.0), RT 0.8 / 1.8 held out (8 captures), one clock round, fade-compensated. Excess over the repeat-capture null, R, 50–150 / 150–300 / 300–600 / 600–1000 ms:
+
+| Branches | Window | Parameters | Excess (dB) | Training captures, 150–300 ms null |
+|---|---|---|---|---|
+| {0} | Pᵢ + 300 | 16.7 k | +20.4 / +25.3 / +22.5 / +12.6 | −26.1 |
+| {0, 1} (Q1) | Pᵢ + 300 | 30.6 k | +19.6 / +20.0 / +12.5 / +7.8 | −32.8 |
+| {0, ½, 1}; {0, ¼, ½, ¾, 1} | Pᵢ + 300 | 44.6 k; 72.4 k | +18.3…+18.6 / +18.8…+18.9 / +11.9…+12.0 / +7.6 | −33.9 |
+| {0, 1, 2} | Pᵢ + 300 | 44.6 k | +12.9 / +15.2 / +10.2 / +6.9 | −36.5 |
+| {0, 1, 2, 3} | Pᵢ + 300 | 58.5 k | +9.2 / +12.3 / +9.7 / +5.3 | −37.5 |
+| {−1, 0, 1} | Pᵢ + 300 | 44.6 k | +7.7 / +12.2 / +7.8 / +5.4 | −40.8 |
+| {0, 1} | Pᵢ + 1000 / 1300 / 1700 / 2000 / 2600 | 41.8–67.4 k | +0.9…+2.6 / +1.1…+2.5 / −0.2…+0.4 / −0.8…−0.1 | −48.8…−49.6 |
+| **{0}** | **Pᵢ + 1700** | **27.9 k** | **−0.9 / +3.4 / +0.6 / +0.5**; at 600 iterations **−2.4 / −1.7 / −2.0 / −1.5** | −49.1; −52.6 |
+| {0} | Pᵢ + 3300 | 40.7 k | +2.6 / +6.7 / +2.7 / +2.8 | −46.1 |
+
+- **Fractional exponents add about 1 dB**, so the loop loss is not spread along the lines with taps between the pieces.
+- **The injection/read-out support runs about one loop length further than Q1's window** (to roughly Pᵢ + 1000 samples or less past its start, i.e. up to about 2Pᵢ + 1,200 samples after tap 0). The G² and G⁻¹ branches were partial stand-ins for it, and so was Q1's G·x1, which is not needed once the window is long enough: **one fixed excitation per loop and channel** suffices.
+- **At 600 iterations the flat held-out nulls are −54.3 / −54.0 / −48.8 / −37.4 dB, 1.5–2.4 dB below the repeat-capture null:** at the measurement ceiling (a correct model carries one capture's noise, a repeat pair two). The 300-iteration fits elsewhere in this section are under-converged by about 1.5–4 dB.
+- Caveat: two held-out settings. §15.9 tests all 128.
+
+### 15.8 Trained on the whole library, the shared injection is spoilt by the loop laws **[S]**
+
+- One injection, window Pᵢ + 1700, trained on the full library (Q1's splits): held-out excess over the repeat-capture null +15…+26 dB in all three splits (RT split −35.0 / −29.2 / −27.9 dB at 50–150 / 150–300 / 300–600 ms). Even the flat settings in it are at +15…+20 dB.
+- **Without LF 0.1 and HF 0.2 in training** (`--subset mild`: 54 training, 18 held-out settings), the same 72 held-out captures improve from +15.1 / +18.6 / +13.6 / +8.4 dB to **+8.1 / +8.5 / +7.0 / +2.4 dB**. So the strong settings, where the laws are wrong (§15.3), pull the shared injection away from the right answer for every setting. A branch through the filters only ({1, H}) gains about 1 dB on the full library, so filter placement is not the issue.
+- Bookkeeping fix: the scored training captures were a fixed stride over the settings list and picked only HF 0.2 settings; now a seeded random 8.
+
+### 15.9 Loop filters refitted per setting, injection frozen (`filters` stage) **[S]**
+
+The flat-only injection (§15.7, 600 iterations, 6 training settings) frozen; per setting, the loops (q1's 5-number `G_loops`: loop RT, LF shelf DC and Nyquist RT ratios and pole, HF lowpass ratio) refitted against all its captures; clock and gain per capture fitted once before. All 128 settings, R, fade-compensated, null [excess over repeat]:
+
+| Loops | 50–150 ms | 150–300 ms | 300–600 ms | 600–1000 ms |
+|---|---|---|---|---|
+| Laws | −48.5 [+8.0] | −43.0 [+12.3] | −38.9 [+10.6] | −34.6 [+5.1] |
+| Refitted (5 numbers per setting) | −50.3 [+5.5] | −44.9 [+9.6] | −41.4 [+7.5] | −36.3 [+3.3] |
+| Refitted + loop-path EQ (LF shelf and HF one-pole on the loop branches, 3 more) | −50.3 [+5.3] | −45.0 [+9.6] | −40.8 [+7.2] | −35.4 [+3.5] |
+
+- **The injection is setting-independent (S):** trained on 6 flat settings only, it predicts all 128 with the plain laws better than any injection trained on the whole library (−48.5 / −43.0 against −35.0 / −29.2 dB).
+- The refit's excess (50–150 / 150–300 / 300–600 ms) by control:
+
+  | | | | | |
+  |---|---|---|---|---|
+  | LF | 0.1: +13.4 / +20.7 / +17.9 | 0.4: +6.3 / +10.9 / +7.2 | 1.0: +2.6 / +5.3 / +4.1 | 2.0: +3.0 / +5.8 / +4.6 |
+  | HF | 0.2: +8.9 / +14.5 / +13.3 | 0.4: +6.2 / +10.3 / +6.8 | 0.6: +5.0 / +8.5 / +4.7 | 1.0: +1.4 / +3.2 / +2.8 |
+  | RT | 0.6: +16.5 / +15.5 / +7.3 | 1.0: +10.1 / +11.5 / +8.9 | 1.8: +4.8 / +9.3 / +9.3 | 2.5: +1.6 / +4.2 / +5.8 |
+- **The loop-path EQ stays flat** (fitted DC gain 1.00, no HF pole): the LF / HF controls act only inside the recursion.
+- **Tail check (annihilator, scratch):** with a free 128-tap filter per loop, the strong settings' tails reach the repeat-capture difference (LF 0.1 / RT 1.8: −50.2 against −48.6 dB, from −45.9 with the law form; HF 0.2 / RT 2.5: −53.0 against −50.9, from −49.1). So the recursion there is four independent LTI loops, and the free filters match the law form to about 1 % in decay time at every frequency and loop. The remaining error is a small per-loop deviation that compounds over many passes (a constant −47…−52 dB annihilator residual relative to the signal ≈ 0.3–0.5 % per pass).
+- **Ruled out as its cause:** one shelf shared by all loops (2–9 dB worse: the length-scaled gains are right); an integer loop-length change compensating the filter delay (delay differences ≤ 0.015 samples at HF 0.2); a persistent AP230 recursion; coupling (§15.4).
+
+### 15.10 What is left for Q2
+
+1. **Per-loop loop-filter parameters:** refit with the injection frozen and 5 numbers per loop (20 per setting) instead of 5 shared ones, then look at the per-loop deviations from length scaling (for example Q15-quantised coefficient tables, **H**). Then new laws or tables, and a final shared fit on all settings to confirm.
+2. **Short RT (0.6–1.0)** is +10…+16 dB at 50–150 ms even with refitted loops; check whether it is the loops (per-loop refit) or the AP230 step (b > 0 only there).
+3. **The compact injection structure:** one fixed excitation per loop and channel, about Pᵢ + 1000…1700 samples long, setting-independent, 27.9 k free coefficients today against about 20–35 memory accesses in the hardware. Candidates from period practice: `docs/period_dsp_practice.md` (in progress in a separate session).

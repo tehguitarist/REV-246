@@ -25,6 +25,25 @@ Stages:
            before the fade as before, then nulls of the data against model x ramp (the model itself stays unfaded),
            windows running on to where the compensated level reaches FLOOR_DB below 50-300 ms or the ramp falls below
            RAMP_MIN. The repeat-capture null is compensated the same way (y_a g_b against y_b g_a).
+  residues per setting: each loop's free excitation (L, R) evaluated at the loop's poles, X_i(z_k) with time from
+           cluster tap 0 (the pole residue less the common diffuser and band factors; it does not depend on where the
+           excitation window starts or on the first-pass FIR), modes in 100 Hz-10 kHz; with the setting's factors at each
+           mode: l = ln G_i(w_k) and its parts from the gain, the LF shelf and the HF lowpass, and the other loops' l_j.
+  regress  per mode, the residues across settings against candidate bases, held out by setting (Q1's splits). Each
+           residue is referenced to the end of the excitation support, rho = R exp(T l / P) (still analytic in l): with the
+           origin at tap 0 a heavily damped mode is extrapolated back by up to e^3 and its estimation noise swamps the fit.
+           fixed taps make the residue an analytic function of l alone (sum of exp(-D l / P)); more than that means
+           the gain and filters act at different points along the line, coupling, or a non-LTI control dependence.
+  branches shared injection with branches through G_i^alpha for a set of exponents (fixed taps on a line whose loss
+           is applied in pieces see fractional powers; q1's x0 + G.x1 is alphas 0, 1), fitted on a subset of settings,
+           held out by q1's splits (--split rt|hf|lf), fade-compensated nulls. --alphas 0,0.5,1 --subset flat|mild|all --ext.
+  filters  per setting, the loop filters refitted with the injection frozen (the flat-only fit, FROZEN): 5 numbers in
+           q1.G_loops' parametrisation (loop RT, LF shelf DC and Nyquist RT ratios and pole, HF lowpass ratio; the LF ones
+           only where LF != 1.0), clock and gain per capture fitted once before; fade-compensated nulls against the
+           repeat-capture null, with the law loops (same frozen injection) for comparison. Second form 'refit+eq': the same
+           plus a loop-path EQ (first-order LF shelf and HF one-pole on the loop branches only; 3 numbers), in case the
+           LF / HF controls also act outside the recursion. --only for a smoke test.
+  breport  excess of branch runs over the repeat-capture null (from the nulls stage of the same split), by control.
   joint    q1's held-out bench (run_split: shared injection x0 + G.x1, laws, AP230 table) re-run with the
            corrected windows, so Q2 candidates are compared against a fade-free baseline. --only limits it to a
            few settings for a smoke test (training = the --only keys not in the split's test set).
@@ -318,6 +337,409 @@ def joint_stage(splits, workers, iters, rounds, only=None):
                      rounds=rounds, iters=iters, workers=workers, ap230=ap)
 
 
+# ---------------------------------------------------------------- residues at the poles, and their setting dependence
+F_BAND = (100.0, 10000.0)
+
+
+def loop_factors(lab, law, w):
+    """Per loop: (gain g, LF shelf H_LF(w), HF lowpass H_HF(w)) as in q1.G_law (G = g H_LF H_HF)."""
+    import model_s as m
+    rt, lf, hf = lab["rt"], lab["lf"], lab["hf"]
+    L = law["lf"][lf]
+    out = []
+    for Pi in q1.P:
+        kk = -3 * Pi / FS
+        g = 10 ** (kk / (L["hi"] * rt))
+        HL = m.shelf(w, 10 ** (kk * (1 / (L["dc"] * rt) - 1 / (L["hi"] * rt))), 1.0, law["a"]) if L["dc"] != L["hi"] else np.ones(len(w), complex)
+        HH = np.ones(len(w), complex)
+        if hf < 1.0:
+            p = q1.onepole_for(np.array(10 ** (kk / rt * L["k"] * (1 / hf - 1))), law["f_ref"])
+            HH = (1 - p) / (1 - p * np.exp(-1j * w))
+        out.append((g, HL, HH))
+    return out
+
+
+def modes(i, lab, law):
+    """Mode frequencies of loop i in F_BAND: w P_i - arg G_i(w) = 2 pi k (fixed point)."""
+    Pi = int(q1.P[i])
+    k = np.arange(int(np.ceil(F_BAND[0] * Pi / FS)), int(F_BAND[1] * Pi / FS) + 1)
+    w = 2 * np.pi * k / Pi
+    for _ in range(6):
+        g, HL, HH = loop_factors(lab, law, w)[i]
+        w = (2 * np.pi * k + np.angle(g * HL * HH)) / Pi
+    return k, w
+
+
+def _residues_setting(a):
+    key, lab, law, vpath = a
+    law["lf"] = {float(k): x for k, x in law["lf"].items()}
+    shared = not vpath.startswith(os.path.join(OUT, "v") + os.sep)     # a joint split's x0 + G.x1 (validation)
+    G = q1.group_spectra(lab, law, q1.grid_n(lab["rt"]), through_g=shared)
+    J = q1.Joint([dict(G, files=[dict(y=np.zeros((4096, 2)), w=np.ones(4096), amp=0)])])        # only to split v
+    _, _, xs = J.split(np.load(vpath).astype(np.float64))
+    out = {}
+    for i in range(4):
+        k, w = modes(i, lab, law)
+        fac = loop_factors(lab, law, w)
+        g, HL, HH = fac[i]
+        lG = np.log(g * HL * HH)
+        z = np.exp(1j * w + lG.real / q1.P[i])
+        t = q1.S0 + np.arange(len(xs[0][i]))
+        Z = z[:, None] ** (-t[None, :].astype(float))
+        R = np.stack([Z @ xs[c][i] for c in (0, 1)], 1)                  # (modes, 2)
+        if shared:                                                         # + G X1 (G = z^P at the pole)
+            R = R + (g * HL * HH)[:, None] * np.stack([Z @ xs[c][i + 4] for c in (0, 1)], 1)
+        other = np.stack([np.log(f[0] * f[1] * f[2]) for j, f in enumerate(fac) if j != i], 1)
+        out[i] = dict(k=k, w=w, R=R, l=lG, lg=np.full(len(w), np.log(g)), lLF=np.log(HL), lHF=np.log(HH), lother=other)
+    return key, out
+
+
+def residues_stage(workers, only=None, source="free"):
+    """source 'free' (per-setting injections) or a joint split name (its shared injection and laws: a validation,
+    since a fixed-tap model must give residues that are a function of l alone)."""
+    from concurrent.futures import ProcessPoolExecutor
+    info, _, law, _, _ = q1_tables()
+    if source != "free":
+        law = json.load(open(os.path.join(OUT, f"split_{source}.json")))["law"]
+    vp = lambda k: os.path.join(OUT, "v", k + ".npy") if source == "free" else os.path.join(OUT, f"v_{source}.npy")
+    keys = [k for k in info if (only is None or k in only) and os.path.exists(vp(k))]
+    jobs = [(k, dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]), json.loads(json.dumps(law)), vp(k)) for k in keys]
+    with ProcessPoolExecutor(workers) as ex:
+        res = dict(ex.map(_residues_setting, jobs))
+    arr = {"keys": np.array(keys), "lab": np.array([[info[k]["lf"], info[k]["rt"], info[k]["hf"]] for k in keys])}
+    for i in range(4):
+        for f in ("k", "w"):
+            arr[f"{f}{i}"] = res[keys[0]][i][f]
+        for f in ("w", "R", "l", "lg", "lLF", "lHF", "lother"):
+            arr[f"{f}_set{i}"] = np.stack([res[k][i][f] for k in keys])
+    np.savez(os.path.join(OUT, "residues" + ("" if source == "free" else "_" + source) + ("_smoke" if only else "") + ".npz"), **arr)
+    print(f"residues: {len(keys)} settings, modes per loop " + "/".join(str(len(arr[f"k{i}"])) for i in range(4)))
+
+
+def _monomials(vs, n):
+    """All products of the variables vs (list of (S, K) arrays) with total degree <= n, as a list of (S, K) arrays."""
+    import itertools
+    out = []
+    for d in range(n + 1):
+        for c in itertools.combinations_with_replacement(range(len(vs)), d):
+            t = np.ones_like(vs[0])
+            for j in c:
+                t = t * vs[j]
+            out.append(t)
+    return out
+
+
+def bases(F, name):
+    """Design columns (list of (S, K) complex arrays) for basis `name` from the features F of one loop."""
+    l, lg, lF = F["l"], F["lg"].astype(complex), F["lLF"] + F["lHF"]
+    kind, n = name[0], int(name[1:])
+    if kind == "A":
+        return _monomials([l], n)
+    if kind == "B":
+        return _monomials([lg, lF], n)
+    if kind == "T":
+        return _monomials([lg, F["lLF"], F["lHF"]], n)
+    if kind == "O":
+        return _monomials([l], n) + [F["lother"][:, :, j] for j in range(F["lother"].shape[2])]
+    if kind == "N":
+        return _monomials([l], n) + [np.conj(l) ** d for d in range(1, n)]
+    raise ValueError(name)
+
+
+SPLITS_RES = {"rt": lambda lab: np.isin(lab[:, 1], (0.8, 1.8)), "hf": lambda lab: lab[:, 2] == 0.4,
+              "lf": lambda lab: lab[:, 0] == 0.4}
+MODELS = ["A0", "A1", "A2", "A3", "A4", "A5", "B2", "B3", "B4", "T2", "T3", "O3", "N3"]
+OCT_EDGES = [100, 200, 400, 800, 1600, 3200, 6400, 10001]
+
+
+def regress_stage(path=None):
+    """Held-out error of each basis (dB re the residues' weighted energy), per split, overall and per octave."""
+    D = np.load(path or os.path.join(OUT, "residues.npz"))
+    lab = D["lab"]
+    res = {}
+    for sp, test_of in SPLITS_RES.items():
+        te = test_of(lab)
+        tr = ~te
+        for name in MODELS:
+            num = np.zeros(len(OCT_EDGES) - 1); den = np.zeros(len(OCT_EDGES) - 1)
+            num_in = np.zeros_like(num); den_in = np.zeros_like(den)
+            for i in range(4):
+                F = {f: D[f"{f}_set{i}"] for f in ("l", "lg", "lLF", "lHF", "lother")}
+                cols = np.stack(bases(F, name), 2)                         # (S, K, p)
+                wgt = q1.P[i] / np.maximum(-2 * D[f"l_set{i}"].real, 1e-6)  # mode energy 1 / (1 - |z|^2)
+                f_hz = D[f"w{i}"] * FS / (2 * np.pi)
+                band = np.digitize(f_hz, OCT_EDGES) - 1
+                T = q1.S0 + q1.P[i] + q1.EXT                                     # end of the excitation support
+                for c in (0, 1):
+                    R = D[f"R_set{i}"][:, :, c] * np.exp(T * D[f"l_set{i}"] / q1.P[i])   # mode amplitude at T (analytic in l)
+                    for kk in range(R.shape[1]):
+                        sw = np.sqrt(wgt[:, kk])
+                        A = cols[:, kk, :] * sw[:, None]
+                        y = R[:, kk] * sw
+                        coef, *_ = np.linalg.lstsq(A[tr], y[tr], rcond=None)
+                        e = y - A @ coef
+                        b = band[kk]
+                        num[b] += np.sum(np.abs(e[te]) ** 2); den[b] += np.sum(np.abs(y[te]) ** 2)
+                        num_in[b] += np.sum(np.abs(e[tr]) ** 2); den_in[b] += np.sum(np.abs(y[tr]) ** 2)
+            res[(sp, name)] = dict(p=cols.shape[2], held=10 * np.log10(num.sum() / den.sum()), ins=10 * np.log10(num_in.sum() / den_in.sum()),
+                                   oct=(10 * np.log10(num / den)).tolist())
+    print(f"\n## Residue regression across settings ({len(lab)} settings; weighted by mode energy; dB re the residues)")
+    print("| basis | coeffs per mode | " + " | ".join(f"{sp} held out (in-sample)" for sp in SPLITS_RES) + " |")
+    print("|---|---|" + "---|" * len(SPLITS_RES))
+    for name in MODELS:
+        print(f"| {name} | {res[('rt', name)]['p']} | " + " | ".join(f"{res[(sp, name)]['held']:.1f} ({res[(sp, name)]['ins']:.1f})" for sp in SPLITS_RES) + " |")
+    for sp in SPLITS_RES:
+        print(f"\nheld out per octave, {sp} split (edges {OCT_EDGES[:-1]} Hz)")
+        for name in MODELS:
+            print(f"  {name:3s} " + " ".join(f"{x:6.1f}" for x in res[(sp, name)]["oct"]))
+    json.dump({f"{a}|{b}": v for (a, b), v in res.items()}, open(os.path.join(OUT, "regress.json"), "w"), indent=0)
+    return res
+
+
+# ---------------------------------------------------------------- shared injection with fractional branches
+def branch_factor(a, g, HL, HH):
+    """One branch's factor: a number alpha -> G^alpha; 'g' gain only, 'H' both filters, 'HL' / 'HH' one filter,
+    'gHL' / 'gHH' gain and one filter (a tap on the far side of some of the loop's processing)."""
+    if isinstance(a, float):
+        return np.exp(a * np.log(g * HL * HH))
+    return {"g": g * np.ones_like(HL), "H": HL * HH, "HL": HL, "HH": HH, "gHL": g * HL, "gHH": g * HH}[a]
+
+
+def branch_spectra(lab, law, alphas, b230):
+    """q1 group spectra with one branch per (alpha, loop): PB / (1 - G z^-P) . factor(alpha)."""
+    G = q1.group_spectra(lab, law, q1.grid_n(lab["rt"]), b230=b230)
+    w = 2 * np.pi * np.fft.rfftfreq(G["N"])
+    fac = loop_factors(lab, law, w)
+    G["R"] = [r * branch_factor(a, *f) for a in alphas for r, f in zip(G["R"][:4], fac)]
+    return G
+
+
+def score_capture(G, v, amp, nm, fade2, eps, end_dev, ext=None):
+    """Clock + gain before the fade, then cut and fade-compensated nulls (as _nulls_setting) for one capture."""
+    if ext is not None:
+        q1.EXT = ext                                       # excitation length P_i + EXT (worker processes start at q1's 300)
+    yb = _band(nm)
+    n = min(len(yb), G["N"])
+    yb = yb[:n]
+    mdl = q1.Joint([dict(G, files=[dict(y=np.zeros((n, 2)), w=np.ones(n), amp=amp)])]).render(v, G, n, amp)
+    if fade2 >= 0.15:
+        _, (e, sh, gain) = q1._clock_job((yb, mdl, fade2, eps, amp == 0))
+    else:
+        g0 = ramp_gain(n, end_dev)
+        _, (e, sh, gain) = q1._clock_job((yb, mdl * g0, comp_end(yb, g0), eps, amp == 0))
+    y = q1.apply_clock(yb, e, sh)[:n] / gain
+    g = ramp_gain(n, [PRE + (x + sh - PRE) / (1 + e * 1e-6) for x in end_dev])
+    te = comp_end(y, g)
+    return dict(null_cut=q1.nulls(y, mdl, fade2, W_COMP, narrow=True), null_comp=q1.nulls(y, mdl * g, te, W_COMP, narrow=True), t_comp=te)
+
+
+def _score_job(a):
+    return a[0], a[1], score_capture(*a[2:])
+
+
+def branches_stage(alphas, subset, workers, iters, rounds=1, ext=None, split="rt"):
+    from concurrent.futures import ProcessPoolExecutor
+    ext = q1.EXT if ext is None else ext
+    q1.EXT = ext
+    info, fade, _, ap, eps0 = q1_tables()
+    ends = json.load(open(os.path.join(OUT, "ramp.json")))
+    fits = json.load(open(os.path.join(Q1, "loops.json")))
+    keys = [k for k, g in info.items() if subset == "all" or (subset == "flat" and g["lf"] == 1.0 and g["hf"] == 1.0)
+            or (subset == "mild" and g["lf"] != 0.1 and g["hf"] != 0.2)]
+    test = [k for k in keys if q1.SPLITS[split](info[k])]
+    train = [k for k in keys if k not in test]
+    law = q1.fit_laws(fits, set(train)) if subset != "flat" else q1.fit_laws(fits)
+    law["lf"] = {float(k): x for k, x in law["lf"].items()}
+    b230 = {k: ap["steps"][ap["settings"][k]["step"]] for k in keys}
+    lab = {k: dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]) for k in keys}
+    eps = dict(eps0)
+    tag = f"branches_{subset}_" + "_".join(f"{a:g}" if isinstance(a, float) else a for a in alphas) + ("" if ext == 300 else f"_ext{ext}") + ("" if split == "rt" else f"_{split}")
+    if iters < 100:
+        tag += "_smoke"
+
+    def build():
+        fl = [(k, amp, nm) for k in train for amp, nm in files_of(info[k]) if amp in q1.TRAIN_AMPL]
+        with ProcessPoolExecutor(workers) as ex:
+            ys = list(ex.map(q1._prep_job, [(Q1, nm, info[k]["rt"], eps[nm], fade[nm], True, 0.0) for k, _, nm in fl], chunksize=4))
+        gs = []
+        for k in train:
+            G = branch_spectra(lab[k], law, alphas, b230[k])
+            G["files"] = [dict(y=y, w=w, amp=amp, name=nm) for (k2, amp, nm), (y, w) in zip(fl, ys) if k2 == k]
+            gs.append(G)
+        return q1.Joint(gs)
+    v = None
+    for rd in range(rounds + 1):
+        J = build()
+        v = J.solve(iters, x0=v)
+        if rd < rounds:                                    # clock refit on the training captures
+            jobs = []
+            for G in J.groups:
+                for fl in G["files"]:
+                    yb = _band(fl["name"])
+                    jobs.append((yb, J.render(v, G, min(len(yb), G["N"]), fl["amp"]), fade[fl["name"]], eps[fl["name"]], False))
+            with ProcessPoolExecutor(workers) as ex:
+                cl = list(ex.map(q1._clock_job, jobs))
+            eps.update({fl["name"]: c[0][0] for G in J.groups for fl in G["files"] for c in [cl.pop(0)]})
+    jobs = []
+    rng = np.random.default_rng(0)                          # scored training settings: a seeded random 8, spread over the controls
+    for k in test + sorted(rng.choice(train, min(8, len(train)), replace=False).tolist()):
+        G = branch_spectra(lab[k], law, alphas, b230[k])
+        for amp, nm in files_of(info[k]):
+            jobs.append((k, amp, G, v, amp, nm, fade[nm], eps0[nm], ends[nm], ext))
+    with ProcessPoolExecutor(workers) as ex:
+        sc = list(ex.map(_score_job, jobs))
+    rows = [dict(key=k, amp=amp, held_out=k in test, **lab[k], **r) for k, amp, r in sc]
+    json.dump(dict(alphas=alphas, subset=subset, ext=ext, split=split, law=law, train=train, test=test, params=J.size(), rows=rows),
+              open(os.path.join(OUT, tag + ".json"), "w"), indent=0)
+    np.save(os.path.join(OUT, tag + ".npy"), v)
+    for held in (True, False):
+        rr = [r for r in rows if r["held_out"] == held]
+        print(f"[{tag}] {'held out' if held else 'training'} ({len(rr)} captures, {J.size()} params), compensated R: " + "  ".join(
+            f"{a}-{b}: {np.median([r['null_comp'][f'{a}-{b}'][1] for r in rr if r['null_comp'].get(f'{a}-{b}')]):.1f}"
+            for a, b in W_COMP if any(r["null_comp"].get(f"{a}-{b}") for r in rr)), flush=True)
+
+
+def branch_report(tags, sel=None):
+    """Per branch run: held-out compensated null (R) and its excess over the repeat-capture null of the same capture
+    (taken from nulls_<split>_x0+Gx1.json), overall and by control; sel optionally restricts the held-out captures."""
+    ws = ["50-150", "150-300", "300-600", "600-1000"]
+    for tag in tags:
+        d = json.load(open(os.path.join(OUT, tag + ".json")))
+        rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, f"nulls_{d.get('split', 'rt')}_x0+Gx1.json")))}
+        rows = [r for r in d["rows"] if r["held_out"] and (sel is None or sel(r))]
+
+        def ex(rr, w):
+            e = [r["null_comp"][w][1] - rep[(r["key"], r["amp"])]["repeat_comp"][w][1] for r in rr
+                 if r["null_comp"].get(w) and (r["key"], r["amp"]) in rep and rep[(r["key"], r["amp"])]["repeat_comp"].get(w)]
+            return np.median(e) if e else np.nan
+        print(f"{tag} ({len(rows)} held-out captures, {d['params']} params): " + "; ".join(
+            f"{w}: {np.median([r['null_comp'][w][1] for r in rows if r['null_comp'].get(w)]):.1f} [{ex(rows, w):+.1f}]" for w in ws))
+        for c in ("rt", "hf", "lf"):
+            vals = sorted({r[c] for r in rows})
+            if len(vals) > 1:
+                print(f"   by {c}: " + "; ".join(f"{v}: " + "/".join(f"{ex([r for r in rows if r[c] == v], w):+.1f}" for w in ws[:3]) for v in vals))
+
+
+# ---------------------------------------------------------------- loop filters refitted per setting, injection frozen
+FROZEN = "branches_flat_0_ext1700"         # flat-only shared injection, 600 iterations (at the repeat-capture null there)
+
+
+def _filters_setting(a):
+    """Least-squares refit of one setting's loop parameters (q1.G_loops) against all its captures, injection frozen."""
+    from scipy.optimize import least_squares
+    key, lab, b230, law, v, ext, caps, ends, v0 = a
+    q1.EXT = ext
+    law["lf"] = {float(k): x for k, x in law["lf"].items()}
+    N = q1.grid_n(lab["rt"])
+    w = 2 * np.pi * np.fft.rfftfreq(N)
+    G0 = q1.group_spectra(lab, law, N, b230=b230)
+    J = q1.Joint([dict(G0, files=[dict(y=np.zeros((4096, 2)), w=np.ones(4096), amp=0)])])
+    cl, f, xs = J.split(v)
+    F, X = J._spectra(f, xs, N)                                     # excitation spectra: fixed
+    C = J.cluster(cl)
+    z = lambda M: np.exp(-1j * w * M)
+
+    import model_s as m
+
+    def eq_of(q):
+        """Loop-path EQ (form 'loops+eq'): first-order LF shelf (DC gain q0, pole q1) and HF one-pole (pole q2)."""
+        return m.shelf(w, q[0], 1.0, q[1]) * (1 - q[2]) / (1 - q[2] * np.exp(-1j * w))
+
+    def reverb(Gs, E=1.0):
+        R = np.array([G0["PB"] * E / (1 - Gi * z(Pi)) for Gi, Pi in zip(Gs, q1.P)])
+        return np.fft.irfft(F * G0["PB"][None] + np.einsum("cik,ik->ck", X, R), N, axis=1).T
+
+    # data: clock and gain per capture against the law-loop model, before the fade; then fixed
+    data = []
+    r_law = reverb(q1.G_law(lab, law, w))
+    for c in caps:
+        yb = _band(c["file"])
+        n = min(len(yb), N, len(C))
+        mdl = (c["amp"] / 90) * C[:n] + r_law[:n]
+        _, (e, sh, gain) = q1._clock_job((yb[:n], mdl, max(c["fade2"], 0.15), c["eps"], c["amp"] == 0))
+        y = q1.apply_clock(yb[:n], e, sh) / gain
+        i0, i1 = PRE + int(0.05 * FS), min(PRE + int(max(c["fade2"], 0.15) * FS), n)
+        t = (np.arange(i0, i1) - PRE) / FS
+        wt = 10 ** (1.5 * np.minimum(t, q1.T_CAP) / lab["rt"])[:, None]
+        data.append(dict(c, y=y, n=n, i0=i0, i1=i1, wt=wt / np.sqrt(np.sum((y[i0:i1] * wt) ** 2)), e=e, sh=sh))
+    lfree = lab["lf"] != 1.0
+    idx = [0, 4] + ([1, 2, 3] if lfree else [])
+    lo = np.array([0.05, 0.02, 0.2, -0.5, 0.05, -300]); hi = np.array([20, 20, 5, 0.99999, 1.0, 300])
+    vv = np.array(v0, float); vv[5] = 0.0
+    vv[4] = min(vv[4], 1.0)
+
+    def res(u, eq=False):
+        p = vv.copy(); p[idx] = u[:len(idx)]
+        r = reverb(q1.G_loops(p, w), eq_of(u[len(idx):]) if eq else 1.0)
+        return np.concatenate([(((d["amp"] / 90) * C[:d["n"]] + r[:d["n"]])[d["i0"]:d["i1"]] - d["y"][d["i0"]:d["i1"]]) * d["wt"] for d in data]).ravel()
+    c0 = float(np.sum(res(vv[idx]) ** 2))
+    xs_ = np.array([0.001 * lab["rt"], 0.01, 0.01, 0.001, 0.01, 1.0])[idx]
+    fit = least_squares(res, vv[idx], bounds=(lo[idx], hi[idx]), x_scale=xs_, diff_step=1e-6, max_nfev=80)
+    vv[idx] = fit.x
+    u0 = np.r_[fit.x, 1.0, 0.9, 0.0]                              # + loop-path EQ, starting flat
+    fe = least_squares(lambda u: res(u, True), u0, bounds=(np.r_[lo[idx], 0.05, 0.0, 0.0], np.r_[hi[idx], 20.0, 0.995, 0.95]),
+                       x_scale=np.r_[xs_, 0.01, 0.001, 0.01], diff_step=1e-6, max_nfev=120)
+    ve = vv.copy(); ve[idx] = fe.x[:len(idx)]
+    E = eq_of(fe.x[len(idx):])
+    out = []
+    for name, Gs, Ex in (("law", q1.G_law(lab, law, w), None), ("refit", q1.G_loops(vv, w), None), ("refit+eq", q1.G_loops(ve, w), E)):
+        G = q1.group_spectra(lab, law, N, Gs=Gs, b230=b230)
+        if Ex is not None:
+            G["R"] = [r_ * Ex for r_ in G["R"]]
+        for c in caps:
+            out.append(dict(key=key, **lab, amp=c["amp"], file=c["file"], loops=name,
+                            **score_capture(G, v, c["amp"], c["file"], c["fade2"], c["eps"], ends[c["file"]], ext)))
+    print(f"{key}: cost {c0:.3g} -> {fit.cost * 2:.3g} (loops) -> {fe.cost * 2:.3g} (loops+eq); v {np.round(vv, 4).tolist()}; "
+          f"eq {np.round(fe.x[len(idx):], 4).tolist()}", flush=True)
+    return dict(key=key, **lab, v=vv.tolist(), v_eq=ve.tolist(), eq=fe.x[len(idx):].tolist(), free=idx, cost0=c0,
+                cost=float(fit.cost * 2), cost_eq=float(fe.cost * 2), nfev=fit.nfev, rows=out)
+
+
+def filters_stage(workers, only=None):
+    from concurrent.futures import ProcessPoolExecutor
+    info, fade, law, ap, eps0 = q1_tables()
+    ends = json.load(open(os.path.join(OUT, "ramp.json")))
+    fits = json.load(open(os.path.join(Q1, "loops.json")))
+    d = json.load(open(os.path.join(OUT, FROZEN + ".json")))
+    v = np.load(os.path.join(OUT, FROZEN + ".npy"))
+    flaw = d["law"]
+    keys = [k for k in info if only is None or k in only]
+    jobs = []
+    for k in keys:
+        g = info[k]
+        caps = [dict(amp=a, file=nm, eps=eps0[nm], fade2=fade[nm]) for a, nm in files_of(g)]
+        v0 = np.median([r["v"] for r in fits if r["file"] in {c["file"] for c in caps}], 0)
+        jobs.append((k, dict(lf=g["lf"], rt=g["rt"], hf=g["hf"]), ap["steps"][ap["settings"][k]["step"]], json.loads(json.dumps(flaw)),
+                     v, d["ext"], caps, ends, v0))
+    with ProcessPoolExecutor(workers) as ex:
+        res = list(ex.map(_filters_setting, jobs))
+    json.dump(res, open(os.path.join(OUT, "filters" + ("_smoke" if only else "") + ".json"), "w"), indent=0)
+    filters_report(res)
+
+
+def filters_report(res):
+    rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, "nulls_free.json")))}
+    ws = ["50-150", "150-300", "300-600", "600-1000"]
+
+    def ex(rows, w):
+        e = [r["null_comp"][w][1] - rep[(r["key"], r["amp"])]["repeat_comp"][w][1] for r in rows
+             if r["null_comp"].get(w) and rep.get((r["key"], r["amp"])) and rep[(r["key"], r["amp"])]["repeat_comp"].get(w)]
+        return np.median(e) if e else np.nan
+    rows = [r for s in res for r in s["rows"]]
+    print(f"\n## Loop filters refitted per setting, injection frozen ({FROZEN}); {len(res)} settings; R, compensated; null [excess over repeat]")
+    for lp in ("law", "refit", "refit+eq"):
+        rr = [r for r in rows if r["loops"] == lp]
+        print(f"- {lp:5s}: " + "; ".join(f"{w}: {np.median([r['null_comp'][w][1] for r in rr if r['null_comp'].get(w)]):.1f} [{ex(rr, w):+.1f}]" for w in ws))
+        for c in ("rt", "hf", "lf"):
+            vals = sorted({r[c] for r in rr})
+            if len(vals) > 1:
+                print(f"    by {c}: " + "; ".join(f"{v_}: " + "/".join(f"{ex([r for r in rr if r[c] == v_], w):+.1f}" for w in ws[:3]) for v_ in vals))
+    if len(res) <= 12:                                               # small runs: per setting (group medians mix settings)
+        for s_ in res:
+            print(f"  {s_['key']:12s} " + "  ".join(f"{lp}: " + "/".join(f"{ex([r for r in s_['rows'] if r['loops'] == lp], w):+.1f}" for w in ws[:3])
+                                                for lp in ("law", "refit", "refit+eq")))
+
+
 W_COMP = [(0, 50), (50, 150), (150, 300), (300, 600), (600, 1000), (1000, 1500), (1500, 2500)]
 
 
@@ -428,7 +850,12 @@ OUT = os.path.join(ROOT, "analysis", "q2")
 def main():
     global OUT
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "report"])
+    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "report"])
+    ap.add_argument("--tags", default="", help="breport: comma-separated branch run names (files in OUT without .json)")
+    ap.add_argument("--alphas", default="0,1", help="branches: per branch an exponent of G_i, or g / H / HL / HH / gHL / gHH")
+    ap.add_argument("--ext", type=int, default=300, help="branches: excitation length P_i + ext (q1: 300)")
+    ap.add_argument("--subset", default="flat", choices=["flat", "mild", "all"],
+                    help="branches: LF 1.0 / HF 1.0 only, all but LF 0.1 and HF 0.2, or all settings")
     ap.add_argument("--source", default="free", help="nulls: 'free' or a joint split name, e.g. rt_x0+Gx1")
     ap.add_argument("--splits", default="rt,hf,lf")
     ap.add_argument("--rounds", type=int, default=1, help="joint: clock-refit rounds before the final fit (as q1)")
@@ -444,6 +871,17 @@ def main():
         windows_stage()
     if a.stage == "ramp":
         ramp_stage(a.workers)
+    if a.stage == "branches":
+        for sp in a.splits.split(","):
+            branches_stage([x if x.isalpha() or x.startswith("g") else float(x) for x in a.alphas.split(",")], a.subset, a.workers, a.iters, a.rounds, a.ext, sp)
+    if a.stage == "filters":
+        filters_stage(a.workers, only)
+    if a.stage == "breport":
+        branch_report(a.tags.split(","))
+    if a.stage == "residues":
+        residues_stage(a.workers, only, a.source)
+    if a.stage == "regress":
+        regress_stage(os.path.join(OUT, "residues" + ("" if a.source == "free" else "_" + a.source) + ("_smoke" if only else "") + ".npz"))
     if a.stage == "nulls":
         nulls_stage(a.source, a.workers, only)
     if a.stage == "free":

@@ -10,3 +10,4 @@ analysis/library/tomkin*/files.csv
 analysis/library/tomkin*/pairs.csv
 analysis/library/trial*/
 analysis/q2/cache
+analysis/q2/residues*.npz
