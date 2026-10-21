@@ -1113,15 +1113,15 @@ The flat-only injection (§15.7, 600 iterations, 6 training settings) frozen; pe
 
 1. **Per-loop loop-filter parameters:** refit with the injection frozen and 5 numbers per loop (20 per setting) instead of 5 shared ones, then look at the per-loop deviations from length scaling (for example Q15-quantised coefficient tables, **H**). Then new laws or tables, and a final shared fit on all settings to confirm.
 2. **Short RT (0.6–1.0)** is +10…+16 dB at 50–150 ms even with refitted loops; check whether it is the loops (per-loop refit) or the AP230 step (b > 0 only there).
-3. **The compact injection structure:** one fixed excitation per loop and channel, about Pᵢ + 1000…1700 samples long, setting-independent, 27.9 k free coefficients today against about 20–35 memory accesses in the hardware. Candidates from period practice: `docs/period_dsp_practice.md`. **Offline result (§16, in-sample):** five equal signed taps per loop, R = L taps + 26 / 332, loop feeds bypass comb460; 98.7 % of the in-band energy with about 60 discrete + 2 continuous parameters. Bench check pending (§16.4).
+3. **The compact injection structure:** one fixed excitation per loop and channel, about Pᵢ + 1000…1700 samples long, setting-independent, 27.9 k free coefficients today against about 20–35 memory accesses in the hardware. Candidates from period practice: `docs/period_dsp_practice.md`. **Offline result (§16, in-sample):** five equal signed taps per loop, R = L taps + 26 / 332, loop feeds bypass comb460; 98.7 % of the in-band energy with about 60 discrete + 2 continuous parameters. Bench check pending (§16.5).
 
 ## 16. The frozen flat injection is five equal signed taps per loop (offline, in-sample, pending the bench) **[M, in-sample]**
 
-Code: `.venv/bin/python tools/q2_candidates.py` → `analysis/q2/k1_sparsity.{json,log}`, `k2_stages.{json,log}`, `structure.{json,log}` (about 1 minute). Input: the frozen flat injection of §15.7 (`branches_flat_0_ext1700.npy`, 600 iterations). These are the offline tests of the candidates in `docs/period_dsp_practice.md` §4; details and the scorecard are in its §7.
+Code: `.venv/bin/python tools/q2_candidates.py` → `analysis/q2/k1_sparsity.{json,log}`, `k2_stages.{json,log}`, `structure.{json,log}`, `k5_resid.{json,log}`, `settings.{json,log}` (about 1 minute). Input: the frozen flat injection of §15.7 (`branches_flat_0_ext1700.npy`, 600 iterations). These are the offline tests of the candidates in `docs/period_dsp_practice.md` §4; details and the scorecard are in its §7.
 
 **Scoring.** Every score is in band: the bench's fit band |LFBAND|² (20 Hz–11 kHz) and band-limited atoms. Nothing is fitted to captures, so **every number here describes the 27.9 k free coefficients, not held-out data**.
 
-> **Status:** a compact structure is found in the free injection. It counts as evidence only once the bench reproduces the held-out nulls with it (§16.4).
+> **Status:** a compact structure is found in the free injection. It counts as evidence only once the bench reproduces the held-out nulls with it (§16.5).
 
 ### 16.1 Sparsity
 
@@ -1166,9 +1166,26 @@ In-band energy explained by K OMP atoms, range over the 8 excitations (4 loops �
 - **Hardware form.** Per loop, 5 reads of the loop line, added with signs (no multiply). L is their sum. Each tap is also routed to one of two output delay lines (26 and 332 samples) shared by all loops, whose outputs form R. That is about 24 memory accesses, inside the 20–35 left by the identified structure (`EMT246_unit_facts.md` §6). It is the EMT 250 patent's tapped read-out plus its output "discorrelator and distributor" (`period_dsp_practice.md` §7.1).
 - **comb460.** With the loop feeds cancelling it and F empty, nothing in the model's output passes a 460 recursion. The "fifth recursion at 460 samples" (§3.3, §8, §11; unit facts §5) may be a stand-in from the short-window fits. The unit-facts row stays until the bench check below.
 
-### 16.4 Bench checks needed
+### 16.4 The other candidates, measured offline (stages `k5`, `settings`)
+
+- **Nested all-pass (K5): not supported.** The tied residual's autocorrelation peaks at loop-length differences and their multiples (68, 72, 126, 198, …) and at the loop's own length. That is cross-talk between loops in the free fit, not the M₁, M₂, M₁ ± M₂ pattern of a nested all-pass (**H** for the reading).
+- **Per-setting tables (K7): not supported [S].** In the 128 per-setting free injections (§15.3; short window Pᵢ + 300) at RT ≥ 1.4 s:
+  - 4.7–4.8 of the 5 flat taps are found within ±1 sample at every LF and HF step;
+  - signs agree in 99.7 % of all excitations;
+  - gains stay within ±0.2 dB of the flat magnitude, except HF 0.2 at −1.0 dB, where the laws are off.
+
+  At short RT those fits are poorly determined (RT 0.3: 2.1 of 5 found).
+- **Taps on both sides of a mid-line filter (K4): not supported [S at HF].** At HF 0.2 K4 predicts a per-tap gap of −5.8…−6.9 dB in 4–10 kHz; the measured per-tap changes are −1.6…+0.7 dB, with no two-level pattern.
+  - The low band is too noisy to decide by itself.
+  - Its one consistent signal is L's earliest tap in loops 1321, 1461 and 1587. That is an artefact of the short-window per-setting fits: those taps sit 5–9 dB low at flat filters too, trending with RT, and the free first-pass FIR carries spikes of about 18× its rms at exactly those positions. The long-window flat injection has them at full magnitude.
+  - §15.8's filters-only branch agrees (about 1 dB).
+
+Details: `docs/period_dsp_practice.md` §7.6.
+
+### 16.5 Bench checks needed
 
 1. **A sparse-tap mode in `branches`:** fixed positions, signs and 26/332 labels, fitting the magnitude (and g460, or free per-tap gains as a check) on the flat training settings. Report held-out compensated nulls against §15.7's −54.3 / −54.0 / −48.8 dB, with the excess over the repeat-capture null and the parameter count.
 2. **comb460 removed from `post`** with the long window: the nulls should not change.
 3. **All 128 settings** with the tied injection frozen (as §15.9).
 4. **M and L's first recirculation** with the delays ×2 / ×4.
+5. **Per-setting fits with the tied model and the long window**, which removes the first-pass FIR / excitation split of §16.4 and is the clean K4/K7 check.

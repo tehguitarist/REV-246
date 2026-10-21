@@ -31,7 +31,21 @@ Stages:
              and across loops. K6 (one per-channel distributor for all loops): R_i = (c0 + c26 z^-26 + c332 z^-332) L_i
              with c common to all loops, against the per-tap 26/332 labels. First-pass FIR F: sparsity raw and comb-
              divided. Residual of the tied model: where it sits (near the taps or not) and its spectrum by octave.
-Output: k1_sparsity.json / .log, k2_stages.json / .log, structure.json / .log in --out.
+  k5         K5 (nested all-pass) and anything else recursive, on what the tied model leaves: normalised in-band
+             autocorrelation of the tied residual at lags 10..1700, against Gaussian noise with the residual's smoothed
+             spectrum (a nested all-pass leaves peaks at M1, M2, M1 +- M2; lags that are loop lengths or their
+             differences point at the free fit trading content between loops instead).
+  settings   K7 and K4 on the per-setting free injections (`q2_injection.py --stage free`, analysis/q2/v/, window
+             P_i + 300, all 128 settings): K7, are the flat taps there in every setting (5-atom OMP on the comb-divided
+             excitation: positions within +-1 of the flat taps; energy the flat tap set explains with free gains) and do
+             their gains stay put; K4, does any tap carry the loop filter once more than the others: per-tap gains fitted
+             in a low band (40-250 Hz) and a high band (4-10 kHz) against the full band, spread across the 5 taps in dB,
+             against the split K4 predicts there (|H_i| of the setting's loop filter in that band re 1 kHz). The decisive
+             form: per-tap band-gain profiles at each LF / HF step minus the profile at LF 1.0 / HF 1.0, averaged over
+             settings with RT >= 1.4 s (short RT is poorly determined); K4 needs the same taps lower by |H_i| at every
+             strong step, in L and R alike.
+Output: k1_sparsity.json / .log, k2_stages.json / .log, structure.json / .log, k5_resid.json / .log,
+settings.json / .log in --out.
 """
 import argparse, json, os, sys
 import numpy as np
@@ -352,10 +366,139 @@ def stage_structure(a, xs, ys, F, loops, say, taps, shift, g460, amp, A):
     json.dump(res, open(os.path.join(OUT, "structure.json"), "w"), indent=1)
 
 
+def stage_k5(xs, ys, loops, say, taps, shift, g460, amp, A):
+    say("[k5] tied residual: largest normalised in-band autocorrelation at lags 10..1700 (control: Gaussian noise with its smoothed spectrum, 95th pct of the max)")
+    res = {}
+    rng = np.random.default_rng(11)
+    for i in loops:
+        for c in (0, 1):
+            r = (ys[c, i] - amp * A[c, i])
+            def acf(z):
+                Z = np.abs(np.fft.rfft(z)) ** 2
+                ac = np.fft.irfft(Z, N)
+                return ac[10:1701] / ac[0]
+            ac = acf(r)
+            top = np.argsort(-np.abs(ac))[:6]
+            env = np.convolve(np.abs(np.fft.rfft(r)) ** 2, np.ones(64) / 64, mode="same")    # smoothed spectrum (~100 Hz)
+            ctl = []
+            for _ in range(50):
+                z = np.fft.rfft(rng.standard_normal(N)) * np.sqrt(env)
+                ctl.append(np.max(np.abs(acf(np.fft.irfft(z, N)))))
+            p95 = float(np.percentile(ctl, 95))
+            loopish = sorted(set([int(v) for v in P] + [int(abs(u - v)) for u in P for v in P if u != v]))
+            tag = lambda t: "*" if any(t % d == 0 and t // d <= 6 for d in loopish if d > 0) or any(abs(t - d) <= 1 for d in loopish) else ""
+            res[f"{P[i]}{'LR'[c]}"] = dict(top=[(int(t + 10), float(ac[t])) for t in top], ctrl_max_p95=p95)
+            say(f"  {P[i]} {'LR'[c]}  top lags " + "  ".join(f"{t + 10}{tag(t + 10)}:{ac[t]:+.3f}" for t in top) + f"   control max (95th pct) {p95:.3f}")
+    say(f"  * = a loop length, a difference of two, or a small multiple of a difference ({sorted(set(int(abs(u - v)) for u in P for v in P if u != v))})")
+    json.dump(res, open(os.path.join(OUT, "k5_resid.json"), "w"), indent=1)
+
+
+def stage_settings(a, loops, say, taps, shift, g460, amp, A):
+    from scipy.signal import butter
+    info = json.load(open(os.path.join(ROOT, "analysis", "q1", "data.json")))
+    law = json.load(open(os.path.join(ROOT, "analysis", "q1", "laws.json")))
+    law["lf"] = {float(k): v for k, v in law["lf"].items()}
+    ext = q1.EXT
+    bands = dict(lf=(40, 250), hf=(4000, 10000))
+    Bb = {k: B * np.abs(sosfreqz(butter(4, f, btype="band", fs=q1.FS, output="sos"), worN=2 * np.pi * np.fft.rfftfreq(N))[1]) ** 2 for k, f in bands.items()}
+    Bb["full"] = B
+    fc = dict(lf=np.sqrt(40 * 250), hf=np.sqrt(4000 * 10000))
+
+    def bandk(x, k):
+        b = np.zeros(N); b[PAD:PAD + len(x)] = x
+        return np.fft.irfft(np.fft.rfft(b) * Bb[k], N)
+
+    def tap_gains(x, i, c, k):
+        L = len(x); y = bandk(x, k); cols = []
+        for t, _ in taps[0, i]:
+            tt = t + (shift.get((i, t), 0) if c else 0)
+            for u in (tt, tt + 460):
+                d = np.zeros(L)
+                if u < L:
+                    d[u] = 1
+                cols.append(bandk(d, k))
+        M = np.array(cols).T
+        g, *_ = np.linalg.lstsq(M, y, rcond=None)
+        r = y - M @ g
+        return g[0::2], float(1 - (r @ r) / (y @ y))
+    keys = sorted(os.path.splitext(f)[0] for f in os.listdir(os.path.join(OUT, "v")) if f.endswith(".npy"))
+    rows = []
+    for key in keys:
+        xs, _ = load(os.path.join(OUT, "v", key + ".npy"), ext)
+        lab = dict(lf=info[key]["lf"], rt=info[key]["rt"], hf=info[key]["hf"])
+        Hs = q1.G_law(lab, law, 2 * np.pi * np.array([fc["lf"], 1000.0, fc["hf"]]) / q1.FS)
+        for i in loops:
+            pred = {k: float(20 * np.log10(np.abs(Hs[i][j]) / np.abs(Hs[i][1]))) for j, k in ((0, "lf"), (2, "hf"))}
+            for c in (0, 1):
+                x = xs[c, i]; L = len(x)
+                y = decomb(band(x), g460)
+                _, sel, _ = omp(y, L, np.array([0.0]), NTAP, [NTAP])
+                flat = [t + (shift.get((i, t), 0) if c else 0) for t, _ in taps[0, i]]
+                found = sum(any(abs(t - f) <= 1 for f in flat) for _, t in sel)
+                gf, ex_flat = tap_gains(x, i, c, "full")
+                gl, _ = tap_gains(x, i, c, "lf")
+                gh, _ = tap_gains(x, i, c, "hf")
+                sg = [float(np.sign(v)) for _, v in taps[0, i]]
+                rows.append(dict(key=key, **lab, loop=int(P[i]), ch="LR"[c], found=int(found), explained_flat=ex_flat,
+                                 gain_db=[float(20 * np.log10(abs(g) / amp)) for g in gf],
+                                 sign_ok=bool(all(np.sign(g) == s for g, s in zip(gf, sg))),
+                                 lf_db=[float(20 * np.log10(abs(l / f))) for l, f in zip(gl, gf)],
+                                 hf_db=[float(20 * np.log10(abs(h / f))) for h, f in zip(gh, gf)], pred=pred))
+    say(f"[settings] K7: the flat taps in the per-setting free injections ({len(keys)} settings x 4 loops x 2 channels = {len(rows)})")
+    found = np.array([r["found"] for r in rows]); ex = np.array([r["explained_flat"] for r in rows])
+    say(f"  5-atom OMP positions within +-1 of the flat taps: 5/5 in {np.mean(found == 5) * 100:.1f} %, >= 4/5 in {np.mean(found >= 4) * 100:.1f} % of excitations")
+    say(f"  energy the flat tap set explains (main + partner atoms, free gains): median {100 * np.median(ex):.1f} %, 10th pct {100 * np.percentile(ex, 10):.1f} %")
+    say(f"  signs as in the flat injection: {np.mean([r['sign_ok'] for r in rows]) * 100:.1f} % of excitations")
+    gd = np.array([r["gain_db"] for r in rows])
+    say(f"  tap gains re the flat magnitude: median {np.median(gd):+.2f} dB, IQR {np.percentile(gd, 25):+.2f}..{np.percentile(gd, 75):+.2f} dB, "
+        f"spread across the 5 taps of one excitation (std) median {np.median(np.std(gd, axis=1)):.2f} dB")
+    for name, f in (("LF", "lf"), ("HF", "hf"), ("RT", "rt")):
+        vals = sorted(set(r[f] for r in rows))
+        say(f"  by {name}: " + "  ".join(f"{v}: found {np.mean([r['found'] for r in rows if r[f] == v]):.2f}/5, gain {np.median([np.median(r['gain_db']) for r in rows if r[f] == v]):+.2f} dB, "
+                                         f"flat set {100 * np.median([r['explained_flat'] for r in rows if r[f] == v]):.1f} %" for v in vals))
+    say("  long RT only (>= 1.4 s), where the per-setting fits are well determined:")
+    lr = [r for r in rows if r["rt"] >= 1.4]
+    for name, f in (("LF", "lf"), ("HF", "hf")):
+        vals = sorted(set(r[f] for r in lr))
+        say(f"    by {name}: " + "  ".join(f"{v}: found {np.mean([r['found'] for r in lr if r[f] == v]):.2f}/5, gain {np.median([np.median(r['gain_db']) for r in lr if r[f] == v]):+.2f} dB, "
+                                           f"flat set {100 * np.median([r['explained_flat'] for r in lr if r[f] == v]):.1f} %" for v in vals))
+    say("\n[settings] K4: per-tap band gain re full band; spread across the 5 taps (max - min, dB) against the split K4 predicts (|H_i| in band re 1 kHz)")
+    for f, b in (("lf", "LF"), ("hf", "HF")):
+        vals = sorted(set(r[f] for r in rows))
+        for v in vals:
+            rr = [r for r in rows if r[f] == v]
+            spread = [max(r[f + "_db"]) - min(r[f + "_db"]) for r in rr]
+            pred = [abs(r["pred"][f]) for r in rr]
+            say(f"  {b} {v}: measured spread median {np.median(spread):.2f} dB (90th pct {np.percentile(spread, 90):.2f}); "
+                f"K4 predicts {np.median(pred):.2f} dB (median; max {np.max(pred):.2f})")
+    say("  per-tap profiles, RT >= 1.4 s: mean band gain of each tap (dB) at a step minus at LF 1.0 / HF 1.0; K4 needs a two-level pattern "
+        "with a gap of about the predicted |H|, the same taps in L and R")
+    prof = {}
+    for f, ref in (("lf", 1.0), ("hf", 1.0)):
+        for v in sorted(set(r[f] for r in lr)):
+            if v == ref:
+                continue
+            for lp in sorted(set(r["loop"] for r in lr)):
+                line = []
+                for ch in "LR":
+                    sel_v = [r for r in lr if r[f] == v and r["loop"] == lp and r["ch"] == ch and r["lf" if f == "hf" else "hf"] == 1.0]
+                    sel_0 = [r for r in lr if r[f] == ref and r["loop"] == lp and r["ch"] == ch and r["lf" if f == "hf" else "hf"] == 1.0]
+                    if not sel_v or not sel_0:
+                        continue
+                    d = np.mean([r[f + "_db"] for r in sel_v], axis=0) - np.mean([r[f + "_db"] for r in sel_0], axis=0)
+                    sd = np.std([r[f + "_db"] for r in sel_v], axis=0)
+                    pr = np.median([r["pred"][f] for r in sel_v])
+                    prof[f"{f}{v}_{lp}{ch}"] = dict(diff_db=[float(u) for u in d], sd_db=[float(u) for u in sd], pred_db=float(pr), n=len(sel_v))
+                    line.append(f"{ch}: " + " ".join(f"{u:+5.1f}" for u in d) + f" (sd {np.median(sd):.1f}, n {len(sel_v)})")
+                if line:
+                    say(f"    {f.upper()} {v}, loop {lp}: K4 gap {prof[f'{f}{v}_{lp}L']['pred_db']:+5.1f} dB   " + "   ".join(line))
+    json.dump(dict(rows=rows, profiles=prof), open(os.path.join(OUT, "settings.json"), "w"), indent=0)
+
+
 def main():
     global OUT
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--stage", default="k1,k2,structure")
+    ap.add_argument("--stage", default="k1,k2,structure,k5,settings")
     ap.add_argument("--src", default="branches_flat_0_ext1700")
     ap.add_argument("--ext", type=int, default=1700)
     ap.add_argument("--loops", default="0,1,2,3")
@@ -383,6 +526,10 @@ def main():
         stage_k2(a, xs, ys, loops, sayer("k2_stages"), k1[2])
     if "structure" in stages:
         stage_structure(a, xs, ys, F, loops, sayer("structure"), *k1)
+    if "k5" in stages:
+        stage_k5(xs, ys, loops, sayer("k5_resid"), *k1)
+    if "settings" in stages:
+        stage_settings(a, loops, sayer("settings"), *k1)
 
 
 if __name__ == "__main__":
