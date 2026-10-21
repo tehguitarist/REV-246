@@ -2,7 +2,7 @@
 
 Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we know), `library_notes.md` (the Tomkin library and harness results), `model_s_results.md` §8–13 (where the S model stands) and `ml_structure.md` (programs M and L).
 
-*Updated October 2026, after the M/L structure work (Q3, `ml_structure.md`). The S model itself has not changed since the single-IR phase.*
+*Updated October 2026, after Q1 (Path B across the library, `model_s_results.md` §14). Before that: the M/L structure work (Q3, `ml_structure.md`).*
 
 ---
 
@@ -12,8 +12,8 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 - **Program S** is a small, deterministic, integer-delay design. Almost all of its structure was identified from one IR (the CLA "Short RT" capture by eugtone):
   - device rate 19.2 MHz / 728 = 26,373.6 Hz (now confirmed by the processor board's timing sequencer);
   - the 8-tap reflection cluster, starting at the DELAY time;
-  - 4 integer loops (1321/1389/1461/1587) with gains length-scaled to RT and a first-order HF filter at 7 kHz;
-  - an all-pass diffuser AP20 · AP72 · AP230 (g ≈ −0.70) plus a 460-sample comb;
+  - 4 integer loops (1321/1389/1461/1587) with gains length-scaled to RT (the Jot law, exact to ±0.1 %), a one-pole HF lowpass per loop (length-scaled, referenced at about 6.4–6.6 kHz) and a first-order LF shelf with one fixed pole (0.9167). The control laws are 13 numbers (`model_s_results.md` §14.2);
+  - an all-pass diffuser AP20 · AP72 · AP230 (g ≈ −0.70) plus a 460-sample comb, on the input side. **AP230's loop filter is a two-tap average (1 − b) + b z⁻¹ with b stepped 0 / 0.17 / 0.33 / 0.50 by a table on RT and HF** (short RT with low HF only; §14.3);
   - left/right read-out lags of 26/332 samples;
   - the analogue chain (§4).
 - **Nulls** (from one IR; details in `model_s_results.md`):
@@ -25,11 +25,13 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
   | R tail after 0.45 s | within 4–6 dB of the noise floor | Loops + 460 only, no fitted input |
   | L tail | 15–22 dB above noise | Fits about 1 % slow gain jitter on L's read-out (unit or capture chain) |
 
+  **Library, held out (Q1, `model_s_results.md` §14.5;** one injection shared by 96 training settings, loops from the laws, clock and gain fitted per capture; 100 Hz–10 kHz, L / R): 0–50 ms −38 / −37 dB; 50–300 ms −29…−32 / −27…−28; 300–600 ms −21…−27 / −21…−25; 600–1000 ms −21…−28 / −21…−26. The repeat-capture ceiling in the same windows is −57 / −46 / −40 dB, so the model is **17–30 dB above it**. Held out equals in-sample (paired captures: +0.0…+0.4 dB). The same injection predicts the CLA unit at −32 / −30 dB (50–300 ms) with nothing digital fitted on CLA.
+
 - **Programs M and L (new, `ml_structure.md`):**
   - **Early section = S's time-scaled by 2 (M) and 4 (L):** same 8-tap cluster and signs (M L 0/108/388/576, R 0/285/388/704; L L 0/216/776/1152, R 0/570/776/1407), reverb onset and L/R gap ×2 / ×4 (**C** for the clusters, **S** for the onsets).
   - **Late reverb is a different structure:** one five-term recursion each, four taps symmetric about N plus one at 2N (L 10826/11384/11618/12176/23002, M 5416/5694/5812/6090/11506; one 2N-word line, **H**). It beats random lag sets by 7–10 dB held out; S's four parallel loops predict S's tail to **−45 dB held out** by the same test.
   - **M and L are time-variant, S is not (S).** AMPL pairs act as repeat captures: S's agree to about −57 dB once each capture's clock ratio (a few ppm) is fitted; M/L tails decorrelate progressively and flat across frequency (L −25 dB at 0.15–0.3 s → −3 dB at 2–4 s). This is the "stochastic control", strong in M/L only.
-- **Main gap (S):** the per-loop injection/read-out structure. Compact fits plateau at about −23 dB where a matching synthetic reaches −46 dB.
+- **Main gap (S):** the per-loop injection/read-out structure. Compact fits plateau at about −23 dB where a matching synthetic reaches −46 dB. **Q1 sharpens it:** one free injection shared by every setting reaches only −28…−33 dB (50–300 ms) at long RT and fails at large per-pass damping (RT 0.3 s: −14…−21 dB; HF 0.2: −22…−26; LF 0.1: −24…−28), although the loops themselves follow the laws to < 1 %. The injection needs a branch that passes the loop gain/filter once (x0 + G·x1, **H**: the filter sits partway along each delay line).
 - **Ruled out (S):** coupled FDNs; all-passes inside the loops; delay-length modulation (EMT 250 style); randomised injection taps; a separate late-input generator; a long EMT 250-style loop; a shared input or small tap set across loops.
 - **New since the single-IR phase:**
   - **The library is in and analysed** (`library_notes.md`): 2,437 settings, S/M/L/Non-Lin, LP and DELAY fixed. The harness run is done; its 116 unknown loop sets are M's and L's recursion seen through the ACF (assigned in `ml_structure.md` §3.1).
@@ -65,15 +67,15 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 
 | # | Question | Test / what is known |
 |---|---|---|
-| Q1 | **Does Path B generalise?** Keep the S structure (loops, diffuser, cluster, injection), change only the loop gains and filters, and predict other RT/HF/LF steps | Held-out null against library IRs at other settings. The decisive test. S grid: 8 RT × 4 LF × 4 HF × 4 AMPL |
-| Q2 | **Per-loop injection/read-out structure** (the −23 dB plateau) | Joint fit across IRs that differ only in RT/HF/LF, with injection, diffuser and cluster shared. **Constraint:** the identified part uses about 34 memory accesses of a 50–70-tap budget, so the unidentified part has about 20–35 accesses |
+| Q1 | ~~**Does Path B generalise?**~~ **Answered (`model_s_results.md` §14): partly.** The loops generalise (laws exact to < 1 %), the first pass does once the AP230 step table is in, and held-out settings null exactly as well as training ones, also across units (CLA). But one shared injection reaches only −28…−33 dB at 50–300 ms and −21…−28 dB later (17–30 dB above the repeat-capture ceiling), worst where the damping per pass is large | Held out by RT step (0.8, 1.8), HF step (0.4) and LF step (0.4); `tools/q1_generalise.py` |
+| Q2 | **Per-loop injection/read-out structure** (the −23 dB plateau) | Joint fit across IRs that differ only in RT/HF/LF, with injection, diffuser and cluster shared (the `joint` stage of `tools/q1_generalise.py` is the test bench). **Constraints:** the identified part uses about 34 memory accesses of a 50–70-tap budget, so the unidentified part has about 20–35 accesses; it must fit every library setting with one set of taps; it needs a part that passes each loop's gain/filter once (x0 + G·x1); and its error grows with the per-pass damping (RT 0.3, HF 0.2, LF 0.1), starting at the first recirculation (`model_s_results.md` §14.4, §14.6) |
 | Q3 | ~~**Loop sets and cluster patterns for M and L**~~ **Answered for structure** (`ml_structure.md`) | Clusters and onsets = S's ×2 / ×4. Late reverb: one five-term recursion per program (2N-word line). Open: the integer lags to ±1 (a common −0.8-sample offset, probably a loop filter; §3.3 there), loop gains/filters per setting, the ACF peaks at 2641/5279 and 460/918 (injection or read-out taps?), and the R-only cluster taps being 0.3 % short of ×2 / ×4. The 15 `novel_cluster` files are not yet looked at |
 | Q3b | **The M/L time variance ("stochastic control")** | Separate captures decorrelate flat across frequency, progressively (`ml_structure.md` §4). Next: decorrelation rate vs RT/HF/LF and per pass vs per second; which part varies (tap gains, tap positions, read-out) by fitting the five-tap recursion with time-varying parameters; depth and rate bounds. **Without hardware this is the main M/L modelling question** |
-| Q4 | **Control laws and step tables:** RT, LF×, HF×, AMPL | The library has a sparse grid, not 16 steps. Fit the laws from the values present; spec says RT 16 steps, LF× 16 (0.1–2), HF× 10 (0.1–1), AMPL 11 steps |
-| Q5 | **LF reference frequency** | **S: 50 Hz** (operation card, data-sheet table, Studio Magazin; only one data-sheet diagram says 250). Confirm with the LF sweeps |
-| Q6 | **HF ×1.0: residual fixed damping?** | HF sweeps including the max step (S has 1.0, M 0.9, L 1.0) |
-| Q7 | **Are the loop filters shared or length-scaled? First order, or higher?** | HF 0.1 and LF 2 extremes (`model_s_results` §3.2) |
-| Q8 | **Is the 460 stage parallel or series? Does its gain vary with any control?** | Across RT and HF steps |
+| Q4 | **Control laws and step tables:** RT, LF×, HF×, AMPL | **S answered for the library steps (`model_s_results.md` §14.2–14.3):** RT = Jot law exactly; HF and LF laws as below; AMPL scales the cluster linearly and the reverb by ≤ 0.07 dB; a new 4-step AP230 table on RT × HF. Open: the step values between the library's (16 RT, 16 LF, 10 HF steps), the AP230 rule (one candidate in §14.3, **H**), and the same for M/L |
+| Q5 | **LF reference frequency** | **S: the LF control sets a first-order shelf (fixed pole 0.9167, corner ≈ 365 Hz)**, so "RT × LF at 50 Hz" holds to ±4 % for LF 0.4 and 2.0 but not for LF 0.1 (0.14 at 50 Hz, 0.13 at DC); the shelf also tilts the top end (RT at Nyquist 1.28 / 1.09 / 1 / 0.96 × RT for LF 0.1 / 0.4 / 1 / 2) |
+| Q6 | ~~**HF ×1.0: residual fixed damping?**~~ **S: none** (RT(7 kHz)/RT = 1.000, IQR 1.000–1.002). The HF reference is about 6.4–6.6 kHz, not 7 kHz | |
+| Q7 | ~~**Are the loop filters shared or length-scaled? First order, or higher?**~~ **S: first order each.** HF one-pole per loop with a length-scaled pole (a shared pole fits 15 dB worse); LF shelf with one shared pole and length-scaled gains (a length-scaled pole fits 4–14 dB worse) | |
+| Q8 | **Is the 460 stage parallel or series? Does its gain vary with any control?** | **Partly:** no control changes it in the first pass; AP230 is the only diffuser stage that steps (§14.3). Series/parallel still open |
 | Q9 | **Exact coefficients (Q15 snapping)** for bit-exactness | Joint fits across many IRs; one IR resolves loop gains to about ±8 LSB. **Needed for −50 dB in tails, not only for bit-exactness:** coefficient errors compound every loop pass (±8 LSB at about 50 passes/s ≈ 1.2 % after 1 s, about −38 dB) |
 | Q10 | **Fixed-point behaviour** (16-bit storage; truncation or rounding) | **Target: the REVERB program's noise is 15 dB above DELAY's** (73 vs 88 dB re nominal, unweighted rms; nominal = about −6 dBFS). Simulate truncation against rounding in the loops and compare the added noise; the TMS32010 has no rounding mode, so truncation is likely (**H**). Only meaningful once the model nears −60 dB |
 | Q11 | **Absolute timing: pre-delay = DELAY exactly?** | Not testable from the library (DELAY is always 0); only the CLA IR has a delay (10 ms) |
@@ -101,10 +103,10 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 
 1. ~~**M and L structure (Q3).**~~ Done (`ml_structure.md`).
 2. ~~**Decide the null target.**~~ Decided (§2): −50 dB minimum wherever a static IR supports it; accuracy over null for M/L reverb. No hardware work blocks the next step.
-3. **Path B generalisation on S (Q1)** at held-out settings, with the analogue stage from §4. If it holds, the same machinery applies to M and L.
-4. **Injection/read-out (Q2)** with the access-count constraint; joint fit across settings.
+3. ~~**Path B generalisation on S (Q1).**~~ Done (`model_s_results.md` §14): the loops, laws and first pass generalise; one shared free injection does not get past −28…−33 dB.
+4. **Injection/read-out (Q2)** with the access-count constraint, as a joint fit across all 128 S settings (`tools/q1_generalise.py`, `joint` stage, is the bench: swap the free excitations for a structure and compare the held-out tables). Start from the clues: the x0 + G·x1 branch, the error growing with per-pass damping from the first recirculation, the 26/332 read-out lags, and R's onset being L's delayed by 332 samples for its first arrivals.
 5. **M/L time variance (Q3b)**, then the M/L loop gains and filters (Q4–Q7 for M/L) from the deterministic part.
-6. **Control laws (Q4–Q8)** from the fits.
+6. ~~**Control laws (Q4–Q8)** from the fits.~~ Done for S at the library's steps (§14.2–14.3); M/L still to do.
 7. **Exact coefficients (Q9) and the analogue band edges (§4)** once S's held-out nulls reach about −40 dB; both are needed for −50 dB in every band and in the tails. **Fixed-point noise (Q10)** after that.
    - Alongside Q3b (step 5): read the unread service-manual pages (processor B, the control-CPU side) for how and how often the tap-offset memory is rewritten; that bounds the M/L modulation rate.
 8. **Non-Lin (§6)** last.

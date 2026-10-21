@@ -8,7 +8,7 @@ Labels: **[M]** measured here, **[A]** assumption, **[H]** hypothesis.
 
 ![model vs measured](../analysis/model_s/model_s.png)
 
-> **Current status (after round 13):** §1–7 describe the first model (B). The current state is in §8–13:
+> **Current status (after round 14, Q1 on the library):** §14 tests Path B across the Tomkin library: the loops follow compact control laws, AP230 has a switched damping step, held-out settings null as well as training ones (and predict the CLA unit), but one shared injection reaches only −28…−33 dB (50–300 ms). §1–7 describe the first model (B); §8–13 the single-IR work on CLA:
 > - best nulls: cluster −50/−52 dB; held-out 400–600 ms about −28 dB; R tail predicted within 4–6 dB of noise after 0.45 s (§10.1);
 > - diffuser found (§11);
 > - group-sparse and long-line taps are negative (§12);
@@ -810,3 +810,171 @@ Code: `.venv/bin/python tools/model_s.py --stochastic` (needs `tighten.json` and
   1. If L's excess is in the unit, it appears in every capture, with the same rough depth, and in L only. If it is the capture chain, it varies between libraries.
   2. Captures that differ only in RT or HF reuse the same injection. If the injection were randomised, the excitations fitted on different captures would disagree beyond noise; in an LTI unit they agree. That is a direct test of injection randomness without repeat captures of the same setting.
   3. Programs M and L ("Grad der Stochastik" differs per program, 1986 review): run the same predictor test. A larger L or R excess in M/L than in S would point to the unit.
+
+## 14. Q1: does Path B generalise across the library? (Tomkin 96 kHz, program S)
+
+Code: `.venv/bin/python tools/q1_generalise.py` (stages `data`, `loops`, `laws`, `ap230`, `joint`, `ceiling`, `cla`, `report`) → `analysis/q1/` (`data.json`, `loops.json`, `laws.json`, `ap230.json`, `fade.json`, `split_*.json`, `repeat_ceiling.json`, `cla.json`, `summary.json`, `report.md`; logs `*.log`). The device-rate cache and the fitted injections (`*.npy`) are not committed. Labels as in `EMT246_unit_facts.md`: **C** confirmed, **S** strong, **H** hypothesis; *[exploratory]* = scratch runs of the same functions on a subset.
+
+> **Answer (October 2026).**
+> - **The loops generalise exactly; the fixed injection only partly.** Gain, LF and HF filters follow compact control laws (13 numbers) to ±0.8 % in RT at every frequency (§14.2). Across RT steps at HF ×1.0 the shared injection predicts held-out settings as well as it fits the training ones (§14.4).
+> - **Path B's fixed structure is incomplete:** the diffuser's AP230 carries a **switched two-tap damping, set by a 4-step table on (RT, HF)** (§14.3). Without it the first 60 ms of short-RT/low-HF settings are wrong by −7 to −15 dB; with it the first pass of every setting fits to −37…−62 dB.
+> - **Held-out nulls stay far from −50 dB:** 0–50 ms −38 / −37 dB; 50–300 ms −29…−32 / −27…−28; 300–1000 ms −21…−28 / −21…−26 (three splits, 100 Hz–10 kHz, L / R), 17–30 dB above the repeat-capture null. Held out = in-sample to 0.4 dB on the same captures, so this is the structure's own error (§14.5).
+> - **Where it fails:** at large damping per loop pass (RT 0.3 s, HF 0.2, LF 0.1), from the first recirculation on. Not the laws (refitting them gains ≤ 1.5 dB) and not the loop-filter form: the injection/read-out geometry, i.e. Q2 (§14.6).
+> - **The same injection predicts the CLA unit** (−32 / −30 dB at 50–300 ms, nothing digital fitted on CLA; §14.7).
+
+### 14.1 Set-up
+
+- **Data:** the 512 library S files (8 RT × 4 LF × 4 HF × 4 AMPL), from the device-rate cache of `ml_structure.py`.
+- **Alignment (per channel):** cluster tap 0 on an integer index (AMPL > 0: the tap itself, ±0.01 sample; AMPL 0, which has no cluster: cross-correlation with the setting's AMPL-90 capture, plus a free shift in the clock fit). L and R tap 0 then agree to 0.0003 sample, so the cache's 19.19 µs L shift is right.
+- **Structure kept (model Cs + diffuser, §8, §11):** loops 1321/1389/1461/1587; comb460 (0.445) · AP20 · AP72 · AP230 (−0.7) in series; the 8-tap cluster with gain × AMPL/90; per channel, excitations of Pᵢ + 300 samples from 230 samples after tap 0 and a 1,400-tap first-pass FIR.
+- **Variant x0 + G·x1:** each loop has a second excitation that passes the loop gain and filter once (§14.4). Injection parameters: 30,640 (16,724 without the second branch).
+- **What changes with the controls:** the loop responses Gᵢ, from laws fitted on the training settings only (§14.2), and the AP230 step (§14.3).
+- **Per capture (counted, not digital):** clock ratio (fitted against the model on 50 ms to the window end), per-channel sub-sample alignment (from the cluster tap, or a free shift for AMPL 0), and in the "+gain" columns one gain.
+- **Windows** end at each file's natural decay: Tomkin's fades start a near-constant **0.65 s before the last non-zero sample** (median over 291 captures where an AMPL partner runs longer; level there median −32 dB re 50–300 ms). A window ends at the earliest of the fade seen against the partners, the last sample − 0.7 s (45 % of the file for short files), and the level 60 dB below 50–300 ms (RT 0.3 files reach the format floor at about −65 dB).
+- **Bands:** 100 Hz–10 kHz (the band of the repeat-capture ceiling, `ml_structure.md` §4.1) and 20 Hz–11 kHz. The device-domain IRs keep the unit's sub-20 Hz high-pass (6.25 Hz for the Tomkin unit, `EMT246_unit_facts.md` §2b): the 5 ms deconvolution kernel can't remove it, so captures with a large cluster carry slow tails below about 22 Hz (−38 against −51 dB annihilator residual for AMPL 90 against AMPL 0 of one setting). Fitting in either band gives the same nulls *[exploratory]*. **No analogue high-pass is modelled here** (model and data share the band filter; the 15 + 15 Hz form of §8.5 is not used). For the 20 Hz–11 kHz and 0–50 ms figures the next step is the measured Tomkin form, corners **3.351 / 0.227 / 0.720 / 0.159 Hz plus the capture chain's 1.8 Hz** (`analog_results.md` §3), applied to model and cluster atoms alike (1 parameter, the 1.8 Hz, shared by all Tomkin captures; for the CLA check the chain is the unit's corners + 6.65 + 6.65 Hz). On the cluster region that form nulls to −44 dB where 15 + 15 Hz gives −20 dB, and 15 + 15 is −8.6 dB wrong in the 63 Hz octave; the 100 Hz–10 kHz tables here should barely move.
+- **Ceiling:** each held-out capture is also nulled against its AMPL partner (another capture of the same reverb), with the same clock and gain fits: the measured repeat-capture null in the same windows and band.
+
+### 14.2 Control laws for the loops (Q4–Q7)
+
+**Method.** Per capture, an annihilator fit of the four loops with the diffuser's poles in the characteristic polynomial (comb460 · AP20 · AP72 · AP230): with them, the input has ended by **0.30 s** (the 50 ms residual drops from −22 to −58 dB at that point; without them only by about 0.4 s). Window 0.30 s to where the block residual rises 10 dB (fade or floor). Free per capture: loop RT, the LF shelf's DC gain and pole, the HF lowpass, the clock ratio (6 numbers, 3 at LF 1.0). Laws from the captures with RT ≥ 1.4 s and residual below −35 dB (223 files). Short RTs (0.3, 0.6 s) leave no usable window after 0.3 s; their loops come from the laws.
+
+| Finding | Value | Conf. |
+|---|---|---|
+| **Gain law = Jot, exactly:** gᵢ = 10^(−3Pᵢ/(fs·RT_label)) | loop RT / label at LF 1.0: 0.9965 / 1.0003 / 1.0005 / 1.0000 / 0.9995 / 0.9994 at RT 0.8 / 1.0 / 1.4 / 1.8 / 2.2 / 2.5 (IQR within ±0.1 %) | S |
+| **Filters are length-scaled:** loss per second of delay is the same in all four loops | free 81-tap loop filters at HF 0.2: −125.5 / −125.5 / −125.0 / −124.3 dB/s at 7 kHz; DC delay ∝ Pᵢ | S |
+| **HF = one-pole lowpass per loop, pole length-scaled** | a shared pole fits 15 dB worse (HF 0.2/0.4/0.6, identical windows); two-tap FIR, cascaded one-poles or a mix all worse; free per-loop gains and poles change nothing (poles within ±0.002 of the law) | S |
+| **HF reference ≈ 6.4–6.6 kHz, not 7 kHz:** RT(f_ref) = HF × RT with one factor k | at LF 1.0, RT(6.6 kHz)/RT = 0.202 / 0.397 / 0.599 for HF 0.2 / 0.4 / 0.6; at 7 kHz 0.194 / 0.380 / 0.580. Fitted f_ref = 6.4 kHz, k = 0.92 / 0.93 / 0.97 / 0.99 for LF 0.1 / 0.4 / 1.0 / 2.0 (the LF shelf shifts the HF end) | S |
+| **HF ×1.0 has no residual damping (Q6)** | RT(7 kHz)/RT = 1.000 (IQR 1.000–1.002); loops flat to 11 kHz within 0.3 % | S |
+| **LF = first-order shelf with one fixed pole, a = 0.9167 (corner ≈ 365 Hz), length-scaled gains** | pole 0.9166–0.9169 at every LF step (12 captures each); a length-scaled pole fits 14 / 10 / 4 dB worse at LF 0.1 / 0.4 / 2.0 (identical windows). 0.9167 = 11/12 (**H**) | S |
+| **LF steps are not exactly "RT × LF at 50 Hz" (Q5)** | RT(50 Hz)/RT = 0.139 / 0.415 / 1 / 1.916 for LF 0.1 / 0.4 / 1.0 / 2.0 (DC: 0.132 / 0.412 / 1 / 1.948). The shelf also tilts the top: RT at Nyquist = 1.28 / 1.09 / 1 / 0.958 × RT, and RT(1 kHz) = 0.93 / 0.95 / 1 / 1.03 × RT. So the 50 Hz definition holds to ±4 % at LF 0.4 and 2.0 but not at 0.1 | S |
+| **Laws as used:** per LF step (Nyquist-end RT ratio, DC RT ratio, k), one shelf pole, f_ref | 13 numbers | |
+
+RT(f)/RT_label from the fitted loops (median, RT ≥ 1.4 s):
+
+| LF, HF | 50 Hz | 200 | 1 k | 2 k | 6.6 k | 13 k |
+|---|---|---|---|---|---|---|
+| 0.1, 1.0 | 0.139 | 0.249 | 0.932 | 1.158 | 1.259 | 1.266 |
+| 0.4, 1.0 | 0.415 | 0.499 | 0.951 | 1.054 | 1.093 | 1.095 |
+| 1.0, 1.0 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 |
+| 2.0, 1.0 | 1.916 | 1.596 | 1.025 | 0.976 | 0.959 | 0.958 |
+| 1.0, 0.6 | 1.000 | 0.999 | 0.979 | 0.923 | 0.599 | 0.454 |
+| 1.0, 0.4 | 0.999 | 0.997 | 0.946 | 0.823 | 0.397 | 0.285 |
+| 1.0, 0.2 | 0.998 | 0.989 | 0.813 | 0.552 | 0.202 | 0.152 |
+
+- **Clock ratio per capture** from the annihilator: 12.2 ppm median (10–90 %: 10.5–13.6), the harness's −13.2 ppm with the opposite sign convention.
+- **Are the laws the limit?** No *[exploratory]*: in a joint fit, each setting's own fitted loops instead of the laws change the nulls by ≤ 1 dB (LF 1.0, HF 0.2/0.6/1.0, RT 1.0–2.5).
+
+### 14.3 New structure: a switched damping step in AP230
+
+The first pass (240–1,550 samples after tap 0, before any loop recirculates) should be the same for every setting if only the loops change. It is, to −45…−62 dB, **except** for settings with short RT and low HF, which differ by quantised amounts (−7.2, −10.3 or −15.4 dB) that do not depend on LF.
+
+- **Where:** the difference starts abruptly 230 samples after the reverb onset (L: 450–475 samples after tap 0), i.e. only signal that has passed AP230's delay changes. Fitting a change to AP20, AP72 or comb460 instead gives nothing.
+- **What:** AP230's loop filter becomes a two-tap average, AP(230) = (0.7 + z⁻²³⁰F)/(1 + 0.7 z⁻²³⁰F) with **F = (1 − b) + b z⁻¹**. A free 19-tap loop filter converges to exactly two taps summing to 1 (0.831/0.171, 0.674/0.328, 0.505/0.493); the gain stays at −0.70. The first pass then fits to −37…−43 dB, against −6…−14 dB with b = 0. Equivalently, a delay of 230 + b samples with linear interpolation (**H**, same response).
+- **The steps:** b = **0.0007 / 0.1715 / 0.3314 / 0.5006** (four values over all 128 settings; the same value to ±0.001 in all four LF columns):
+
+| RT \ HF | 0.2 | 0.4 | 0.6 | 1.0 |
+|---|---|---|---|---|
+| 0.3 | 0.50 | 0.50 | 0.33 | 0 |
+| 0.6 | 0.50 | 0.33 | 0.17 | 0 |
+| 0.8 | 0.33 | 0.17 | 0 | 0 |
+| 1.0 | 0.17 | 0 | 0 | 0 |
+| 1.4–2.5 | 0 | 0 | 0 | 0 |
+
+- **Reading (H):** extra HF damping in the input diffuser when the requested HF decay is very short, from a coarse table in the control CPU. The rule is not a simple function of RT·HF (RT 1.0/HF 0.2 = 0.2 gives 0.17, RT 0.6/HF 0.4 = 0.24 gives 0.33). If the 16 RT steps are 0.2, 0.3, …, 1.0, 1.2, …, 2.2, 2.5 and the 10 HF steps 0.1…1.0, b = min(⌈(10 − s)/2⌉, 3)/6 with s = RT index + HF index fits every cell, but those step tables are assumed (**H**).
+- **AP230 is on the input side (S):** putting the step into the annihilator's AP230 denominator changes the loop fits after 0.3 s by < 0.1 dB in all six step > 0 settings tried. If AP230 sat after the loops, its poles would act all the way down the tail. This settles §11's open placement for AP230.
+- **For the model:** b is a per-setting step table (2 bits per setting), measured from each setting's first pass (`ap230` stage); held-out settings use their measured step (a rule is H).
+
+### 14.4 Across RT: the injection carries over, but needs a branch through the loop gain
+
+*[exploratory]* runs on LF 1.0 / HF 1.0 only (no LF/HF filters, AP230 step 0), 20 Hz–11 kHz, clock from the annihilator, no gain; null L / R, median over captures:
+
+First rows: AMPL-0 captures only, ranges over the held-out (or training) RT steps; last three rows: medians over all captures.
+
+| Training RT steps | Injection | Held out | 50–300 ms | 300–600 ms | 600–1000 ms |
+|---|---|---|---|---|---|
+| 1.0, 1.8, 2.5 | x (Path B as in §8) | 1.4, 2.2 | −38.1…−40.6 / −34.4…−39.6 | −37.3…−38.9 / −35.1…−35.5 | −34.3…−37.3 / −32.2…−34.6 |
+| 〃 (in-sample) | x | 1.8, 2.5 | −36.7…−40.6 / −32.6…−38.4 | −37.0…−41.4 / −33.2…−39.9 | −36.0…−37.9 / −32.8…−36.3 |
+| 〃 | x | 0.6 (extrapolated) | −26.3 / −21.6 | −20.7 / −17.7 | – |
+| 0.6, 1.0, 1.8, 2.5 | x | 0.8, 1.4, 2.2 | −34.5 / −30.0 | −34.0 / −29.8 | −30.6 / −27.8 |
+| 0.6, 1.0, 1.8, 2.5 | **x0 + G·x1** | 0.8, 1.4, 2.2 | **−41.6 / −39.4** | **−37.8 / −36.5** | **−34.9 / −33.1** |
+| 〃 | all excitations through G only | 0.8, 1.4, 2.2 | −18.7 / −18.7 | −22.8 / −22.1 | −20.5 / −19.9 |
+
+- **Within the trained RT range, held out = in-sample:** the injection does not depend on RT (S, for HF 1.0 / LF 1.0).
+- **One injection can't serve short and long RT** if every excitation enters the loop after the gain: adding RT 0.6 drops every window by 4–9 dB. Scaling RT 0.6's loop gain law by 0.96–1.04 only makes it worse (best at 1.00), so the law is right and the form is wrong.
+- **x0 + G·x1 fixes it:** each loop gets a second excitation that passes the loop gain and filter once. Every excitation through G fails. So part of each loop's injection (or read-out) sits on each side of the gain/filter. **Reading (H):** the loop filter sits partway along each delay line, with taps on both segments. That is Q2's question; here it costs a second set of excitations (30,640 parameters in all).
+- Other branch forms with HF settings included (gain only, filter only, gain + filter, all four) agree within 1–3 dB, so the data don't pin where the gain and filter sit relative to the taps.
+
+### 14.5 Held-out nulls across the library
+
+Three splits, each holding out every capture of 32 settings (4 AMPL captures each = 128): **RT** steps 0.8 and 1.8 s (interpolation of the gain law and the AP230 table), **HF** step 0.4 (HF law), **LF** step 0.4 (shelf tables interpolated in log LF). Laws refitted on the 96 training settings of each split; injection trained on their AMPL-30 and AMPL-90 captures; one clock-refit round. Null in dB, median over held-out captures, **100 Hz–10 kHz, one clock ratio and one gain per capture**, L / R (`analysis/q1/report.md`, `summary.json`):
+
+| Window (ms) | RT 0.8 / 1.8 held out | HF 0.4 held out | LF 0.4 held out | Repeat-capture null (RT split) | Excess over repeat, R (RT / HF / LF split) |
+|---|---|---|---|---|---|
+| 0–50 | −38.2 / −37.4 | −37.7 / −37.4 | −37.5 / −36.8 | – | – |
+| 50–300 | −30.7 / −27.4 | −31.5 / −28.1 | −29.2 / −27.0 | −57.2 / −56.4 | +30.0 / +27.9 / +30.4 |
+| 300–600 | −24.9 / −22.9 | −26.8 / −24.8 | −21.3 / −20.6 | −46.2 / −46.4 | +23.9 / +22.0 / +25.1 |
+| 600–1000 | −27.1 / −24.9 | −27.7 / −25.7 | −21.5 / −20.8 | −40.2 / −40.2 | +17.0 / +17.8 / +19.9 |
+| 1000–1500 | −28.0 / −25.7 | −27.0 / −24.8 | −22.6 / −21.6 | −34.0 / −33.9 | +10.5 / +17.3 / +17.2 |
+
+- **Captures per window:** 128 up to 300 ms, 123–128 at 300–600, 64–79 at 600–1000, 20–21 at 1–1.5 s (windows stop at each capture's fade).
+- **Parameters:** injection 30,640 (shared by all settings); laws 13 (10 in the LF split, which has three LF steps); the AP230 table (2 bits per RT/HF cell); per capture a clock ratio, the per-channel alignment (a cluster-tap fit, or one free shift for AMPL 0) and one gain.
+- **Without the gain** the nulls change by ≤ 0.3 dB after 50 ms; 0–50 ms is 2–3 dB better without it (−40 dB), because the gain is fitted from 50 ms on. **In 20 Hz–11 kHz:** within 0.5 dB after 50 ms; 0–50 ms 1–2 dB worse (the sub-20 Hz tails of the cluster, §14.1).
+- **Repeat-capture null** = AMPL partners against each other with the same clock and gain fits, in the same windows. It depends on RT, because short files reach their floor early: RT 0.3–0.8 s −59 / −34 / −29 dB at 50–300 / 300–600 / 600–1000 ms; RT 1.0–1.4 s −58 / −46 / −39; RT 1.8–2.5 s −53 / −50 / −42 (−38 at 1–1.5 s). Over all 128 settings: −56 / −46 / −41 / −38 dB. These are below `ml_structure.md` §4.1's −57…−58 dB after 0.3 s, which used a gain per window, the capture domain and the 40 longest settings. The format floor (24-bit, −88 dB below the 50–300 ms reverb) is far below either.
+
+**Held out against in-sample, same captures.** 48 captures are held out in one split and in the training set of another:
+
+| Window (ms) | n | Held out | In-sample | Held out − in-sample (median of pairs) |
+|---|---|---|---|---|
+| 0–50 | 48 | −37.9 / −37.0 | −37.8 / −37.1 | +0.0 / +0.1 |
+| 50–300 | 48 | −29.5 / −26.3 | −29.8 / −26.9 | +0.1 / +0.4 |
+| 300–600 | 46 | −22.2 / −20.7 | −24.8 / −22.8 | +0.0 / +0.1 |
+| 600–1000 | 23 | −23.4 / −22.4 | −24.9 / −23.6 | +0.2 / +0.4 |
+
+So **the structure generalises completely**: a held-out setting is predicted as well as when it is trained on. The gap to the ceiling is the structure's own error, not overfitting (the 30 k injection parameters are constrained by 192 training captures).
+
+**Loops from each setting's own tail instead of the laws** ("own loops", annihilator fits of §14.2 on held-out captures with RT ≥ 1.0 s; nothing else refitted): RT split −31.7 / −28.3, −28.1 / −26.1, −27.2 / −25.0 dB (50–300 / 300–600 / 600–1000 ms); HF split −31.3 / −28.2, −27.7 / −25.8, −28.1 / −25.8; LF split −31.2 / −28.1, −27.8 / −25.6, −25.8 / −24.8. The RT and HF laws cost ≤ 1–3 dB; the interpolated LF 0.4 shelf costs 4–7 dB after 300 ms.
+
+**By control** (50–300 ms; 300–600 ms in brackets; L / R):
+
+| | | | | |
+|---|---|---|---|---|
+| RT (HF split) | 0.3: −18.2 / −14.3 (−4.0 / −3.0) | 0.6: −28.0 / −24.3 (−15.9 / −15.5) | 1.0: −31.5 / −28.3 (−24.1 / −22.6) | 2.5: −33.4 / −29.3 (−30.6 / −27.4) |
+| HF (RT split) | 0.2: −25.4 / −21.8 (−19.4 / −18.6) | 0.4: −31.1 / −27.8 (−26.4 / −24.3) | 0.6: −31.5 / −28.3 (−26.8 / −24.5) | 1.0: −31.2 / −27.8 (−26.8 / −23.6) |
+| LF (RT split) | 0.1: −26.5 / −23.8 (−18.5 / −17.5) | 0.4: −30.9 / −27.6 (−24.9 / −22.7) | 1.0: −30.9 / −27.5 (−24.0 / −22.3) | 2.0: −31.2 / −27.7 (−25.2 / −23.4) |
+| AMPL (RT split) | 0: −30.8 / −27.4 (−25.6 / −23.7) | 30: −30.7 / −27.3 (−24.7 / −22.7) | 60: −30.6 / −27.4 (−24.6 / −22.7) | 90: −30.7 / −27.4 (−24.8 / −22.8) |
+
+R is 3–4 dB worse than L throughout (R's reverb starts 332 samples later, so more of each window is recirculation).
+
+### 14.6 Where it fails, and why it isn't the loops
+
+- **The extremes fit worst, in-sample as well as held out:** RT 0.3 s (50–300 ms about −14…−18 dB; 300–600 ms 0 to −4 dB), HF 0.2 (−22…−25 dB at 50–300 ms), LF 0.1 (−24…−27 dB). Long RT with HF ≥ 0.4 and LF ≥ 0.4 reach −31…−33 dB (L) and −28…−29 dB (R) at 50–300 ms. These are the settings with the largest loss per loop pass.
+- **The first 50 ms fit everywhere** (−37…−38 dB held out, about −40 dB without a gain), so the misfit starts at the first recirculation. (R's first arrivals are L's delayed by exactly 332 samples, with the same values to ±0.01, the 332 read-out lag of §5.) At HF 0.2 the residual jumps at 60–90 ms (the first loop passes, 1,551 samples in L and 1,883 in R) and rises with frequency, from −39 dB at 125 Hz to −17 dB at 8 kHz (RT 1.0 s, R, relative to each octave's energy) *[exploratory]*.
+- **Not the laws:** with the injection held fixed, refitting each setting's loop RT, HF factor and LF shelf (3 numbers) gains ≤ 1.5 dB at RT 0.3, 0.6 and 1.0 and HF 0.2 *[exploratory]*. Using each setting's own annihilator loops instead of the laws changes the held-out nulls by ≤ 1 dB in the RT and HF splits (columns "own loops"); only the interpolated LF 0.4 shelf costs 4–7 dB after 300 ms.
+- **Not the loop filter's form:** per-loop free gains and poles, free 81-tap loop filters, two-tap or cascaded filters, and branch forms of the injection through the gain only, the filter only or both, all leave the same picture *[exploratory]*.
+- **Not the band:** fitting in 100 Hz–10 kHz instead of 20 Hz–11 kHz changes nothing *[exploratory]*.
+- **Reading (H):** the excitations themselves depend on how much each loop pass damps. With a fixed injection and the loop filter applied at one point per pass, the first recirculations carry the wrong spectral balance when the damping per pass is large. That points at the injection/read-out geometry: where the taps sit relative to the gain and filter along each delay line (§14.4), which is Q2.
+- **The heavy-damping annihilator is weaker too:** at HF 0.2 the per-capture loop fit reaches −38…−40 dB against −45…−51 dB at HF 1.0, and its residual sits at high frequencies (−36 dB at 8 kHz re that octave, against −58 dB flat at HF 1.0), even with free per-loop filters. A small high-frequency component that no fixed per-loop LTI filter predicts is consistent with the same geometry question (**H**).
+- **AMPL changes the reverb level slightly:** the fitted gain per capture rises with AMPL (median +0.02 / +0.03 / +0.03 / +0.07 dB at AMPL 0 / 30 / 60 / 90, the same in all three splits). So "AMPL changes only the cluster" holds to about 0.05 dB (S).
+
+### 14.7 Cross-unit check: the CLA IR predicted from the library
+
+The CLA IR (another unit; LF 1.0, RT 1.0, **HF 0.9, a step the library doesn't have**, AMPL 80, DELAY 10 ms) rendered from the RT split's library-trained injection and laws, AP230 step 0. Fitted on CLA: clock ratio (97.5 ppm, against 98.4 ppm from its own annihilator in §9.1), a common shift (−0.005 sample) and one gain (+1.0 dB). **No digital parameter is fitted on CLA.**
+
+| Window (ms) | 100 Hz–10 kHz | 20 Hz–11 kHz | CLA's own model Cs (§8.5, 20 Hz–11.3 kHz) | CLA noise-limited null (§8.2, §9.3) |
+|---|---|---|---|---|
+| 0–50 | −35.0 / −35.6 | −28.4 / −31.6 | −51.0 / −52.9 (fitted) | −80 / −86 |
+| 50–300 | −32.1 / −29.7 | −28.9 / −27.8 | −47.8 / −47.7 (fitted) | −67 / −76 |
+| 400–600 | −24.3 / −22.1 | −23.4 / −21.3 | −27.1 / −29.2 (held out) | −46 / −54 |
+| 600–1000 | −21.6 / −20.4 | −20.9 / −19.8 | −17.0 / −19.4 (held out) | −31 / −39 |
+| 1000–1500 | −8.6 / −13.7 | −7.3 / −13.2 | – | −7 / −13 (noise) |
+
+- After 400 ms the library-trained prediction is within 4–8 dB of CLA's own best generative model (model Cs, fitted on CLA's first 400 ms) at 400–600 ms and 1–4 dB better at 600–1000 ms. So **an injection learnt on one unit predicts another unit's IR about as well as that unit's own fitted injection (S)**: the firmware, injection included, is the same, and an unseen HF step works through the law. Excess over CLA's noise: +21 / +32 dB at 400–600 ms.
+- The cluster window (−35 dB) is limited by the two units' different analogue chains (CLA's own capture-domain fit reaches −50/−52 dB, §8.5); this check runs in the device domain with each library's kernel.
+
+### 14.8 What this answers
+
+- **Q1: partly.** The structure generalises: the loops follow 13-number control laws to < 1 % in RT; the first pass is identical across settings once the AP230 step is in; held-out settings null as well as training ones (in every split, held-out and in-sample agree within 1–3 dB); and the library-trained injection predicts a second unit. But the shared injection only reaches −28…−33 dB at 50–300 ms and −21…−28 dB later, 17–30 dB above the repeat-capture ceiling, and it fails at the extremes (RT 0.3, HF 0.2, LF 0.1). **Path B as structured can't reach −50 dB; what's missing is the injection/read-out structure (Q2), now with a sharper test: it must fit every setting with one set of taps, and its error grows with the per-pass damping.**
+- **Q4–Q7 answered for S** (§14.2, §14.3): gain law exact; HF one-pole per loop, length-scaled, referenced at 6.4–6.6 kHz; no residual damping at HF ×1.0; LF a first-order shelf with one fixed pole (0.9167) and length-scaled gains, not exactly "×LF at 50 Hz"; plus the AP230 step table.
+- **Q8 partly:** the 460 stage needs no control dependence in the first pass (AP230 is the only stage that changes, §14.3).
+- **§11's open placement:** AP230 is on the input side (§14.3).
+- **Parameter count:** 30,640 shared injection parameters (the Q2 target: replace them with a structure), 13 law numbers, a 4-step table (2 bits per RT/HF cell), and per capture a clock ratio, a per-channel sub-sample alignment and optionally a gain.
