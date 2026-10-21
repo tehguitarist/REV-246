@@ -64,6 +64,9 @@ Stages:
   loops    the loop refit again, with the compact injection frozen (--frozen, default the 5-tap / -1/sqrt(2) model of
            model_s_results 16.8-16.9, its diffuser and AP230 table): per setting the law loops, 5 shared numbers ('refit',
            as `filters`), and 5 numbers per loop ('perloop', 20 per setting) -> loops_<tag>.json. --only for a smoke test.
+  capped   the laws with two coefficient limits common to all loops (model_s_results §16.15): the HF one-pole's pole at most
+           P_MAX and the loop's total per-pass gain at DC (broadband gain x LF shelf) at least DC_MIN; scored on all settings
+           against the plain laws, with a frozen injection (--frozen). --only for a smoke test.
   breport  excess of branch runs over the repeat-capture null (from the nulls stage of the same split), by control.
   joint    q1's held-out bench (run_split: shared injection x0 + G.x1, laws, AP230 table) re-run with the
            corrected windows, so Q2 candidates are compared against a fade-free baseline. --only limits it to a
@@ -1067,6 +1070,80 @@ def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None, ap23
 
 
 COMPACT = "diffuser_tied_fix-0.707107_ap230new"     # 5 taps per loop, all-pass gains -1/sqrt(2) (model_s_results 16.8-16.9)
+P_MAX = 0.84          # HF one-pole: largest pole (refit, HF 0.2 / RT 0.6, all four loops 0.835-0.845)
+DC_MIN = 0.18         # smallest total per-pass gain at DC (refit, LF 0.1 / RT 0.6-1.4, all four loops 0.17-0.20)
+
+
+def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN):
+    """q1.G_law with the two coefficient limits: HF pole <= p_max; g . r0 (per-pass gain at DC) >= dc_min."""
+    import model_s as m
+    rt, lf, hf = lab["rt"], lab["lf"], lab["hf"]
+    L = law["lf"][lf]
+    out = []
+    for Pi in q1.P:
+        kk = -3 * Pi / q1.FS
+        g = 10 ** (kk / (L["hi"] * rt))
+        H = np.ones(len(w), complex)
+        if L["dc"] != L["hi"]:
+            r0 = 10 ** (kk * (1 / (L["dc"] * rt) - 1 / (L["hi"] * rt)))
+            H = m.shelf(w, max(r0, dc_min / g), 1.0, law["a"])
+        if hf < 1.0:
+            p = min(float(q1.onepole_for(np.array(10 ** (kk / rt * L["k"] * (1 / hf - 1))), law["f_ref"])), p_max)
+            H = H * (1 - p) / (1 - p * np.exp(-1j * w))
+        out.append(g * H)
+    return out
+
+
+def _capped_setting(a):
+    key, lab, b230, law, v, ext, caps, ends, diff = a
+    q1.EXT = ext
+    law["lf"] = {float(k): x for k, x in law["lf"].items()}
+    w = 2 * np.pi * np.fft.rfftfreq(q1.grid_n(lab["rt"]))
+    out = []
+    for name, Gs in (("law", q1.G_law(lab, law, w)), ("capped", G_capped(lab, law, w))):
+        G = make_G(lab, law, Gs, b230, diff)
+        for c in caps:
+            out.append(dict(key=key, **lab, amp=c["amp"], file=c["file"], loops=name,
+                            **score_capture(G, v, c["amp"], c["file"], c["fade2"], c["eps"], ends[c["file"]], ext)))
+    return dict(key=key, **lab, rows=out)
+
+
+def capped_stage(workers, only=None, frozen=COMPACT):
+    from concurrent.futures import ProcessPoolExecutor
+    info, fade, _, _, eps0 = q1_tables()
+    d = json.load(open(os.path.join(OUT, frozen + ".json")))
+    q1diff = dict(g20=q1.DIFF["g_ap"], g72=q1.DIFF["g_ap"], g230=q1.DIFF["g_ap"], g460=q1.DIFF["g460"])
+    diff = d.get("diff", q1diff)
+    ap = json.load(open(os.path.join(OUT, "ap230_g0.7071.json"))) if "diff" in d else json.load(open(os.path.join(Q1, "ap230.json")))
+    ends = json.load(open(os.path.join(OUT, "ramp.json")))
+    law = q1.fit_laws(json.load(open(os.path.join(Q1, "loops.json"))))
+    v = np.load(os.path.join(OUT, frozen + ".npy"))
+    keys = [k for k in info if only is None or k in only]
+    jobs = [(k, dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]), ap["steps"][ap["settings"][k]["step"]], json.loads(json.dumps(law)),
+             v, d.get("ext", 1700), [dict(amp=a, file=nm, eps=eps0[nm], fade2=fade[nm]) for a, nm in files_of(info[k])], ends, diff) for k in keys]
+    with ProcessPoolExecutor(workers) as ex:
+        res = list(ex.map(_capped_setting, jobs))
+    json.dump(res, open(os.path.join(OUT, f"capped_{frozen}" + ("_smoke" if only else "") + ".json"), "w"), indent=0)
+    rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, "nulls_free.json")))}
+    ws = ["50-150", "150-300", "300-600", "600-1000"]
+
+    def ex_(rows, w):
+        e = [r["null_comp"][w][1] - rep[(r["key"], r["amp"])]["repeat_comp"][w][1] for r in rows
+             if r["null_comp"].get(w) and rep.get((r["key"], r["amp"])) and rep[(r["key"], r["amp"])]["repeat_comp"].get(w)]
+        return np.median(e) if e else np.nan
+    rows = [r for s_ in res for r in s_["rows"]]
+    print(f"\n## Capped laws (P_MAX {P_MAX}, DC_MIN {DC_MIN}) with {frozen} frozen; {len(res)} settings; R, compensated; null [excess, ref nulls_free]")
+    for lp in ("law", "capped"):
+        rr = [r for r in rows if r["loops"] == lp]
+        print(f"- {lp:6s}: " + "; ".join(f"{w}: {np.median([r['null_comp'][w][1] for r in rr if r['null_comp'].get(w)]):.1f} [{ex_(rr, w):+.1f}]" for w in ws))
+        for c in ("rt", "hf", "lf"):
+            vals = sorted({r[c] for r in rr})
+            if len(vals) > 1:
+                print(f"    by {c}: " + "; ".join(f"{v_}: " + "/".join(f"{ex_([r for r in rr if r[c] == v_], w):+.1f}" for w in ws[:3]) for v_ in vals))
+    if len(res) <= 12:
+        for s_ in res:
+            print(f"  {s_['key']:12s} " + "  ".join(f"{lp}: " + "/".join(f"{ex_([r for r in s_['rows'] if r['loops'] == lp], w):+.1f}" for w in ws[:3])
+                                                for lp in ("law", "capped")))
 
 
 def make_G(lab, law, Gs, b230, diff, w=None):
@@ -1149,13 +1226,19 @@ def _loops_setting(a):
                 cost_perloop=float(2 * f2.cost), nfev=[int(f1.nfev), int(f2.nfev)], rows=out)
 
 
-def loops_stage(workers, only=None, frozen=COMPACT, ap230="ap230_g0.7071.json"):
+def loops_stage(workers, only=None, frozen=COMPACT, ap230=None):
+    """frozen: the compact model (its -1/sqrt(2) diffuser and the re-measured AP230 table) or a branch run such as the
+    free flat injection (fitted with q1's -0.70 diffuser and q1's AP230 table, which are then used with it)."""
     from concurrent.futures import ProcessPoolExecutor
     info, fade, law, ap, eps0 = q1_tables()
-    ap = json.load(open(os.path.join(OUT, ap230)))
+    d = json.load(open(os.path.join(OUT, frozen + ".json")))
+    q1diff = dict(g20=q1.DIFF["g_ap"], g72=q1.DIFF["g_ap"], g230=q1.DIFF["g_ap"], g460=q1.DIFF["g460"])
+    diff = d.get("diff", q1diff)
+    ap230 = ap230 or ("ap230_g0.7071.json" if "diff" in d else None)
+    ap = json.load(open(os.path.join(OUT, ap230))) if ap230 else json.load(open(os.path.join(Q1, "ap230.json")))
+    ext = d.get("ext", 1700)
     ends = json.load(open(os.path.join(OUT, "ramp.json")))
     fits = json.load(open(os.path.join(Q1, "loops.json")))
-    d = json.load(open(os.path.join(OUT, frozen + ".json")))
     v = np.load(os.path.join(OUT, frozen + ".npy"))
     law = q1.fit_laws(fits)
     keys = [k for k in info if only is None or k in only]
@@ -1165,10 +1248,10 @@ def loops_stage(workers, only=None, frozen=COMPACT, ap230="ap230_g0.7071.json"):
         caps = [dict(amp=a, file=nm, eps=eps0[nm], fade2=fade[nm]) for a, nm in files_of(g)]
         v0 = np.median([r["v"] for r in fits if r["file"] in {c["file"] for c in caps}], 0)
         jobs.append((k, dict(lf=g["lf"], rt=g["rt"], hf=g["hf"]), ap["steps"][ap["settings"][k]["step"]], json.loads(json.dumps(law)),
-                     v, 1700, caps, ends, v0, d["diff"]))
+                     v, ext, caps, ends, v0, diff))
     with ProcessPoolExecutor(workers) as ex:
         res = list(ex.map(_loops_setting, jobs))
-    path = os.path.join(OUT, "loops_compact" + ("_smoke" if only else "") + ".json")
+    path = os.path.join(OUT, ("loops_compact" if frozen == COMPACT else f"loops_{frozen}") + ("_smoke" if only else "") + ".json")
     json.dump(res, open(path, "w"), indent=0)
     rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, "nulls_free.json")))}
     ws = ["50-150", "150-300", "300-600", "600-1000"]
@@ -1400,7 +1483,7 @@ OUT = os.path.join(ROOT, "analysis", "q2")
 def main():
     global OUT
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "ap230", "loops", "cla", "report"])
+    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "ap230", "loops", "cla", "capped", "report"])
     ap.add_argument("--g230", type=float, default=-0.7071067812, help="ap230: the all-pass gain for the step measurement")
     ap.add_argument("--ap230", default=None, help="diffuser: an AP230 step table from the ap230 stage (default: q1's)")
     ap.add_argument("--analog", nargs="?", const=True, default=False,
@@ -1414,6 +1497,7 @@ def main():
     ap.add_argument("--g460", default="0.445", help="tied: comma-separated g460 values (0.445 = the post comb cancelled)")
     ap.add_argument("--dense", type=int, default=0, help="tied: free dense coefficients over the first N samples of each excitation")
     ap.add_argument("--score", default="test", choices=["test", "all"], help="tied: score the flat test settings, or all 128")
+    ap.add_argument("--frozen", default=COMPACT, help="loops: the frozen injection (a run name in OUT), e.g. branches_flat_0_ext1700")
     ap.add_argument("--tags", default="", help="breport: comma-separated branch run names (files in OUT without .json)")
     ap.add_argument("--alphas", default="0,1", help="branches: per branch an exponent of G_i, or g / H / HL / HH / gHL / gHH")
     ap.add_argument("--ext", type=int, default=300, help="branches: excitation length P_i + ext (q1: 300)")
@@ -1445,7 +1529,9 @@ def main():
     if a.stage == "cla":
         cla_compare([a.only] if a.only else None, a.analog)
     if a.stage == "loops":
-        loops_stage(a.workers, only)
+        loops_stage(a.workers, only, a.frozen)
+    if a.stage == "capped":
+        capped_stage(a.workers, only, a.frozen)
     if a.stage == "ap230":
         ap230_stage(a.g230, only)
     if a.stage == "filters":
