@@ -20,6 +20,7 @@ Goal: recreate the EMT 246 digital reverb's S/M/L programs (Non-Lin as a bonus) 
 | `ml_structure.md` | Programs M and L from the library: clusters and onsets (S's ×2 / ×4), the five-term late recursion, lag precision, the time variance found with AMPL pairs as repeat captures, and the noise floors and repeat-capture ceiling (S about −57 dB) that bound the null target |
 | `EMT246_discovery.md` | The original discovery and viability study. Hardware photos analysis in §2.3a; period sources in §10a; history in §10 |
 | `algorithm_research.md` | Reverb-algorithm lineage (EMT 250 patent, Blesser), classic and modern methods, topology hypotheses and tests (T1–T10), the stochastic-control analysis (§7.2b) |
+| `period_dsp_practice.md` | 1978–1990 reverb and TMS32010 practice (EMT, Lexicon, patents, German sources) turned into ranked, testable candidates (K1–K7) for the dense per-loop injection/read-out found in Q2, with test recipes for `tools/q2_injection.py` |
 | `analysis_harness_spec.md` | IR-library harness test specification (stages A–G), plus implementation status of A–C |
 
 ### Code (`tools/`, `tests/`)
