@@ -1329,7 +1329,11 @@ Code: `.venv/bin/python tools/q2_injection.py --stage cla` → `analysis/q2/cla_
 
 Fitted on CLA: clock 97.5–98.4 ppm, shift −0.005…−0.001 sample, gain +0.91…+1.01 dB for all four. CLA's noise-limited nulls are −67 / −76 dB at 50–300 ms (§8.2, §9.3), so none of these is noise-limited.
 
-- **The free injection's lead over the compact model shrinks from 8–10 dB on the library to 1.4–1.8 dB on L and 3.2–4.2 dB on R on another unit.** So most of that lead was library-specific: the free FIR also fits the library's shared measurement chain (one deconvolution kernel and one capture chain for every file), which carries over to held-out library settings but not to another unit. **H** for the mechanism, **S** for the size.
+- **The free injection's lead over the compact model shrinks from 8–10 dB on the library to 1.4–1.8 dB on L and 3.2–4.2 dB on R on another unit.** Two readings, not yet separated:
+  - **library-specific fitting:** the free FIR also learns what every library file shares and CLA does not. That means our single deconvolution kernel, this unit's analogue stage (its filters, S&H pole and coupling corners, which differ per unit), and Tomkin's unknown processing (sweep deconvolution, the files' "dc" step). It carries over to held-out library settings but not to another unit. The converters (Prism Orpheus) are not the suspect;
+  - **a CLA-side ceiling compressing the differences:** every model sits near −37…−42 dB on CLA, and even the cluster window (0–50 ms, no reverb model involved) reaches only −36…−40 dB, because CLA's analogue chain differs and only clock, shift and gain are fitted on it.
+
+  **Test:** fit CLA's per-unit analogue parameters (S&H pole, extra high-pass corners; counted, as `NEXT_STEPS.md` §2 allows) to raise its ceiling, then compare again. Until then: **H** for the mechanism; **S** only for "the free model's lead is smaller on CLA".
 - **A smaller part, larger in R, does transfer:** 1.5–4 dB the compact model still lacks. R's read-out (the 26 / 332 distributor) is the first place to look.
 - **The −1/√2 all-pass gain transfers in full:** +5…+6 dB on CLA against the −0.70 diffuser, with nothing fitted on CLA. It belongs to the unit's algorithm (now **S** on two units).
 - **The 9-parameter model beats Q1's 30,640-parameter model on CLA by 4–14 dB** after 50 ms, and in the 0–50 ms window by 3 dB.
