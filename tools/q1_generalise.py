@@ -2,7 +2,7 @@
 Results: docs/model_s_results.md §14.
 
     .venv/bin/python tools/q1_generalise.py [--stage all|data|loops|laws|ap230|joint|ceiling|cla|report]
-        [--splits rt,hf,lf] [--variant x0+Gx1|x] [--rounds 1] [--workers 10] [--out analysis/q1]
+        [--splits rt,hf,lf] [--variant x0+Gx1|x] [--rounds 1] [--workers 10] [--sample 8] [--out analysis/q1]
 
 Structure kept fixed (model_s_results.md §8-13): loops 1321/1389/1461/1587, the diffuser
 comb460 . AP20 . AP72 . AP230 in series, the 8-tap cluster (gain x AMPL/90), per-channel injection
@@ -21,6 +21,8 @@ Stages:
   ceiling  repeat-capture null: AMPL partners against each other with the same clock and gain fits.
   cla      cross-unit check: the CLA IR predicted from the library-trained injection and laws.
   report   held-out tables (stdout) and summary.json.
+  check    spot check: re-derive --sample held-out captures per split from the saved injection and compare
+           with the stored nulls (a few minutes; use instead of a full re-run to verify committed results).
 """
 import argparse, json, os, sys
 import numpy as np
@@ -796,6 +798,54 @@ def cla_stage(out, split="rt_x0+Gx1", eps0=98.4):
     return res
 
 
+# ---------------------------------------------------------------- spot check (sampled re-evaluation)
+def check_stage(out, n=8, seed=0, workers=8, tol_db=0.2):
+    """Re-derive a random sample of held-out rows of every split from the saved injection (v_*.npy), the split's
+    laws and the AP230 table, and compare with the stored nulls. Minutes instead of a full re-run; it checks the
+    evaluation path (rendering, clock fit, windows), not the training."""
+    import glob
+    from concurrent.futures import ProcessPoolExecutor
+    info = json.load(open(os.path.join(out, "data.json")))
+    fade = json.load(open(os.path.join(out, "fade.json")))
+    eps0, _ = file_eps(json.load(open(os.path.join(out, "loops.json"))))
+    ap = json.load(open(os.path.join(out, "ap230.json")))
+    rng = np.random.default_rng(seed)
+    worst = 0.0
+    for path in sorted(glob.glob(os.path.join(out, "split_*.json"))):
+        R = json.load(open(path))
+        name = os.path.basename(path)[6:-5]
+        v = np.load(os.path.join(out, f"v_{name}.npy"))
+        law = R["law"]
+        law["lf"] = {float(k): x for k, x in law["lf"].items()}
+        held = [r for r in R["rows"] if r["held_out"]]
+        sample = [held[i] for i in rng.choice(len(held), min(n, len(held)), replace=False)]
+        jobs, mdls = [], []
+        for r in sample:
+            g = info[r["key"]]
+            lab = dict(lf=g["lf"], rt=g["rt"], hf=g["hf"])
+            G = group_spectra(lab, law, grid_n(g["rt"]), through_g={"x": False, "x0+Gx1": True}[R["variant"]],
+                              b230=ap["steps"][ap["settings"][r["key"]]["step"]] if R.get("ap230") else 0.0)
+            yb = sosfiltfilt(LFBAND, load(out, r["file"]), axis=0)
+            nn = min(PRE + int(fade[r["file"]] * FS), len(yb))
+            J = Joint([dict(G, files=[dict(y=np.zeros((nn, 2)), w=np.ones(nn), amp=r["amp"])])])
+            mdl = J.render(v, G, nn, r["amp"])
+            mdls.append((yb, mdl))
+            jobs.append((yb, mdl, fade[r["file"]], eps0[r["file"]], r["amp"] == 0))
+        with ProcessPoolExecutor(workers) as ex:
+            ce = list(ex.map(_clock_job, jobs))
+        for r, (yb, mdl), (_, (eg, shg, gain)) in zip(sample, mdls, ce):
+            y = apply_clock(yb, eg, shg)[:len(mdl)] / gain
+            new = nulls(y, mdl, fade[r["file"]], narrow=True)
+            d = [abs(a_ - b_) for w in new if new[w] and r["null_gain_100_10k"].get(w)
+                 for a_, b_ in zip(new[w], r["null_gain_100_10k"][w])]
+            worst = max(worst, max(d))
+            print(f"[{name}] {r['file']}: 50-300 ms {new['50-300'][0]:.1f}/{new['50-300'][1]:.1f} "
+                  f"(stored {r['null_gain_100_10k']['50-300'][0]:.1f}/{r['null_gain_100_10k']['50-300'][1]:.1f}); "
+                  f"max |diff| over windows {max(d):.2f} dB", flush=True)
+    print(f"spot check: worst |diff| {worst:.2f} dB ({'PASS' if worst <= tol_db else 'FAIL'} at {tol_db} dB)")
+    return worst
+
+
 # ---------------------------------------------------------------- repeat-capture ceiling (AMPL partners)
 def _pair_job(a):
     out, fa, fb, ea, t_end = a
@@ -913,10 +963,11 @@ def report(out):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--stage", default="all", choices=["all", "data", "loops", "laws", "ap230", "joint", "ceiling", "report", "cla"])
+    ap.add_argument("--stage", default="all", choices=["all", "data", "loops", "laws", "ap230", "joint", "ceiling", "report", "cla", "check"])
     ap.add_argument("--no-ap230", action="store_true", help="joint: leave the AP230 step out (b = 0 everywhere)")
     ap.add_argument("--rounds", type=int, default=1, help="joint: clock-refit rounds before the final fit")
     ap.add_argument("--workers", type=int, default=10)
+    ap.add_argument("--sample", type=int, default=8, help="check: held-out captures re-derived per split")
     ap.add_argument("--out", default=os.path.join(ROOT, "analysis", "q1"))
     ap.add_argument("--splits", default="rt,hf,lf")
     ap.add_argument("--variant", default="x0+Gx1", choices=["x", "x0+Gx1"])
@@ -934,6 +985,8 @@ def main():
         ap230_stage(a.out, info)
     if a.stage in ("all", "joint"):
         joint_stage(a.out, info, a.splits.split(","), a.variant, not a.no_ap230, a.rounds, a.workers)
+    if a.stage == "check":                            # not part of "all": a quick spot check of committed results
+        check_stage(a.out, a.sample)
     if a.stage in ("all", "ceiling"):
         ceiling_stage(a.out, info)
     if a.stage in ("all", "cla"):
