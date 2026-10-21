@@ -1347,3 +1347,17 @@ The tied model with R built freely from every L tap at lags 0, 26 and 332 (one m
 - **Held out: −44.6 / −44.5 / −43.6 / −36.0 dB**, against −43.5 / −44.4 / −44.1 / −36.2 for the 9-parameter model. The 60 extra parameters buy about 1 dB at 50–150 ms and lose 0.5 dB at 300–600.
 - **Per channel on the library** (flat, held out, 50–150 / 150–300 / 300–600 ms): the compact model's L is −41.7 / −41.3 / −39.9 and R −43.5 / −44.5 / −44.1. The free injection is −53.1 / −54.0 / −49.2 (L) and −54.3 / −54.0 / −48.8 (R). So on the library L's gap is the larger, while on CLA R's was (§16.12).
 - **So R's extra gap on CLA is not the distributor's routing.** Next: lift CLA's ceiling by fitting its per-unit analogue parameters (§16.12), and only then read per-channel gaps on CLA.
+
+### 16.14 Can CLA's ceiling be lifted? (`cla --analog`, scratch checks) **[negative; open]**
+
+Aim: separate the two readings of §16.12 (library-specific fitting by the free injection, or a CLA-side ceiling compressing differences) by correcting CLA's per-unit chain differences. Compact model, 100 Hz–10 kHz, L / R:
+
+| Correction fitted on CLA (counted) | 0–50 ms | 50–150 ms | 150–300 ms | 300–600 ms |
+|---|---|---|---|---|
+| none (clock, shift, gain only) | −37.9 / −38.9 | −37.0 / −37.5 | −36.4 / −37.4 | −35.9 / −37.2 |
+| two extra high-pass corners + S&H pole (3), fitted on 0–300 ms | −37.1 / −38.2 | −36.2 / −36.3 | −35.7 / −36.3 | −35.6 / −36.3 |
+| 63-tap chain FIR per channel (126), fitted on the cluster-only region | −36.9 / −37.8 | −35.7 / −36.1 | −34.8 / −35.9 | −34.8 / −36.0 |
+
+- The parametric fit converges to Tomkin's own values (1.84 + 1.84 Hz, S&H pole 0.304), so these do not differ in a way the device-domain comparison sees. Neither correction helps; both cost 0.5–1.6 dB.
+- **The cluster-only region** (tap 0 − 1.5 ms up to the reverb onset; only R holds all four cluster taps before its onset at 570 samples) nulls to −38.9 dB (R). Neither a 63-tap chain FIR (−37.9 dB) nor CLA-refitted cluster gains (−39.0 dB) improve it; those gains come out equal to the library's within ±0.1 %. So that region is limited by something that is neither a linear chain difference nor a gain. Candidates (**H**): features of the CLA capture itself (its L-only gain jitter and L pre-onset energy, unit facts §5), or sub-sample per-tap timing.
+- **Correction to §16.12's second reading:** the "0–50 ms window" there is not cluster-only (CLA's reverb starts 9 / 21 ms after tap 0), and the cluster-only limit found here need not apply to the reverb. On CLA's reverb the free injection reaches −38.4 / −41.7 dB at 50–150 ms, so CLA supports at least that. The compact model is 1.4 (L) / 4.2 (R) dB short of it. Whether more is possible on CLA is not established. The free model's larger lead on the library (8–10 dB) remains consistent with library-specific fitting (**H**), not proven.

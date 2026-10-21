@@ -1200,8 +1200,21 @@ CLA_MODELS = {
 }
 
 
-def cla_compare(names=None):
+def analog_corr(n, q):
+    """Per-unit analogue correction for CLA (counted): two extra first-order high-pass corners q[0], q[1] (Hz) and the S&H
+    one-pole at the device rate, CLA's pole q[2] relative to Tomkin's 0.301 (analog_results.md §2-§3)."""
+    sys.path.insert(0, os.path.join(HERE, "analog"))
+    from sample_hold import highpass
+    N = 1 << int(np.ceil(np.log2(n + 8192)))
+    f = np.fft.rfftfreq(N, 1 / FS)
+    z1 = np.exp(-2j * np.pi * f / FS)
+    sh = lambda p: (1 - p) / (1 - p * z1)
+    return N, highpass(f, [max(q[0], 1e-3), max(q[1], 1e-3)]) * sh(q[2]) / sh(0.301)
+
+
+def cla_compare(names=None, analog=False):
     import model_s as m
+    from scipy.optimize import minimize
     fits = json.load(open(os.path.join(Q1, "loops.json")))
     h = np.load(q1.CLA_DEV)[m.K0 - PRE:m.K0 + int(1.9 * FS)]
     yb = sosfiltfilt(q1.LFBAND, h, axis=0)
@@ -1227,10 +1240,48 @@ def cla_compare(names=None):
         mdl = J.render(v, G, n, q1.CLA_LAB["amp"])
         _, (eg, shg, gain) = q1._clock_job((yb, mdl, 1.0, 98.4, True))
         y = q1.apply_clock(yb, eg, shg)[:n] / gain
-        out[name] = dict(eps_ppm=eg, shift=shg, gain_db=float(20 * np.log10(gain)),
-                         null_100_10k=q1.nulls(y, mdl, 1.5, ws, narrow=True), null_20_11k=q1.nulls(y, mdl, 1.5, ws))
+        qa = None
+        if analog == "fir":                                 # per-channel 63-tap chain correction fitted on the cluster-only region
+            cl_, f_, xs_ = J.split(v)                       # (before each channel's reverb starts): no reverb data used
+            C_ = J.cluster(cl_)[:n] * (q1.CLA_LAB["amp"] / 90)
+            ends_ = {0: PRE + 225, 1: PRE + 555}
+            mdl2 = np.zeros_like(mdl)
+            hs = []
+            for c in (0, 1):
+                i0, i1 = PRE - 40, ends_[c]
+                A = np.stack([np.roll(C_[:, c], k) for k in range(-31, 32)], 1)
+                hc, *_ = np.linalg.lstsq(A[i0:i1], y[i0:i1, c], rcond=None)
+                hs.append(hc)
+                mdl2[:, c] = np.stack([np.roll(mdl[:, c], k) for k in range(-31, 32)], 1) @ hc
+            mdl = mdl2
+            qa = [float(np.sum(h ** 2)) for h in hs]
+            _, (eg, shg, gain) = q1._clock_job((yb, mdl, 1.0, eg, True))
+            y = q1.apply_clock(yb, eg, shg)[:n] / gain
+        elif analog:                                        # 3 counted per-unit parameters, fitted on 0-300 ms, 20 Hz-11 kHz
+            raw = np.fft.rfft(mdl, analog_corr(n, [1, 1, 0.3])[0], axis=0)
+            i0, i1 = PRE, PRE + int(0.3 * FS)
+
+            def corr(q):
+                Nn, C = analog_corr(n, q)
+                return np.fft.irfft(raw * C[:, None], Nn, axis=0)[:n]
+
+            def cost(q):
+                mm = corr(q)
+                g = np.sum(y[i0:i1] * mm[i0:i1]) / np.sum(mm[i0:i1] ** 2)
+                return np.sum((y[i0:i1] - g * mm[i0:i1]) ** 2) / np.sum(y[i0:i1] ** 2)
+            best = min(([c1, c2, p] for c1 in (0.5, 3, 7) for c2 in (0.5, 7, 13) for p in (0.301, 0.325)), key=cost)
+            qa = minimize(cost, best, method="Nelder-Mead", options=dict(xatol=1e-3, fatol=1e-9, maxiter=300)).x
+            mdl = corr(qa)
+            _, (eg, shg, gain) = q1._clock_job((yb, mdl, 1.0, eg, True))
+            y = q1.apply_clock(yb, eg, shg)[:n] / gain
+        tagn = name + (" + CLA chain FIR (126, cluster-only fit)" if analog == "fir" else " + CLA analogue" if analog else "")
+        out[tagn] = dict(
+            eps_ppm=eg, shift=shg, gain_db=float(20 * np.log10(gain)), analog=None if qa is None else [float(x) for x in qa],
+            null_100_10k=q1.nulls(y, mdl, 1.5, ws, narrow=True), null_20_11k=q1.nulls(y, mdl, 1.5, ws))
+        name = tagn
         r = out[name]
-        print(f"{name:34s} clock {eg:6.1f} ppm, shift {shg:+.3f}, gain {r['gain_db']:+.2f} dB | 100 Hz-10 kHz L / R: " + "; ".join(
+        print(f"{name:34s} clock {eg:6.1f} ppm, shift {shg:+.3f}, gain {r['gain_db']:+.2f} dB"
+              + (f", HP {qa[0]:.2f} + {qa[1]:.2f} Hz, S&H {qa[2]:.3f}" if qa is not None and analog is True else "") + " | 100 Hz-10 kHz L / R: " + "; ".join(
             f"{w}: {x[0]:.1f}/{x[1]:.1f}" for w, x in r["null_100_10k"].items() if x), flush=True)
     path = os.path.join(OUT, "cla_compare.json")
     old = json.load(open(path)) if os.path.exists(path) else {}
@@ -1352,6 +1403,9 @@ def main():
     ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "ap230", "loops", "cla", "report"])
     ap.add_argument("--g230", type=float, default=-0.7071067812, help="ap230: the all-pass gain for the step measurement")
     ap.add_argument("--ap230", default=None, help="diffuser: an AP230 step table from the ap230 stage (default: q1's)")
+    ap.add_argument("--analog", nargs="?", const=True, default=False,
+                    help="cla: CLA's per-unit analogue correction: bare flag = 3 parameters (HP corners, S&H pole) fitted on 0-300 ms; "
+                         "'fir' = a 63-tap chain FIR per channel fitted on the cluster-only region")
     ap.add_argument("--maxfev", type=int, default=120, help="diffuser: Nelder-Mead evaluations")
     ap.add_argument("--dtap", action="store_true", help="diffuser: also fit one common fractional delay of the loop paths")
     ap.add_argument("--gfix", type=float, default=None, help="diffuser: fix all three all-pass gains (no fit), e.g. -0.70710678")
@@ -1389,7 +1443,7 @@ def main():
     if a.stage == "diffuser":
         diffuser_stage(a.workers, a.score, a.maxfev, gfix=a.gfix, ap230=a.ap230, dtap=a.dtap)
     if a.stage == "cla":
-        cla_compare([a.only] if a.only else None)
+        cla_compare([a.only] if a.only else None, a.analog)
     if a.stage == "loops":
         loops_stage(a.workers, only)
     if a.stage == "ap230":
