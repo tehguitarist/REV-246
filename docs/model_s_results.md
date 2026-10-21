@@ -1246,3 +1246,32 @@ Code: `.venv/bin/python tools/q2_injection.py --stage tied --mode tied|tapgain -
 - (The common-kernel test of §16.6 missed it: on the noisier free-minus-tied leftover, with an un-band-limited kernel, it gained only 0.4–1.4 dB.)
 
 **Reading (H):** the diffuser model is slightly off. A gain error in an all-pass needs exactly this kind of correction: two-sided (the inverse of the modelled all-pass is anti-causal), at the all-pass delays, and common to all loops. The ±1–2 sample part may be a small fractional-delay or tap-shape term. The AP gains (−0.70 for all three) were fitted on one IR to about ±0.02 (§11.1). **Next:** fit g20, g72, g230 (and AP230's damping step, fixed at b = 0 on flat settings) with the 5-tap model on the flat settings, and score held out.
+
+### 16.8 The diffuser's all-pass gains are −1/√2 (`diffuser` stage) **[S]**
+
+Code: `.venv/bin/python tools/q2_injection.py --stage diffuser [--gfix -0.70710678] [--score all]` → `analysis/q2/diffuser_tied*.json` (logs `diffuser_all.log`). The 5-tap tied model (§16.6) with the diffuser rebuilt from per-stage gains g20, g72, g230 (AP230 keeps its damping-step table, comb460 stays cancelled on the loop paths). Fitted on the flat training settings: Nelder–Mead over the three gains, the 9 linear parameters solved exactly per evaluation.
+
+- **Fitted gains: g20 −0.7072, g72 −0.7069, g230 −0.7074**, all within ±0.0004 of **−1/√2 = −0.70711** (in Q15, −23170 / 32768). The training cost is sharp: moving any one gain by 0.02 from −0.70 costs 4.6 dB. §11's −0.70 (resolved to ±0.02 on one IR, with dense free excitations absorbing the error) was close but not right.
+- **Fixed at −1/√2 (no gain fitted) the result is identical.** R, fade-compensated, [excess over the repeat-capture null]:
+
+| Model | Free parameters | 50–150 ms | 150–300 ms | 300–600 ms | 600–1000 ms |
+|---|---|---|---|---|---|
+| 5 taps, diffuser −0.70, flat held out | 9 | −32.1 [+19.0] | −32.0 [+20.9] | −31.8 [+16.2] | −30.8 [+4.0] |
+| **5 taps, diffuser −1/√2, flat held out** | **9** | **−43.5 [+7.7]** | **−44.4 [+8.9]** | **−44.1 [+3.6]** | −36.2 [−1.2] |
+| *Free injection, flat held out (§15.7)* | *27,924* | *−54.3* | *−54.0* | *−48.8* | *−37.4* |
+| 5 taps, −0.70, all 128 with the laws | 9 | −32.0 [+20.1] | −31.2 [+22.5] | −30.8 [+17.0] | −30.2 [+9.2] |
+| **5 taps, −1/√2, all 128 with the laws** | **9** | **−42.0 [+11.3]** | **−38.3 [+13.2]** | **−35.0 [+11.1]** | −32.4 [+5.3] |
+| *Free injection, all 128 with the laws (§15.9)* | *27,924* | *−48.5 [+8.0]* | *−43.0 [+12.3]* | *−38.9 [+10.6]* | *−34.6 [+5.1]* |
+
+- **On all 128 settings the 9-parameter model is now within 1–6 dB of the 28 k-coefficient free injection.** By control (excess, 50–150 / 150–300 / 300–600 ms):
+  - RT 1.4–2.5: +5…+12;
+  - RT 0.6–1.0: +14…+27;
+  - LF 0.1: +16 / +20 / +23; HF 0.2: +16 / +19 / +17;
+  - LF 1.0: +7 / +10 / +4.
+
+  What is left there is where the loop laws are known to be weak (§15.9), and possibly the AP230 damping steps (b = 0.17 / 0.33 / 0.50), which were measured with the −0.70 gain (§14.3) and act only at short RT with low HF.
+- **Remaining on flat settings (+4…+9 dB):** the ±1–2-sample part of the §16.7 kernel (a tap-shape or fractional-delay term), and whatever else the dense part held.
+- **Next:**
+  1. refit the AP230 step values with g230 = −1/√2;
+  2. the per-loop loop-filter refit with this injection frozen (it is now compact and setting-independent, so it no longer biases the loop fits);
+  3. the tap-shape term.

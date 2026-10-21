@@ -49,6 +49,9 @@ Stages:
            or tapgain (8 + 40 tap gains). Fitted on the flat training settings (RT 0.8 / 1.8 held out), one clock round;
            --score all scores every capture of all 128 settings with the laws. --g460 0.42,0.445 scans. --dense L adds free
            coefficients over the first L samples of every excitation (hybrid: how far the missing dense feed reaches).
+  diffuser the diffuser's all-pass gains (g20, g72, g230) refitted with the 5-tap tied model on the flat training settings
+           (Nelder-Mead on the training cost; the 9 linear parameters solved exactly per evaluation); then scored held out
+           and, with --score all, on all 128 settings with the laws. --maxfev for a smoke test.
   breport  excess of branch runs over the repeat-capture null (from the nulls stage of the same split), by control.
   joint    q1's held-out bench (run_split: shared injection x0 + G.x1, laws, AP230 table) re-run with the
            corrected windows, so Q2 candidates are compared against a fade-free baseline. --only limits it to a
@@ -511,10 +514,22 @@ def branch_factor(a, g, HL, HH):
     return {"g": g * np.ones_like(HL), "H": HL * HH, "HL": HL, "HH": HH, "gHL": g * HL, "gHH": g * HH}[a]
 
 
-def branch_spectra(lab, law, alphas, b230):
-    """q1 group spectra with one branch per (alpha, loop): PB / (1 - G z^-P) . factor(alpha)."""
+def diffuser_post(w, b230, diff):
+    """comb460 . AP20 . AP72 . AP230 with per-stage gains diff = dict(g20, g72, g230, g460) (q1 uses one gain, -0.7)."""
+    z = lambda M: np.exp(-1j * w * M)
+    ap = lambda M, g: (-g + z(M)) / (1 - g * z(M))
+    return ap(20, diff["g20"]) * ap(72, diff["g72"]) * q1.ap230_resp(b230, w, diff["g230"]) / (1 - diff["g460"] * z(460))
+
+
+def branch_spectra(lab, law, alphas, b230, diff=None):
+    """q1 group spectra with one branch per (alpha, loop): PB / (1 - G z^-P) . factor(alpha); diff overrides the diffuser."""
     G = q1.group_spectra(lab, law, q1.grid_n(lab["rt"]), b230=b230)
     w = 2 * np.pi * np.fft.rfftfreq(G["N"])
+    if diff is not None:
+        from scipy.signal import sosfreqz
+        G["PB"] = diffuser_post(w, b230, diff) * np.abs(sosfreqz(q1.LFBAND, worN=w)[1]) ** 2
+        z = lambda M: np.exp(-1j * w * M)
+        G["R"] = [G["PB"] / (1 - Gi * z(Pi)) for Gi, Pi in zip(q1.G_law(lab, law, w), q1.P)]
     fac = loop_factors(lab, law, w)
     G["R"] = [r * branch_factor(a, *f) for a in alphas for r, f in zip(G["R"][:4], fac)]
     return G
@@ -857,6 +872,77 @@ def tied_stage(mode, g460s, workers, iters, rounds, ext, score, dense=0):
             branch_report([tag])
 
 
+def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None):
+    from concurrent.futures import ProcessPoolExecutor
+    from scipy.optimize import minimize
+    q1.EXT = ext
+    info, fade, _, ap, eps0 = q1_tables()
+    ends = json.load(open(os.path.join(OUT, "ramp.json")))
+    law = q1.fit_laws(json.load(open(os.path.join(Q1, "loops.json"))))
+    law["lf"] = {float(k): x for k, x in law["lf"].items()}
+    flat = [k for k, g in info.items() if g["lf"] == 1.0 and g["hf"] == 1.0]
+    test = [k for k in flat if info[k]["rt"] in (0.8, 1.8)]
+    train = [k for k in flat if k not in test]
+    lab = {k: dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]) for k in info}
+    b230 = {k: ap["steps"][ap["settings"][k]["step"]] for k in info}
+    taps = tap_table()
+    fl = [(k, amp, nm) for k in train for amp, nm in files_of(info[k]) if amp in q1.TRAIN_AMPL]
+    with ProcessPoolExecutor(workers) as ex:
+        ys = list(ex.map(q1._prep_job, [(Q1, nm, info[k]["rt"], eps0[nm], fade[nm], True, 0.0) for k, _, nm in fl], chunksize=4))
+    hist = []
+
+    def solve(gs):
+        diff = dict(g20=gs[0], g72=gs[1], g230=gs[2], g460=g460)
+        groups = []
+        for k in train:
+            G = branch_spectra(lab[k], law, [0.0], b230[k], diff)
+            G["files"] = [dict(y=y, w=w, amp=amp, name=nm) for (k2, amp, nm), (y, w) in zip(fl, ys) if k2 == k]
+            groups.append(G)
+        J = q1.Joint(groups)
+        M = tied_map(J, taps, g460, "tied")
+        A = np.stack([J.forward(M[:, j].toarray().ravel()) for j in range(M.shape[1])], 1)
+        y = J.target()
+        th, *_ = np.linalg.lstsq(A, y, rcond=None)
+        r = y - A @ th
+        cost = float(r @ r / (y @ y))
+        hist.append(dict(g=list(map(float, gs)), cost_db=10 * np.log10(cost), a=float(th[8])))
+        print(f"  g20 {gs[0]:+.4f} g72 {gs[1]:+.4f} g230 {gs[2]:+.4f}: training cost {10 * np.log10(cost):.2f} dB, a {th[8]:.4f}", flush=True)
+        return cost, M @ th, diff
+    g0 = np.array([-0.70, -0.70, -0.70])
+    c0 = solve(g0)[0]
+    if gfix is None:
+        res = minimize(lambda g: solve(g)[0], g0, method="Nelder-Mead",
+                       options=dict(initial_simplex=[g0, g0 + [0.004, 0, 0], g0 + [0, 0.004, 0], g0 + [0, 0, 0.004]],
+                                    xatol=5e-4, fatol=1e-6, maxfev=maxfev))
+        gbest = res.x
+    else:
+        gbest = np.full(3, gfix)                             # all three fixed (no gain fitted)
+    cost, v, diff = solve(gbest)
+    tag = "diffuser_tied" + ("" if gfix is None else f"_fix{gfix:g}") + ("_smoke" if gfix is None and maxfev < 20 else "")
+    keys = test + sorted(np.random.default_rng(0).choice(train, min(8, len(train)), replace=False).tolist())
+    if score == "all":
+        keys = list(info)
+    rows = []
+    for name, dd in (("refit", diff), ("q1 diffuser", dict(g20=-0.7, g72=-0.7, g230=-0.7, g460=g460))):
+        vv = v if name == "refit" else solve(g0)[1]
+        jobs = [(k, amp, branch_spectra(lab[k], law, [0.0], b230[k], dd), vv, amp, nm, fade[nm], eps0[nm], ends[nm], ext)
+                for k in keys for amp, nm in files_of(info[k])]
+        with ProcessPoolExecutor(workers) as ex:
+            sc = list(ex.map(_score_job, jobs))
+        sub = [dict(key=k, amp=amp, held_out=k not in train, diffuser=name, **lab[k], **r) for k, amp, r in sc]
+        rows += sub
+        json.dump(dict(diff=dd, train=train, test=test, split="rt", params=9 + (3 if name == "refit" and gfix is None else 0), rows=sub, hist=hist),
+                  open(os.path.join(OUT, tag + ("" if name == "refit" else "_q1diff") + ".json"), "w"), indent=0)
+    np.save(os.path.join(OUT, tag + ".npy"), v)
+    print(f"[{tag}] g20 {diff['g20']:+.4f}  g72 {diff['g72']:+.4f}  g230 {diff['g230']:+.4f}; training cost {10 * np.log10(c0):.2f} -> "
+          f"{10 * np.log10(cost):.2f} dB ({len(hist)} evaluations)")
+    for t_ in (tag, tag + "_q1diff"):
+        branch_report([t_], sel=lambda r: r["key"] in test)
+        if score == "all":
+            print("  all 128 settings:")
+            branch_report([t_])
+
+
 W_COMP = [(0, 50), (50, 150), (150, 300), (300, 600), (600, 1000), (1000, 1500), (1500, 2500)]
 
 
@@ -967,7 +1053,9 @@ OUT = os.path.join(ROOT, "analysis", "q2")
 def main():
     global OUT
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "report"])
+    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "report"])
+    ap.add_argument("--maxfev", type=int, default=120, help="diffuser: Nelder-Mead evaluations")
+    ap.add_argument("--gfix", type=float, default=None, help="diffuser: fix all three all-pass gains (no fit), e.g. -0.70710678")
     ap.add_argument("--mode", default="tied", choices=["tied", "tapgain"], help="tied: one magnitude; tapgain: one gain per tap")
     ap.add_argument("--g460", default="0.445", help="tied: comma-separated g460 values (0.445 = the post comb cancelled)")
     ap.add_argument("--dense", type=int, default=0, help="tied: free dense coefficients over the first N samples of each excitation")
@@ -997,6 +1085,8 @@ def main():
             branches_stage([x if x.isalpha() or x.startswith("g") else float(x) for x in a.alphas.split(",")], a.subset, a.workers, a.iters, a.rounds, a.ext, sp)
     if a.stage == "tied":
         tied_stage(a.mode, [float(x) for x in a.g460.split(",")], a.workers, a.iters, a.rounds, a.ext if a.ext != 300 else 1700, a.score, a.dense)
+    if a.stage == "diffuser":
+        diffuser_stage(a.workers, a.score, a.maxfev, gfix=a.gfix)
     if a.stage == "filters":
         filters_stage(a.workers, only)
     if a.stage == "breport":
