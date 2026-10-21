@@ -1338,3 +1338,12 @@ Fitted on CLA: clock 97.5–98.4 ppm, shift −0.005…−0.001 sample, gain +0.
 - **The −1/√2 all-pass gain transfers in full:** +5…+6 dB on CLA against the −0.70 diffuser, with nothing fitted on CLA. It belongs to the unit's algorithm (now **S** on two units).
 - **The 9-parameter model beats Q1's 30,640-parameter model on CLA by 4–14 dB** after 50 ms, and in the 0–50 ms window by 3 dB.
 - **Bearing on the null target:** against the library alone, the compact model's excess over the repeat-capture null (+8 dB on flat settings, §16.8) overstates its error as a model of the unit. The cross-unit gap to the best available (free) model is 1.4–4 dB. Against CLA, all models are 30–40 dB above CLA's noise floor, which is what limits the −70 dB stretch target (`NEXT_STEPS.md` §2) there.
+
+### 16.13 R's distributor is binary routing (`tied --mode router`) **[S]**
+
+The tied model with R built freely from every L tap at lags 0, 26 and 332 (one magnitude for L, 60 free R gains; 69 parameters; −1/√2 diffuser, §16.9 AP230 table; flat settings, RT 0.8 / 1.8 held out; `analysis/q2/tied_router*.json`, `tied_router.log`).
+
+- **Every tap's labelled lag gets 0.2985–0.2995; the two other lags get ≤ 0.0005.** No cross-feed between the 26- and 332-sample lines and no direct (lag-0) path into R. The labels of §16.2 are exact. R's taps are the same size as L's (0.299 against 0.301, −0.07 dB).
+- **Held out: −44.6 / −44.5 / −43.6 / −36.0 dB**, against −43.5 / −44.4 / −44.1 / −36.2 for the 9-parameter model. The 60 extra parameters buy about 1 dB at 50–150 ms and lose 0.5 dB at 300–600.
+- **Per channel on the library** (flat, held out, 50–150 / 150–300 / 300–600 ms): the compact model's L is −41.7 / −41.3 / −39.9 and R −43.5 / −44.5 / −44.1. The free injection is −53.1 / −54.0 / −49.2 (L) and −54.3 / −54.0 / −48.8 (R). So on the library L's gap is the larger, while on CLA R's was (§16.12).
+- **So R's extra gap on CLA is not the distributor's routing.** Next: lift CLA's ceiling by fitting its per-unit analogue parameters (§16.12), and only then read per-channel gaps on CLA.

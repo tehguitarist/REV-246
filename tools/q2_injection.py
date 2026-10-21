@@ -826,7 +826,8 @@ def tied_map(J, taps, g460, mode, dense=0):
             off[(c, i)] = o
             o += L
     K = int(mode[6:]) if mode.startswith("kernel") else 0       # "kernelK": one kernel at lags -K..K shared by every tap
-    ntap = 8 + (1 if mode == "tied" else 2 * K + 1 if mode.startswith("kernel") else len(taps))
+    lt = [x for x in taps if x[1] == 0]                         # router: L taps; R from each at lags 0, 26, 332
+    ntap = 8 + (1 if mode == "tied" else 2 * K + 1 if mode.startswith("kernel") else 1 + 3 * len(lt) if mode == "router" else len(taps))
     ncol = ntap + dense * 8
     M = lil_matrix((J.size(), ncol))
     if dense:
@@ -839,6 +840,15 @@ def tied_map(J, taps, g460, mode, dense=0):
                     col += 1
     for k in range(8):
         M[k, k] = 1.0
+    if mode == "router":
+        for n, (i, c, t, sg, j) in enumerate(lt):
+            M[off[(0, i)] + t, 8] += sg
+            M[off[(0, i)] + t + 460, 8] -= g460 * sg
+            for q_, lag in enumerate((0, 26, 332)):
+                assert t + lag + 460 < J.Lx[i]
+                M[off[(1, i)] + t + lag, 9 + 3 * n + q_] += sg
+                M[off[(1, i)] + t + lag + 460, 9 + 3 * n + q_] -= g460 * sg
+        taps = []
     for n, (i, c, t, sg, j) in enumerate(taps):
         assert 0 <= t - K and t + K + 460 < J.Lx[i], "tap outside the excitation window"
         if mode.startswith("kernel"):
@@ -915,7 +925,7 @@ def tied_stage(mode, g460s, workers, iters, rounds, ext, score, dense=0, gfix=No
         json.dump(dict(mode=mode, g460=g460, ext=ext, split="rt", law=law, train=train, test=test, params=nfree,
                        theta=th.tolist(), rows=rows), open(os.path.join(OUT, tag + ".json"), "w"), indent=0)
         np.save(os.path.join(OUT, tag + ".npy"), v)
-        print(f"[{tag}] {nfree} free parameters; tap magnitude / kernel {np.round(th[8:8 + (1 if mode == 'tied' else 17 if mode.startswith('kernel') else len(taps))], 4).tolist()[:17]}",
+        print(f"[{tag}] {nfree} free parameters; tap magnitude / kernel {np.round(th[8:8 + (1 if mode == 'tied' else 17 if mode.startswith('kernel') else 61 if mode == 'router' else len(taps))], 4).tolist()[:61]}",
               flush=True)
         branch_report([tag], sel=lambda r: r["key"] in test)
         if score == "all":
@@ -1345,7 +1355,8 @@ def main():
     ap.add_argument("--maxfev", type=int, default=120, help="diffuser: Nelder-Mead evaluations")
     ap.add_argument("--dtap", action="store_true", help="diffuser: also fit one common fractional delay of the loop paths")
     ap.add_argument("--gfix", type=float, default=None, help="diffuser: fix all three all-pass gains (no fit), e.g. -0.70710678")
-    ap.add_argument("--mode", default="tied", help="tied: one magnitude; tapgain: one gain per tap; kernelK: one kernel at lags -K..K for every tap")
+    ap.add_argument("--mode", default="tied", help="tied: one magnitude; tapgain: one gain per tap; kernelK: one kernel at lags -K..K for every tap; "
+                                                   "router: L taps one magnitude, R from every L tap at lags 0/26/332 with free gains")
     ap.add_argument("--g460", default="0.445", help="tied: comma-separated g460 values (0.445 = the post comb cancelled)")
     ap.add_argument("--dense", type=int, default=0, help="tied: free dense coefficients over the first N samples of each excitation")
     ap.add_argument("--score", default="test", choices=["test", "all"], help="tied: score the flat test settings, or all 128")
