@@ -1074,8 +1074,13 @@ P_MAX = 0.84          # HF one-pole: largest pole (refit, HF 0.2 / RT 0.6, all f
 DC_MIN = 0.18         # smallest total per-pass gain at DC (refit, LF 0.1 / RT 0.6-1.4, all four loops 0.17-0.20)
 
 
-def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN):
-    """q1.G_law with the two coefficient limits: HF pole <= p_max; g . r0 (per-pass gain at DC) >= dc_min."""
+BETA_LF = 0.0         # under the LF cap: extra top-end loss per pass = BETA_LF x the cap's lift at DC (dB per dB)
+
+
+def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None):
+    """q1.G_law with the two coefficient limits: HF pole <= p_max; g . r0 (per-pass gain at DC) >= dc_min. Where the DC
+    floor lifts the shelf by D dB, the broadband (Nyquist-end) gain drops by beta . D dB, the DC end staying at dc_min."""
+    beta = BETA_LF if beta is None else beta
     import model_s as m
     rt, lf, hf = lab["rt"], lab["lf"], lab["hf"]
     L = law["lf"][lf]
@@ -1086,6 +1091,9 @@ def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN):
         H = np.ones(len(w), complex)
         if L["dc"] != L["hi"]:
             r0 = 10 ** (kk * (1 / (L["dc"] * rt) - 1 / (L["hi"] * rt)))
+            if g * r0 < dc_min:
+                lift = 20 * np.log10(dc_min / (g * r0))
+                g = g * 10 ** (-beta * lift / 20)
             H = m.shelf(w, max(r0, dc_min / g), 1.0, law["a"])
         if hf < 1.0:
             p = min(float(q1.onepole_for(np.array(10 ** (kk / rt * L["k"] * (1 / hf - 1))), law["f_ref"])), p_max)
@@ -1095,12 +1103,15 @@ def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN):
 
 
 def _capped_setting(a):
-    key, lab, b230, law, v, ext, caps, ends, diff = a
+    key, lab, b230, law, v, ext, caps, ends, diff, beta = a
     q1.EXT = ext
     law["lf"] = {float(k): x for k, x in law["lf"].items()}
     w = 2 * np.pi * np.fft.rfftfreq(q1.grid_n(lab["rt"]))
     out = []
-    for name, Gs in (("law", q1.G_law(lab, law, w)), ("capped", G_capped(lab, law, w))):
+    forms = [("law", q1.G_law(lab, law, w)), ("capped", G_capped(lab, law, w, beta=0.0))]
+    if beta:
+        forms.append((f"capped+beta", G_capped(lab, law, w, beta=beta)))
+    for name, Gs in forms:
         G = make_G(lab, law, Gs, b230, diff)
         for c in caps:
             out.append(dict(key=key, **lab, amp=c["amp"], file=c["file"], loops=name,
@@ -1108,7 +1119,7 @@ def _capped_setting(a):
     return dict(key=key, **lab, rows=out)
 
 
-def capped_stage(workers, only=None, frozen=COMPACT):
+def capped_stage(workers, only=None, frozen=COMPACT, beta=0.0):
     from concurrent.futures import ProcessPoolExecutor
     info, fade, _, _, eps0 = q1_tables()
     d = json.load(open(os.path.join(OUT, frozen + ".json")))
@@ -1120,10 +1131,11 @@ def capped_stage(workers, only=None, frozen=COMPACT):
     v = np.load(os.path.join(OUT, frozen + ".npy"))
     keys = [k for k in info if only is None or k in only]
     jobs = [(k, dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]), ap["steps"][ap["settings"][k]["step"]], json.loads(json.dumps(law)),
-             v, d.get("ext", 1700), [dict(amp=a, file=nm, eps=eps0[nm], fade2=fade[nm]) for a, nm in files_of(info[k])], ends, diff) for k in keys]
+             v, d.get("ext", 1700), [dict(amp=a, file=nm, eps=eps0[nm], fade2=fade[nm]) for a, nm in files_of(info[k])], ends, diff, beta)
+            for k in keys]
     with ProcessPoolExecutor(workers) as ex:
         res = list(ex.map(_capped_setting, jobs))
-    json.dump(res, open(os.path.join(OUT, f"capped_{frozen}" + ("_smoke" if only else "") + ".json"), "w"), indent=0)
+    json.dump(res, open(os.path.join(OUT, f"capped_{frozen}" + (f"_beta{beta:g}" if beta else "") + ("_smoke" if only else "") + ".json"), "w"), indent=0)
     rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, "nulls_free.json")))}
     ws = ["50-150", "150-300", "300-600", "600-1000"]
 
@@ -1133,9 +1145,10 @@ def capped_stage(workers, only=None, frozen=COMPACT):
         return np.median(e) if e else np.nan
     rows = [r for s_ in res for r in s_["rows"]]
     print(f"\n## Capped laws (P_MAX {P_MAX}, DC_MIN {DC_MIN}) with {frozen} frozen; {len(res)} settings; R, compensated; null [excess, ref nulls_free]")
-    for lp in ("law", "capped"):
+    forms_ = ["law", "capped"] + (["capped+beta"] if beta else [])
+    for lp in forms_:
         rr = [r for r in rows if r["loops"] == lp]
-        print(f"- {lp:6s}: " + "; ".join(f"{w}: {np.median([r['null_comp'][w][1] for r in rr if r['null_comp'].get(w)]):.1f} [{ex_(rr, w):+.1f}]" for w in ws))
+        print(f"- {lp:11s}: " + "; ".join(f"{w}: {np.median([r['null_comp'][w][1] for r in rr if r['null_comp'].get(w)]):.1f} [{ex_(rr, w):+.1f}]" for w in ws))
         for c in ("rt", "hf", "lf"):
             vals = sorted({r[c] for r in rr})
             if len(vals) > 1:
@@ -1143,7 +1156,7 @@ def capped_stage(workers, only=None, frozen=COMPACT):
     if len(res) <= 12:
         for s_ in res:
             print(f"  {s_['key']:12s} " + "  ".join(f"{lp}: " + "/".join(f"{ex_([r for r in s_['rows'] if r['loops'] == lp], w):+.1f}" for w in ws[:3])
-                                                for lp in ("law", "capped")))
+                                                for lp in forms_))
 
 
 def make_G(lab, law, Gs, b230, diff, w=None):
@@ -1498,6 +1511,7 @@ def main():
     ap.add_argument("--dense", type=int, default=0, help="tied: free dense coefficients over the first N samples of each excitation")
     ap.add_argument("--score", default="test", choices=["test", "all"], help="tied: score the flat test settings, or all 128")
     ap.add_argument("--frozen", default=COMPACT, help="loops: the frozen injection (a run name in OUT), e.g. branches_flat_0_ext1700")
+    ap.add_argument("--beta", type=float, default=0.0, help="capped: LF top-end correction under the cap (dB per dB of lift)")
     ap.add_argument("--tags", default="", help="breport: comma-separated branch run names (files in OUT without .json)")
     ap.add_argument("--alphas", default="0,1", help="branches: per branch an exponent of G_i, or g / H / HL / HH / gHL / gHH")
     ap.add_argument("--ext", type=int, default=300, help="branches: excitation length P_i + ext (q1: 300)")
@@ -1531,7 +1545,7 @@ def main():
     if a.stage == "loops":
         loops_stage(a.workers, only, a.frozen)
     if a.stage == "capped":
-        capped_stage(a.workers, only, a.frozen)
+        capped_stage(a.workers, only, a.frozen, a.beta)
     if a.stage == "ap230":
         ap230_stage(a.g230, only)
     if a.stage == "filters":

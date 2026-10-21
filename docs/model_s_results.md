@@ -1382,3 +1382,22 @@ Aim: separate the two readings of §16.12 (library-specific fitting by the free 
   - **LF: partial.** The cap reproduces the refitted low end (within ±0.3 dB at DC–125 Hz), but at LF 0.1 / short RT the refits also lose 0.1–0.4 dB more per pass from 1 kHz up, growing with how hard the cap bites (0.4 dB at RT 0.6, 0 at RT 1.4). Without that, LF 0.1 / RT 0.8 improves 1–4 dB against about 9 dB for a refit. A "label RT at a fixed normalisation frequency" rule fixes the capped settings but spoils the exact ones (best f_n 1.1–1.5 kHz depends on LF and RT), so it is not the rule.
 - **All 128 settings, capped against plain laws** (excess, 50–150 / 150–300 / 300–600 ms): free injection +8.0 / +12.3 / +10.6 → +7.4 / +11.7 / +9.8; compact injection +14.5 / +17.0 / +14.0 → +14.1 / +16.3 / +13.4. The limits act on about 15 settings: HF 0.2 at 50–150 ms +13.0 → +10.5, LF 0.1 +19.4 / +28.2 / +25.3 → +17.1 / +23.3 / +22.9, RT 0.3 +13.9 / +16.8 / +14.3 → +10.7 / +15.6 / +6.9.
 - **Next:** the LF top-end correction under the cap (one parameter: extra per-pass broadband loss proportional to the cap's lift); and HF 0.2 at RT 0.8–1.4, below the cap (+10…+16 dB): look at the HF law's k and f_ref there.
+
+### 16.16 Under the LF cap the top end loses a little more: one constant, β (`capped --beta`) **[S]**
+
+- **Rule:** where the LF floor lifts a loop's per-pass DC gain by Δ dB, its broadband (Nyquist-end) gain drops by **β·Δ dB**, the DC end staying at DC_MIN. Fitted offline on the shared refits (§16.15) of LF 0.1 / RT 0.6, 1.0, 1.4 (HF 1.0, 0.6) and LF 0.4 / RT 0.3, response 500 Hz–13 kHz: **β = 0.019** (0.015–0.020 equally good).
+  - On the **held-out** RT 0.8 settings the per-pass response error drops from 0.28 to **0.05 dB rms**.
+  - In the code: `G_capped(..., beta=)`; `BETA_LF` stays 0 by default; `--beta 0.019` for the stage.
+- **The 33 settings where a limit is active** (free injection frozen; R, fade-compensated; `capped_branches_flat_0_ext1700_beta0.019_cappedsettings.json`, `capped_beta.log`):
+
+| Loops | 50–150 ms | 150–300 ms | 300–600 ms | 600–1000 ms |
+|---|---|---|---|---|
+| Plain laws | −26.9 [+25.8] | −12.1 [+33.3] | −6.6 [+28.5] | −6.6 [+22.2] |
+| + limits (P_MAX, DC_MIN) | −32.1 [+21.1] | −20.1 [+27.3] | −13.1 [+22.9] | −13.1 [+19.4] |
+| **+ limits + β** | **−39.7 [+14.8]** | **−27.6 [+20.2]** | **−23.3 [+16.9]** | −20.3 [+11.5] |
+
+- With three fixed constants (0.84, 0.18, 0.019) the capped settings gain 11–13 dB over the plain laws.
+  - Where only the HF limit bites (the LF 1.0 / 2.0 rows) the excess is −1…+10 dB.
+  - At LF 0.1 / RT 0.8 (held out from the β fit), +10.9 / +18.7 / +16.2 dB beats the free per-setting refits (5 numbers +15.4 / +23.5 / +20.8; 20 numbers +15.0 / +22.9 / +20.6).
+- **What remains:** LF 0.1 at short RT (+15 / +20 / +19 dB). Its low end decays within one or two passes, and most of those files are fade-dominated. Also HF 0.2 at RT 0.8–1.4 below the cap (§16.15).
+- **Reading (H):** a control CPU that clips the LF shelf coefficient at its range limit and recomputes the broadband gain from what the clipped shelf leaves. A rule of that kind would make the top-end correction proportional to the clip.
