@@ -52,6 +52,10 @@ Stages:
   diffuser the diffuser's all-pass gains (g20, g72, g230) refitted with the 5-tap tied model on the flat training settings
            (Nelder-Mead on the training cost; the 9 linear parameters solved exactly per evaluation); then scored held out
            and, with --score all, on all 128 settings with the laws. --maxfev for a smoke test.
+  ap230    the AP230 damping steps re-measured with an all-pass gain --g230 (q1's ap230 stage used -0.70): per setting b
+           from the first pass (240-1550 samples after tap 0) of the AMPL-0 capture against the b = 0 reference setting,
+           x = ref . AP230(b) / AP230(0) -> ap230_g<g>.json (same layout as q1's ap230.json). --only for a smoke test.
+           The diffuser stage takes it with --ap230 <file>.
   breport  excess of branch runs over the repeat-capture null (from the nulls stage of the same split), by control.
   joint    q1's held-out bench (run_split: shared injection x0 + G.x1, laws, AP230 table) re-run with the
            corrected windows, so Q2 candidates are compared against a fade-free baseline. --only limits it to a
@@ -872,11 +876,58 @@ def tied_stage(mode, g460s, workers, iters, rounds, ext, score, dense=0):
             branch_report([tag])
 
 
-def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None):
+def ap230_stage(g230, only=None):
+    """q1.ap230_stage with the all-pass gain g230 (the ratio AP230(b) / AP230(0) depends on it)."""
+    from scipy.optimize import minimize_scalar
+    info = json.load(open(os.path.join(Q1, "data.json")))
+    N = 1 << 14
+    w = 2 * np.pi * np.fft.rfftfreq(N)
+    ref = sosfiltfilt(q1.LFBAND, q1.load(Q1, info[q1.AP230_REF]["files"]["0"]["file"]), axis=0)
+    R = np.fft.rfft(ref[:N], axis=0)
+    i0, i1 = PRE + 240, PRE + 1550
+    res = {}
+    for key, g in info.items():
+        if only and key not in only:
+            continue
+        x = sosfiltfilt(q1.LFBAND, q1.load(Q1, g["files"]["0"]["file"]), axis=0)
+
+        def cost(b):
+            mdl = np.fft.irfft(R * (q1.ap230_resp(b, w, g230) / q1.ap230_resp(0.0, w, g230))[:, None], N, axis=0)
+            return np.sum((x[i0:i1] - mdl[i0:i1]) ** 2) / np.sum(x[i0:i1] ** 2)
+        r = minimize_scalar(cost, bounds=(-0.1, 0.9), method="bounded", options={"xatol": 1e-5})
+        res[key] = dict(lf=g["lf"], rt=g["rt"], hf=g["hf"], b=float(r.x), null_db=float(10 * np.log10(r.fun)), null_b0_db=float(10 * np.log10(cost(0.0))))
+    bs = np.sort([v["b"] for v in res.values()])
+    levels = []
+    for b in bs:                                            # the steps: cluster the fitted values (gaps > 0.05), as q1
+        if not levels or b - levels[-1][-1] > 0.05:
+            levels.append([b])
+        else:
+            levels[-1].append(b)
+    steps = [float(np.median(l)) for l in levels]
+    for v in res.values():
+        v["step"] = int(np.argmin([abs(v["b"] - st) for st in steps]))
+    old = json.load(open(os.path.join(Q1, "ap230.json")))
+    path = os.path.join(OUT, f"ap230_g{abs(g230):.4f}" + ("_smoke" if only else "") + ".json")
+    json.dump(dict(g230=g230, steps=steps, settings=res), open(path, "w"), indent=0)
+    print(f"AP230 steps with g230 = {g230:.5f}: {np.round(steps, 4).tolist()}  (q1, g -0.70: {np.round(old['steps'], 4).tolist()})")
+    nb = [v["null_db"] for v in res.values() if v["step"] > 0]
+    ch = sum(1 for k, v in res.items() if v["step"] != old["settings"][k]["step"])
+    print(f"  {len(res)} settings; first-pass null median {np.median([v['null_db'] for v in res.values()]):.1f} dB "
+          f"(step > 0: {np.median(nb) if nb else float('nan'):.1f} dB); settings whose step index changed: {ch}")
+    for k, v in sorted(res.items(), key=lambda kv: (kv[1]["rt"], kv[1]["hf"], kv[1]["lf"])):
+        if v["step"] > 0 or old["settings"][k]["step"] > 0:
+            o = old["settings"][k]
+            print(f"  {k}: b {v['b']:.4f} (q1 {o['b']:.4f}), first-pass null {v['null_db']:.1f} dB (q1 {o['null_db']:.1f})")
+    return path
+
+
+def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None, ap230=None):
     from concurrent.futures import ProcessPoolExecutor
     from scipy.optimize import minimize
     q1.EXT = ext
     info, fade, _, ap, eps0 = q1_tables()
+    if ap230:
+        ap = json.load(open(ap230))                        # re-measured AP230 steps (ap230 stage)
     ends = json.load(open(os.path.join(OUT, "ramp.json")))
     law = q1.fit_laws(json.load(open(os.path.join(Q1, "loops.json"))))
     law["lf"] = {float(k): x for k, x in law["lf"].items()}
@@ -918,7 +969,7 @@ def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None):
     else:
         gbest = np.full(3, gfix)                             # all three fixed (no gain fitted)
     cost, v, diff = solve(gbest)
-    tag = "diffuser_tied" + ("" if gfix is None else f"_fix{gfix:g}") + ("_smoke" if gfix is None and maxfev < 20 else "")
+    tag = "diffuser_tied" + ("" if gfix is None else f"_fix{gfix:g}") + ("_ap230new" if ap230 else "") + ("_smoke" if gfix is None and maxfev < 20 else "")
     keys = test + sorted(np.random.default_rng(0).choice(train, min(8, len(train)), replace=False).tolist())
     if score == "all":
         keys = list(info)
@@ -1053,7 +1104,9 @@ OUT = os.path.join(ROOT, "analysis", "q2")
 def main():
     global OUT
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "report"])
+    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "ap230", "report"])
+    ap.add_argument("--g230", type=float, default=-0.7071067812, help="ap230: the all-pass gain for the step measurement")
+    ap.add_argument("--ap230", default=None, help="diffuser: an AP230 step table from the ap230 stage (default: q1's)")
     ap.add_argument("--maxfev", type=int, default=120, help="diffuser: Nelder-Mead evaluations")
     ap.add_argument("--gfix", type=float, default=None, help="diffuser: fix all three all-pass gains (no fit), e.g. -0.70710678")
     ap.add_argument("--mode", default="tied", choices=["tied", "tapgain"], help="tied: one magnitude; tapgain: one gain per tap")
@@ -1086,7 +1139,9 @@ def main():
     if a.stage == "tied":
         tied_stage(a.mode, [float(x) for x in a.g460.split(",")], a.workers, a.iters, a.rounds, a.ext if a.ext != 300 else 1700, a.score, a.dense)
     if a.stage == "diffuser":
-        diffuser_stage(a.workers, a.score, a.maxfev, gfix=a.gfix)
+        diffuser_stage(a.workers, a.score, a.maxfev, gfix=a.gfix, ap230=a.ap230)
+    if a.stage == "ap230":
+        ap230_stage(a.g230, only)
     if a.stage == "filters":
         filters_stage(a.workers, only)
     if a.stage == "breport":

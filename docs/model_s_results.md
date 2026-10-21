@@ -1275,3 +1275,12 @@ Code: `.venv/bin/python tools/q2_injection.py --stage diffuser [--gfix -0.707106
   1. refit the AP230 step values with g230 = −1/√2;
   2. the per-loop loop-filter refit with this injection frozen (it is now compact and setting-independent, so it no longer biases the loop fits);
   3. the tap-shape term.
+
+### 16.9 AP230's damping steps with the −1/√2 gain (`ap230` stage) **[S]**
+
+Code: `.venv/bin/python tools/q2_injection.py --stage ap230 --g230 -0.70710678` → `analysis/q2/ap230_g0.7071.{json,log}`. Same measurement as q1's `ap230` stage (each setting's first pass, 240–1,550 samples after tap 0, against the b = 0 reference setting through AP230(b) / AP230(0)), with the all-pass gain as a parameter. At g = −0.70 it reproduces q1's values and first-pass nulls exactly.
+
+- **With g230 = −1/√2 the steps are b = 0.0007 / 0.1711 / 0.3316 / 0.5019** (q1: 0.0007 / 0.1715 / 0.3314 / 0.5006). No setting changes step. They sit close to 1/6, 1/3 and 1/2 (**H**: a table in sixths).
+- The first pass fits 1.4–2.1 dB better where b > 0 (b 0.50: −39.0 against −36.9 dB; b 0.33: −41.0 against −39.6), but still only to −39…−41 dB, against a median −48.9 dB over all settings. So the two-tap form (1 − b) + b z⁻¹ of AP230's damping is probably only approximately right (**H**).
+- **Rescored with the new table, the compact model is unchanged** (all 128: −42.0 / −38.4 / −35.0 dB, within 0.1 dB of §16.8). The step values are not what limits short RT.
+- **RT 1.0 is the worst step** (+19 / +26 / +27 dB, against +14…+19 at RT 0.6 / 0.8 and +5…+12 at RT ≥ 1.4). It is the first step below the RT ≥ 1.4 files the loop laws were fitted on, which points at the laws. **Next:** the per-loop loop-filter refit with the compact injection frozen (§15.9's `filters` stage, now with `FROZEN` = the §16.8 model).
