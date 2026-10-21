@@ -2,11 +2,14 @@
 
 Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we know), `library_notes.md` (the Tomkin library and harness results), `model_s_results.md` §8–13 (where the S model stands) and `ml_structure.md` (programs M and L).
 
-*Updated October 2026, after Q2 §15–16 (`model_s_results.md`: fade-free bench; the injection is one fixed, setting-independent excitation; offline it is five equal signed taps per loop, pending the bench) and `period_dsp_practice.md`. Before that: Q1 (Path B across the library, §14) and the M/L structure work (Q3, `ml_structure.md`).*
+*Updated October 2026, after Q2 and the consolidated program-S model (`model_s_results.md` §15–17; baseline: §17, `tools/q2_injection.py --stage final`). **Next phase: programs M and L** (§5 item 5). Before that: Q1 (Path B across the library, §14) and the M/L structure work (Q3, `ml_structure.md`).*
 
 ---
 
 ## 1. Where we are
+
+- **Program S, consolidated (`model_s_results.md` §17):** 8-tap cluster; diffuser AP20 · AP72 · AP230 at **−1/√2** with AP230's damping-step table; **no comb460**; **5 equal sign-only read taps per loop**, R through 26- / 332-sample lines; four uncoupled loops whose laws (13 numbers) **saturate at an HF pole of 0.84 and a per-pass DC gain of 0.18**, with β = 0.019 under the LF floor. 9 fitted numbers for the injection. Baseline: all 128 settings −41 / −39 / −36 dB (L, 50–150 / 150–300 / 300–600 ms), flat held out −44 dB, CLA −37 dB. The −50 dB target is reached on flat settings by a free injection, not yet by the compact model. Open S items in §17 (none blocks M/L).
+- *The bullets below are the history up to Q2; §17 supersedes their S model details.*
 
 - **Unit topology:** **mono in, stereo out**. One input, two outputs from one multiplexed DAC (L half a sample late). Each stereo IR is the complete 1×2 response.
 - **Program S** is a small, deterministic, integer-delay design. Almost all of its structure was identified from one IR (the CLA "Short RT" capture by eugtone):
@@ -107,8 +110,8 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 1. ~~**M and L structure (Q3).**~~ Done (`ml_structure.md`).
 2. ~~**Decide the null target.**~~ Decided (§2): −50 dB minimum wherever a static IR supports it; accuracy over null for M/L reverb. No hardware work blocks the next step.
 3. ~~**Path B generalisation on S (Q1).**~~ Done (`model_s_results.md` §14): the loops, laws and first pass generalise; one shared free injection does not get past −28…−33 dB.
-4. **Injection/read-out (Q2).** Form found (§15) and a 5-tap structure found offline (§16). Next, in order (the compact model is §16.8: 5 taps per loop, all-pass gains −1/√2; AP230 steps re-checked in §16.9): then the per-loop loop-filter refit with the tied injection frozen, new laws, and one final shared fit; then update unit facts §5/§6.
-5. **M/L time variance (Q3b)**, then the M/L loop gains and filters (Q4–Q7 for M/L) from the deterministic part.
+4. ~~**Injection/read-out (Q2).**~~ Done: the consolidated S model and its baseline are `model_s_results.md` §17. Open S refinements (§17): the compact model's last dB, AP230's damping form at b > 0, LF 0.1 at short RT, values between control steps.
+5. **Programs M and L (next).** First the **S carry-over test**: do S's 5-tap read-out (R via 26 / 332 → ×2 / ×4) and −1/√2 diffuser, scaled ×2 / ×4, explain M's and L's first recirculation and injection? Then M/L time variance (Q3b), then the M/L loop gains and filters (Q4–Q7 for M/L) from the deterministic part, with S's saturation limits as a hypothesis.
 6. ~~**Control laws (Q4–Q8)** from the fits.~~ Done for S at the library's steps (§14.2–14.3); M/L still to do.
 7. **Exact coefficients (Q9) and the analogue band edges (§4)** once S's held-out nulls reach about −40 dB; both are needed for −50 dB in every band and in the tails. **Fixed-point noise (Q10)** after that.
    - Alongside Q3b (step 5): read the unread service-manual pages (processor B, the control-CPU side) for how and how often the tap-offset memory is rewritten; that bounds the M/L modulation rate.

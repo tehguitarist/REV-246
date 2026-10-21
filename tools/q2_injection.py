@@ -67,6 +67,11 @@ Stages:
   capped   the laws with two coefficient limits common to all loops (model_s_results §16.15): the HF one-pole's pole at most
            P_MAX and the loop's total per-pass gain at DC (broadband gain x LF shelf) at least DC_MIN; scored on all settings
            against the plain laws, with a frozen injection (--frozen). --only for a smoke test.
+  final    the consolidated program-S model (model_s_results §17): 8-tap cluster; diffuser AP20 . AP72 . AP230 at -1/sqrt(2)
+           with the re-measured AP230 step table; no comb460; 5 equal sign-only taps per loop and channel (one magnitude),
+           R via 26 / 332; loops from the laws with the HF pole limit, the LF floor and beta. 9 fitted numbers (cluster gains
+           and tap magnitude, from the flat-trained compact fit) + 13 law numbers + 3 limit constants + the AP230 table.
+           Scores every capture of all 128 settings and the CLA IR -> final_s.json. --only for a smoke test.
   breport  excess of branch runs over the repeat-capture null (from the nulls stage of the same split), by control.
   joint    q1's held-out bench (run_split: shared injection x0 + G.x1, laws, AP230 table) re-run with the
            corrected windows, so Q2 candidates are compared against a fade-free baseline. --only limits it to a
@@ -1386,6 +1391,85 @@ def cla_compare(names=None, analog=False):
     return out
 
 
+FINAL_DIFF = dict(g20=-0.70710678, g72=-0.70710678, g230=-0.70710678, g460=0.0)
+FINAL_BETA = 0.019
+
+
+def final_injection(ext=1700):
+    """The final model's parameter vector: cluster gains and tap magnitude of the compact fit, taps without comb partners."""
+    q1.EXT = ext
+    law = q1.fit_laws(json.load(open(os.path.join(Q1, "loops.json"))))
+    law["lf"] = {float(k): x for k, x in law["lf"].items()}
+    G = branch_spectra(dict(lf=1.0, rt=1.4, hf=1.0), law, [0.0], 0.0, FINAL_DIFF)
+    J = q1.Joint([dict(G, files=[dict(y=np.zeros((4096, 2)), w=np.ones(4096), amp=0)])])
+    v_c = np.load(os.path.join(OUT, COMPACT + ".npy"))
+    cl = v_c[:8]                                          # cluster gains of the compact fit
+    M_c = tied_map(J, tap_table(), 0.445, "tied")
+    a = float(np.linalg.lstsq(M_c[:, 8:].toarray(), v_c - M_c[:, :8] @ cl, rcond=None)[0][0])   # its tap magnitude
+    M = tied_map(J, tap_table(), 0.0, "tied")            # comb460 removed: no partners
+    return M @ np.r_[cl, a], law, a
+
+
+def _final_setting(a_):
+    key, lab, b230, law, v, ext, caps, ends = a_
+    q1.EXT = ext
+    law["lf"] = {float(k): x for k, x in law["lf"].items()}
+    w = 2 * np.pi * np.fft.rfftfreq(q1.grid_n(lab["rt"]))
+    G = make_G(lab, law, G_capped(lab, law, w, beta=FINAL_BETA), b230, FINAL_DIFF)
+    return [dict(key=key, **lab, amp=c["amp"], file=c["file"], **score_capture(G, v, c["amp"], c["file"], c["fade2"], c["eps"], ends[c["file"]], ext))
+            for c in caps]
+
+
+def final_stage(workers, only=None):
+    from concurrent.futures import ProcessPoolExecutor
+    info, fade, _, _, eps0 = q1_tables()
+    ap = json.load(open(os.path.join(OUT, "ap230_g0.7071.json")))
+    ends = json.load(open(os.path.join(OUT, "ramp.json")))
+    v, law, a = final_injection()
+    keys = [k for k in info if only is None or k in only]
+    jobs = [(k, dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]), ap["steps"][ap["settings"][k]["step"]], json.loads(json.dumps(law)),
+             v, 1700, [dict(amp=a_, file=nm, eps=eps0[nm], fade2=fade[nm]) for a_, nm in files_of(info[k])], ends) for k in keys]
+    with ProcessPoolExecutor(workers) as ex:
+        rows = [r for rr in ex.map(_final_setting, jobs) for r in rr]
+    # CLA (another unit): clock, shift and gain fitted on CLA only
+    import model_s as m
+    h = np.load(q1.CLA_DEV)[m.K0 - PRE:m.K0 + int(1.9 * FS)]
+    yb = sosfiltfilt(q1.LFBAND, h, axis=0)
+    n = len(yb) - 600
+    wc = 2 * np.pi * np.fft.rfftfreq(q1.grid_n(q1.CLA_LAB["rt"]))
+    G = make_G(q1.CLA_LAB, law, G_capped(q1.CLA_LAB, law, wc, beta=FINAL_BETA), 0.0, FINAL_DIFF)
+    mdl = q1.Joint([dict(G, files=[dict(y=np.zeros((n, 2)), w=np.ones(n), amp=80)])]).render(v, G, n, 80)
+    _, (eg, shg, gain) = q1._clock_job((yb, mdl, 1.0, 98.4, True))
+    y = q1.apply_clock(yb, eg, shg)[:n] / gain
+    cla = dict(eps_ppm=eg, shift=shg, gain_db=float(20 * np.log10(gain)), null_100_10k=q1.nulls(y, mdl, 1.5, W_COMP[:6], narrow=True))
+    json.dump(dict(diff=FINAL_DIFF, beta=FINAL_BETA, p_max=P_MAX, dc_min=DC_MIN, tap_magnitude=a, rows=rows, cla=cla),
+              open(os.path.join(OUT, "final_s" + ("_smoke" if only else "") + ".json"), "w"), indent=0)
+    rep_f = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, "nulls_free.json")))}
+    ws = ["0-50", "50-150", "150-300", "300-600", "600-1000", "1000-1500"]
+
+    def med(rr, w, c):
+        v_ = [r["null_comp"][w][c] for r in rr if r["null_comp"].get(w)]
+        return np.median(v_) if v_ else np.nan
+
+    def ex(rr, w):
+        e = [r["null_comp"][w][1] - rep_f[(r["key"], r["amp"])]["repeat_comp"][w][1] for r in rr
+             if r["null_comp"].get(w) and rep_f.get((r["key"], r["amp"])) and rep_f[(r["key"], r["amp"])]["repeat_comp"].get(w)]
+        return np.median(e) if e else np.nan
+    print(f"\n## Final S ({len(keys)} settings, {len(rows)} captures; tap magnitude {a:.4f}); 100 Hz-10 kHz, fade-compensated; null L / R [excess R, ref nulls_free]")
+    print("| window (ms) | all settings | flat (LF 1.0, HF 1.0) | RT >= 1.4 | RT <= 1.0 |\n|---|---|---|---|---|")
+    groups = [lambda r: True, lambda r: r["lf"] == 1.0 and r["hf"] == 1.0, lambda r: r["rt"] >= 1.4, lambda r: r["rt"] <= 1.0]
+    for w in ws:
+        cells = []
+        for gsel in groups:
+            rr = [r for r in rows if gsel(r)]
+            cells.append(f"{med(rr, w, 0):.1f} / {med(rr, w, 1):.1f} [{ex(rr, w):+.1f}]" if rr else "--")
+        print(f"| {w} | " + " | ".join(cells) + " |")
+    for c in ("rt", "hf", "lf"):
+        print(f"- by {c} (R excess 50-150/150-300/300-600): " + "; ".join(
+            f"{v_}: " + "/".join(f"{ex([r for r in rows if r[c] == v_], w):+.1f}" for w in ws[1:4]) for v_ in sorted({r[c] for r in rows})))
+    print(f"- CLA (clock {eg:.1f} ppm, gain {cla['gain_db']:+.2f} dB): " + "; ".join(f"{w}: {x[0]:.1f}/{x[1]:.1f}" for w, x in cla["null_100_10k"].items() if x))
+
+
 W_COMP = [(0, 50), (50, 150), (150, 300), (300, 600), (600, 1000), (1000, 1500), (1500, 2500)]
 
 
@@ -1496,7 +1580,7 @@ OUT = os.path.join(ROOT, "analysis", "q2")
 def main():
     global OUT
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "ap230", "loops", "cla", "capped", "report"])
+    ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "ap230", "loops", "cla", "capped", "final", "report"])
     ap.add_argument("--g230", type=float, default=-0.7071067812, help="ap230: the all-pass gain for the step measurement")
     ap.add_argument("--ap230", default=None, help="diffuser: an AP230 step table from the ap230 stage (default: q1's)")
     ap.add_argument("--analog", nargs="?", const=True, default=False,
@@ -1544,6 +1628,8 @@ def main():
         cla_compare([a.only] if a.only else None, a.analog)
     if a.stage == "loops":
         loops_stage(a.workers, only, a.frozen)
+    if a.stage == "final":
+        final_stage(a.workers, only)
     if a.stage == "capped":
         capped_stage(a.workers, only, a.frozen, a.beta)
     if a.stage == "ap230":

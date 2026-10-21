@@ -1416,3 +1416,45 @@ Aim: separate the two readings of §16.12 (library-specific fitting by the free 
   The residual is spread through the diffuser output, not concentrated at the read taps (17–20 % of it within ±6 samples of the taps' first appearances, against a 24 % time share). Q1's free 19-tap loop filter also converged to the two taps (§14.3).
 - **Time variance ruled out (a correction):** a first test suggested the first pass decorrelates between captures as b grows (repeat null −36 / −35 / −29 / −20 dB for b = 0 / 0.17 / 0.33 / 0.50). That was an artefact of the raw tail-fit clock ratios (`loops.json`), which are off by up to 357 ppm for about 10 % of files (median 0.8 ppm), the short-RT ones. With the fitted clocks of the nulls stage the first-pass repeat null is −36.1 / −38.0 / −35.5 / −35.4 dB (no trend), and the reverb windows agree to −59…−60 dB at b = 0.17 / 0.33. **Program S is time-invariant at b > 0 as well.** For any capture-to-capture comparison use fitted clocks, not the raw tail fits.
 - **So:** the two-tap AP230 damping is the best LTI form found, and its −39…−43 dB first pass is what limits the b > 0 settings. The cause is open: a form not tried, or something in how the step is realised (**H**).
+
+## 17. The consolidated program-S model (October 2026)
+
+Code: `.venv/bin/python tools/q2_injection.py --stage final` → `analysis/q2/final_s.{json,log}`. This is the baseline for everything after Q2 (M/L carry-over, exact coefficients, fixed point, the plugin).
+
+**The model:**
+
+| Part | Form | Numbers |
+|---|---|---|
+| Reflection cluster | 8 sign-only taps at DELAY (L 0 / 54 / 194 / 288, R 0 / 143 / 194 / 353), gain × AMPL/90 | 8 gains (from the flat-trained fit; equal within 0.1 %) |
+| Input diffuser | AP20 · AP72 · AP230, all with gain **−1/√2**; AP230's loop filter (1 − b) + b z⁻¹, b = 0 / 0.171 / 0.332 / 0.502 from a table on RT × HF (§16.9) | table (2 bits per RT/HF cell) |
+| comb460 | **none** (removing it is identical to −170 dB, §16.6) | — |
+| Read-out / injection | per loop and channel 5 equal sign-only taps (§16.2), one magnitude (0.3001); R = L taps delayed by 26 or 332 (binary routing, §16.13); first-pass FIR empty | 1 magnitude + the tap table |
+| Loops | 1321 / 1389 / 1461 / 1587, uncoupled; laws (§14.2) with the HF pole ≤ **0.84**, the per-pass DC gain ≥ **0.18**, and under the LF floor the top end lowered by **β = 0.019** × the floor's lift (§16.15–16.16) | 13 law numbers + 3 constants |
+| Analogue chain | not modelled here (device-domain comparison); `tools/analog/` has it | — |
+
+**Fitted on the library:** 9 numbers (cluster gains and tap magnitude, on 6 flat settings), the 13 law numbers (§14.2), the 3 limit constants and the AP230 table. Per capture: clock ratio, sub-sample alignment and one gain. The fade is compensated, never modelled (§15.2).
+
+**Baseline nulls** (100 Hz–10 kHz, fade-compensated, L / R; [excess over the repeat-capture null, R, `nulls_free` reference]):
+
+| Window (ms) | All 128 settings (512 captures) | Flat (LF 1.0, HF 1.0) | RT ≥ 1.4 | RT ≤ 1.0 | CLA (other unit; clock, shift, gain only) |
+|---|---|---|---|---|---|
+| 0–50 | −42.9 / −44.3 | −43.1 / −44.5 | −43.2 / −44.1 | −42.0 / −44.5 | −37.9 / −38.9 |
+| 50–150 | −41.0 / −42.3 [+13.5] | −41.5 / −43.3 [+8.2] | −41.6 / −42.8 [+11.9] | −39.2 / −40.9 [+15.8] | −37.0 / −37.5 |
+| 150–300 | −39.6 / −38.8 [+16.1] | −41.1 / −44.2 [+9.3] | −41.1 / −41.6 [+15.6] | −34.2 / −32.9 [+17.7] | −36.4 / −37.4 |
+| 300–600 | −36.4 / −35.3 [+13.0] | −39.9 / −43.7 [+2.9] | −38.7 / −39.9 [+13.0] | −26.9 / −25.7 [+13.0] | −35.9 / −37.2 |
+| 600–1000 | −32.0 / −32.6 [+7.1] | −36.3 / −38.1 [−1.7] | −35.2 / −35.5 [+8.9] | −22.8 / −23.3 [+5.1] | −29.0 / −34.9 |
+| 1000–1500 | −30.8 / −30.7 [+3.0] | −32.3 / −33.1 [−2.2] | −31.8 / −31.6 [+4.0] | −18.9 / −19.8 [−0.9] | −8.8 / −15.3 |
+
+The flat column includes the 6 flat training settings; held out on flat (RT 0.8 / 1.8) the same model gives −43.5 / −44.4 / −44.1 dB (§16.8). Excess by control (R, 50–150 / 150–300 / 300–600 ms):
+- HF 0.2 +18.1 / +20.0 / +17.6 … HF 1.0 +9.0 / +12.3 / +9.8;
+- LF 0.1 +14.8 / +19.9 / +17.3, LF 1.0 +11.8 / +13.2 / +7.8;
+- RT 0.6–1.0 +15…+20, RT 2.2–2.5 +10…+14.
+
+**Against the null target:** −50 dB is reached on flat settings by the free 28 k-coefficient injection (§15.7), not yet by this 9-number model (about 8 dB short on the library, 1.4–4 dB short of the free model on CLA, §16.12–16.14).
+
+**Open for S** (none blocks M/L):
+1. the compact model's remaining gap (part may be library-specific, §16.14);
+2. AP230's damping form where b > 0 (§16.17);
+3. LF 0.1 at short RT;
+4. the values between the library's control steps;
+5. exact coefficients (Q9) and fixed-point behaviour (Q10), best done once the M/L structures are known, since the arithmetic engine is shared.

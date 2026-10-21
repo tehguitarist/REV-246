@@ -117,6 +117,9 @@ Source: `sources/emt-documents/EMT 246S service manual 1/2.pdf` (OCR of the Engl
 
 ## 5. Program S algorithm (measured from the CLA IR)
 
+**Consolidated model (October 2026, `model_s_results.md` §17):** cluster; AP20 · AP72 · AP230 at −1/√2 with AP230's step table; no comb460; 5 equal sign-only taps per loop, R via 26 / 332; laws with the HF pole ≤ 0.84, per-pass DC gain ≥ 0.18 and β = 0.019. Baseline all 128 settings −41 / −39 / −36 dB (L), CLA −37 dB. Rows below give the evidence; where an older row differs, the §16–17 rows hold.
+
+
 The CLA IR settings, from a numeric display with some dead segments: **SHORT RT, LP 12, DELAY 10 ms, AMPL 80 %, LF ×1.0, RT 1.0 s, HF ×0.9** (S).
 
 | Fact | Conf. | Source |
@@ -133,7 +136,7 @@ The CLA IR settings, from a numeric display with some dead segments: **SHORT RT,
 | Modal density 0.218 modes/Hz. The lengths are not optimal on simple spacing metrics; three share a factor of 3 | C (arith.) | discovery §3.3 |
 | **Per-loop mode amplitudes are noise-like (spread ≈ 5 dB, Rayleigh-like)**, so not equalised. This argues against a pure all-pass diffuser read by single taps | S | topology T2 |
 | **First pass is dense** and carries non-recirculating content (−11/−7 dB of the first 1,400 samples). The reverb starts about 240 samples (L) and 570 (R) after tap 0. So there is multi-point injection or read-out, not a single write and read per loop | S / H | model §4 |
-| **5th recursion at 460 samples** (g ≈ 0.45, i.e. RT ≈ 0.15 s). It is the one structural addition that clearly helps: +13/+17 dB in-sample, +6/+10 dB held out. Its excitations show an all-pass-like −g + z⁻⁴⁶⁰ signature. Whether it sits in parallel or in series is unresolved | **In question (model §16.3, §16.6):** with the 5-tap read-out, every loop path cancels the comb and the first-pass FIR is empty, so no 460 recursion reaches the output; the "5th recursion" may be a stand-in from short-window fits. Pending a fit with comb460 removed outright | S (exists) / H (form) | model §3.3, §8.2–8.3 |
+| **5th recursion at 460 samples** (g ≈ 0.45, i.e. RT ≈ 0.15 s). It is the one structural addition that clearly helps: +13/+17 dB in-sample, +6/+10 dB held out. Its excitations show an all-pass-like −g + z⁻⁴⁶⁰ signature. Whether it sits in parallel or in series is unresolved | **Withdrawn (model §16.3, §16.6, §17):** with the 5-tap read-out every loop path cancelled the comb exactly, and with comb460 removed outright the model's output is identical (to −170 dB). There is no 460 recursion in program S; the "5th recursion" was a stand-in from the short-window fits | S (absent) | model §3.3, §8.2–8.3 |
 | **R: once the input ends (about 0.45 s), the 4 loops + 460 stage predict the rest to within 4–6 dB of the noise floor.** This prediction uses only the 9 loop/460 numbers and the IR's own past, e.g. −45.5 dB at 450–650 ms. So the loops and the 460 stage are right | S | model §10.1 |
 | **Correction (§13):** the "late input up to 0.45 s" is **not** a separate generator. A fully LTI synthetic with all taps inside 82 ms reproduces it. It is the **diffuser's own tail** (AP230 at g = −0.7, about 356 dB/s) **plus band-edge ringing from the IR deconvolution**. The row below is kept for history | S | model §13.2 |
 | *(superseded)* **Late input:** each loop receives its **own dense injection** that keeps arriving and decays smoothly (R ≈ 290 dB/s, RT ≈ 0.2 s; L ≈ 130 dB/s) until about 0.45 s. There are no spikes. Fine structure is uncorrelated across loops but correlated between L and R of the same loop. **Ruled out:** a shared input, a long EMT 250-style loop (lags 3.5–16 k), and extra 230/460/920 stages. The 460 stage's gain is flat across frequency, g ≈ 0.44–0.46, consistent with an all-pass | S | model §10.2–10.3 |
