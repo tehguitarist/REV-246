@@ -17,6 +17,9 @@ nulls as the final stage):
   fir    the capped law times a free correction per loop, C_i(z) = sum_k c_ik z^-k, k = -KC..KC (C_i = 1 is the law):
          G_i -> G_i C_i. 4 (2 KC + 1) numbers, exact Jacobian.
 
+interp: held out by setting, the corrections of RT 0.6 / 1.0 / 1.8 predicted by interpolating each loop's correction
+linearly in RT from the neighbouring steps (same LF and HF) -> analysis/loop_fir/<kernel>_interp.json.
+
 One result file per setting in analysis/loop_fir/<kernel>/ (skipped on rerun); report reads them all: nulls and excess
 over the repeat-capture null (nulls_free_<kernel>), and the corrections' shape per pass: magnitude (dB) and phase delay
 (samples) against frequency, per loop and by control. coefs: each correction read as changes of the law's own
@@ -273,9 +276,67 @@ def coefs_stage():
                                           for j, nm in enumerate(names) if any(o["delta"][j] != 0.0 for o in oo)))
 
 
+INTERP = {0.6: (0.3, 0.8), 1.0: (0.8, 1.4), 1.8: (1.4, 2.2)}      # held-out RT step: its fitted neighbours
+
+
+def _interp_setting(a):
+    """One held-out setting: each loop's correction interpolated linearly in RT from the same LF / HF at the two
+    neighbouring RT steps (their fir fits), applied to the capped law; every capture scored (none of this setting's
+    captures entered the neighbours' fits)."""
+    key, lab, b230, law, caps, ends, c_lo, c_hi, t = a
+    q1.EXT = 1700
+    law["lf"] = {float(k): x for k, x in law["lf"].items()}
+    v, _, _ = q2.final_injection(compact=COMPACT)
+    w = 2 * np.pi * np.fft.rfftfreq(q1.grid_n(lab["rt"]))
+    lags = np.arange(-KC, KC + 1)
+    E = np.exp(-1j * np.outer(lags, w))
+    G_law = q2.G_capped(lab, law, w, beta=q2.FINAL_BETA)
+    C = [((1 - t) * np.asarray(lo) + t * np.asarray(hi)) @ E for lo, hi in zip(c_lo, c_hi)]
+    G = q2.make_G(lab, law, [Gi * Ci for Gi, Ci in zip(G_law, C)], b230, q2.FINAL_DIFF)
+    return [dict(key=key, **lab, amp=c["amp"], loops="interp", held_out=True,
+                 **q2.score_capture(G, v, c["amp"], c["file"], c["fade2"], c["eps"], ends[c["file"]], 1700)) for c in caps]
+
+
+def interp_stage(workers, only=None):
+    info, fade, _, _, eps0 = q2.q1_tables()
+    ap = json.load(open(os.path.join(q2.OUT, AP230)))
+    ends = json.load(open(os.path.join(q2.OUT, "ramp.json")))
+    law = q1.fit_laws(json.load(open(os.path.join(q2.Q1, "loops.json"))))
+    fit = {json.load(open(p))["key"]: json.load(open(p)) for p in glob.glob(os.path.join(OUT, "*.json"))}
+    jobs = []
+    for k, g in info.items():
+        if g["rt"] not in INTERP or (only and k not in only):
+            continue
+        r0, r1 = INTERP[g["rt"]]
+        k0, k1 = f"{g['lf']}_{r0}_{g['hf']}", f"{g['lf']}_{r1}_{g['hf']}"
+        caps = [dict(amp=a, file=nm, eps=eps0[nm], fade2=fade[nm]) for a, nm in q2.files_of(g)]
+        jobs.append((k, dict(lf=g["lf"], rt=g["rt"], hf=g["hf"]), ap["steps"][ap["settings"][k]["step"]], json.loads(json.dumps(law)),
+                     caps, ends, fit[k0]["fir"], fit[k1]["fir"], (g["rt"] - r0) / (r1 - r0)))
+    with ProcessPoolExecutor(workers, max_tasks_per_child=4) as ex:
+        rows = [r for rr in ex.map(_interp_setting, jobs) for r in rr]
+    json.dump(rows, open(OUT + "_interp" + ("_smoke" if only else "") + ".json", "w"), indent=0)
+    rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("nulls_free") + ".json")))}
+    own = {(r["key"], r["amp"], r["loops"]): r for k in {r["key"] for r in rows} for r in fit[k]["rows"]}
+    ws = ["50-150", "150-300", "300-600", "600-1000"]
+
+    def cell(rr, w):
+        x = [r["null_comp"][w][1] for r in rr if r["null_comp"].get(w)]
+        e = [r["null_comp"][w][1] - rep[(r["key"], r["amp"])]["repeat_comp"][w][1] for r in rr
+             if r["null_comp"].get(w) and rep[(r["key"], r["amp"])]["repeat_comp"].get(w)]
+        return f"{np.median(x):.1f} [{np.median(e):+.1f}]" if x else "--"
+    print(f"\n## Held out by setting (RT {sorted(INTERP)}): corrections interpolated in RT from the neighbouring steps; R, compensated null [excess]")
+    print("| settings | loops | " + " | ".join(ws) + " |\n|---|---|" + "---|" * len(ws))
+    for g, sel in (("all", lambda r: True), ("LF 0.1", lambda r: r["lf"] == 0.1), ("LF 0.4", lambda r: r["lf"] == 0.4),
+                   ("LF 1.0", lambda r: r["lf"] == 1.0), ("LF 2.0", lambda r: r["lf"] == 2.0), ("HF 0.2", lambda r: r["hf"] == 0.2),
+                   ("HF 1.0", lambda r: r["hf"] == 1.0)):
+        for lp in ("law", "interp", "fir"):
+            rr = [r for r in rows if sel(r)] if lp == "interp" else [own[(r["key"], r["amp"], lp)] for r in rows if sel(r)]
+            print(f"| {g} | {lp} | " + " | ".join(cell(rr, w) for w in ws) + " |")
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", default="fit", choices=["fit", "report", "coefs"])
+    ap.add_argument("--stage", default="fit", choices=["fit", "report", "coefs", "interp"])
     ap.add_argument("--only", default=None)
     ap.add_argument("--workers", type=int, default=4)
     a = ap.parse_args()
@@ -283,6 +344,8 @@ def main():
         fit_stage(a.workers, a.only.split(",") if a.only else None)
     if a.stage == "coefs":
         coefs_stage()
+    elif a.stage == "interp":
+        interp_stage(a.workers, a.only.split(",") if a.only else None)
     else:
         report_stage()
 

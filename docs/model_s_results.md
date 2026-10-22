@@ -1699,10 +1699,33 @@ The injection is frozen (the chain2 compact model, §21). Per setting, three loo
 
 Phase changes are ≤ 0.005 samples per pass. Values above 10 kHz are poorly constrained (the nulls are scored to 10 kHz) and are not used.
 
-**Read as changes of the law's own coefficients** (`coefs` stage: C − 1 ≈ Σ δθ ∂ln G/∂θ, complex, 100 Hz–10 kHz, θ = loop gain g, shelf DC gain r₀, shelf pole a, HF pole p, fractional delay d): a median **61 %** of each correction is a change of the law's coefficients (IQR 35–87 %). The loop gain needs **−1.2 % at RT 0.3, −0.28 % at RT 0.6, −0.37 % at LF 0.1**, and ≤ 0.07 % at RT ≥ 1.4; the HF pole moves by ±0.1–0.6 %; d ≤ 0.001 samples. The rest is mainly a loss at about 10 kHz (−0.03…−0.14 dB per pass, larger at short RT) that the law form (one-pole HF, first-order shelf) cannot make.
+**Read as changes of the law's own coefficients** (`coefs` stage: C − 1 ≈ Σ δθ ∂ln G/∂θ, complex, 100 Hz–10 kHz, θ = loop gain g, shelf DC gain r₀, shelf pole a, HF pole p, fractional delay d): a median **61 %** of each correction is a change of the law's coefficients (IQR 35–87 %). The loop gain needs −1.2 % at RT 0.3, −0.28 % at RT 0.6, −0.37 % at LF 0.1 and ≤ 0.07 % at RT ≥ 1.4 (medians over all cells of a row; *these mix LF and HF: where an HF filter acts the gain and pole changes trade off and are not separately identified, see §22.1 for the per-LF figures*); the HF pole moves by ±0.1–0.6 %; d ≤ 0.001 samples. The rest is mainly a loss at about 10 kHz (−0.03…−0.14 dB per pass, larger at short RT) that the law form (one-pole HF, first-order shelf) cannot make.
 
 **Not quantisation (S, at this resolution):**
 - the fitted gain and pole changes do not correlate with the rounding (or truncation) error of the law's coefficients on any grid from 6 to 16 bits (|r| < 0.1 throughout, for g and for p);
 - the four loops of one setting need the same relative gain change (spread across the loops 3.4e-4, setting mean 1.0e-3): a common, control-dependent law error, length-scaled like the law, not per-coefficient rounding.
 
-So exact coefficients (Q9) are not visible yet; what is visible is that **the laws damp too little where damping per pass is large** (short RT, LF 0.1), across the band, with an extra loss near 10 kHz. Next: turn the corrections into law changes (a per-pass loss term growing with the damping, and a fixed HF term near 10 kHz), refitted on some settings and **held out by setting**; then the injection's share at LF 0.1 / HF 0.2.
+So exact coefficients (Q9) are not visible yet; what is visible is that **the laws damp too little at LF 0.1 / 0.4 and short RT** (§22.1), across the band, with an extra loss near 10 kHz. Next: turn the corrections into law changes (a per-pass loss term growing with the damping, and a fixed HF term near 10 kHz), refitted on some settings and **held out by setting**; then the injection's share at LF 0.1 / HF 0.2.
+
+### 22.1 Turning the corrections into law changes, held out by setting (`loop_fir.py --stage interp`, `final --bbtilt`) **[S for the LF part; open for HF 0.2]**
+
+**What the corrections look like in dB per second** (so the four loops compare; negative = the unit decays faster than the law), at HF ≥ 0.6: LF 0.1 needs a broadband extra decay of −4.8 / −2.3 / −1.25 / −0.46 / +0.04 dB/s at RT 0.3 / 0.6 / 1.0 / 1.8 / 2.5, about **−3 % of the law's broadband rate at RT ≤ 1.0, fading to 0 by RT 2.5**; LF 0.4 about −1.3 % falling to −0.3 %; LF 2.0 about +0.3 %; LF 1.0 / HF 1.0 is within 0.4 % everywhere (a small under-damping growing like the square of the per-pass loss, +0.06 dB per pass at RT 0.3). HF 0.2 at RT 1.0 needs about 1.4 % more HF decay; at HF 0.2 / RT ≤ 0.6 the corrections are not identified (±100 dB/s at 6–10 kHz, spread across the loops up to 28 dB/s: the HF content is gone after one or two passes). The law's LF and HF numbers were fitted at RT ≥ 1.4 (§14.2); these are their departures at short RT. The read-off in §22's last table mixes LF and HF columns: its "loop gain −1.2 % at RT 0.3" is the LF 0.1 and HF 0.2 cells, not a general short-RT trend.
+
+**One constant does not do it (`final --bbtilt c`):** scaling each loop's broadband loss by (1 + c (hi − 1)), hi − 1 the LF step's top-end tilt, explains 68 % of the corrections with each RT step held out (c = 0.084; fitted on RT 0.3 / 0.8 / 1.4 / 2.2 alone, 0.089), but in the bench it helps LF 0.1 / RT 1.0 by 9–14 dB and costs LF 0.4 / RT 1.8 1.5–9 dB: the correction fades with RT, and at long RT a 0.5 % rate error already costs 8 dB at −49 dB nulls.
+
+**Held out by setting, interpolated in RT** (`interp` stage → `analysis/loop_fir/chain2_interp.json`, `interp_chain2.log`): the 48 settings at RT 0.6 / 1.0 / 1.8 get each loop's correction interpolated linearly in RT from the same LF / HF at the neighbouring steps (0.3 & 0.8, 0.8 & 1.4, 1.4 & 2.2), none of their own captures used. R, fade-compensated null [excess over repeat]; "own fir" is each setting's own correction, held out by capture (§22):
+
+| Settings | Loops | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|---|
+| All 48 | law | −48.7 [+9.4] | −43.4 [+13.3] | −37.3 [+11.5] | −29.7 [+4.1] |
+| | **interp** | −49.6 [+6.8] | −44.3 [+10.3] | −38.6 [+8.2] | −32.5 [+1.9] |
+| | own fir | −50.5 [+5.9] | −48.0 [+9.0] | −42.5 [+5.5] | −35.0 [−0.1] |
+| LF 0.1 | law → **interp** (own) | +16.0 → **+8.9** (+8.4) | +20.2 → **+13.7** (+11.6) | +18.8 → **+12.0** (+9.0) | +11.3 → **+3.4** (+2.9) |
+| LF 0.4 | | +14.0 → +12.9 (+10.4) | +16.7 → +13.9 (+12.3) | +12.1 → +9.2 (+5.9) | +3.3 → +0.3 (−0.5) |
+| LF 1.0 | | +4.4 → +4.4 (+3.2) | +8.9 → +9.1 (+4.2) | +5.1 → +6.2 (+1.5) | −0.2 → +0.9 (−0.4) |
+| LF 2.0 | | +4.6 → +4.6 (+3.7) | +7.3 → +6.9 (+4.3) | +6.3 → +6.1 (+2.2) | +2.5 → +1.8 (−0.5) |
+| HF 0.2 | | +20.8 → +22.0 (+12.7) | +27.9 → +29.8 (+18.9) | +14.6 → +15.9 (+8.7) | +9.2 → +6.3 (+0.2) |
+
+- **The LF part of the correction is smooth in RT and carries to unseen settings (S):** at LF 0.1 the interpolated correction gains 6.5–8 dB at 50–1000 ms, as much as the setting's own fit (within 0.5–3 dB); LF 0.4 gains 1–3 dB. So the LF law's departures at short RT can be a law (or the unit's own table) in RT.
+- **The HF 0.2 part does not transfer:** each setting's own correction gains 6–10 dB, but its neighbours' interpolated corrections do not (−1…+3 dB). At HF 0.2 the short-RT neighbours' corrections are unidentified, and the HF pole cap and the AP230 step change state between RT steps, so a linear interpolation across them is the wrong form. Open.
+- Parameters: interp uses the neighbours' 36 numbers per setting (a table, not yet a law); the next step is a compact form for the LF part per LF step (its RT dependence: about constant to RT 1.0, fading to 0 by 2.5) and a separate look at HF 0.2.
