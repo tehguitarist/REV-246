@@ -9,7 +9,8 @@ through the same code as the control and the calibration. Labels as in `EMT246_u
 
 > **Summary.**
 > - **Early section = program S's, time-scaled by 2 (M) and 4 (L).** Same 8-tap cluster with the same signs, the reverb onset and the L/R onset gap all scale (§1, §2).
-> - **The late reverb is a different structure from S.** S is four parallel loops: the product of four combs predicts its tail to **−45 dB held out**. M and L follow one five-term recursion each, four taps symmetric about a centre plus one at twice the centre: L 10826/11384/11618/12176/23002, M 5416/5694/5812/6090/11506 (§3).
+> - **The late reverb is S's four loops, ×2 / ×4 and coupled (§7, superseding §3's reading).** S is four parallel loops: the product of four combs predicts its tail to **−45 dB held out**. M and L follow one five-term recursion each (L 10826/11384/11618/12176/23002, M 5416/5694/5812/6090/11506, §3). §7 shows why: the same four lines scaled (M 2641/2775/2919/3171, L 5279/5547/5837/6339) are cross-coupled by an orthogonal 2 + 2 matrix, whose characteristic polynomial has exactly these five lags (pair sums and the sum of all four) and their signs.
+> - **The carry-over test (§7):** M's and L's diffuser, 20 read taps per channel, R routing and AP damping steps are S's, time-scaled (with small exact integer offsets); M and L add an output smoothing kernel. Held out, the first pass nulls as well as S's own compact model does.
 > - **M and L are time-variant; S is not.** Separate captures of the same M or L setting decorrelate progressively (L: −25 dB at 0.15–0.3 s → −3 dB at 2–4 s), flat across frequency. S's repeat captures agree to −52…−59 dB once a per-capture clock ratio is fitted (§4.1). This is the first direct evidence of the "stochastic control" and its program dependence (§4).
 > - **Consequence for the null target:** past the first recirculation, M and L can't be nulled waveform-for-waveform against one capture; two captures of the same unit don't null each other (§5).
 > - **Noise floor vs the CLA capture (§4.2):** not the same. CLA levels off at −71/−77 dB (L/R) below its 50–300 ms reverb level; the library shows no capture noise down to its 24-bit floor, about −88 dB below. What limits a comparison against the library is the capture clock, not noise: with it fitted, the S repeat-capture ceiling is about −57 dB.
@@ -85,7 +86,7 @@ The parameter counts are dominated by the 300-tap short block, which only models
 
   Equivalently a + {0, p, q, p + q} with p = 558, q = 792 (L) and p = 278, q = 396 (M), and 2a + p + q. L's lags are 2× M's within 4–10 samples, not exactly.
 - Random lag sets of the same size add nothing over the short block, and a greedy search for further lags (up to 2.2 × the largest) finds none that helps held out *[exploratory]*. Treating the four mid taps as parallel loops (which adds their pair sums, including 23002) gives the same null as the five taps, so the pair terms carry no extra information.
-- **Reading (H):** one recirculating delay line of 2N words (L 23 K, M 11.5 K, within the ~39 K budget) with five feedback taps, or the equivalent two lines of N with a coupling. The four mid taps cancel at DC (+ − − +), so at low frequencies the loop is the 2N tap alone; the mid taps shape the loop gain as −4β sin(ωp/2) sin(ωq/2) on the half-loop. With uniform decay that is a 2 × 2 rotation-like system in w = z^−N: modes decay by the same factor per N samples wherever |trace| ≤ 2√det.
+- **Reading (H; superseded by §7.3):** one recirculating delay line of 2N words (L 23 K, M 11.5 K, within the ~39 K budget) with five feedback taps, or the equivalent two lines of N with a coupling. The four mid taps cancel at DC (+ − − +), so at low frequencies the loop is the 2N tap alone; the mid taps shape the loop gain as −4β sin(ωp/2) sin(ωq/2) on the half-loop. With uniform decay that is a 2 × 2 rotation-like system in w = z^−N: modes decay by the same factor per N samples wherever |trace| ≤ 2√det.
 - **The plateau (−18 to −22 dB) is not a missing lag.** The residual is flat across octaves (within about 2 dB from 125 Hz to 4 kHz, 3–8 dB higher in the 8 kHz octave next to the 10 kHz band edge; S: −56 to −43 dB), the same in-sample as held out, and still there later in the tail (L fitted 8–10.5 s, tested 10.5–12.5 s: −12.3 / −18.9 dB): a fixed fraction of the decaying reverb that no fixed recursion predicts. §4 shows why.
 
 ### 3.3 Lag precision
@@ -99,6 +100,8 @@ Sub-sample position of each lag FIR's peak (low-passed), over 12 settings each w
 | L (10826, 11384, 11618, 12176; 23002) | −0.82 / −0.83 (23002: −0.73 / −0.76) | ≤ 0.04 (23002 on L: 0.09) |
 
 S sits within 0.05 sample of its integer lags (the remainder is the capture clock, `model_s_results.md` §3.1), so the method has no offset of its own. **M and L carry a common −0.8 sample on every lag**, stable to ±0.04 across 12 settings each (RT, LF and AMPL varied): each lag is d − 1 plus about 0.2 sample of group delay that all taps share. **H:** a filter in the common feedback path (e.g. a one-pole with p ≈ 0.17), and the integer lags are d − 1 (L 10825 … 23001). The sums between lags (§3.2) are exact either way, but the absolute integers are uncertain by one sample until the loop filter is modelled. With heavy HF damping (HF 0.1–0.2) the offsets spread to ±1 sample, as the loop low-pass adds frequency-dependent delay *[exploratory]*.
+
+*Update (§7.3):* the lags are sums of four integer lines, and a single recirculation lands on tap + line within +0.05…0.08 sample (the capture clock), so the lines carry no −0.8-sample offset or loop-filter group delay. Why the predictor's lag FIRs peak 0.8 sample early is open.
 
 ## 4. Time variance: AMPL pairs as repeat captures
 
@@ -169,15 +172,156 @@ All three M pairings agree (R, 0.15–0.3 / 0.3–0.6 / 0.6–1.0 / 1–2 s): 60
 
 ## 5. What this means
 
-- **Q3 is answered for structure:** M and L have their own cluster scale (×2, ×4), onset scale and a different late recursion; the harness's unknown loop sets are assigned (§3.1).
+- **Q3 is answered for structure:** M and L have their own cluster scale (×2, ×4), onset scale and a different late recursion; the harness's unknown loop sets are assigned (§3.1). §7 explains the recursion as S's loops, scaled and coupled.
 - **The null target needs a decision for M and L.** Two captures of the same M/L setting from the same unit null each other only to −9 to −14 dB at 0.3–0.6 s and −3 to −7 dB after 1 s. No deterministic model can beat that against one capture. For M and L the waveform target can only apply to the deterministic part (cluster and first recirculation, about the first 0.1–0.2 s); beyond it, the right target is statistical (decay, spectrum, decorrelation rate between captures). S is unaffected: its repeat captures agree to about −57 dB with the clock fitted (§4.1).
 - **What can be demonstrated for S:** against Tomkin, about −57 dB at best (repeat-capture ceiling, one clock parameter per capture), in held-out windows up to each file's fade; the noise floor is not the limit there (§4.2). Against CLA, −60 dB or better only in roughly the first 300 ms, and it is a different unit (S&H pole, L/R offset).
-- **Budget:** the M/L recursion is about 6 accesses (one write, five reads) on a 2N-word line; S's four loops are 8. The randomisation must also fit the budget.
+- **Budget:** M and L use the same four lines as S (scaled, 11.5 K / 23 K words) and the same 20 + 20 read taps; the coupling adds a few multiply-adds per sample. The randomisation must also fit the budget.
 
 ## 6. Next tests
+
+*Done since: the S carry-over (§7). With the deterministic structure known, items 1–3 can now be tested inside the model (which matrix entries, line gains or taps vary).*
 
 1. **Decorrelation rate vs settings:** does the pair-null decay rate depend on RT, HF or LF? Does it scale per recirculation (per N samples) or per second? This separates "random change per pass" from a free-running clock.
 2. **Which part varies:** compare the pair difference with the five-tap recursion: is it consistent with randomised tap gains (β, γ), switched tap positions, or a varying read-out?
 3. **Loop gains and filters from the recursion** at RT/HF/LF steps (Q4–Q7 for M/L), using the deterministic part.
 4. **Harness:** per-program cluster templates (§1) with a 60 ms window, and the M/L lag sets as known loop sets.
 5. **Non-Lin:** its late part (`1108-1254-1386` and `231-628-…` in the harness) through the same predictor.
+
+## 7. The S carry-over test (October 2026)
+
+`.venv/bin/python tools/ml_carryover.py [--stage diffuser|taps|routing|firstpass]` → `analysis/ml_carryover/` (`*.json`, `*.log`). `NEXT_STEPS.md` §5 item 5: do S's diffuser, read taps and R routing, scaled ×2 / ×4, explain M's and L's injection and first recirculation?
+
+**Method.** Per AMPL group, a cluster-free reverb (y_lo − A_lo/(A_hi − A_lo)·(y_hi − y_lo), the low-AMPL capture aligned onto the high one, cluster tap 0 at a fixed index). The diffuser is all-pass, so correlating the first pass with the diffuser's impulse response (a matched filter) turns it back into the read taps as isolated spikes when the diffuser is right, and smears them when it is not. S is the control: with its own diffuser (AP20 · AP72 · AP230, −1/√2) the matched filter puts 90 / 91 % of the first-pass energy into 20 spikes per channel, exactly at the Q2 taps (`model_s_results.md` §16.2).
+
+> **Summary.** Yes, with three exceptions in the detail and one structural change:
+> - **The diffuser carries over** with exact, slightly irregular lengths: **M AP42 · AP144 · AP460, L AP82 · AP286 · AP918**, all at **−1/√2**. (S × 2 would be 40 / 144 / 460; L = 2 × M − 2 for every stage.) Plain ×2 / ×4 smears the taps (24 / 9 % in 20 spikes against 91–92 %). **C**
+> - **The read taps carry over:** 20 equal, sign-only taps per channel in every M and L group (160 and 180 groups), with **S's sign pattern tap for tap**, at **2 × S − 8…−12 (M) and 4 × S − 24…−35 (L)**, integers. R = L through **51 / 661 (M) and 101 / 1320 (L)**, the same binary 26 / 332 routing as S, per tap. **C**
+> - **The damping step carries over:** the last all-pass takes S's AP230 two-tap damping with **the same four step values** (0 / 0.17 / 0.33 / 0.50) at short RT × low HF. **S**
+> - **New in M and L: an output smoothing kernel** S does not have, on the cluster and the reverb alike: symmetric, about **[0.024, 0.952, 0.028] (M)** and **[0.11, 0.78, 0.12] (L)**, setting-independent (−0.8 / −4.2 dB at 10 kHz). **S**
+> - **The structural change: M's and L's four loops are coupled.** The lines are S's ×2 / ×4 (**M 2641 / 2775 / 2919 / 3171, L 5279 / 5547 / 5837 / 6339**, integers), but each tap recirculates through **two** lines at ±g/√2, through an orthogonal 4 × 4 matrix that couples loops 1/3 with lines 2/4 and loops 2/4 with lines 1/3. Its characteristic polynomial is exactly the five-term recursion of §3 (lags, and signs + − − + −). S's matrix is diagonal. **C**
+> - **Held out** (positions, signs, kernel from 6 flat long-RT settings; per capture one shift, one cluster gain, one tap gain; b per setting): first pass **S −42.8 / −41.5, M −40.7 / −39.2, L −36.6 / −35.9 dB**, against repeat captures **−48.2 / −54.6, −47.1 / −48.8, −41.3 / −50.8 dB (§7.6)**. Cluster and gap **S −49.1 / −44.1, M −46.6 / −42.0, L −43.0 / −38.8 dB** (at the repeat-capture level).
+
+### 7.1 Diffuser
+
+Matched-filter sparsity (share of first-pass energy in the 20 largest isolated spikes per channel; median of 13 settings per program, a ±3-sample grid per stage on 4 of them):
+
+| Program | Best stage lengths (all 4 grid settings) | Share L / R | Plain S × scale | Runner-up (grid) |
+|---|---|---|---|---|
+| S | 20 / 72 / 230 | 0.90 / 0.91 | (same) | 0.54 |
+| M | **42 / 144 / 460** | 0.91 / 0.91 | 0.25 / 0.23 | 0.54 |
+| L | **82 / 286 / 918** | 0.92 / 0.92 | 0.10 / 0.08 | 0.58 |
+
+- One sample off in any stage costs a third or more of the share (runner-up 0.54–0.58), so the lengths are exact. Where a grid setting chose the last stage +1 (one per program), it is a damped setting (b > 0, §7.4), whose two-tap filter adds delay.
+- **All-pass gain:** the share peaks at **−0.70…−0.71** in all three programs (−0.707 best of the grid −0.80…−0.62). The −1/√2 of S (§16.8 there) carries over.
+- **Lengths:** M = 2 × S except the first stage (42, not 40); L = 2 × M − 2 for all three stages (82, 286, 918). The cluster's R-only taps show the same kind of "×2 minus a little" (§1), so the program tables are probably computed with an offset rather than stored as clean multiples (**H**).
+
+### 7.2 Read taps and R routing
+
+Greedy pursuit (band-limited pulses shaped by the program's output kernel, §7.5) on the matched-filter output of every AMPL group, matched to S's tap table:
+
+| | S (128 groups) | M (160) | L (180) |
+|---|---|---|---|
+| All 20 taps found per channel | 100 % | 100 % | 100 % |
+| Sign agreement with S's pattern | 1.000 | 1.000 | 1.000 |
+| Magnitude spread over the 20 taps | 0.01 dB | 0.01–0.02 dB | 0.01 dB |
+| Position IQR over groups (max) | 0.15 | 0.13 | 0.004 |
+| Integer part re cluster tap 0 | the Q2 table (+0.00…0.03) | +0.01…0.06 | +0.03…0.12 |
+
+The fractional parts grow with the lag (L: +0.03 at 952 to +0.12 at 7379): the capture clock against the nominal device rate, not the unit. Tap positions (L channel; R = L + route):
+
+| S | 244 | 276 | 338 | 624 | 677 | 768 | 797 | 826 | 913 | 971 | 984 | 1069 | 1129 | 1256 | 1319 | 1368 | 1449 | 1514 | 1521 | 1780 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| sign | + | − | + | − | − | − | − | − | − | + | + | + | − | − | + | + | − | + | + | − |
+| M | 480 | 543 | 667 | 1239 | 1344 | 1526 | 1584 | 1644 | 1816 | 1934 | 1960 | 2128 | 2249 | 2504 | 2629 | 2728 | 2889 | 3020 | 3033 | 3550 |
+| M − 2S | −8 | −9 | −9 | −9 | −10 | −10 | −10 | −8 | −10 | −8 | −8 | −10 | −9 | −8 | −9 | −8 | −9 | −8 | −9 | −10 |
+| L | 952 | 1078 | 1326 | 2469 | 2679 | 3043 | 3159 | 3280 | 3623 | 3860 | 3912 | 4247 | 4489 | 5000 | 5249 | 5448 | 5769 | 6030 | 6059 | 7090 |
+| L − 4S | −24 | −26 | −26 | −27 | −29 | −29 | −29 | −24 | −29 | −24 | −24 | −29 | −27 | −24 | −27 | −24 | −27 | −26 | −25 | −30 |
+
+- **R routing:** each R tap is its L tap delayed by **S 26 / 332, M 51 / 661, L 101 / 1320**, the same choice per tap in all three programs (σ ≤ 0.01 sample). M = 2 × S − 1 / −3, L = 2 × M − 1 / −2. R taps sit at 2 × S − 9…−12 (M) and 4 × S − 29…−35 (L).
+- The offsets from 2 × S / 4 × S take three or four values per program, not one, and don't follow the loop a tap belongs to. They are exact integers, so the tap table is stored or computed per program with its own rounding (**H**); the rule is open.
+- The onsets of §2 (474 / 1,134 and 948 / 2,268) are these first taps (480 / 1,141 and 952 / 2,272) seen through a threshold.
+
+### 7.3 Routing through the lines: the four loops are coupled
+
+For each tap, the matched-filter value at tap + Pⱼ for each line (flattest HF settings: S 32, M 32, L 36 groups):
+
+- **Line lengths are exact integers:** the recirculated taps arrive at tap + Pⱼ + 0.00…0.03 (S), +0.05…0.06 (M), +0.07…0.08 (L): the capture clock again (§7.2), no fractional delay or loop-filter group delay. So **M's lines are 2641 / 2775 / 2919 / 3171** (2 × S − 1, −3, −3, −3) and **L's 5279 / 5547 / 5837 / 6339** (2 × M − 3, −3, −1, −3). **C**
+- **Routing matrix** (line ← the tap's S loop; median gain re the tap):
+
+  | | S: loop 1 | 2 | 3 | 4 | M: loop 1 | 2 | 3 | 4 | L: loop 1 | 2 | 3 | 4 |
+  |---|---|---|---|---|---|---|---|---|---|---|---|---|
+  | line 1 | **+0.72** | 0 | 0 | 0 | 0 | **+0.49** | 0 | **+0.53** | 0 | **+0.55** | 0 | **+0.60** |
+  | line 2 | 0 | **+0.72** | 0 | 0 | **+0.50** | 0 | **−0.52** | 0 | **+0.55** | 0 | **−0.58** | 0 |
+  | line 3 | 0 | 0 | **+0.70** | 0 | 0 | **+0.52** | 0 | **−0.48** | 0 | **+0.58** | 0 | **−0.54** |
+  | line 4 | 0 | 0 | 0 | **+0.67** | **−0.51** | 0 | **−0.46** | 0 | **−0.57** | 0 | **−0.53** | 0 |
+
+  Off-pattern entries are ≤ 0.011 in magnitude. Gains are medians over RT, so only their pattern and ratios matter here.
+- **M and L share one matrix:** F = (g/√2) · [[0, 1, 0, 1], [1, 0, −1, 0], [0, 1, 0, −1], [−1, 0, −1, 0]] (rows: lines; columns: loops), times each line's own gain and filter. F/g is **orthogonal**, so the coupling itself is lossless. It is bipartite: loops 1 and 3 feed lines 2 and 4 through [[1, −1], [−1, −1]]/√2, and loops 2 and 4 feed lines 1 and 3 through [[1, 1], [1, −1]]/√2. **C** (pattern; σ of the sign over groups 0 where no other tap collides).
+- **This is the five-term recursion of §3.** With xᵢ = g·z^−Pᵢ (one gain for all lines, filters left out), det(I − X·F) = 1 − (x₁x₂ − x₂x₃ − x₁x₄ + x₃x₄)/2 + x₁x₂x₃x₄. Its lags are P₁ + P₂ = 5416, P₂ + P₃ = 5694, P₁ + P₄ = 5812, P₃ + P₄ = 6090 and P₁ + P₂ + P₃ + P₄ = 11506 (L: 10826 / 11384 / 11618 / 12176 / 23002), with signs **+ − − + −**, exactly the lags and signs the tail predictor found blind (§3.2). The "2N line" reading of §3.2 is superseded. The tail ACF peaks at 2641 (M) and 5279 (L) are line 1 (§3.1).
+- **§3.3's −0.8-sample offset is not a property of the lines:** single recirculations land on the integers. Why the predictor's lag FIRs peak 0.8 sample early is open (a predictor artefact with the time-variant part, **H**).
+
+### 7.4 The damping step
+
+b of the last all-pass (two-tap loop filter (1 − b) + b z⁻¹, as S's AP230), fitted per setting on the first pass of the high-AMPL capture:
+
+| S: RT \ HF | 0.2 | 0.4 | 0.6 | 1.0 |
+|---|---|---|---|---|
+| 0.3 | 0.50 | 0.50 | 0.33 | 0 |
+| 0.6 | 0.50 | 0.33 | 0.17 | 0 |
+| 0.8 | 0.33 | 0.17 | 0 | 0 |
+| 1.0 | 0.17 | 0 | 0 | 0 |
+| ≥ 1.4 | 0 | 0 | 0 | 0 |
+
+| M: RT \ HF | 0.1 | 0.2 | 0.4 | 0.7 | 0.9 |
+|---|---|---|---|---|---|
+| 0.6 | 0.50 | 0.50 | 0.50 | 0.33 | 0.17 |
+| 0.8 | 0.50 | 0.50 | 0.33 | 0.17 | 0 |
+| 1.2 | 0.50 | 0.33 | 0.17 | 0 | 0 |
+| 1.8 | 0.17 | 0.17 | 0 | 0 | 0 |
+| ≥ 2.6 | 0 | 0 | 0 | 0 | 0 |
+
+| L: RT \ HF | 0.1 | 0.3 | 0.5 | 0.8 | 1.0 |
+|---|---|---|---|---|---|
+| 2.2 | 0.50 | 0.50 | 0.50 | 0.17 | 0 |
+| 2.6 | 0.50 | 0.50 | 0.33 | 0 | 0 |
+| 3.6 | 0.33 | 0.17 | 0 | 0 | 0 |
+| 4.5 | 0.17 | 0 | 0 | 0 | 0 |
+| ≥ 6.0 | 0 | 0 | 0 | 0 | 0 |
+
+Medians over LF (the four LF values agree in every cell). Fitted values: 0.500–0.502, 0.330–0.332, 0.171–0.173 and ≤ 0.004.
+
+- **S's fit reproduces its Q2 table exactly** (`model_s_results.md` §16.9), so the bench measures the same thing.
+- **M and L use S's four step values** and the same kind of staircase: b rises as RT and HF fall. **S**
+- The cells don't map onto S's by a plain RT rescaling (RT / 2, RT / 4) or by RT × HF; the rule that picks the step is open for all three programs (`model_s_results.md` §14.3, §16.17).
+- Fitting b per setting matters only where it is on: held out it changes the median first-pass null by 0.3–0.9 dB, but the 90th percentile by 30 dB (S −10.6 → −42.1 dB on L, M −9.1 → −40.4, L −10.5 → −35.5).
+
+### 7.5 The output kernel (M and L only)
+
+A least-squares FIR (−5…5) on the cluster window of the high-AMPL captures (the cluster is 8 known taps, so the kernel is all that is fitted), unit DC, median of the 6 training settings × 2 channels:
+
+| | −2 | −1 | 0 | +1 | +2 | spread (max σ) | at 10 kHz |
+|---|---|---|---|---|---|---|---|
+| S | −0.0000 | +0.0007 | 1.0001 | +0.0022 | −0.0022 | 0.003 | 0 dB |
+| M | −0.0093 | +0.0235 | 0.9518 | +0.0276 | +0.0063 | 0.005 | −0.8 dB |
+| L | −0.0392 | +0.1134 | 0.7834 | +0.1217 | +0.0173 | 0.004 | −4.2 dB |
+
+- Symmetric (zero phase) and the same in every setting; it acts on the reverb as well as the cluster (without it, M's first pass is held at about −30 dB, §7.6). In band, L's is close to [1/8, 3/4, 1/8]; the alternating outer taps are out of band (the fit is in 100 Hz–10 kHz).
+- **Not in S** (S's kernel is δ within 0.003). So it is program-specific processing, not the analogue chain or the library's deconvolution.
+- **Cause (H):** a ±1-sample jitter of a common read or write address, averaged by the sweep measurement, gives exactly a symmetric [p/2, 1 − p, p/2] (p ≈ 0.05 in M, 0.23 in L). That would tie it to the time variance of §4 (stronger in L). A deliberate output low-pass is the alternative. The library alone may not separate them: a jitter averaged over a 10 s sweep looks the same in every capture.
+
+### 7.6 Held-out first pass
+
+Positions, signs and kernel from 6 training settings per program (the flattest HF, the longest RTs); held out on every other group. Per capture: one sub-sample shift, one cluster gain, one tap gain (both windows, per channel). Per setting: b (§7.4). 100 Hz–10 kHz, device domain, no clock fit (the windows end by 0.07 / 0.14 / 0.29 s, where a few ppm don't matter). Repeat-capture null: another capture of the same group as the model, with the same freedoms (shift, cluster gain, scale). Medians, L / R [repeat L / R]:
+
+| Program (captures held out) | Cluster and gap, [0, onset) | First pass, [onset, onset + shortest line) | Excess R, first pass | First pass without the kernel |
+|---|---|---|---|---|
+| S (366 / 488) | **−49.1 / −44.1** [−47.2 / −45.3] | **−42.8 / −41.5** [−48.2 / −54.6] | +13.7 | −42.5 / −41.6 |
+| M (461) | **−46.6 / −42.0** [−46.4 / −44.6] | **−40.7 / −39.2** [−47.1 / −48.8] | +9.6 | −30.3 / −30.8 |
+| L (174 / 348) | **−43.0 / −38.8** [−41.3 / −40.6] | **−36.6 / −35.9** [−41.3 / −50.8] | +15.3 | −17.2 / −17.4 |
+
+- **Held out equals training** within 0.5 dB in every row (training: S −42.6 / −40.7, M −40.7 / −39.1, L −36.8 / −35.8), and the 90th percentile is within 0.3–1.1 dB of the median: the model is the same for every setting, HF, LF and RT (per-HF medians vary by ≤ 0.3 dB).
+- **The carry-over is complete at S's own level.** M's first pass is predicted as well as S's own compact model predicts S (−40.7 / −39.2 against −42.8 / −41.5; excess over repeat captures +9.6 dB against +13.7). L is 4–6 dB behind (+15.3 on R).
+- **Cluster and gap are at the repeat-capture level** in all three (excess +0.9 / +1.5 / +1.7 dB on R). This is the window the null target puts at −50 dB for M and L; in this bench the repeat captures themselves reach only −41…−47 dB there (device domain, no clock fit, 100 Hz–10 kHz), so −50 dB can't be shown with it. A capture-domain comparison with fitted clocks (as `model_s_results.md` §17) is the next step for that window.
+- **What the first pass still misses** (the 10–15 dB to the repeat level) is the same gap S's compact model has (`model_s_results.md` §16.11, §17: a dense remainder, mostly out of band). L's extra 4–6 dB is probably the kernel: it is fitted on the cluster window only, and L's kernel is the strongest (**H**).
+- **Parameters:** per program the diffuser (3 lengths, one gain), the 40 tap positions and signs, the 11-tap kernel and the step table; per capture 3 (shift, two gains). The kernel and taps are trained on 6 settings, never on the held-out ones.
+- **The first recirculation** (the coupling) is measured in §7.3 but not yet nulled: its gains are the line gains and filters per setting (Q4–Q7 for M/L), and from there on the time variance of §4 caps any waveform null.
