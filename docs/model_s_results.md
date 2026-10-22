@@ -1453,7 +1453,7 @@ The flat column includes the 6 flat training settings; held out on flat (RT 0.8 
 **Against the null target:** −50 dB is reached on flat settings by the free 28 k-coefficient injection (§15.7), not yet by this 9-number model (about 8 dB short on the library, 1.4–4 dB short of the free model on CLA, §16.12–16.14).
 
 **Open for S** (none blocks M/L):
-1. the compact model's remaining gap (part may be library-specific, §16.14);
+1. the compact model's remaining gap (part may be library-specific, §16.14). *Update: part of it was the library's deconvolution kernel; corrected, every window gains 2.3–4 dB and the first pass reaches −58 dB (§19, `ml_structure.md` §10). The rest is in the recirculations;*
 2. AP230's damping form where b > 0 (§16.17);
 3. LF 0.1 at short RT;
 4. the values between the library's control steps;
@@ -1507,3 +1507,20 @@ The carry-over model of `ml_structure.md` §7 (cluster, diffuser, 20 equal sign-
 - **The cluster itself fits: every tap to −55…−60 dB** (L: tap 0, 216, 776; R: 0, 570, 776, 1407) with the same chain as S: R a pure gain (0.83), L the filter [1.15, −0.24, −0.07]. The residual in the cluster window is 92–99 % between the taps (the gap), at −38…−43 dB re the signal. So the 24 positions and signs transfer.
 - **The first pass is 9–13 dB worse than on the library** (M −31 / −28 against −41 / −39, L −25 / −23 against −37 / −36). **It is not time variance:** the Tomkin first pass repeats from capture to capture to −47 / −49 dB (M) and −41 / −51 dB (L) (median of the repeat rows in `analysis/ml_carryover/firstpass.json`; by RT −53…−46 for M, −52…−50 for L), 16–25 dB better than the Altiverb's residual, so a single frozen realisation cannot account for it. **It is the same size as the S gap on this unit:** S is −35 dB on the Altiverb against −43.5…−44 on the library held out (9 dB; CLA −37), M 9–11 dB, L 11–13 dB (L's wider output kernel, −4.2 dB at 10 kHz, makes a chain mismatch cost more). So the likeliest reading (**H**) is the same unit-to-unit and chain difference as for S, not something specific to M and L; there is no second M/L unit to confirm it. The model has no LF or HF dependence in this window, so a wrong inferred setting cannot be the cause.
 - **The damping step carries over and snaps to the library's values:** the fitted b is **0.32 for M at RT 0.5 and 0.48 / 0.155 for L at RT 2 / 3, and 0 at longer RT** (the library's steps are 0 / 0.17 / 0.33 / 0.50; the library's rule is b > 0 only at short RT and low HF, HF here 0.7 and 0.4). Without b the first pass is −7…−12 dB at those presets; with it −25…−31 (**S**: three presets on a third unit; the cell rule itself is still open).
+
+## 19. The consolidated model rescored with the deconvolution-kernel correction (`Q2_CHAIN`) **[S]**
+
+`Q2_CHAIN=analysis/firstpass_gap/chain.json:cluster_perch .venv/bin/python tools/q2_injection.py --stage final` → `analysis/q2/final_s_chain.{json,log}`. Every library capture is divided by the per-channel correction of the 5.2 ms deconvolution kernel (`ml_structure.md` §10: fitted on the cluster-only regions of all library captures, 433 lags per channel, kept to 100 Hz–10 kHz). Nothing in the §17 model is refitted; per capture clock, shift and gain as before. From 50 ms on no sample of any window entered the correction's fit (held out); 0–50 ms contains the cluster regions it was fitted on. L / R [excess R over the repeat-capture null, `nulls_free` reference]:
+
+| Window (ms) | All 128, §17 | **All 128, corrected** | Flat, §17 | **Flat, corrected** | RT ≤ 1.0, corrected |
+|---|---|---|---|---|---|
+| 0–50 | −42.9 / −44.3 | **−46.2 / −46.3** | −43.1 / −44.5 | −46.8 / −46.2 | −44.9 / −46.8 |
+| 50–150 | −41.0 / −42.3 [+13.5] | **−44.9 / −44.9 [+11.0]** | −41.5 / −43.3 [+8.2] | −45.6 / −45.7 [+5.9] | −41.2 / −43.3 [+12.5] |
+| 150–300 | −39.6 / −38.8 [+16.1] | **−43.4 / −42.6 [+13.2]** | −41.1 / −44.2 [+9.3] | −44.5 / −46.8 [+6.6] | −34.2 / −32.4 [+15.9] |
+| 300–600 | −36.4 / −35.3 [+13.0] | **−38.7 / −40.2 [+10.4]** | −39.9 / −43.7 [+2.9] | −42.2 / −45.3 [+0.5] | −26.6 / −25.7 [+10.3] |
+| 600–1000 | −32.0 / −32.6 [+7.1] | −34.5 / −35.5 [+4.8] | −36.3 / −38.1 | −37.2 / −37.5 | −22.8 / −23.3 |
+
+- **2.3–4.0 dB better in every window,** and the first pass alone is now at −58 dB (`ml_structure.md` §10.3). What is left above the repeat captures (+10…13 dB, all settings) is no longer the injection: it grows where the loop laws are weakest (HF 0.2 +13…16, LF 0.1 +12…20, RT 0.6–1.0 +11…19), i.e. in the recirculations.
+- The repeat-capture reference is unaffected by the correction (a capture against a capture), so the excess figures compare directly with §17's.
+- CLA is unchanged (another capture chain, not corrected).
+- **Revised reading of §16.11–16.12, §18.1 (H):** the free injection's 8–10 dB lead on the library was largely the deconvolution kernel's error, which a 28 k-coefficient free injection can absorb and a 9-number model can't.

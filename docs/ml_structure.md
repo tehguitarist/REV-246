@@ -520,3 +520,108 @@ Tomkin: its AMPL pairs (M 3, L 1 per setting); model: 15 pairs of 6 renders; ran
 - **Per pass or per second: per second** (the same 0.83 Hz in M and L), periodic with a random phase per capture (**H**: a sine; a triangle or other smooth periodic shape is not excluded).
 - **Budget:** 8 coefficient multiplies per sample as before (the two blocks), with (cos θ, sin θ) rewritten by the control side at a rate well above 0.83 Hz; a table or recursive oscillator suffices.
 - **Next:** the shape and exact depth of θ (ghost phase versus frequency within one capture; more renders per setting against the library-wide null distribution), the non-periodic remainder (the shallow deep tail), and whether θ's rate or depth depends on the program or a control (§9.4 shows none at this precision). For the plugin: the read-out form with F(θ(t)), θ = a sin(2π f_m t + φ₀), a ≈ 0.155–0.2 rad, f_m ≈ 0.83 Hz.
+
+## 10. The first-pass gap was the deconvolution kernel, not the algorithm (October 2026)
+
+`.venv/bin/python tools/firstpass_gap.py --stage collect|report|chain [--model carry|lines]` → `analysis/firstpass_gap/` (`report_*.log`, `chain.{json,log}`; the per-group residual caches `groups_*/` are not committed). `NEXT_STEPS.md` §5 item 5: the first pass (cluster + diffuser + 20 taps, §7.6 / §8.1) sat 4–15 dB above the repeat-capture null in S, M and L alike. What is the residual?
+
+> **Summary.** It is a fixed, setting- and program-independent error of the library's device-domain IRs: the 5.2 ms deconvolution kernel (`analysis/library/tomkin96/kernels/kernel_96000.npz`, the mean of 8 R tap-0 waveforms, used for both channels) leaves a small low-frequency tail 2–6 ms after every impulse. **A per-channel correction kernel fitted only on the cluster-only regions (no reverb sample in the fit) predicts the first pass to the repeat-capture level, held out**: S −58.4 / −57.8, M −53.9 / −49.6, L −49.5 / −46.5 dB (L / R), against −44.7 / −45.7, −44.5 / −44.1, −44.3 / −42.7 without it. The reverb structure of §7–8 needs no change. **S** (cause: **H**, strongly indicated).
+
+### 10.1 Without a clock fit, part of the gap is the clock
+
+The §7.6 bench fits no capture clock and renders the taps at their measured fractional positions, so the diffuser's echoes stay on the nominal clock while the taps carry the capture's (10–15 ppm). Its residual's kernel (one signal read through each channel's taps) is antisymmetric ±1-sample pairs at lag 0 and at every all-pass delay (S 20 / 72, M 42 / 144, L 82 / 286): a time-scale error. With `ml_lines.Model` (integer taps, per capture a shift and clock fitted on [0, onset + shortest line), as §8.1) the first pass is S −43.6 / −45.7, M −42.6 / −44.1, L −42.2 / −42.7 dB (medians over all captures; repeat −48.2 / −62.3, −47.3 / −49.2, −46.0 / −54.1). Everything below uses this model.
+
+### 10.2 What is left is one waveform, the same everywhere
+
+Residual of the first pass (capture minus its fitted cluster, minus the fitted tap part), b = 0 settings (S 368, M 311, L 280 captures):
+- **The mean residual, normalised by the tap gain and learned on the even-indexed settings, removes the gap on the odd ones:** S −43.8 / −45.8 → −49.9 / −62.9, M −42.8 / −43.9 → −49.2 / −49.4, L −42.9 / −42.7 → −51.0 / −56.0 dB (repeat as above). Its two halves correlate 0.993–1.000. Short FIRs on the tap part (±4…±48 taps, ridge) gain only 0.3–1.7 dB.
+- **60–83 % of it lies at 100–400 Hz,** at the same level re the data in all three programs (−29 dB at 100–200 Hz, −35 dB at 200–400 Hz).
+- **Two parts, by AMPL:** in R it does not depend on AMPL (scale 0.92–1.00, correlation 0.94–1.00); in L a further part grows with AMPL and sits just after the last cluster tap inside L's first-pass window (S tap 288, M 576, L 1152): the cluster's own low-frequency tail.
+- **The data/model transfer function is one curve for S, M and L, both channels** (pooled, ≈25 Hz smoothing): −0.2 dB at 160 Hz, +0.13 at 280, −0.08 at 400, +0.05 at 520 Hz, phase ±1–2°, flat (≤ 0.03 dB) above 600 Hz. A ripple fixed in device hertz, not scaled ×2 / ×4 with the program, so not in the structure. Its time kernel is causal, at lags 50–150 (peak 93), and each program's correlates 0.88–0.98 with the pooled one.
+
+### 10.3 A chain-correction kernel, fitted on the clusters only (`chain` stage)
+
+One causal kernel g (lags −32…400) applied to the whole fitted model, m → m + g ∗ m; per held-out capture only the two gains per channel refitted (shift and clock as fitted without g). Medians L / R, dB, over all captures of the program; "first pass" held out in every row except where marked:
+
+| Kernel (fitted on) | Free numbers | S cluster/gap | S first pass | M cluster/gap | M first pass | L cluster/gap | L first pass |
+|---|---|---|---|---|---|---|---|
+| none | 0 | −49.4 / −46.3 | −44.7 / −45.7 | −48.5 / −45.7 | −44.5 / −44.1 | −44.9 / −45.5 | −44.3 / −42.7 |
+| joint L+R, on another program (S row: from M) | 433 | −52.3 / −54.0 | −50.7 / −53.6 | −54.9 / −52.5 (from S) | −51.4 / −47.8 | −52.8 / −51.3 (from S) | −48.4 / −45.1 |
+| per channel, even settings, all programs (odd settings scored) | 866 | −59.7 / −58.5 | −59.1 / −57.7 | −63.3 / −64.0 | −54.4 / −49.7 | −57.4 / −57.2 | −49.8 / −46.7 |
+| **per channel, cluster-only regions of all captures** | 866 | −61.6 / −59.7 (in-sample) | **−58.4 / −57.8** | −63.5 / −64.1 (in-sample) | **−53.9 / −49.6** | −57.1 / −57.0 (in-sample) | **−49.5 / −46.5** |
+| per channel, cluster-only regions of M and L only | 866 | **−57.9 / −57.1** | **−56.6 / −56.0** | (in-sample) | −53.7 / −49.6 | (in-sample) | −49.8 / −46.7 |
+| *repeat capture* | | | *−48.2 / −62.3* | | *−47.3 / −49.2* | | *−46.0 / −54.1* |
+
+- **Excess over the repeat-capture null, first pass, cluster-only kernel:** S −10.2 / +4.5, M −6.6 / −0.4, L −3.5 / +7.6 dB (negative: the model nulls deeper than another capture does; the L channel's repeat null is limited by capture-to-capture differences, unit facts §2: L's noise floor is 6–9 dB above R's). The L program's R channel keeps +7.6 dB.
+- **Program S held out completely** (kernel from M's and L's clusters only) reaches −56…−58 dB in both windows: the correction is not per program.
+- Per channel matters (S cluster/gap −53 → −60 dB): the library kernel was built from R tap-0 waveforms and is applied to L too, and each channel has its own output S&H and trimmer (unit facts §2b).
+- **In band the correction is small:** −47 dB of energy; 64–67 % in lags 40–200 (peak 93–98), 20–23 % within ±10 samples. Response L / R: +0.18 / +0.17 dB at 100 Hz (−2°), −0.23 / −0.25 at 150, −0.17 / −0.18 at 200, +0.15 / +0.13 at 300 Hz, within ±0.06 dB from 500 Hz to 10 kHz (L −0.06 dB at 10 kHz). Its out-of-band part (−13 dB, lags −12…−8) is unconstrained and is cut off wherever the kernel is applied.
+- **Reading (H):** the analogue and capture chain's response continues past the 5.2 ms kernel (its tail is −52 dB at 4 ms, and the high-passes at 0.2–3.4 Hz, `analog_results.md` §3.5, are far longer), so the truncated kernel's deconvolution leaves this low-frequency ripple on every impulse, cluster and reverb alike. It belongs to the measurement pipeline, not to the unit's algorithm, and affects every device-domain comparison made so far by about this much. The principled fix is a longer, per-channel chain kernel in `tools/harness` (rebuild of the IR caches); until then the correction is `chain.json:cluster_perch`.
+- **What it explains elsewhere (H):** the free 28 k-coefficient S injection's 8–10 dB lead over the compact model on the library shrank to 1–2.5 dB on CLA and the Altiverb (`model_s_results.md` §16.12, §18.1): a free injection can absorb a library-wide kernel error; on another chain there was none to absorb.
+
+## 11. Out of band: 25–100 Hz and 10–12 kHz (October 2026)
+
+`.venv/bin/python tools/outofband.py --stage score|report|sweep` → `analysis/outofband/` (`report.{json,log}`, `sweep.{json,log}`; the per-group files `groups/` are not committed). Every null so far is 100 Hz–10 kHz. Do the existing S, M and L models (`ml_lines.Model`, all three programs) hold outside it? **Nothing is refitted:** each capture keeps the law stage's in-band shift, clock and two gains per channel; the model is rendered full band and multiplied by the pipeline's measured response P(f) (flat to 11 kHz, −3.6 dB at 11.5, −19 dB at 12 kHz, nothing from 12.3 kHz: the deconvolution's band window, `tools/harness/core.py`). The data are the uncorrected device-domain IRs (the §10 correction is defined only in band). Bands: 25–50, 50–100, 10–11 k, 11–12 kHz; 100–200 Hz and 5–10 kHz as in-band controls.
+
+> **Summary.** No sign that the band limit hid a structural error. **10–12 kHz:** the decay matches in every program and HF step (RT capture / model 1.000 ± 0.003, level within 0.1 dB), so the HF laws and the 0.84 pole limit hold to 12 kHz; the nulls expose two measurement-side items, S's L-channel chain (the R-only deconvolution kernel, §10) and **the M/L output kernel's phase above 9 kHz** (L +7° at 10 kHz, +18° at 12 kHz; magnitude within 0.08 dB of a symmetric kernel). **25–100 Hz:** S's decay matches (RT ratio 1.00–1.01, LF 0.1 +2…4 %, near the measurement's noise); **M and L fall short by up to 16 % at high LF and long RT, and the rotating model through a simulated sweep reproduces this** (static: no shortfall), so it is how a sweep measures the time-variant unit, not an LF-law error. Low-band nulls and levels are limited by the pipeline (repeat captures null only −14…−36 dB there), not by the model.
+
+### 11.1 High band
+
+Median nulls, strict (in-band gains) L / R [repeat capture], dB:
+
+| Program | Window | 5–10 kHz (control) | 10–11 kHz | 11–12 kHz |
+|---|---|---|---|---|
+| S | first pass | −50.0 / −52.1 [−57.9 / −59.9] | −41.2 / −47.4 [−46.6 / −48.6] | −32.7 / −43.0 [−36.7 / −41.7] |
+| S | recirc 1 | −46.5 / −47.9 [−61.5 / −59.1] | −40.4 / −43.8 [−48.4 / −47.7] | −32.8 / −39.8 [−41.2 / −40.0] |
+| M | cluster and gap | −53.5 / −50.4 | −47.3 / −40.1 | −40.7 / −33.2 |
+| M | first pass | −51.3 / −48.9 [−58.1 / −67.1] | −47.1 / −39.4 [−51.6 / −60.7] | −40.8 / −33.1 [−45.5 / −54.2] |
+| L | cluster and gap | −50.9 / −48.8 | −30.8 / −29.4 | −21.3 / −19.5 |
+| L | first pass | −46.0 / −42.3 [−52.6 / −65.2] | −31.3 / −29.2 [−32.8 / −55.8] | −21.3 / −19.8 [−22.9 / −48.2] |
+
+(The cluster-and-gap repeat uses the model's cluster, as in `ml_lines.fit_repeat`, so it is no reference there. M/L recirculations are time-variance-limited, model ≈ repeat.)
+
+- **Decay, 10–11 and 11–12 kHz:** RT capture / model 1.000 / 1.000 (S), 1.000 / 0.999 (M), 1.001 / 1.001 (L), every HF step within 0.997–1.004; level at onset −0.08…+0.08 dB. **S**
+- **S:** R at the repeat-capture level to 12 kHz; L 4–8 dB worse at 11–12 kHz in every window including the cluster's, i.e. the chain: the deconvolution kernel was built from R alone (§10). **S**
+- **The M/L output kernel, measured** in the R channel's cluster-only window (`--stage kernel` → `kernel.{json,log}`; 4 known taps; 161 M / 60 L captures, gain matched at 2–6 kHz):
+
+  | | 8 kHz | 10 kHz | 11 kHz | 12 kHz |
+  |---|---|---|---|---|
+  | M measured |K| / phase | −0.54 dB / −0.2° | −0.72 / +1.2° | −0.76 / +2.2° | −0.75 / +2.7° |
+  | M stored 11-tap / 5-tap symmetric fitted in band | −0.55 / −0.54 | −0.76 / −0.72 | −0.85 / −0.78 | −0.92 / −0.83 |
+  | L measured |K| / phase | −2.75 dB / −0.1° | −4.07 / +6.8° | −4.66 / +12.4° | −5.04 / +18.4° |
+  | L stored 11-tap / 5-tap symmetric fitted in band | −2.76 / −2.76 | −4.13 / −4.05 | −4.79 / −4.59 | −5.38 / −4.98 |
+
+  The magnitude is a symmetric kernel's (5 taps fitted in band predict it to 0.08 dB at 12 kHz; the stored kernel's unconstrained outer taps are 0.1–0.35 dB off). **The phase is not** (+18° at 12 kHz in L, −3° at 4 kHz): a non-symmetric part that a ±1-sample address jitter averaged by the sweep (§7.5, **H**) does not give. It is what limits L's high-band nulls (cluster window −21 dB at 11–12 kHz). **S** (measurement) / open (cause). Fix: refit the kernel over 100 Hz–12 kHz with P(f) on the cluster windows.
+
+### 11.2 Low band
+
+- **Nulls are pipeline-limited:** strict model nulls −13…−23 dB at 25–100 Hz in every program and window, but the repeat captures reach only −14…−36 dB in the early windows too (S recirc1 at 50–100 Hz: repeat −51 / −56, model −20 / −20). Adding the unit's sub-20 Hz high-passes to the model makes it 2–4 dB worse (as `model_s_results.md` §16.11 found in band). Level at onset: captures +1.2 dB (25–50 Hz) and +0.5…0.7 dB (50–100 Hz) above the model in all three programs alike: the deconvolution kernel's low-frequency error growing below 100 Hz (§10.3: +0.18 dB at 100 Hz). So waveform and level below 100 Hz can't be tested with these IRs until the chain kernel is fixed (**S**).
+- **Decay, S:** RT capture / model 1.007 (25–50 Hz) and 1.008 (50–100 Hz); LF 1.0 / 2.0 within 1.000–1.006 at every RT, LF 0.4 1.005–1.045, **LF 0.1 +2…4 % at every RT** (repeat-pair spread 2–3 % at 25–50 Hz, 0.5–0.8 % at 50–100 Hz, so LF 0.1 is just above it). **S** (match); the LF 0.1 excess is small (**H**: the DC floor or β regime).
+- **Decay, M and L: the captures decay faster than the model at high LF, increasingly with the model's LF RT:**
+
+  | | LF 0.1 | LF 0.7 / 0.8 | LF 1.2 | LF 2.0 |
+  |---|---|---|---|---|
+  | M, 25–50 Hz (RT 5.0) | 1.011 | 0.899 | 0.876 | 0.840 |
+  | M, 50–100 Hz (RT 5.0) | 0.988 | 0.995 | 0.998 | 1.000 |
+  | L, 50–100 Hz (RT 20) | 1.004 | 0.883 | 0.859 | 0.879 |
+  | L, 100–200 Hz (RT 20, in band) | 0.997 | 0.962 | 0.962 | 0.969 |
+
+  (RT capture / model, median over HF; the full RT × LF grids per band are in `analysis/outofband/report.log`.) In L at 50–100 Hz: 0.99 at RT_law 4–5 s, 0.92–0.95 at 7–8 s, 0.83–0.88 beyond 11 s. S, time-invariant, has none at the same per-pass loss.
+- **The rotating model reproduces it through a simulated sweep** (`outofband.py --stage sweep` → `sweep.{json,log}`: `ml_variance.sweep_measure` with the sim's band widened to 15 Hz–12 kHz; θ = 0.155 sin(2π · 0.83 t + φ), 3 phases, 12 s tail; RT rotating / static, same decay measure):
+
+  | Setting | 25–50 Hz | 50–100 Hz | 100–200 Hz | 5–12 kHz | captures / model at 25–50 / 50–100 / 100–200 |
+  |---|---|---|---|---|---|
+  | M 2.0_5.0_0.9 | 0.860 | 1.004 | 0.994 | 0.996–1.005 | 0.840 / 1.000 / 0.999 |
+  | M 0.1_5.0_0.9 | 0.993 | 1.003 | 1.005 | 0.997–1.004 | 1.011 / 0.988 / 1.003 |
+  | L 2.0_20.0_1.0 | 0.922 | 0.839 | 0.977 | 0.991–0.996 | 0.874 / 0.879 / 0.969 |
+  | L 2.0_8.0_1.0 | 0.945 | 0.869 | 0.971 | 0.995–0.998 | 0.834 / 0.827 / 0.936 |
+  | L 0.1_20.0_1.0 | 0.996 | 0.984 | 0.997 | 0.989–0.997 | 0.993 / 1.004 / 0.997 |
+
+  Including the program-dependent pattern (M short at 25–50 Hz only, L most at 50–100 Hz). The captures' shortfall is somewhat larger in L 2.0_8.0 (the sweep length and θ's depth are not known exactly, §9.5). **Reading (S):** a sine sweep of a unit whose coupling rotates under-reads long low-frequency decays; the rotation keeps the coupling orthogonal, so the unit's own decay follows the law. The M/L LF laws stand; for the plugin, use the law, not the captures' low-band RT.
+- **Not L/R timing:** the L channel's poorer repeat nulls (in band and out) are not a per-capture L/R timing difference: per-channel shifts of repeat-capture pairs differ by 0.0003–0.0005 samples (std; S, L programs).
+
+### 11.3 What this answers, and what's next
+
+- **The algorithm was not mis-identified by the band limit:** structure, HF laws and pole limit hold to 12 kHz; S's LF decay holds to 25 Hz; M/L's LF decay holds once the sweep's time-variance artefact is accounted for.
+- **Measurement-side items:** the deconvolution kernel (§10; also the low-band level and S's L channel at 11–12 kHz) and the M/L output kernel's phase above 9 kHz.
+- **Next:** (1) a per-channel, longer chain kernel and a cache rebuild, then repeat this check below 100 Hz for level and waveform; (2) refit the M/L output kernel over 100 Hz–12 kHz on the cluster windows (with P(f)), then rescore the high band; (3) S at LF 0.1 (+2…4 % RT at 25–100 Hz).

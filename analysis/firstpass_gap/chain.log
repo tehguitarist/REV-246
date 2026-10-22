@@ -1,0 +1,67 @@
+
+## S: one kernel on the whole model (cluster + reverb), lags -32..400; median null L / R, dB; held out = settings or programs the kernel was not fitted on
+- odd settings (256 captures; first-pass repeat -48.2 / -62.4):
+  none             (held out): cluster_gap -49.4 / -46.3; first_pass -44.7 / -45.7
+  from_S           (in-sample): cluster_gap -54.9 / -55.0; first_pass -52.6 / -53.8
+  from_M           (held out): cluster_gap -52.3 / -54.0; first_pass -50.7 / -53.6
+  from_L           (held out): cluster_gap -49.8 / -51.8; first_pass -48.6 / -51.7
+  from_even        (held out): cluster_gap -53.0 / -54.5; first_pass -51.4 / -54.0
+  from_even_perch  (held out): cluster_gap -59.7 / -58.5; first_pass -59.1 / -57.7
+  cluster_perch    (held out first pass): cluster_gap -61.6 / -59.7; first_pass -58.4 / -57.8
+  cluster_ML_perch (held out first pass): cluster_gap -57.9 / -57.1; first_pass -56.6 / -56.0
+- all (512 captures; first-pass repeat -48.2 / -62.3):
+  none             (held out): cluster_gap -49.4 / -46.3; first_pass -44.7 / -45.7
+  from_S           (in-sample): cluster_gap -54.9 / -55.0; first_pass -52.6 / -53.8
+  from_M           (held out): cluster_gap -52.3 / -54.0; first_pass -50.7 / -53.6
+  from_L           (held out): cluster_gap -49.8 / -51.8; first_pass -48.6 / -51.7
+  from_even        (in-sample): cluster_gap -53.0 / -54.6; first_pass -51.4 / -54.1
+  from_even_perch  (in-sample): cluster_gap -59.7 / -58.5; first_pass -59.0 / -57.7
+  cluster_perch    (held out first pass): cluster_gap -61.6 / -59.7; first_pass -58.3 / -57.8
+  cluster_ML_perch (held out first pass): cluster_gap -57.9 / -57.1; first_pass -56.6 / -56.0
+
+## M: one kernel on the whole model (cluster + reverb), lags -32..400; median null L / R, dB; held out = settings or programs the kernel was not fitted on
+- odd settings (240 captures; first-pass repeat -47.1 / -49.4):
+  none             (held out): cluster_gap -48.5 / -45.7; first_pass -44.5 / -44.1
+  from_S           (held out): cluster_gap -54.9 / -52.5; first_pass -51.3 / -47.7
+  from_M           (in-sample): cluster_gap -55.6 / -55.0; first_pass -51.2 / -48.4
+  from_L           (held out): cluster_gap -51.7 / -52.9; first_pass -49.3 / -48.2
+  from_even        (held out): cluster_gap -55.2 / -54.3; first_pass -51.3 / -48.3
+  from_even_perch  (held out): cluster_gap -63.3 / -64.0; first_pass -54.4 / -49.7
+  cluster_perch    (held out first pass): cluster_gap -63.5 / -64.1; first_pass -53.9 / -49.6
+  cluster_ML_perch (held out first pass): cluster_gap -62.9 / -64.1; first_pass -53.7 / -49.6
+- all (479 captures; first-pass repeat -47.3 / -49.2):
+  none             (held out): cluster_gap -48.5 / -45.7; first_pass -44.5 / -44.1
+  from_S           (held out): cluster_gap -54.9 / -52.5; first_pass -51.4 / -47.8
+  from_M           (in-sample): cluster_gap -55.6 / -55.0; first_pass -51.2 / -48.5
+  from_L           (held out): cluster_gap -51.8 / -52.9; first_pass -49.4 / -48.3
+  from_even        (in-sample): cluster_gap -55.2 / -54.3; first_pass -51.3 / -48.4
+  from_even_perch  (in-sample): cluster_gap -63.3 / -64.0; first_pass -54.4 / -49.7
+  cluster_perch    (held out first pass): cluster_gap -63.5 / -64.1; first_pass -53.9 / -49.7
+  cluster_ML_perch (held out first pass): cluster_gap -63.0 / -64.0; first_pass -53.7 / -49.6
+
+## L: one kernel on the whole model (cluster + reverb), lags -32..400; median null L / R, dB; held out = settings or programs the kernel was not fitted on
+- odd settings (180 captures; first-pass repeat -46.4 / -54.2):
+  none             (held out): cluster_gap -44.9 / -45.5; first_pass -44.3 / -42.7
+  from_S           (held out): cluster_gap -52.7 / -51.3; first_pass -48.5 / -45.1
+  from_M           (held out): cluster_gap -53.0 / -52.6; first_pass -48.7 / -45.6
+  from_L           (in-sample): cluster_gap -53.9 / -54.6; first_pass -49.1 / -46.4
+  from_even        (held out): cluster_gap -53.7 / -52.8; first_pass -49.0 / -45.6
+  from_even_perch  (held out): cluster_gap -57.4 / -57.2; first_pass -49.8 / -46.7
+  cluster_perch    (held out first pass): cluster_gap -57.1 / -57.0; first_pass -49.5 / -46.5
+  cluster_ML_perch (held out first pass): cluster_gap -59.0 / -58.2; first_pass -49.8 / -46.7
+- all (360 captures; first-pass repeat -46.0 / -54.1):
+  none             (held out): cluster_gap -44.9 / -45.5; first_pass -44.3 / -42.7
+  from_S           (held out): cluster_gap -52.8 / -51.3; first_pass -48.4 / -45.1
+  from_M           (held out): cluster_gap -53.1 / -52.6; first_pass -48.7 / -45.6
+  from_L           (in-sample): cluster_gap -54.0 / -54.7; first_pass -49.1 / -46.3
+  from_even        (in-sample): cluster_gap -53.7 / -52.9; first_pass -48.9 / -45.6
+  from_even_perch  (in-sample): cluster_gap -57.4 / -57.2; first_pass -49.7 / -46.7
+  cluster_perch    (held out first pass): cluster_gap -57.1 / -57.1; first_pass -49.5 / -46.5
+  cluster_ML_perch (held out first pass): cluster_gap -59.0 / -58.3; first_pass -49.8 / -46.7
+- kernel from_S: energy -10.9 dB, largest at lags [-11, -10, 0, 1, 2, 3]
+- kernel from_M: energy -8.1 dB, largest at lags [-13, -12, -11, -10, -9, -8]
+- kernel from_L: energy -3.3 dB, largest at lags [7, 8, 9, 10, 11, 12]
+- kernel from_even: energy -11.8 dB, largest at lags [-13, -12, -11, -10, -9, -8]
+- kernel from_even_perch: energy -13.7 dB, largest at lags [-12, -11, -10, -9, -8, -7]
+- kernel cluster_perch: energy -12.8 dB, largest at lags [-11, -10, -9, -8, 1, 2]
+- kernel cluster_ML_perch: energy -12.7 dB, largest at lags [-12, -11, -10, -9, -8, 10]

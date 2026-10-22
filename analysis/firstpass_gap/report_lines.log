@@ -1,0 +1,123 @@
+
+## S: 128 groups, 512 captures (368 with b = 0)
+- first pass (minus fitted cluster), median: model -43.6 / -45.7, repeat -48.2 / -62.3 dB (L / R)
+- L: transfer error H = Y/T (b = 0 rows), per band: |H| dB, angle deg, [train half / held-out half]
+    100-200   Hz: -0.135 / -0.135 dB, -1.01 / -1.01 deg, |H-1|^2 -29.5 / -29.5 dB
+    200-400   Hz: +0.054 / +0.054 dB, +0.09 / +0.09 deg, |H-1|^2 -35.0 / -35.0 dB
+    400-800   Hz: +0.032 / +0.032 dB, +0.13 / +0.13 deg, |H-1|^2 -40.5 / -40.5 dB
+    800-1600  Hz: +0.029 / +0.029 dB, +0.04 / +0.04 deg, |H-1|^2 -49.2 / -49.3 dB
+   1600-3200  Hz: +0.009 / +0.009 dB, +0.05 / +0.05 deg, |H-1|^2 -55.5 / -55.6 dB
+   3200-5000  Hz: +0.003 / +0.003 dB, +0.09 / +0.09 deg, |H-1|^2 -52.2 / -52.2 dB
+   5000-7000  Hz: -0.002 / -0.002 dB, +0.13 / +0.13 deg, |H-1|^2 -49.7 / -49.8 dB
+   7000-10000 Hz: -0.022 / -0.022 dB, +0.11 / +0.11 deg, |H-1|^2 -42.6 / -42.8 dB
+- R: transfer error H = Y/T (b = 0 rows), per band: |H| dB, angle deg, [train half / held-out half]
+    100-200   Hz: -0.114 / -0.114 dB, -1.06 / -1.06 deg, |H-1|^2 -30.1 / -30.1 dB
+    200-400   Hz: +0.030 / +0.030 dB, +0.17 / +0.17 deg, |H-1|^2 -33.8 / -33.8 dB
+    400-800   Hz: +0.009 / +0.009 dB, +0.04 / +0.04 deg, |H-1|^2 -44.8 / -44.8 dB
+    800-1600  Hz: +0.006 / +0.005 dB, -0.02 / -0.02 deg, |H-1|^2 -59.8 / -60.0 dB
+   1600-3200  Hz: -0.013 / -0.014 dB, -0.05 / -0.05 deg, |H-1|^2 -53.9 / -53.8 dB
+   3200-5000  Hz: -0.007 / -0.007 dB, -0.06 / -0.06 deg, |H-1|^2 -52.6 / -52.7 dB
+   5000-7000  Hz: +0.006 / +0.006 dB, -0.13 / -0.13 deg, |H-1|^2 -43.6 / -43.9 dB
+   7000-10000 Hz: +0.003 / +0.003 dB, -0.06 / -0.06 deg, |H-1|^2 -47.5 / -47.7 dB
+- L: residual re data per band, model / repeat (excess)
+    100-200   Hz: -30.3 / -40.2 (+9.9); share of the model residual 25 %
+    200-400   Hz: -35.1 / -52.9 (+17.8); share of the model residual 38 %
+    400-800   Hz: -45.7 / -58.1 (+12.5); share of the model residual 4 %
+    800-1600  Hz: -49.3 / -63.6 (+14.3); share of the model residual 5 %
+   1600-3200  Hz: -55.6 / -65.5 (+10.0); share of the model residual 2 %
+   3200-5000  Hz: -55.5 / -67.4 (+11.9); share of the model residual 3 %
+   5000-7000  Hz: -52.5 / -69.0 (+16.5); share of the model residual 5 %
+   7000-10000 Hz: -48.5 / -59.9 (+11.4); share of the model residual 18 %
+- R: residual re data per band, model / repeat (excess)
+    100-200   Hz: -29.2 / -61.2 (+32.0); share of the model residual 44 %
+    200-400   Hz: -34.5 / -61.6 (+27.1); share of the model residual 39 %
+    400-800   Hz: -45.7 / -61.2 (+15.5); share of the model residual 4 %
+    800-1600  Hz: -58.8 / -61.7 (+2.9); share of the model residual 0 %
+   1600-3200  Hz: -54.1 / -63.3 (+9.2); share of the model residual 2 %
+   3200-5000  Hz: -56.1 / -66.0 (+9.9); share of the model residual 1 %
+   5000-7000  Hz: -51.6 / -67.6 (+16.0); share of the model residual 4 %
+   7000-10000 Hz: -52.3 / -58.3 (+6.1); share of the model residual 6 %
+- L: held out (b = 0, odd settings, n 208): model -43.8; + mean residual template (1314 numbers) -49.9, with gain refit -49.9; FIR ±4 -44.7; FIR ±16 -44.9; FIR ±48 -45.5
+- R: held out (b = 0, odd settings, n 208): model -45.8; + mean residual template (1314 numbers) -62.9, with gain refit -62.9; FIR ±4 -46.3; FIR ±16 -46.4; FIR ±48 -46.7
+
+## M: 160 groups, 479 captures (311 with b = 0)
+- first pass (minus fitted cluster), median: model -42.6 / -44.1, repeat -47.3 / -49.2 dB (L / R)
+- L: transfer error H = Y/T (b = 0 rows), per band: |H| dB, angle deg, [train half / held-out half]
+    100-200   Hz: -0.149 / -0.148 dB, -1.08 / -1.09 deg, |H-1|^2 -28.9 / -29.0 dB
+    200-400   Hz: +0.047 / +0.045 dB, +0.11 / +0.11 deg, |H-1|^2 -34.6 / -34.8 dB
+    400-800   Hz: +0.013 / +0.012 dB, +0.07 / +0.08 deg, |H-1|^2 -45.3 / -45.4 dB
+    800-1600  Hz: +0.016 / +0.017 dB, +0.02 / +0.02 deg, |H-1|^2 -53.7 / -53.6 dB
+   1600-3200  Hz: +0.005 / +0.005 dB, +0.06 / +0.06 deg, |H-1|^2 -49.8 / -50.0 dB
+   3200-5000  Hz: +0.002 / +0.002 dB, +0.11 / +0.10 deg, |H-1|^2 -44.8 / -44.7 dB
+   5000-7000  Hz: -0.000 / -0.000 dB, +0.15 / +0.14 deg, |H-1|^2 -45.5 / -45.6 dB
+   7000-10000 Hz: -0.016 / -0.017 dB, +0.09 / +0.08 deg, |H-1|^2 -44.6 / -42.7 dB
+- R: transfer error H = Y/T (b = 0 rows), per band: |H| dB, angle deg, [train half / held-out half]
+    100-200   Hz: -0.175 / -0.173 dB, -1.20 / -1.19 deg, |H-1|^2 -28.0 / -28.1 dB
+    200-400   Hz: +0.016 / +0.017 dB, +0.16 / +0.16 deg, |H-1|^2 -35.7 / -35.7 dB
+    400-800   Hz: -0.009 / -0.008 dB, +0.05 / +0.05 deg, |H-1|^2 -45.3 / -45.1 dB
+    800-1600  Hz: -0.006 / -0.006 dB, -0.03 / -0.04 deg, |H-1|^2 -58.8 / -59.0 dB
+   1600-3200  Hz: -0.016 / -0.015 dB, -0.03 / -0.04 deg, |H-1|^2 -51.5 / -51.5 dB
+   3200-5000  Hz: -0.006 / -0.005 dB, -0.04 / -0.05 deg, |H-1|^2 -49.5 / -49.4 dB
+   5000-7000  Hz: +0.007 / +0.007 dB, -0.11 / -0.12 deg, |H-1|^2 -44.9 / -44.9 dB
+   7000-10000 Hz: +0.021 / +0.022 dB, -0.07 / -0.09 deg, |H-1|^2 -46.5 / -46.3 dB
+- L: residual re data per band, model / repeat (excess)
+    100-200   Hz: -28.5 / -39.4 (+10.9); share of the model residual 42 %
+    200-400   Hz: -36.0 / -46.1 (+10.1); share of the model residual 14 %
+    400-800   Hz: -45.0 / -54.2 (+9.2); share of the model residual 5 %
+    800-1600  Hz: -52.9 / -58.5 (+5.6); share of the model residual 2 %
+   1600-3200  Hz: -54.9 / -55.4 (+0.5); share of the model residual 2 %
+   3200-5000  Hz: -50.8 / -51.4 (+0.6); share of the model residual 5 %
+   5000-7000  Hz: -48.2 / -48.7 (+0.5); share of the model residual 10 %
+   7000-10000 Hz: -46.0 / -46.2 (+0.2); share of the model residual 20 %
+- R: residual re data per band, model / repeat (excess)
+    100-200   Hz: -27.8 / -38.3 (+10.5); share of the model residual 42 %
+    200-400   Hz: -35.8 / -46.1 (+10.3); share of the model residual 14 %
+    400-800   Hz: -45.2 / -53.3 (+8.0); share of the model residual 3 %
+    800-1600  Hz: -55.4 / -54.4 (-0.9); share of the model residual 1 %
+   1600-3200  Hz: -50.5 / -50.0 (-0.5); share of the model residual 3 %
+   3200-5000  Hz: -48.5 / -46.2 (-2.2); share of the model residual 6 %
+   5000-7000  Hz: -45.3 / -43.6 (-1.7); share of the model residual 12 %
+   7000-10000 Hz: -43.0 / -41.1 (-1.9); share of the model residual 20 %
+- L: held out (b = 0, odd settings, n 168): model -42.8; + mean residual template (2634 numbers) -49.2, with gain refit -49.2; FIR ±4 -43.2; FIR ±16 -43.2; FIR ±48 -43.5
+- R: held out (b = 0, odd settings, n 168): model -43.9; + mean residual template (2634 numbers) -49.4, with gain refit -49.4; FIR ±4 -44.4; FIR ±16 -44.4; FIR ±48 -44.8
+
+## L: 180 groups, 360 captures (280 with b = 0)
+- first pass (minus fitted cluster), median: model -42.2 / -42.7, repeat -46.0 / -54.1 dB (L / R)
+- L: transfer error H = Y/T (b = 0 rows), per band: |H| dB, angle deg, [train half / held-out half]
+    100-200   Hz: -0.161 / -0.161 dB, -1.09 / -1.08 deg, |H-1|^2 -28.8 / -28.8 dB
+    200-400   Hz: +0.025 / +0.025 dB, +0.17 / +0.17 deg, |H-1|^2 -35.5 / -35.5 dB
+    400-800   Hz: +0.006 / +0.006 dB, +0.07 / +0.07 deg, |H-1|^2 -45.4 / -45.4 dB
+    800-1600  Hz: +0.012 / +0.012 dB, +0.00 / +0.00 deg, |H-1|^2 -51.6 / -51.6 dB
+   1600-3200  Hz: +0.002 / +0.002 dB, +0.09 / +0.09 deg, |H-1|^2 -37.5 / -37.5 dB
+   3200-5000  Hz: +0.003 / +0.003 dB, +0.14 / +0.14 deg, |H-1|^2 -42.1 / -42.1 dB
+   5000-7000  Hz: +0.002 / +0.002 dB, +0.14 / +0.14 deg, |H-1|^2 -38.9 / -38.9 dB
+   7000-10000 Hz: -0.004 / -0.004 dB, +0.06 / +0.06 deg, |H-1|^2 -37.5 / -37.5 dB
+- R: transfer error H = Y/T (b = 0 rows), per band: |H| dB, angle deg, [train half / held-out half]
+    100-200   Hz: -0.167 / -0.167 dB, -1.03 / -1.02 deg, |H-1|^2 -29.0 / -29.1 dB
+    200-400   Hz: +0.008 / +0.008 dB, +0.16 / +0.16 deg, |H-1|^2 -35.9 / -35.9 dB
+    400-800   Hz: -0.014 / -0.014 dB, +0.03 / +0.03 deg, |H-1|^2 -45.6 / -45.6 dB
+    800-1600  Hz: -0.007 / -0.007 dB, -0.04 / -0.04 deg, |H-1|^2 -54.3 / -54.2 dB
+   1600-3200  Hz: -0.021 / -0.021 dB, -0.01 / -0.01 deg, |H-1|^2 -37.4 / -37.5 dB
+   3200-5000  Hz: -0.006 / -0.006 dB, +0.02 / +0.02 deg, |H-1|^2 -38.4 / -38.4 dB
+   5000-7000  Hz: +0.017 / +0.017 dB, -0.09 / -0.09 deg, |H-1|^2 -39.9 / -39.9 dB
+   7000-10000 Hz: +0.049 / +0.049 dB, -0.09 / -0.09 deg, |H-1|^2 -35.2 / -35.2 dB
+- L: residual re data per band, model / repeat (excess)
+    100-200   Hz: -29.5 / -44.4 (+14.8); share of the model residual 29 %
+    200-400   Hz: -35.5 / -52.6 (+17.1); share of the model residual 24 %
+    400-800   Hz: -45.0 / -60.6 (+15.6); share of the model residual 5 %
+    800-1600  Hz: -54.8 / -67.2 (+12.4); share of the model residual 1 %
+   1600-3200  Hz: -52.7 / -67.4 (+14.7); share of the model residual 3 %
+   3200-5000  Hz: -48.7 / -66.7 (+18.0); share of the model residual 9 %
+   5000-7000  Hz: -47.0 / -66.3 (+19.4); share of the model residual 12 %
+   7000-10000 Hz: -44.9 / -57.5 (+12.6); share of the model residual 17 %
+- R: residual re data per band, model / repeat (excess)
+    100-200   Hz: -28.8 / -44.7 (+15.9); share of the model residual 38 %
+    200-400   Hz: -35.5 / -53.4 (+17.9); share of the model residual 18 %
+    400-800   Hz: -45.6 / -59.4 (+13.8); share of the model residual 4 %
+    800-1600  Hz: -56.3 / -66.1 (+9.7); share of the model residual 0 %
+   1600-3200  Hz: -50.9 / -68.2 (+17.4); share of the model residual 4 %
+   3200-5000  Hz: -49.4 / -67.0 (+17.6); share of the model residual 5 %
+   5000-7000  Hz: -45.4 / -66.9 (+21.5); share of the model residual 11 %
+   7000-10000 Hz: -42.5 / -64.4 (+21.9); share of the model residual 20 %
+- L: held out (b = 0, odd settings, n 140): model -42.9; + mean residual template (5272 numbers) -51.0, with gain refit -51.0; FIR ±4 -43.2; FIR ±16 -43.5; FIR ±48 -43.7
+- R: held out (b = 0, odd settings, n 140): model -42.7; + mean residual template (5272 numbers) -56.0, with gain refit -56.0; FIR ±4 -43.3; FIR ±16 -43.6; FIR ±48 -44.1

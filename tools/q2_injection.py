@@ -54,6 +54,8 @@ Stages:
            100 Hz-10 kHz and 20 Hz-11 kHz -> cla_compare.json. Models: q1's shared injection (reference), the free flat
            injection, the compact 5-tap / -1/sqrt(2) model, and the 5-tap model with q1's -0.70 diffuser.
   (any)    Q2_HP=1 in the environment undoes the measured analogue high-pass on every capture (see hp_undo).
+  (any)    Q2_CHAIN=path:name divides every library capture by the deconvolution-kernel correction (chain_undo); the
+           final stage then writes final_s_chain.json.
   diffuser the diffuser's all-pass gains (g20, g72, g230) refitted with the 5-tap tied model on the flat training settings
            (Nelder-Mead on the training cost; the 9 linear parameters solved exactly per evaluation); then scored held out
            and, with --score all, on all 128 settings with the laws. --maxfev for a smoke test.
@@ -116,6 +118,38 @@ if os.environ.get("Q2_HP") == "1" and not getattr(q1, "_hp_patched", False):
         return sosfiltfilt(q1.ms.BAND, h, axis=0) if band else h
     q1.load = _load_hp
     q1._hp_patched = True
+
+
+def chain_undo(h, spec):
+    """h divided by 1 + G, G the per-channel correction of the deconvolution kernel (tools/firstpass_gap.py, chain
+    stage; spec "path:name"), kept to 100 Hz-10 kHz where it was fitted (raised-cosine edges an octave wide)."""
+    path, name = spec.rsplit(":", 1)
+    d = json.load(open(path if os.path.isabs(path) else os.path.join(ROOT, path)))
+    lags, g = np.array(d["lags"]), d["kernels"][name]
+    n = len(h)
+    N = 1 << int(np.ceil(np.log2(n + 4096)))
+    f = np.fft.rfftfreq(N, 1 / FS)
+    lo = np.clip(np.log2(np.maximum(f, 1e-9) / 50) , 0, 1)          # 50 -> 100 Hz
+    hi = np.clip(np.log2(10500 / np.maximum(f, 1e-9)) + 1, 0, 1)      # 10.5 -> 5.25 kHz edge ends at 10.5 kHz
+    wb = np.sin(np.pi / 2 * lo) ** 2 * np.sin(np.pi / 2 * hi) ** 2
+    w = 2 * np.pi * f / FS
+    out = np.empty_like(h)
+    for ch in (0, 1):
+        G = np.exp(-1j * w[:, None] * lags[None]) @ np.array(g[ch])
+        out[:, ch] = np.fft.irfft(np.fft.rfft(h[:, ch], N) / (1 + G * wb), N)[:n]
+    return out
+
+
+# Q2_CHAIN=path:name in the environment: every library capture q1.load returns is divided by the deconvolution-kernel
+# correction (docs/ml_structure.md §10). CLA is loaded separately and is not touched.
+if os.environ.get("Q2_CHAIN") and not getattr(q1, "_chain_patched", False):
+    _load_c = q1.load
+
+    def _load_chain(out, name, band=False):
+        h = chain_undo(_load_c(out, name), os.environ["Q2_CHAIN"])
+        return sosfiltfilt(q1.ms.BAND, h, axis=0) if band else h
+    q1.load = _load_chain
+    q1._chain_patched = True
 T_FIT = 0.25                    # time test: fit window 0-T_FIT s after tap 0
 WINDOWS = [(0, 50), (50, 150), (150, 300), (300, 600), (600, 1000), (1000, 1500)]
 OCT = [125, 250, 500, 1000, 2000, 4000, 8000]
@@ -1443,7 +1477,7 @@ def final_stage(workers, only=None):
     y = q1.apply_clock(yb, eg, shg)[:n] / gain
     cla = dict(eps_ppm=eg, shift=shg, gain_db=float(20 * np.log10(gain)), null_100_10k=q1.nulls(y, mdl, 1.5, W_COMP[:6], narrow=True))
     json.dump(dict(diff=FINAL_DIFF, beta=FINAL_BETA, p_max=P_MAX, dc_min=DC_MIN, tap_magnitude=a, rows=rows, cla=cla),
-              open(os.path.join(OUT, "final_s" + ("_smoke" if only else "") + ".json"), "w"), indent=0)
+              open(os.path.join(OUT, "final_s" + ("_chain" if os.environ.get("Q2_CHAIN") else "") + ("_smoke" if only else "") + ".json"), "w"), indent=0)
     rep_f = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, "nulls_free.json")))}
     ws = ["0-50", "50-150", "150-300", "300-600", "600-1000", "1000-1500"]
 

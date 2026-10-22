@@ -140,7 +140,7 @@ class Model:
         self.cl = cc.cluster_taps(prog)
         self.F = np.eye(4) if prog == "S" else F_ML
 
-    def parts(self, n, key, coefs=None, F=None):
+    def parts(self, n, key, coefs=None, F=None, band=True):
         """(cluster, reverb), (n, 2) each, unit gain, band-limited, on the nominal device clock with cluster tap 0 at K0.
         All delays are integers (the taps' fractional parts are the capture clock, ml_structure §7.2), so the weighted
         grid stays causal; clock and shift come after (warp)."""
@@ -170,7 +170,8 @@ class Model:
                 T[:, i, ch] += sg * zd(p_)
         R = np.linalg.solve(A, T).sum(1) * D[:, None]
         grow = r ** np.arange(n)[:, None]
-        return [sosfiltfilt(ml.BAND, np.fft.irfft(X * Hk[:, None], N, axis=0)[:n] * grow, axis=0) for X in (C, R)]
+        raw = [np.fft.irfft(X * Hk[:, None], N, axis=0)[:n] * grow for X in (C, R)]
+        return [sosfiltfilt(ml.BAND, x, axis=0) for x in raw] if band else raw     # band=False: full band (outofband.py)
 
 
 HALF = 48                                                   # warp: Kaiser-windowed sinc half-length
