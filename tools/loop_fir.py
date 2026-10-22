@@ -20,6 +20,12 @@ nulls as the final stage):
 floor: the DC floor's constants (DC_MIN, beta) and a constant extra loss under the floor (gamma) on full windows, a grid
 on the LF 0.1 / 0.4 settings, chosen on TRAIN_RT, reported held out by setting -> <kernel>_floor.json, _floor_best.json.
 
+probe: which part of a setting's own correction carries its gain (common, magnitude, phase, per-loop) -> <kernel>_probe.json.
+tilt: per LF step the training settings' median common magnitude shape (dB/s) -> <kernel>_tilt.json (q2 final --tilt).
+
+shelf: on top of gamma, one shift of the LF shelf's pole (all LF steps) and each LF step's top end at fixed DC, a grid on
+the LF 0.1 / 0.4 / 2.0 settings, chosen on TRAIN_RT -> <kernel>_shelf.json, _shelf_best.json.
+
 interp: held out by setting, the corrections of RT 0.6 / 1.0 / 1.8 predicted by interpolating each loop's correction
 linearly in RT from the neighbouring steps (same LF and HF) -> analysis/loop_fir/<kernel>_interp.json.
 
@@ -282,6 +288,18 @@ def coefs_stage():
 FLOOR_GRID = dict(dc_min=[0.15, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28],
                   beta=[0.0, 0.019, 0.04, 0.08], gamma=[0.0, -0.01, -0.02, -0.03, -0.04])
 TRAIN_RT = (0.3, 0.8, 1.4, 2.2, 2.5)
+SHELF_GRID = dict(da=[-0.0006, -0.0003, -0.0001, 0.0, 0.0001, 0.0003, 0.0006, 0.001, 0.002], hi=[-0.02, -0.01, 0.0, 0.01])
+SHELF_GAMMA = -0.02
+
+
+def G_shelf(lab, law, w, da, hi):
+    """The capped law with gamma = SHELF_GAMMA, the shelf pole a + da (shared by every LF step) and the LF step's
+    Nyquist-end RT ratio hi x (1 + hi_scale) (the top end moves, the DC end stays: g r0 does not depend on hi)."""
+    lw = json.loads(json.dumps(law)); lw["lf"] = {float(k): v for k, v in lw["lf"].items()}
+    lw["a"] = law["a"] + da
+    if lab["lf"] != 1.0:
+        lw["lf"][lab["lf"]]["hi"] = law["lf"][lab["lf"]]["hi"] * (1 + hi)
+    return q2.G_capped(lab, lw, w, beta=q2.FINAL_BETA, gamma=SHELF_GAMMA)
 
 
 def G_floor(lab, law, w, dc_min, beta, gamma):
@@ -289,7 +307,7 @@ def G_floor(lab, law, w, dc_min, beta, gamma):
     return q2.G_capped(lab, law, w, dc_min=dc_min, beta=beta, gamma=gamma)
 
 
-def _floor_setting(a):
+def _floor_setting(a, mode="floor"):
     """One setting: the data prepared once (clock, shift, gain against the current law, as _fit_setting), then the
     weighted residual over the whole window to the fade for every (dc_min, beta, gamma) in FLOOR_GRID."""
     key, lab, b230, law, caps = a
@@ -321,15 +339,118 @@ def _floor_setting(a):
         t = (np.arange(i0, i1) - PRE) / FS
         wt = 10 ** (1.5 * np.minimum(t, q1.T_CAP) / lab["rt"])[:, None]
         data.append(dict(amp=c["amp"], y=y, i0=i0, i1=i1, wt=wt / np.sqrt(np.sum((y[i0:i1] * wt) ** 2))))
+    def cost_of(Gs):
+        r = reverb(Gs)
+        return sum(float(np.sum(((((d["amp"] / 90) * Cl[d["i0"]:d["i1"]] + r[d["i0"]:d["i1"]]) - d["y"][d["i0"]:d["i1"]]) * d["wt"]) ** 2))
+                   for d in data)
     grid = []
+    if mode == "probe":                              # parts of the setting's own fir correction (model_s_results 22.4)
+        fir = json.load(open(os.path.join(OUT, key + ".json")))
+        lags = np.array(fir["lags"]); E = np.exp(-1j * np.outer(lags, w))
+        C = [np.asarray(c) @ E for c in fir["fir"]]
+        G_law = q2.G_capped(lab, law, w, beta=q2.FINAL_BETA)
+        Cm = np.exp(np.median(np.log(np.abs(C)), 0)) * np.exp(1j * np.median(np.unwrap(np.angle(C), axis=1), 0))
+        variants = {"law": [1.0] * 4, "own": C, "common": [Cm] * 4, "magnitude": [np.abs(c) for c in C],
+                    "phase": [np.exp(1j * np.angle(c)) for c in C], "per-loop only": [c / Cm for c in C]}
+        return dict(key=key, **lab, grid=[dict(variant=k, cost=cost_of([Gi * ci for Gi, ci in zip(G_law, v)])) for k, v in variants.items()])
+    if mode == "shelf":
+        for da in SHELF_GRID["da"]:
+            for hs in SHELF_GRID["hi"]:
+                grid.append(dict(da=da, hi=hs, cost=cost_of(G_shelf(lab, law, w, da, hs))))
+        grid.append(dict(da=None, hi=None, cost=cost_of(q2.G_capped(lab, law, w, beta=q2.FINAL_BETA))))    # the law, no gamma
+        return dict(key=key, **lab, grid=grid)
     for dm in FLOOR_GRID["dc_min"]:
         for be in FLOOR_GRID["beta"]:
             for ga in FLOOR_GRID["gamma"]:
-                r = reverb(G_floor(lab, law, w, dm, be, ga))
-                cost = sum(float(np.sum(((((d["amp"] / 90) * Cl[d["i0"]:d["i1"]] + r[d["i0"]:d["i1"]]) - d["y"][d["i0"]:d["i1"]]) * d["wt"]) ** 2))
-                           for d in data)
-                grid.append(dict(dc_min=dm, beta=be, gamma=ga, cost=cost))
+                grid.append(dict(dc_min=dm, beta=be, gamma=ga, cost=cost_of(G_floor(lab, law, w, dm, be, ga))))
     return dict(key=key, **lab, grid=grid)
+
+
+def _shelf_setting(a):
+    return _floor_setting(a, "shelf")
+
+
+def _probe_setting(a):
+    return _floor_setting(a, "probe")
+
+
+TILT_F = np.r_[np.arange(0, 1000, 50), np.arange(1000, 13000, 250), 13186.8]
+
+
+def tilt_stage():
+    """Per LF step (not 1.0) the common magnitude correction of the training-RT settings (HF 0.6 and 1.0), in dB per
+    second, relative to its value at <= 250 Hz (the broadband part is gamma's): median over settings of the four loops'
+    median -> <kernel>_tilt.json (frequencies in Hz, dB/s), for q2_injection final --tilt."""
+    res = [json.load(open(p)) for p in sorted(glob.glob(os.path.join(OUT, "*.json")))]
+    w = 2 * np.pi * TILT_F / FS
+    out = dict(f_hz=TILT_F.tolist(), train_rt=list(TRAIN_RT), note="dB/s re the value at <= 250 Hz; model_s_results 22.4")
+    for lf in (0.1, 0.4, 2.0):
+        shapes = []
+        for s_ in res:
+            if s_["lf"] != lf or s_["hf"] not in (0.6, 1.0) or s_["rt"] not in TRAIN_RT:
+                continue
+            E = np.exp(-1j * np.outer(w, s_["lags"]))
+            dbps = np.median([20 * np.log10(np.abs(E @ np.asarray(c))) * FS / Pi for c, Pi in zip(s_["fir"], q1.P)], 0)
+            shapes.append(dbps - np.median(dbps[TILT_F <= 250]))
+        med = np.median(shapes, 0)
+        med[TILT_F > 6000] = med[np.argmin(abs(TILT_F - 6000))]        # the 8-12 kHz pattern is common to every LF step
+        out[str(lf)] = med.tolist()
+        print(f"LF {lf} ({len(shapes)} settings): " + " ".join(f"{f:.0f}:{v:+.2f}" for f, v in zip(TILT_F[::8], np.median(shapes, 0)[::8])))
+    json.dump(out, open(OUT + "_tilt.json", "w"), indent=0)
+
+
+def probe_stage(workers, only):
+    """Which part of a setting's own fir correction carries its gain: the correction in all four loops alike (median),
+    magnitude only, phase only, the per-loop deviations only; cost over the whole window, all captures, dB re the law."""
+    info, fade, _, _, eps0 = q2.q1_tables()
+    ap = json.load(open(os.path.join(q2.OUT, AP230)))
+    law = q1.fit_laws(json.load(open(os.path.join(q2.Q1, "loops.json"))))
+    jobs = [(k, dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]), ap["steps"][ap["settings"][k]["step"]], json.loads(json.dumps(law)),
+             [dict(amp=a, file=nm, eps=eps0[nm], fade2=fade[nm]) for a, nm in q2.files_of(info[k])]) for k in only]
+    with ProcessPoolExecutor(workers, max_tasks_per_child=4) as ex:
+        res = list(ex.map(_probe_setting, jobs))
+    json.dump(res, open(OUT + "_probe.json", "w"), indent=0)
+    for s in res:
+        base = next(g["cost"] for g in s["grid"] if g["variant"] == "law")
+        print(f"{s['key']}: " + "; ".join(f"{g['variant']} {10 * np.log10(g['cost'] / base):+.2f}" for g in s["grid"] if g["variant"] != "law") + " dB re the law")
+
+
+def shelf_stage(workers, only=None):
+    """The shelf's pole (one shift for every LF step) and each LF step's top end at fixed DC, on top of gamma: a grid on
+    full windows over the LF 0.1 / 0.4 / 2.0 settings, chosen on TRAIN_RT, reported per LF and RT (cost re the law)."""
+    info, fade, _, _, eps0 = q2.q1_tables()
+    ap = json.load(open(os.path.join(q2.OUT, AP230)))
+    law = q1.fit_laws(json.load(open(os.path.join(q2.Q1, "loops.json"))))
+    keys = [k for k, g in info.items() if g["lf"] != 1.0 and (only is None or k in only)]
+    jobs = [(k, dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]), ap["steps"][ap["settings"][k]["step"]], json.loads(json.dumps(law)),
+             [dict(amp=a, file=nm, eps=eps0[nm], fade2=fade[nm]) for a, nm in q2.files_of(info[k])]) for k in keys]
+    with ProcessPoolExecutor(workers, max_tasks_per_child=4) as ex:
+        res = list(ex.map(_shelf_setting, jobs))
+    json.dump(res, open(OUT + "_shelf" + ("_smoke" if only else "") + ".json", "w"), indent=0)
+    combos = [(g["da"], g["hi"]) for g in res[0]["grid"] if g["da"] is not None]
+
+    def rel(s, combo):
+        base = next(g["cost"] for g in s["grid"] if g["da"] is None)
+        return next(g["cost"] for g in s["grid"] if (g["da"], g["hi"]) == combo) / base
+    best = {}
+    for lf in (0.1, 0.4, 2.0):
+        tr = [s for s in res if s["lf"] == lf and s["rt"] in TRAIN_RT]
+        if not tr:
+            continue
+        tot = [np.mean([rel(s, c) for s in tr]) for c in combos]
+        best[lf] = combos[int(np.argmin(tot))]
+        print(f"LF {lf}: chosen on training RT (alone): da {best[lf][0]}, hi x (1 {best[lf][1]:+}); gamma only (da 0, hi 0): "
+              f"{10 * np.log10(np.mean([rel(s, (0.0, 0.0)) for s in tr])):+.2f} dB, chosen {10 * np.log10(min(tot)):+.2f} dB re the law")
+    tot = [np.mean([rel(s, c) for s in res if s["rt"] in TRAIN_RT]) for c in combos]
+    da_all = combos[int(np.argmin(tot))][0]
+    print(f"one da for all LF steps (training RT): {da_all}")
+    for lf in (0.1, 0.4, 2.0):
+        for rt in sorted({s["rt"] for s in res}):
+            ss = [s for s in res if s["lf"] == lf and s["rt"] == rt]
+            if ss and lf in best:
+                print(f"  LF {lf} RT {rt}{' (held out)' if rt not in TRAIN_RT else ''}: gamma only {10 * np.log10(np.mean([rel(s, (0.0, 0.0)) for s in ss])):+.2f}, "
+                      f"+ chosen shelf {10 * np.log10(np.mean([rel(s, best[lf]) for s in ss])):+.2f} dB re the law")
+    json.dump({str(k): dict(da=v[0], hi=v[1]) for k, v in best.items()}, open(OUT + "_shelf_best.json", "w"), indent=1)
 
 
 def floor_stage(workers, only=None):
@@ -432,7 +553,7 @@ def interp_stage(workers, only=None):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", default="fit", choices=["fit", "report", "coefs", "interp", "floor"])
+    ap.add_argument("--stage", default="fit", choices=["fit", "report", "coefs", "interp", "floor", "shelf", "probe", "tilt"])
     ap.add_argument("--only", default=None)
     ap.add_argument("--workers", type=int, default=4)
     a = ap.parse_args()
@@ -440,6 +561,12 @@ def main():
         fit_stage(a.workers, a.only.split(",") if a.only else None)
     if a.stage == "coefs":
         coefs_stage()
+    elif a.stage == "tilt":
+        tilt_stage()
+    elif a.stage == "probe":
+        probe_stage(a.workers, a.only.split(","))
+    elif a.stage == "shelf":
+        shelf_stage(a.workers, a.only.split(",") if a.only else None)
     elif a.stage == "floor":
         floor_stage(a.workers, a.only.split(",") if a.only else None)
     elif a.stage == "interp":

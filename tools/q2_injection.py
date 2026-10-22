@@ -1481,11 +1481,14 @@ def final_injection(ext=1700, compact=None):
 
 
 def _final_setting(a_):
-    key, lab, b230, law, v, ext, caps, ends, loopk, bbtilt, lfrt, gamma = a_
+    key, lab, b230, law, v, ext, caps, ends, loopk, bbtilt, lfrt, gamma, tilt = a_
     q1.EXT = ext
     law["lf"] = {float(k): x for k, x in law["lf"].items()}
     w = 2 * np.pi * np.fft.rfftfreq(q1.grid_n(lab["rt"]))
     Gs = G_capped(lab, law, w, beta=FINAL_BETA, gamma=gamma)
+    if tilt and str(lab["lf"]) in tilt:            # --tilt: a per-LF-step magnitude shape in dB/s on every loop (model_s_results 22.4)
+        S = np.interp(w / (2 * np.pi) * q1.FS, tilt["f_hz"], tilt[str(lab["lf"])])
+        Gs = [Gi * 10 ** (S * Pi / (20 * q1.FS)) for Gi, Pi in zip(Gs, q1.P)]
     if lfrt and str(lab["lf"]) in lfrt["coefs"]:  # --lfrt: broadband rate x (1 + a + b RT) per LF step (model_s_results 22.2)
         a_, b_ = lfrt["coefs"][str(lab["lf"])]
         rel = a_ + b_ * lab["rt"]
@@ -1502,7 +1505,7 @@ def _final_setting(a_):
             for c in caps]
 
 
-def final_stage(workers, only=None, compact=None, ap230=None, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0):
+def final_stage(workers, only=None, compact=None, ap230=None, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None):
     """compact / ap230: the 9 numbers and the AP230 step table to use (default: those fitted on the old IRs, as §17);
     either given -> output suffix _refit."""
     from concurrent.futures import ProcessPoolExecutor
@@ -1516,7 +1519,7 @@ def final_stage(workers, only=None, compact=None, ap230=None, loopk=0.0, bbtilt=
     keys = [k for k in info if only is None or k in only]
     jobs = [(k, dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]), ap["steps"][ap["settings"][k]["step"]], json.loads(json.dumps(law)),
              v, 1700, [dict(amp=a_, file=nm, eps=eps0[nm], fade2=fade[nm]) for a_, nm in files_of(info[k])], ends, loopk, bbtilt,
-             json.load(open(lfrt)) if lfrt else None, gamma) for k in keys]
+             json.load(open(lfrt)) if lfrt else None, gamma, json.load(open(tilt)) if tilt else None) for k in keys]
     with ProcessPoolExecutor(workers) as ex:
         rows = [r for rr in ex.map(_final_setting, jobs) for r in rr]
     # CLA (another unit): clock, shift and gain fitted on CLA only
@@ -1533,7 +1536,7 @@ def final_stage(workers, only=None, compact=None, ap230=None, loopk=0.0, bbtilt=
     json.dump(dict(diff=FINAL_DIFF, beta=FINAL_BETA, p_max=P_MAX, dc_min=DC_MIN, tap_magnitude=a, cluster_gains=cl.tolist(), compact=compact or COMPACT,
                    ap230=ap230, ap230_steps=ap["steps"], rows=rows, cla=cla),
               open(os.path.join(OUT, q1.ms.tagged("final_s") + ("_chain" if os.environ.get("Q2_CHAIN") else "") + ("_refit" if compact or ap230 else "")
-                                + (f"_loopb{loopk:g}" if loopk else "") + (f"_bbtilt{bbtilt:g}" if bbtilt else "") + ("_lfrt" if lfrt else "") + (f"_gamma{gamma:g}" if gamma else "") + ("_smoke" if only else "") + ".json"), "w"), indent=0)
+                                + (f"_loopb{loopk:g}" if loopk else "") + (f"_bbtilt{bbtilt:g}" if bbtilt else "") + ("_lfrt" if lfrt else "") + (f"_gamma{gamma:g}" if gamma else "") + ("_tilt" if tilt else "") + ("_smoke" if only else "") + ".json"), "w"), indent=0)
     rep_f = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, q1.ms.tagged("nulls_free") + ".json")))}
     ws = ["0-50", "50-150", "150-300", "300-600", "600-1000", "1000-1500"]
 
@@ -1673,6 +1676,7 @@ def main():
     ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "ap230", "loops", "cla", "capped", "final", "report"])
     ap.add_argument("--g230", type=float, default=-0.7071067812, help="ap230: the all-pass gain for the step measurement")
     ap.add_argument("--ap230", default=None, help="diffuser, final: an AP230 step table from the ap230 stage (default: q1's; final: ap230_g0.7071.json)")
+    ap.add_argument("--tilt", default=None, help="final: a JSON of per-LF-step magnitude shapes in dB/s (loop_fir.py --stage tilt)")
     ap.add_argument("--gamma", type=float, default=0.0, help="final: where the DC floor acts, the loop's broadband decay rate x (1 - gamma) (G_capped)")
     ap.add_argument("--lfrt", default=None, help="final: a JSON of per-LF-step (a, b): each loop's broadband decay rate x (1 + a + b RT)")
     ap.add_argument("--bbtilt", type=float, default=0.0, help="final: each loop's broadband loss x (1 + c (hi - 1)), hi the LF step's Nyquist RT ratio")
@@ -1725,7 +1729,7 @@ def main():
     if a.stage == "loops":
         loops_stage(a.workers, only, a.frozen)
     if a.stage == "final":
-        final_stage(a.workers, only, a.compact, a.ap230, a.loopb, a.bbtilt, a.lfrt, a.gamma)
+        final_stage(a.workers, only, a.compact, a.ap230, a.loopb, a.bbtilt, a.lfrt, a.gamma, a.tilt)
     if a.stage == "capped":
         capped_stage(a.workers, only, a.frozen, a.beta)
     if a.stage == "ap230":
