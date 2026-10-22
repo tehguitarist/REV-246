@@ -1762,3 +1762,24 @@ So exact coefficients (Q9) are not visible yet; what is visible is that **the la
 - **Where it costs:** LF 0.4 at RT 1.8 (1–2.4 dB from 150 ms on) and LF 2.0 at 50–150 ms (0.9 dB). At LF 0.4 / RT 1.8 the setting's own correction was already no better than the law held out, so the small long-RT values in the table there are probably fit noise and the form should go to zero sooner at LF 0.4.
 - **What it does not reach:** LF 0.1 at RT 1.8, the knee where the correction falls from −2.3 % to −0.2 % (+16.5 → +14.7 at 300–600 ms); a straight line in RT cannot follow the knee. It coincides with the DC floor stopping, so the floor's value (DC_MIN, fitted in §16.15 on ~50–150 ms windows) may be part of it (**H**).
 - The HF 0.2 part is separate and open (§22.1).
+
+### 22.3 The DC floor on full windows, and a constant extra loss under it (`loop_fir.py --stage floor`, `final --gamma`) **[S for the constants; S for γ at LF 0.1 RT ≤ 1.4; open at long RT]**
+
+`EMT_KERNEL=chain2 .venv/bin/python tools/loop_fir.py --stage floor` → `analysis/loop_fir/chain2_floor.json`, `chain2_floor_best.json`, `floor_chain2.log`. On the 64 LF 0.1 / 0.4 settings, the data are prepared once per setting (clock, shift and gain against the current law, injection frozen as §22) and the weighted residual over the whole window to the fade is evaluated on a grid: DC_MIN 0.15–0.28, β 0–0.08, and **γ**, a constant extra broadband loss where the floor acts (`G_capped(gamma=)`: the loop response × 10^(γ · rate · Pᵢ / (20 fs)), rate = 60 / (hi · RT); unlike β it does not scale with the floor's lift). Chosen on RT 0.3 / 0.8 / 1.4 / 2.2 / 2.5; RT 0.6 / 1.0 / 1.8 held out.
+
+- **The floor's constants stand on full windows:** the best combinations keep **DC_MIN = 0.18 and β = 0.019** (§16.15–16.16 fitted them on ~50–150 ms, §22). A higher DC_MIN, which would put RT 1.8 under the floor, does not help.
+- **γ ≈ −0.02** (2 % faster broadband decay where the floor acts) is chosen on the training steps and lowers the fit cost at LF 0.1 by 1.1 / 1.9 / 1.8 / 1.8 / 1.4 / 0.5 dB at RT 0.3 / 0.6 (held out) / 0.8 / 1.0 (held out) / 1.4 / 1.8 (held out), and not at all at RT 2.2–2.5 or at LF 0.4 (only its RT 0.3 is floored). **That is the plateau-and-knee of §22.2's table:** a constant share gated by the floor, which acts on every loop up to RT 1.4 and only on the longest loop at RT 1.8, hence the half-way value there (**S**). LF 0.4's smaller, smooth correction is a separate effect.
+
+**In the bench, held out by setting** (RT 0.6 / 1.0 / 1.8; `analysis/lf_rt/final_gamma_test.{json,log}`), R excess over repeat, law / linear form of §22.2 (2 numbers at LF 0.1) / γ (1 number):
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| LF 0.1 | +16.0 / +10.0 / +11.1 | +20.2 / +14.5 / +15.3 | +18.8 / +12.0 / +13.8 | +11.3 / +5.9 / +6.9 |
+| LF 0.1, RT 0.6 | +20.5 / +13.0 / +15.7 | +24.8 / +15.0 / +18.3 | +18.5 / +9.6 / +13.1 | +6.3 / −1.0 / +1.6 |
+| LF 0.1, RT 1.0 | +15.3 / +10.1 / +10.7 | +19.5 / +13.0 / +13.8 | +20.3 / +12.5 / +13.5 | +12.1 / +4.4 / +5.6 |
+| LF 0.1, RT 1.8 | +9.3 / +7.4 / +8.6 | +15.4 / +14.7 / +14.2 | +16.5 / +14.7 / +15.4 | +13.6 / +11.0 / +12.3 |
+| LF 0.4 | +14.0 / +11.7 / +14.0 | +16.7 / +15.0 / +16.7 | +12.1 / +11.0 / +12.1 | +3.3 / +2.2 / +3.3 |
+
+- **γ alone, one number tied to the floor, gives LF 0.1 most of what the linear form gives** (300–600 ms: +18.8 → +13.8, linear +12.0); the linear form is 2.6–3.5 dB better at RT 0.6 and 0.6–1.2 dB at RT 1.0, where its RT slope also absorbs part of something else. γ does nothing at LF 0.4, as it should.
+- **The knee setting is not fixed by either.** At LF 0.1 / RT 1.8 the setting's own free correction (§22, held out by capture) reaches +11.0 / +10.1 / +6.1 dB at 150–300 / 300–600 / 600–1000 ms, against +14.2 / +15.4 / +12.3 with γ; at RT 2.2, own +8.6 / +5.7 / +1.1 against the law's +12.4 / +12.1 / +7.0, although its broadband correction is only −0.18 %. **At LF 0.1 and long RT the loop error is a spectral tilt, not a broadband rate:** at RT 2.5 / HF 1.0 the correction runs +0.04 dB/s at 63 Hz to +0.36 at 8 kHz (the LF shelf's low-to-high balance slightly off, about 5 dB of null). Neither a broadband term nor the floor reaches it. Open.
+- So the parts are: **γ under the floor (1 number, LF 0.1, S)**; a smooth broadband term at LF 0.4 / 2.0 (§22.2's form there); an LF 0.1 tilt at long RT (open); HF 0.2 (open).

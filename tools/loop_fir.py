@@ -17,6 +17,9 @@ nulls as the final stage):
   fir    the capped law times a free correction per loop, C_i(z) = sum_k c_ik z^-k, k = -KC..KC (C_i = 1 is the law):
          G_i -> G_i C_i. 4 (2 KC + 1) numbers, exact Jacobian.
 
+floor: the DC floor's constants (DC_MIN, beta) and a constant extra loss under the floor (gamma) on full windows, a grid
+on the LF 0.1 / 0.4 settings, chosen on TRAIN_RT, reported held out by setting -> <kernel>_floor.json, _floor_best.json.
+
 interp: held out by setting, the corrections of RT 0.6 / 1.0 / 1.8 predicted by interpolating each loop's correction
 linearly in RT from the neighbouring steps (same LF and HF) -> analysis/loop_fir/<kernel>_interp.json.
 
@@ -276,6 +279,99 @@ def coefs_stage():
                                           for j, nm in enumerate(names) if any(o["delta"][j] != 0.0 for o in oo)))
 
 
+FLOOR_GRID = dict(dc_min=[0.15, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28],
+                  beta=[0.0, 0.019, 0.04, 0.08], gamma=[0.0, -0.01, -0.02, -0.03, -0.04])
+TRAIN_RT = (0.3, 0.8, 1.4, 2.2, 2.5)
+
+
+def G_floor(lab, law, w, dc_min, beta, gamma):
+    """q2.G_capped with the floor's constants free and gamma (a constant extra broadband loss where the floor acts)."""
+    return q2.G_capped(lab, law, w, dc_min=dc_min, beta=beta, gamma=gamma)
+
+
+def _floor_setting(a):
+    """One setting: the data prepared once (clock, shift, gain against the current law, as _fit_setting), then the
+    weighted residual over the whole window to the fade for every (dc_min, beta, gamma) in FLOOR_GRID."""
+    key, lab, b230, law, caps = a
+    q1.EXT = 1700
+    law["lf"] = {float(k): x for k, x in law["lf"].items()}
+    v, _, _ = q2.final_injection(compact=COMPACT)
+    G0 = q2.branch_spectra(lab, law, [0.0], b230, q2.FINAL_DIFF)
+    N = G0["N"]
+    w = 2 * np.pi * np.fft.rfftfreq(N)
+    Z = [np.exp(-1j * w * Pi) for Pi in q1.P]
+    J = q1.Joint([dict(G0, files=[dict(y=np.zeros((N, 2)), w=np.ones(N), amp=0)])])
+    cl, f, xs = J.split(v)
+    F, X = J._spectra(f, xs, N)
+    Cl = J.cluster(cl)
+    PB = G0["PB"]
+
+    def reverb(Gs):
+        R = np.array([PB / (1 - Gi * Zi) for Gi, Zi in zip(Gs, Z)])
+        return np.fft.irfft(F * PB[None] + np.einsum("cik,ik->ck", X, R), N, axis=1).T
+    r_law = reverb(q2.G_capped(lab, law, w, beta=q2.FINAL_BETA))
+    data = []
+    for c in caps:
+        yb = q2._band(c["file"])
+        n = min(len(yb), N)
+        t_end = max(c["fade2"], 0.15)
+        _, (e, sh, gain) = q1._clock_job((yb[:n], (c["amp"] / 90) * Cl[:n] + r_law[:n], t_end, c["eps"], c["amp"] == 0))
+        y = q1.apply_clock(yb[:n], e, sh) / gain
+        i0, i1 = PRE + int(0.05 * FS), min(PRE + int(t_end * FS), n)
+        t = (np.arange(i0, i1) - PRE) / FS
+        wt = 10 ** (1.5 * np.minimum(t, q1.T_CAP) / lab["rt"])[:, None]
+        data.append(dict(amp=c["amp"], y=y, i0=i0, i1=i1, wt=wt / np.sqrt(np.sum((y[i0:i1] * wt) ** 2))))
+    grid = []
+    for dm in FLOOR_GRID["dc_min"]:
+        for be in FLOOR_GRID["beta"]:
+            for ga in FLOOR_GRID["gamma"]:
+                r = reverb(G_floor(lab, law, w, dm, be, ga))
+                cost = sum(float(np.sum(((((d["amp"] / 90) * Cl[d["i0"]:d["i1"]] + r[d["i0"]:d["i1"]]) - d["y"][d["i0"]:d["i1"]]) * d["wt"]) ** 2))
+                           for d in data)
+                grid.append(dict(dc_min=dm, beta=be, gamma=ga, cost=cost))
+    return dict(key=key, **lab, grid=grid)
+
+
+def floor_stage(workers, only=None):
+    """The DC floor's constants on full windows: a grid over (dc_min, beta, gamma) on the LF 0.1 and 0.4 settings;
+    chosen on the training RT steps (TRAIN_RT), reported on the others (held out by setting)."""
+    info, fade, _, _, eps0 = q2.q1_tables()
+    ap = json.load(open(os.path.join(q2.OUT, AP230)))
+    law = q1.fit_laws(json.load(open(os.path.join(q2.Q1, "loops.json"))))
+    keys = [k for k, g in info.items() if g["lf"] in (0.1, 0.4) and (only is None or k in only)]
+    jobs = [(k, dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]), ap["steps"][ap["settings"][k]["step"]], json.loads(json.dumps(law)),
+             [dict(amp=a, file=nm, eps=eps0[nm], fade2=fade[nm]) for a, nm in q2.files_of(info[k])]) for k in keys]
+    with ProcessPoolExecutor(workers, max_tasks_per_child=4) as ex:
+        res = list(ex.map(_floor_setting, jobs))
+    json.dump(res, open(OUT + "_floor" + ("_smoke" if only else "") + ".json", "w"), indent=0)
+    combos = [(g["dc_min"], g["beta"], g["gamma"]) for g in res[0]["grid"]]
+
+    def total(sel):
+        out = np.zeros(len(combos))
+        for s in res:
+            if sel(s):
+                base = next(g["cost"] for g in s["grid"] if (g["dc_min"], g["beta"], g["gamma"]) == (q2.DC_MIN, q2.FINAL_BETA, 0.0))
+                out += np.array([g["cost"] for g in s["grid"]]) / base      # each setting relative to the current constants
+        return out
+    for name, sel in (("training RT", lambda s: s["rt"] in TRAIN_RT), ("held-out RT", lambda s: s["rt"] not in TRAIN_RT)):
+        for lf in (0.1, 0.4):
+            tot = total(lambda s: sel(s) and s["lf"] == lf)
+            n = sum(1 for s in res if sel(s) and s["lf"] == lf)
+            order = np.argsort(tot)[:5]
+            print(f"{name}, LF {lf} ({n} settings): mean cost re current constants, best: " +
+                  "; ".join(f"dc {combos[i][0]} beta {combos[i][1]} gamma {combos[i][2]}: {tot[i] / n:.3f}" for i in order))
+    tr = total(lambda s: s["rt"] in TRAIN_RT)
+    best = combos[int(np.argmin(tr))]
+    print(f"\nchosen on the training RT steps (LF 0.1 + 0.4): dc_min {best[0]}, beta {best[1]}, gamma {best[2]}")
+    for lf in (0.1, 0.4):
+        for rt in sorted({s["rt"] for s in res}):
+            ss = [s for s in res if s["lf"] == lf and s["rt"] == rt]
+            rel = np.mean([next(g["cost"] for g in s["grid"] if (g["dc_min"], g["beta"], g["gamma"]) == best) /
+                           next(g["cost"] for g in s["grid"] if (g["dc_min"], g["beta"], g["gamma"]) == (q2.DC_MIN, q2.FINAL_BETA, 0.0)) for s in ss])
+            print(f"  LF {lf} RT {rt}{' (held out)' if rt not in TRAIN_RT else ''}: cost {10 * np.log10(rel):+.2f} dB re current")
+    json.dump(dict(dc_min=best[0], beta=best[1], gamma=best[2], train_rt=TRAIN_RT), open(OUT + "_floor_best.json", "w"), indent=1)
+
+
 INTERP = {0.6: (0.3, 0.8), 1.0: (0.8, 1.4), 1.8: (1.4, 2.2)}      # held-out RT step: its fitted neighbours
 
 
@@ -336,7 +432,7 @@ def interp_stage(workers, only=None):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", default="fit", choices=["fit", "report", "coefs", "interp"])
+    ap.add_argument("--stage", default="fit", choices=["fit", "report", "coefs", "interp", "floor"])
     ap.add_argument("--only", default=None)
     ap.add_argument("--workers", type=int, default=4)
     a = ap.parse_args()
@@ -344,6 +440,8 @@ def main():
         fit_stage(a.workers, a.only.split(",") if a.only else None)
     if a.stage == "coefs":
         coefs_stage()
+    elif a.stage == "floor":
+        floor_stage(a.workers, a.only.split(",") if a.only else None)
     elif a.stage == "interp":
         interp_stage(a.workers, a.only.split(",") if a.only else None)
     else:
