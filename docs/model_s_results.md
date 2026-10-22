@@ -1415,7 +1415,7 @@ Aim: separate the two readings of §16.12 (library-specific fitting by the free 
 
   The residual is spread through the diffuser output, not concentrated at the read taps (17–20 % of it within ±6 samples of the taps' first appearances, against a 24 % time share). Q1's free 19-tap loop filter also converged to the two taps (§14.3).
 - **Time variance ruled out (a correction):** a first test suggested the first pass decorrelates between captures as b grows (repeat null −36 / −35 / −29 / −20 dB for b = 0 / 0.17 / 0.33 / 0.50). That was an artefact of the raw tail-fit clock ratios (`loops.json`), which are off by up to 357 ppm for about 10 % of files (median 0.8 ppm), the short-RT ones. With the fitted clocks of the nulls stage the first-pass repeat null is −36.1 / −38.0 / −35.5 / −35.4 dB (no trend), and the reverb windows agree to −59…−60 dB at b = 0.17 / 0.33. **Program S is time-invariant at b > 0 as well.** For any capture-to-capture comparison use fitted clocks, not the raw tail fits.
-- **So:** the two-tap AP230 damping is the best LTI form found, and its −39…−43 dB first pass is what limits the b > 0 settings. The cause is open: a form not tried, or something in how the step is realised (**H**).
+- **So:** the two-tap AP230 damping is the best LTI form found, and its −39…−43 dB first pass is what limits the b > 0 settings. The cause is open: a form not tried, or something in how the step is realised (**H**). *Corrected (§21.2): the −39…−43 dB is an artefact of this ratio test (A(b)/A₀ is anticausal and pulls the reference setting's later reverb into the window). Rendered forward, the b > 0 first pass is as good as b = 0.*
 
 ## 17. The consolidated program-S model (October 2026)
 
@@ -1454,7 +1454,7 @@ The flat column includes the 6 flat training settings; held out on flat (RT 0.8 
 
 **Open for S** (none blocks M/L):
 1. the compact model's remaining gap (part may be library-specific, §16.14). *Update: part of it was the library's deconvolution kernel; corrected, every window gains 2.3–4 dB and the first pass reaches −58 dB (§19, `ml_structure.md` §10). The rest is in the recirculations Now built into the IRs (§20, `EMT_KERNEL=chain2`): −48.7 / −49.1 dB at 50–150 ms on all settings, −50.5 / −50.4 on flat ones;*
-2. AP230's damping form where b > 0 (§16.17);
+2. ~~AP230's damping form where b > 0 (§16.17)~~ *settled (§21.2): the two-tap form is right; §16.17's first-pass limit was the test's artefact. The b > 0 excess is in the recirculations;*
 3. LF 0.1 at short RT;
 4. the values between the library's control steps;
 5. exact coefficients (Q9) and fixed-point behaviour (Q10), best done once the M/L structures are known, since the arithmetic engine is shared.
@@ -1620,3 +1620,32 @@ The repeat references (`repeat_comp`: AMPL partners against each other, fade-com
 
 - **The compact model is 3–5 dB short of the free model** on flat and long-RT settings, against 8–10 dB on the old IRs (§17). On flat settings that is 0.6–3.2 dB above the repeat-capture null, while the free model sits 1.1–1.2 dB *below* it: an in-sample fit deeper than another capture of the same reverb partly fits the capture itself. Against what the library can confirm, the compact model is within about 1–3 dB on flat settings.
 - **At the strong settings the two are level** (LF 0.1, HF 0.2, RT ≤ 1.0: −0.3…+2 dB cut at the fade), and past the free model's fit region (the fade-compensated windows at short RT) the compact model is ahead by 2–7 dB. Both use the same loop laws, so neither gets past them: what limits S there is the recirculation (loop filters at strong settings, AP230's form at b > 0), not the injection (**S**).
+
+### 21.2 AP230's damping form at b > 0: the two-tap form is right; §16.17's limit was the test (`tools/ap230_form.py`) **[S]**
+
+`EMT_KERNEL=chain2 .venv/bin/python tools/ap230_form.py` → `analysis/ap230_form/forms_chain2.{json,log}`, the 36 b > 0 settings, same first-pass test as the `ap230` stage (240–1,550 samples after tap 0, AMPL-0 capture against the b = 0 reference setting, x = ref · A / A₀).
+
+**Where the two taps sit.** A = (−g + F_ff z⁻²³⁰) / (1 − g F_fb z⁻²³⁰), g = −1/√2, F = (1 − b) + b z⁻¹. Median first-pass null, dB:
+
+| Step (b) | b = 0 | both (current) | feedback only | feed-forward only | both free: b_ff / b_fb |
+|---|---|---|---|---|---|
+| 1 (0.171), 12 settings | −14.3 | −43.3 | −14.8 | −22.9 | −43.4: 0.1706 / 0.1692 |
+| 2 (0.332), 12 | −9.1 | −41.0 | −10.0 | −18.5 | −41.1: 0.3307 / 0.3285 |
+| 3 (0.502), 12 | −6.1 | −39.0 | −7.1 | −15.2 | −39.1: 0.5004 / 0.4972 |
+
+With both b free the fit lands on b_ff = b_fb: **the damping is a 230 + b delay with linear interpolation, read once and used by both paths (S).** A general AP230 with 17 free numbers (d₀, and F_ff and F_fb as 8-tap FIRs at lags −3…+4), fitted on 6 settings per step and scored on the other 6, gains only 1.0 / 0.7 / 0.5 dB held out and stays on the two-tap form (d₀ 0.706; F_ff [1 − b, b] summing to 0.999; F_fb g · [1 − b, b]).
+
+**The residual is a fixed waveform per step, and it is the test's** (scratch checks, not in the tool: the general fit above, the residual cross-explanation and its time envelope). At b > 0 one setting's residual explains another's by 13–21 dB (L / R), across LF and across RT / HF within the step (b = 0: 7–10 dB, the reference capture's own share). It grows with b (−43.3 / −41.0 / −39.0 dB, b = 0: −50.3) and sits at 1–11 kHz. **It is present before the reverb onset** (R lags 150–450 after tap 0: −30…−40 dB re the window's mean, b = 0: −66…−74), where an AMPL-0 capture holds nothing. The ratio test explains it: 1/A₀ has its pole outside the unit circle, so A(b)/A₀ is partly anticausal (about −3 dB per 230 samples backwards, scaled by the A(b) − A₀ difference) and pulls the reference capture's *later* content, including its RT 1.8 loop recirculations, back into the window. The short-RT setting has other loops, so the identity x = ref · A(b) / A₀ fails there by an amount that grows with b and is the same for every setting of a step.
+
+**Rendered forward (causal), the b > 0 first pass is as good as b = 0** (`ml_carryover` first-pass bench, `firstpass_chain2.json`, S held out, b fitted, no clock fit, L / R [repeat]):
+
+| Step | n | First pass | Repeat | b forced to 0 |
+|---|---|---|---|---|
+| 0 | 344 | −44.5 / −42.3 | −53.0 / −55.1 | — |
+| 1 (0.17) | 48 | −45.2 / −43.9 | −52.7 / −54.7 | −16.5 / −14.8 |
+| 2 (0.33) | 48 | −45.7 / −44.3 | −52.6 / −54.6 | −11.4 / −9.8 |
+| 3 (0.50) | 48 | −46.5 / −45.6 | −52.6 / −54.6 | −8.4 / −6.9 |
+
+So §16.17's "the two-tap AP230's −39…−43 dB first pass limits the b > 0 settings" is withdrawn. AP230's form is settled. **What limits the b > 0 settings (+10…+18 dB) is in the recirculations**, as at the other strong settings (LF 0.1, HF 0.2 at long RT): the loop filters, which a free 128-tap filter per loop fits to the repeat level (§15.9) and five law numbers per loop do not (§16.15, §16.17).
+
+**Not it: the two-tap in every loop too.** `q2_injection.py --stage final … --loopb k` multiplies each loop's per-pass response by F(k b) where the step is on. k = 1 (smoke, 1.0_0.6_0.2 and 1.0_1.0_0.2) is 2–8 dB worse in 5 of 6 windows (R, 50–600 ms) than k = 0. That is with the law loops unchanged; a joint refit with F in the loops is not done.
