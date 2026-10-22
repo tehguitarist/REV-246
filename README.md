@@ -14,7 +14,7 @@ Goal: recreate the EMT 246 digital reverb's S/M/L programs (Non-Lin as a bonus) 
 | File | What it is |
 |---|---|
 | `NEXT_STEPS.md` | Hand-over: status, working rules (96 kHz only), open questions Q1–Q12, analogue stage, order of work, Non-Lin, gaps, modulation, Tomkin questions, UAD 250 test bench, plugin notes |
-| `library_notes.md` | The Tomkin library: licence, layout and naming, value sets, harness results, cross-rate (48k = 96k) analysis, harness usage |
+| `library_notes.md` | The Tomkin library: licence, layout and naming, value sets, harness results, cross-rate (48k = 96k) analysis, harness usage, the Altiverb 246 captures (§6) |
 | `EMT246_unit_facts.md` | Consolidated fact sheet: hardware, converters, controls, programs, measured program-S algorithm, budgets, open questions, source index |
 | `model_s_results.md` | Program S grey-box model: 13 rounds of null tests. §8–13 hold the current state: hold-out, capture domain, long tail, diffuser, group-sparse, time-variance |
 | `ml_structure.md` | Programs M and L from the library: clusters and onsets (S's ×2 / ×4), the five-term late recursion (§7: S's four loops scaled ×2 / ×4 and coupled; the S carry-over test), lag precision, the time variance found with AMPL pairs as repeat captures, and the noise floors and repeat-capture ceiling (S about −57 dB) that bound the null target |
@@ -36,6 +36,8 @@ Goal: recreate the EMT 246 digital reverb's S/M/L programs (Non-Lin as a bonus) 
 | `tools/q1_generalise.py` | Q1: Path B across the library (loop fits, control laws, AP230 step, shared-injection joint fit, held-out splits, repeat-capture ceiling, CLA check) → `analysis/q1/` |
 | `tools/q2_injection.py` | Q2: fade-free windows, Tomkin fade compensation (fixed 0.700 s ramp), per-setting free injections, q1's joint bench with corrected windows, fade-compensated nulls, residue regression, the `branches` bench (shared injection with branch exponents and window length), the `filters` / `loops` stages (loops refitted per setting with an injection frozen), the `tied` / `diffuser` / `ap230` / `capped` stages (the compact 5-tap model, −1/√2 diffuser, AP230 steps, saturating laws), `cla` (cross-unit), and `final` (the consolidated S model and its baseline, `model_s_results.md` §17) → `analysis/q2/` |
 | `tools/q2_candidates.py` | Offline tests of the period-practice candidates on the frozen flat injection: in-band sparsity with controls (K1), the comb factor and tied tap model, a recursive-stage scan (K2/K5), tap-position structure (K3), a common distributor (K6), the first-pass FIR, the residual (K5), and per-tap checks across the 128 per-setting injections (K7, K4) → `analysis/q2/` |
+| `tools/make_sweep.py` | Stimulus for sweep-capturing a convolution plugin: log sweep (48 / 96 kHz, −6/−12/−18 dBFS, optional 15 s tail), its inverse filter, a single-sample impulse → `sweep_request/` (not committed) |
+| `tools/altiverb_compare.py` | Altiverb 246 IRs against Tomkin: sweep deconvolution and clipping check, cluster taps, octave-band T60, tap spectrum vs the CLA kernel, S reverb null (`library_notes.md` §6, unit facts §5c) → `analysis/altiverb/` |
 | `tools/analog/` | Analogue chain: `netlists.py` (input 7 246 131 and output 7 246 130 filters transcribed from the service manual), `mna.py` (AC solver, ideal or finite-GBW op-amps), `compare_kernel.py` (vs the reference kernel → `analysis/analog/`) |
 | `tools/harness/` | IR-library harness, stages A–C: `run.py` (CLI), `crossrate.py` (direct cross-rate comparison), `core.py` (per file), `library.py` (library level), `naming.py`, `report.py`, `synth.py` (synthetic test library), `config.json` (constants, templates, naming patterns) |
 | `tests/test_harness.py` | End-to-end harness tests: `.venv/bin/python -m pytest tests -q` |
@@ -70,6 +72,8 @@ python3 -m venv .venv && .venv/bin/pip install numpy scipy soundfile matplotlib 
 .venv/bin/python tools/harness/crossrate.py "irs/EMT 246 captures" --out analysis/library/tomkin/crossrate.csv   # direct 48k vs 96k comparison
 .venv/bin/python tools/ml_structure.py [--stage clusters|loops|lags|pairs|floors|clock]                # programs M/L (and S as control), 96 kHz set
 .venv/bin/python tools/ml_carryover.py [--stage diffuser|taps|routing|firstpass] [--only N]           # S carry-over to M/L (needs ml_structure's cache)
+.venv/bin/python tools/make_sweep.py                                                         # sweep, inverse and impulse stimuli → sweep_request/
+.venv/bin/python tools/altiverb_compare.py [--stage deconv|cluster|decay|spectrum|null]      # Altiverb 246 vs Tomkin (needs irs/Altiverb EMT256 IRs/)
 .venv/bin/python tools/analog/compare_kernel.py [--kernel <npz> --tag <name>]            # analogue chain vs a kernel
 .venv/bin/python tools/model_s.py [--tighten|--tail|--diffuser|--allpass|--groups|--stochastic]
 .venv/bin/python -m pytest tests -q

@@ -78,3 +78,14 @@ Non-Lin: SPAN 0–0.5 s, EARLY RT −3.0…10 s, LATE RT 0–2.0 s. The grid is 
 - The 96k file is a flat 24-bit floor from 14 kHz to 47 kHz, as is the 48k file: neither carries interface noise above the rounding floor.
 
 **What this cannot show:** which file came from which, because the 96k file has no content above 14 kHz. Either way the 96k set contains all the information. The earlier hope of using 48k/96k pairs as repeat captures for time-variance tests is gone, and the question is closed.
+
+## 6. The Altiverb 246 IRs (`irs/Altiverb EMT256 IRs/`, not committed)
+
+Captured for this project by a third party running the Altiverb 246 plugin. No licence is known, so **the audio is not committed** (`.gitignore`). Derived data (`analysis/altiverb/summary.json`) may be. Findings: `EMT246_unit_facts.md` §5c; code: `tools/altiverb_compare.py`.
+
+- **What the files are:** 66 stereo 48 kHz 24-bit WAVs, 26.00 s each, named `EMT256_<preset>.wav`. They are **sweep recordings of the plugin, not IRs**: the stimulus is `tools/make_sweep.py` (1 s lead-in, 10 s log sweep 20 Hz–20 kHz, 15 s tail, played at −18 dBFS). Deconvolve with that script's inverse filter; lag 0 is at LEAD + sweep length (zero plugin latency assumed).
+- **Presets:** families `NON-LIN SHORT RT 0.2…2.2 s` (S, six files), `MED RT 0.5…5.0 s` (M, ten), `LONG RT 2…10 s` (L, seven), `REV-250 0.4…4.5 s` (nine, probably the EMT 250 and not used), `NON-LIN`, `PRESET1…10` (PIANO … CATHEDRL) and `PRESET72…90`, `PRESET23`, `PRESET27`, `PRESET54 GATED`. The six `NON-LIN SHORT RT` files are the same IRs the first batch had under `SHORT RT`; the naming is the plugin's and has nothing to do with Tomkin's Non-Lin.
+- **Settings are only the preset name.** LF, HF and AMPL are not given; LF and HF are not neutral (unit facts §5c).
+- **It is not 96 kHz and not Tomkin's capture,** so the "96 kHz only" rule does not apply to it, and it is not a repeat capture of Tomkin: separate capture, relative clock about −45 ppm, polarity inverted.
+- **Capture lessons (the first batch was spoilt):** at −6 dBFS with a 6 s tail, the dense presets clipped by 0…+3.4 dBFS (many thousands of samples in CATHEDRL and CONCERT, pre-IR distortion 6–15 dB above the method floor) and tails past 6 s were lost. At −18 dBFS with a 15 s tail, no file clips and the longest tails (LONG RT 10, PRESET90) are down to −139 dB by 13–14 s. Where neither run clipped, the two levels agree to −104…−112 dB: the method and the plugin repeat to about −100 dB.
+- **Use:** structure and decay checks only. One frozen realisation per preset, so no M/L time-variance test and no held-out nulls of the M/L reverb. Not run through the harness (its naming parsers do not know these files).
