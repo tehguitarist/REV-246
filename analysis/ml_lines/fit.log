@@ -1,0 +1,100 @@
+
+## M: line law fitted per setting to the band decay (160 groups; median rms rate error 0.79 %)
+- per LF step, settings with HF at its top step: Nyquist-end RT / label (S law: L['hi']), DC RT / Nyquist-end RT (S law: dc / hi); median [IQR] over RT; RT where no limit is active in the law
+  LF 0.1: hi 1.281 [1.273–1.289] (S 1.278); dc/hi 0.103 [0.102–0.104] (S 0.103); 2 of 8 settings uncapped
+  LF 0.7: hi 1.032 [1.031–1.034] (S 1.035); dc/hi 0.684 [0.683–0.685] (S 0.684); 7 of 8 settings uncapped
+  LF 1.2: hi 0.986 [0.986–0.987] (S 0.989); dc/hi 1.197 [1.195–1.199] (S 1.205); 8 of 8 settings uncapped
+  LF 2.0: hi 0.958 [0.956–0.960] (S 0.958); dc/hi 2.019 [2.017–2.024] (S 2.032); 8 of 8 settings uncapped
+- per-pass DC gain (min over lines) fitted vs law-with-limits, settings where the law's DC limit is active:
+  0.1_0.6_0.1: fitted 0.151 (law 0.180); RT fit / law per octave 1.00 1.00 1.00 1.01 1.01 1.01 1.01
+  0.1_0.6_0.2: fitted 0.145 (law 0.180); RT fit / law per octave 0.99 1.00 1.01 1.01 1.01 1.01 1.00
+  0.1_0.6_0.4: fitted 0.148 (law 0.180); RT fit / law per octave 0.99 0.99 0.99 0.99 0.99 0.99 1.00
+  0.1_0.6_0.7: fitted 0.153 (law 0.180); RT fit / law per octave 1.00 1.00 0.99 0.99 0.99 0.99 0.99
+  0.1_0.6_0.9: fitted 0.148 (law 0.180); RT fit / law per octave 0.99 0.99 0.99 0.99 0.99 0.99 0.99
+  0.1_0.8_0.1: fitted 0.155 (law 0.180); RT fit / law per octave 1.01 0.99 0.98 0.99 0.99 1.00 1.00
+  0.1_0.8_0.2: fitted 0.149 (law 0.180); RT fit / law per octave 0.99 0.99 0.99 0.99 1.00 1.00 1.00
+  0.1_0.8_0.4: fitted 0.152 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.99 0.99 1.00
+  0.1_0.8_0.7: fitted 0.149 (law 0.180); RT fit / law per octave 1.00 0.99 0.99 0.99 0.99 0.99 0.99
+  0.1_0.8_0.9: fitted 0.151 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.98 0.98 0.99
+  0.1_1.2_0.1: fitted 0.156 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.99 0.99 1.00 1.00
+  0.1_1.2_0.2: fitted 0.153 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.99 0.99 1.00
+  0.1_1.2_0.4: fitted 0.149 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.98 0.99 0.99 1.00
+  0.1_1.2_0.7: fitted 0.146 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.98 0.98 0.98 0.98
+  0.1_1.2_0.9: fitted 0.150 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.98 0.98 0.98
+  0.1_1.8_0.1: fitted 0.135 (law 0.180); RT fit / law per octave 0.98 0.99 0.98 0.98 0.99 0.99 0.99
+  0.1_1.8_0.2: fitted 0.153 (law 0.180); RT fit / law per octave 1.00 0.98 0.96 0.96 0.97 0.98 0.99
+  0.1_1.8_0.4: fitted 0.146 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.98 0.98 0.99 0.99
+  0.1_1.8_0.7: fitted 0.148 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.98 0.98 0.98 0.98
+  0.1_1.8_0.9: fitted 0.144 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.98 0.98 0.98 0.98
+  0.1_2.6_0.1: fitted 0.151 (law 0.180); RT fit / law per octave 0.99 0.98 0.97 0.98 0.99 0.99 0.99
+  0.1_2.6_0.2: fitted 0.150 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.99 1.00 1.00
+  0.1_2.6_0.4: fitted 0.144 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.98 0.98 0.98 0.99
+  0.1_2.6_0.7: fitted 0.145 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.98 0.97 0.98 0.98
+  0.1_2.6_0.9: fitted 0.138 (law 0.180); RT fit / law per octave 0.98 0.98 0.98 0.98 0.98 0.98 0.98
+  0.1_3.0_0.1: fitted 0.152 (law 0.180); RT fit / law per octave 0.99 0.97 0.95 0.96 0.97 0.98 0.99
+  0.1_3.0_0.2: fitted 0.151 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.99 1.00 1.00
+  0.1_3.0_0.4: fitted 0.149 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.98 0.98 0.99
+  0.1_3.0_0.7: fitted 0.142 (law 0.180); RT fit / law per octave 0.99 0.99 0.99 0.98 0.98 0.98 0.98
+  0.1_3.0_0.9: fitted 0.147 (law 0.180); RT fit / law per octave 0.99 0.99 0.99 0.98 0.98 0.98 0.98
+  0.7_0.6_0.1: fitted 0.147 (law 0.180); RT fit / law per octave 0.99 1.00 1.01 1.01 1.00 1.00 1.00
+  0.7_0.6_0.2: fitted 0.148 (law 0.180); RT fit / law per octave 0.99 1.00 1.01 1.01 1.00 1.00 1.00
+  0.7_0.6_0.4: fitted 0.156 (law 0.180); RT fit / law per octave 1.00 1.00 0.99 0.99 1.00 1.00 1.00
+  0.7_0.6_0.7: fitted 0.155 (law 0.180); RT fit / law per octave 1.00 1.00 1.00 1.00 1.00 1.00 1.00
+  0.7_0.6_0.9: fitted 0.153 (law 0.180); RT fit / law per octave 1.00 1.00 1.00 1.00 1.00 1.00 1.00
+- HF pole (max over lines) fitted vs law-with-limits, per HF step (median over settings) and where the law's pole is capped:
+  HF 0.1: fitted 0.868 (law 0.840); capped in the law: 24 settings, fitted max pole there 0.868
+  HF 0.2: fitted 0.720 (law 0.719); capped in the law: 12 settings, fitted max pole there 0.871
+  HF 0.4: fitted 0.392 (law 0.391); capped in the law: 0 settings, fitted max pole there nan
+  HF 0.7: fitted 0.143 (law 0.143); capped in the law: 0 settings, fitted max pole there nan
+  HF 0.9: fitted 0.041 (law 0.041); capped in the law: 0 settings, fitted max pole there nan
+- RT fit / law per octave (median over all groups), by HF step:
+  HF 0.1   0.990  0.982  0.980  0.984  0.992  0.995  0.996
+  HF 0.2   0.993  0.993  0.994  0.996  0.997  0.999  1.000
+  HF 0.4   0.995  0.994  0.994  0.995  0.995  0.995  0.996
+  HF 0.7   0.996  0.996  0.997  0.997  0.998  0.998  0.998
+  HF 0.9   0.995  0.995  0.997  0.997  0.997  0.998  0.998
+
+## L: line law fitted per setting to the band decay (180 groups; median rms rate error 0.73 %)
+- per LF step, settings with HF at its top step: Nyquist-end RT / label (S law: L['hi']), DC RT / Nyquist-end RT (S law: dc / hi); median [IQR] over RT; RT where no limit is active in the law
+  LF 0.1: hi 1.321 [1.289–1.356] (S 1.278); dc/hi 0.098 [0.095–0.101] (S 0.103); 4 of 9 settings uncapped
+  LF 0.8: hi 1.021 [1.019–1.021] (S 1.022); dc/hi 0.781 [0.771–0.782] (S 0.788); 9 of 9 settings uncapped
+  LF 1.2: hi 0.986 [0.985–0.987] (S 0.989); dc/hi 1.187 [1.158–1.194] (S 1.205); 9 of 9 settings uncapped
+  LF 2.0: hi 0.958 [0.957–0.960] (S 0.958); dc/hi 1.967 [1.953–1.973] (S 2.032); 9 of 9 settings uncapped
+- per-pass DC gain (min over lines) fitted vs law-with-limits, settings where the law's DC limit is active:
+  0.1_2.2_0.1: fitted 0.136 (law 0.180); RT fit / law per octave 0.99 1.03 1.08 1.11 1.10 1.08 1.07
+  0.1_2.2_0.3: fitted 0.142 (law 0.180); RT fit / law per octave 0.99 1.01 1.03 1.06 1.08 1.07 1.06
+  0.1_2.2_0.5: fitted 0.150 (law 0.180); RT fit / law per octave 1.00 0.99 0.99 0.98 0.98 0.99 0.99
+  0.1_2.2_0.8: fitted 0.151 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.98 0.98 0.98
+  0.1_2.2_1.0: fitted 0.149 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.98 0.98 0.98 0.98
+  0.1_2.6_0.1: fitted 0.151 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.99 1.00 1.00 1.00
+  0.1_2.6_0.3: fitted 0.151 (law 0.180); RT fit / law per octave 1.00 0.99 0.99 0.99 0.99 0.99 1.00
+  0.1_2.6_0.5: fitted 0.150 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.98 0.99 0.99
+  0.1_2.6_0.8: fitted 0.153 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.98 0.98 0.99
+  0.1_2.6_1.0: fitted 0.152 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.98 0.98 0.98
+  0.1_3.6_0.1: fitted 0.148 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.99 0.99 0.99 1.00
+  0.1_3.6_0.3: fitted 0.149 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.98 0.99 1.00 1.00
+  0.1_3.6_0.5: fitted 0.148 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.97 0.98 0.98 0.99
+  0.1_3.6_0.8: fitted 0.150 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.97 0.98 0.98
+  0.1_3.6_1.0: fitted 0.150 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.97 0.97 0.97
+  0.1_4.5_0.1: fitted 0.149 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.98 0.99 0.99 1.00
+  0.1_4.5_0.3: fitted 0.149 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.99 0.99 1.00
+  0.1_4.5_0.5: fitted 0.151 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.98 0.98 0.99
+  0.1_4.5_0.8: fitted 0.150 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.98 0.98 0.98
+  0.1_4.5_1.0: fitted 0.149 (law 0.180); RT fit / law per octave 1.00 0.99 0.99 0.98 0.98 0.97 0.97
+  0.1_6.0_0.1: fitted 0.157 (law 0.180); RT fit / law per octave 1.00 0.98 0.96 0.97 0.98 0.99 0.99
+  0.1_6.0_0.3: fitted 0.149 (law 0.180); RT fit / law per octave 1.00 0.99 0.99 0.98 0.98 0.99 0.99
+  0.1_6.0_0.5: fitted 0.149 (law 0.180); RT fit / law per octave 1.00 0.99 0.99 0.98 0.98 0.98 0.99
+  0.1_6.0_0.8: fitted 0.144 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.98 0.97 0.98 0.99
+  0.1_6.0_1.0: fitted 0.141 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.98 0.98 0.97 0.97
+- HF pole (max over lines) fitted vs law-with-limits, per HF step (median over settings) and where the law's pole is capped:
+  HF 0.1: fitted 0.861 (law 0.840); capped in the law: 20 settings, fitted max pole there 0.868
+  HF 0.3: fitted 0.426 (law 0.427); capped in the law: 0 settings, fitted max pole there nan
+  HF 0.5: fitted 0.224 (law 0.223); capped in the law: 0 settings, fitted max pole there nan
+  HF 0.8: fitted 0.065 (law 0.065); capped in the law: 0 settings, fitted max pole there nan
+  HF 1.0: fitted 0.000 (law 0.000); capped in the law: 0 settings, fitted max pole there nan
+- RT fit / law per octave (median over all groups), by HF step:
+  HF 0.1   0.970  0.973  0.978  0.985  0.993  0.996  0.997
+  HF 0.3   0.983  0.987  0.990  0.994  0.995  0.996  0.996
+  HF 0.5   0.988  0.989  0.989  0.995  0.997  0.997  0.998
+  HF 0.8   0.987  0.989  0.990  0.996  0.998  0.999  1.001
+  HF 1.0   0.984  0.988  0.991  0.996  0.998  0.998  0.997

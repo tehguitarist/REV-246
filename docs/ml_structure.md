@@ -5,7 +5,7 @@ Everything below comes from `.venv/bin/python tools/ml_structure.py` on the Tomk
 through the same code as the control and the calibration. Labels as in `EMT246_unit_facts.md`
 (**C** confirmed, **S** strong, **H** hypothesis).
 
-*October 2026. Answers `NEXT_STEPS.md` Q3 and changes the picture of the "stochastic control" (§8 there).*
+*October 2026. Answers `NEXT_STEPS.md` Q3 and changes the picture of the "stochastic control" (§8 there). §8 below adds the line gains and filters (Q4–Q7 for M/L).*
 
 > **Summary.**
 > - **Early section = program S's, time-scaled by 2 (M) and 4 (L).** Same 8-tap cluster with the same signs, the reverb onset and the L/R onset gap all scale (§1, §2).
@@ -179,11 +179,11 @@ All three M pairings agree (R, 0.15–0.3 / 0.3–0.6 / 0.6–1.0 / 1–2 s): 60
 
 ## 6. Next tests
 
-*Done since: the S carry-over (§7). With the deterministic structure known, items 1–3 can now be tested inside the model (which matrix entries, line gains or taps vary).*
+*Done since: the S carry-over (§7) and the line laws (§8). With the deterministic model complete, items 1–2 can now be tested inside it (which matrix entries, line gains or taps vary).*
 
 1. **Decorrelation rate vs settings:** does the pair-null decay rate depend on RT, HF or LF? Does it scale per recirculation (per N samples) or per second? This separates "random change per pass" from a free-running clock.
 2. **Which part varies:** compare the pair difference with the five-tap recursion: is it consistent with randomised tap gains (β, γ), switched tap positions, or a varying read-out?
-3. **Loop gains and filters from the recursion** at RT/HF/LF steps (Q4–Q7 for M/L), using the deterministic part.
+3. ~~**Loop gains and filters from the recursion** at RT/HF/LF steps (Q4–Q7 for M/L), using the deterministic part.~~ Done (§8): S's laws, length-scaled.
 4. **Harness:** per-program cluster templates (§1) with a 60 ms window, and the M/L lag sets as known loop sets.
 5. **Non-Lin:** its late part (`1108-1254-1386` and `231-628-…` in the harness) through the same predictor.
 
@@ -325,3 +325,99 @@ Positions, signs and kernel from 6 training settings per program (the flattest H
 - **What the first pass still misses** (the 10–15 dB to the repeat level) is the same gap S's compact model has (`model_s_results.md` §16.11, §17: a dense remainder, mostly out of band). L's extra 4–6 dB is probably the kernel: it is fitted on the cluster window only, and L's kernel is the strongest (**H**).
 - **Parameters:** per program the diffuser (3 lengths, one gain), the 40 tap positions and signs, the 11-tap kernel and the step table; per capture 3 (shift, two gains). The kernel and taps are trained on 6 settings, never on the held-out ones.
 - **The first recirculation** (the coupling) is measured in §7.3 but not yet nulled: its gains are the line gains and filters per setting (Q4–Q7 for M/L), and from there on the time variance of §4 caps any waveform null.
+
+## 8. Line gains and filters: S's laws, length-scaled (October 2026)
+
+`.venv/bin/python tools/ml_lines.py [--stage law|report|fit]` → `analysis/ml_lines/` (`law/` one file per AMPL group, `report.log`, `fit.json` / `fit.log`). `NEXT_STEPS.md` §5 item 5, the step after §7: what are the line gains and filters per setting (Q4–Q7 for M/L)?
+
+**Method.** The §7 model is closed through the four lines: y = h ∗ [g_c C + g_t D · 1ᵀ(I − ΛF)⁻¹T], Λ = diag(G_j(z) z^−P_j), F the §7.3 coupling matrix, T the read taps grouped by their S loop.
+- **Line responses:** each G_j is **S's control laws** (`model_s_results.md` §14.2, the 13 numbers) evaluated at line j's own length: Jot gain, LF shelf with the fixed pole, HF one-pole. S's three limits apply: HF pole ≤ 0.84, per-pass DC gain ≥ 0.18, β = 0.019 (§16.15–16.16 there). M's and L's LF steps that S lacks (0.7, 0.8, 1.2) are interpolated in log LF. **No loop number is fitted on M or L**, so everything after the first pass is a held-out prediction.
+- **Per capture** (fitted only on [0, onset + shortest line), which no line reaches): one sub-sample shift, one clock ratio and two gains per channel (cluster, reverb). The fitted clocks are tight: M +12.8 ppm (10–90 % +12.2…+13.2), L +13.4 (+12.4…+13.5).
+- **Windows** (100 Hz–10 kHz, up to each capture's fade): cluster and gap, first pass, then three recirculation windows one shortest line long (M R channel: 0.14–0.24 / 0.24–0.34 / 0.34–0.44 s; L: 0.29–0.49 / 0.49–0.69 / 0.69–0.89 s).
+- **Repeat-capture null:** another capture of the same AMPL group as the model, with the same freedoms (shift, clock, cluster column, gain).
+- **Rendering:** frequency domain on an exponentially weighted grid (no time aliasing at RT 20 s) with integer delays; clock and shift are applied after, as a Kaiser-sinc warp. The tap positions' fractional parts are the capture clock (§7.2), so the taps render as integers.
+- **Decay per octave:** 10 log10 of the band energy ratio measured / model per 39 ms frame, from the onset to the fade. Its slope is the decay error, and it is energy-based, so the time variance does not bias it the way it biases a waveform null.
+
+> **Summary.**
+> - **S's laws, length-scaled, are M's and L's line laws.** With no parameter fitted on M or L, the model predicts the recirculations **better than a repeat capture does**: recirc1 (R) M −20.8 vs repeat −19.8 dB, L −18.9 vs −17.5. The model beats the repeat in 69 % (M) and 65 % (L) of captures, by a median 2.2 dB. **S**
+> - **Coupling confirmed:** with the lines uncoupled (F = I) every recirculation window is at about 0 dB (−1.2…+3.2 dB). **C**
+> - **S's coefficient limits carry over unchanged:** the HF-pole limit scan peaks at **0.84** in both programs (recirc1 M −26.9, L −23.6 dB at 0.84; 2–3 dB worse at 0.80 / 0.88; without the limit −16 / −11). The DC floor is best at 0.18 (shallow: ±0.3 dB over 0.14–0.22), and β = 0.019 is at or near the best. **S** (HF), **S/weak** (DC, β)
+> - **Decay matches to under 1 %:** measured RT / law RT over all octaves is 0.996 (M) and 0.995 (L), IQR 0.985–1.001. Fitted per setting, M's and L's LF law numbers reproduce S's (interpolated) ones to 0.1–1.5 %, except L at LF 2.0 (DC RT 3 % short) and LF 0.1 (capped settings). **S**
+> - **The model is at the time-variance limit:** splitting each window's null into capture-to-capture variance v and the model's own error e (repeat = 2v, model = v + e), e is 2–9 dB below v in every recirculation window. Past the first pass, waveform nulls against one capture can't show more (§4, `NEXT_STEPS.md` §2: accuracy over null). **S** (given the independence assumption)
+
+### 8.1 Nulls against repeat captures
+
+Median over captures, L / R [repeat L / R], dB; v / e for R; held out in time and setting (loops from S's laws):
+
+| Window | M (160 groups, 479 captures) | v / e | L (180 groups, 360 captures) | v / e |
+|---|---|---|---|---|
+| Cluster and gap | −48.5 / −45.8 [−49.9 / −47.3] | −50.3 / −47.6 | −44.9 / −45.5 [−44.8 / −45.5] | −48.5 / −48.5 |
+| First pass | −44.5 / −44.1 [−48.6 / −49.2] | −52.2 / −44.8 | −44.3 / −42.7 [−46.2 / −54.1] | −57.1 / −42.9 |
+| Recirculation 1 | **−22.0 / −20.8** [−21.2 / −19.8] | −22.8 / −25.1 | **−19.7 / −18.9** [−18.4 / −17.5] | −20.5 / −23.8 |
+| Recirculation 2 | −16.5 / −16.0 [−14.4 / −14.1] | −17.1 / −22.2 | −16.1 / −15.7 [−13.7 / −13.4] | −16.5 / −23.6 |
+| Recirculation 3 | −13.1 / −12.6 [−10.9 / −10.2] | −13.3 / −20.8 | −12.8 / −12.6 [−10.4 / −10.1] | −13.1 / −22.3 |
+| Recirc. 1, lines uncoupled (R) | −1.2 | | +0.7 | |
+| Recirc. 1, no limits (R) | −19.3 | | −18.5 | |
+
+- **The model beats the repeat captures past the first pass, at every RT, LF and HF step** (by-control tables in `report.log`; the only exceptions are three cells within 0.3 dB: M RT 4.0, L RT 2.6, L LF 0.1). That is what a deterministic model of the common response should do when each capture adds its own random part.
+- **The first pass is where the model's own error dominates** (e 7–14 dB above v): the same dense remainder S's compact model has (`model_s_results.md` §16.11, §17), about −44 dB. It enters every later window too, but at −44 dB that is far below the time variance there.
+- **Cluster and gap with fitted clocks:** M at the repeat-capture level (−48.5 / −45.8 against −49.9 / −47.3), L exactly at it. With fitted clocks the repeat captures reach −50 / −47 dB (M) and −45 dB (L) in this window, so **−50 dB is not demonstrable here against this library**; the model is within 1.5 dB of what is.
+- **Recirculation nulls get worse with RT** (M recirc1 −26 dB at RT 0.6, −19 at RT 5.0), and so do the repeat nulls: longer RT keeps more of the earlier, already-decorrelated passes in each window.
+
+### 8.2 The coefficient limits
+
+Recirculation nulls (median over captures and channels, recirc1 / recirc2 / recirc3, dB) in the groups where each limit can act; everything else at the law:
+
+| HF pole limit | M (41 groups) | L (21 groups) |
+|---|---|---|
+| 0.80 | −22.4 / −11.6 / −7.8 | −18.7 / −10.7 / −7.1 |
+| 0.82 | −24.8 / −14.6 / −10.2 | −21.1 / −13.6 / −9.8 |
+| **0.84** | **−26.9 / −17.1 / −12.5** | **−23.6 / −16.5 / −12.4** |
+| 0.86 | −26.1 / −16.8 / −12.3 | −23.4 / −16.3 / −12.4 |
+| 0.88 | −24.0 / −13.8 / −9.8 | −21.3 / −12.9 / −9.4 |
+| 0.90 | −21.9 / −10.5 / −6.9 | −18.3 / −9.4 / −6.2 |
+| none | −16.2 / −3.0 / −0.7 | −11.4 / −2.5 / −0.5 |
+
+| DC floor | M (45) | L (30) | | β | M (45) | L (30) |
+|---|---|---|---|---|---|---|
+| 0.10 | −22.0 / −15.7 | −19.5 / −15.7 | | 0 | −21.3 / −15.6 | −19.3 / −15.6 |
+| 0.14 | −22.2 / −16.1 | −19.6 / −16.0 | | **0.019** | **−22.3 / −16.4** | **−19.7 / −16.2** |
+| **0.18** | **−22.3 / −16.4** | **−19.7 / −16.2** | | 0.04 | −22.2 / −16.4 | −19.7 / −16.2 |
+| 0.22 | −22.4 / −16.3 | −19.7 / −16.2 | | | | |
+| 0.26 | −22.2 / −15.9 | −19.5 / −15.9 | | | | |
+| none | −20.3 / −15.3 | −18.9 / −14.9 | | | | |
+
+- **The HF limit is sharp and the same as S's** (0.84, between 0.84 and 0.86 in both programs; S's refit gave 0.835–0.845). It acts per line, so it bites at longer RT in M and L than in S (more damping per pass for the same RT): 41 M groups (HF 0.1–0.2) and 21 L groups (HF 0.1). **S**
+- **The DC floor matters (0.8–2 dB against none) but its value is weakly fixed** by these windows: 0.14–0.22 are within 0.3 dB, 0.18 is in the middle. Its effect is mostly below 100 Hz, outside the null band. **S** that a floor exists; its value carries over from S as the best estimate.
+- **β = 0.019 is at the best** (0 is 0.4–1.0 dB worse; 0.04 equal). Consistent with S's value, not an independent measurement of it.
+- The decay-based per-setting fit (§8.3) cannot fix the HF pole at HF 0.1: the top octaves decay before 0.15 s, and the pole then trades off against the broadband RT (fitted 0.86–0.87 with an equal RT curve). The waveform scan above decides it.
+
+### 8.3 Decay per octave, and the LF law per step
+
+Measured RT / law RT (median over captures and channels):
+
+| | 125 | 250 | 500 | 1 k | 2 k | 4 k | 8 k Hz |
+|---|---|---|---|---|---|---|---|
+| M, LF 0.1 / 0.7 / 1.2 / 2.0 | 0.993 / 0.996 / 0.988 / 0.991 | 0.997 / 0.996 / 0.992 / 0.996 | 0.987 / 0.997 / 0.995 / 1.001 | 0.980 / 0.994 / 0.993 / 0.997 | 0.986 / 0.996 / 0.997 / 0.998 | 0.993 / 0.998 / 0.997 / 0.998 | 0.997 / 0.999 / 0.999 / 1.000 |
+| L, LF 0.1 / 0.8 / 1.2 / 2.0 | 0.996 / 0.982 / 0.972 / **0.958** | 0.996 / 0.992 / 0.987 / 0.982 | 0.988 / 0.991 / 0.990 / 0.991 | 0.986 / 0.994 / 0.993 / 0.995 | 0.988 / 0.996 / 0.995 / 0.997 | 0.994 / 0.997 / 0.997 / 0.998 | 0.999 / 1.000 / 0.999 / 1.000 |
+
+Band levels at the onset agree with the model within ±0.15 dB in every octave and HF step (`report.log`), so the spectrum is right, not only the decay.
+
+**The law's numbers per LF step, fitted per setting** (`fit` stage: Nyquist-end RT / label and DC RT / Nyquist-end RT, from the band decay, settings at the top HF step where no limit is active; median over RT):
+
+| LF | M: hi | M: dc / hi | L: hi | L: dc / hi | S law (interpolated where S has no step): hi, dc / hi |
+|---|---|---|---|---|---|
+| 0.1 | 1.281 | 0.103 | 1.321 | 0.098 | 1.278, 0.103 |
+| 0.7 / 0.8 | 1.032 | 0.684 | 1.021 | 0.781 | 1.035, 0.684 / 1.022, 0.788 |
+| 1.2 | 0.986 | 1.197 | 0.986 | 1.187 | 0.989, 1.205 |
+| 2.0 | 0.958 | 2.019 | 0.958 | 1.967 | 0.958, 2.032 |
+
+- **M's LF steps are S's law exactly**, including the two steps S doesn't have (0.7, 1.2), from log-LF interpolation of S's four steps. So the LF control is one continuous law shared by the programs, not a per-program table (**S**). L agrees as well except at the low end of LF 2.0 / 1.2 (DC RT 3 % / 1.5 % short, the 125 Hz shortfall above) and LF 0.1 (only 4 of 9 settings uncapped).
+- **A small common shortfall:** measured RT is 0.2–2 % below the law in the mid bands, most at HF 0.1 (2 %) and in L at low frequencies. Two readings, not separated yet: a real slightly stronger damping in M/L, or the sweep measurement of a time-variant system, which loses coherent energy as the response decorrelates, so the measured IR decays a little faster than the unit's energy (**H**). The second predicts a shortfall that grows with the decorrelation rate; testing it needs the time-variance model (Q3b).
+- The HF steps behave the same way: fitted HF poles equal the law's at HF 0.2–0.9 in M and 0.3–1.0 in L (M 0.720 / 0.392 / 0.143 / 0.041 against 0.719 / 0.391 / 0.143 / 0.041).
+
+### 8.4 What this answers, and what's next
+
+- **Q4–Q7 for M/L (line gains and filters) are answered at the library's steps:** S's laws at the M/L line lengths with S's limits. The per-program control laws are one set: what changes between programs is the line lengths, the coupling and the kernel, not the control arithmetic. **Parameters added for M/L: none** (13 law numbers and 3 limits from S, the §7 structure trained on 6 settings, 6 per capture: shift, clock, and per channel a cluster gain and one reverb gain shared by all lines).
+- **For the null target:** the reverb windows are now limited by the time variance, not the model (e below v). By the M/L rule in `NEXT_STEPS.md` §2 the next proof is statistical, the decorrelation curve, which needs a model of the variation itself.
+- **Next (Q3b):** with the deterministic model in hand, the model-minus-capture residual in each recirculation window is the variation itself (plus e, 2–9 dB lower). Test which part varies (line gains, matrix signs, tap positions, the output kernel as averaged address jitter) by how that residual grows per pass, and check whether the 0.2–2 % RT shortfall follows it.
