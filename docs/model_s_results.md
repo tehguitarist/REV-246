@@ -1794,3 +1794,26 @@ After γ (§22.3), LF 0.1 at RT ≥ 1.8 keeps +14…+16 dB of excess (300–600 
 - **Not smooth across RT (§22.1's interpolation, split by HF):** at LF 0.1 / RT 1.8, the correction interpolated from RT 1.4 and 2.2 recovers only a third to a half of the setting's own gain (300–600 ms, law / interpolated / own: HF 1.0 +17.9 / +15.5 / +11.0; HF 0.6 +16.5 / +14.8 / +9.8; HF 0.4 +17.2 / +13.7 / +9.0), and at HF 0.2 makes it worse (+16.4 / +18.2 / +11.9).
 
 **So:** at LF 0.1 and long RT the loops need a magnitude correction of about 1 % of the decay rate, the same in the four loops, that differs from one RT step to the next in a way neither a law in RT nor the neighbours predict. That pattern fits per-cell table values in the unit (for example a shared rate parameter stored coarsely per RT × LF cell; **H**), not a formula; the §22 quantisation test looked at the final per-loop coefficients and would not see it. Held out by setting, the transferable parts of the loop correction are γ under the floor (§22.3) and the smooth broadband term at LF 0.4 / 2.0 (§22.2); this residual stays per setting. For the plugin, the library's own settings could carry their own correction (the measured cell), but values between steps cannot be predicted from these data.
+
+### 22.5 HF 0.2 at long RT: a small pole shift that transfers (`final --hfdp`) **[S for RT 1.8 at LF 0.4–2.0; H for the rest]**
+
+At RT ≥ 1.4, HF 0.2 (and 0.4) carries a loop error of its own: excess +8…+13 dB at 150–600 ms at LF 0.4 / 1.0 / 2.0 that each setting's own correction reduces to +1…+5 (§22.3's table).
+
+- **What it is (`probe`, `analysis/loop_fir/chain2_probe_hf02.json`):** mostly common to the four loops, and **phase matters as much as magnitude** (RT 1.4–1.8: magnitude only −0.18…−0.23, phase only −0.22…−0.26 of own −0.41…−0.51 dB in the late-weighted cost; RT 1.0: phase −1.7 / −2.8 of −4.0 / −5.2). A change of the HF one-pole's pole moves both together.
+- **As a pole change** (per loop, the correction fitted as (1 + δg) · H_op(p + Δp) / H_op(p), complex, 100 Hz–9 kHz; HF < 1, LF ≠ 0.1): where it explains 80–90 % of the correction, **Δp ≈ −0.002…−0.003 at law poles 0.50–0.60** (HF 0.2 at RT 1.4–1.8, HF 0.4 at RT 0.6), **+0.005…+0.011 at 0.65–0.75** (HF 0.2 at RT 1.0), ≈ 0 below 0.5; at ≥ 0.75 (capped or b > 0 short-RT cells) not identified. The four loops agree, so it is not per-coefficient rounding. **No reference frequency and k reproduce it** (f_ref 5.6–8 kHz × k 0.94–1.06: rms pole error 4.05 → 3.97 × 10⁻³ at best, HF 0.2 / RT 1.0 stays +7…+9 × 10⁻³ while RT 1.4–2.2 stay negative): like the LF 0.1 residual (§22.4) it is regime- or cell-dependent, not a smooth law error.
+- **One number, held out by setting:** for HF 0.2, Δp = the median over the training RT steps 1.4 / 2.2 / 2.5 (−0.0020, 17 loops; `analysis/lf_rt/hfdp_train.json`) wherever the law's pole is below 0.75. Scored on the HF 0.2 settings at RT 0.6 / 1.0 / 1.8 (`analysis/lf_rt/final_hfdp_test.{json,log}`), R excess law → shifted:
+
+| | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| RT 1.8, LF 1.0 | +7.8 → +5.1 | +12.4 → **+6.2** | +13.2 → **+5.6** | +9.2 → **+2.4** |
+| RT 1.8, LF 2.0 | +8.8 → +4.7 | +12.6 → **+6.0** | +13.8 → **+6.7** | +10.2 → **+5.1** |
+| RT 1.8, LF 0.4 | +9.6 → +8.8 | +14.5 → +10.5 | +12.9 → +8.2 | +6.4 → +2.7 |
+| RT 1.8, LF 0.1 | +9.0 → +12.2 | +14.6 → +17.4 | +15.8 → +19.3 | +11.3 → +14.5 |
+| RT 1.0, all LF | +24.1 → +24.9 | +30.9 → +32.0 | +26.1 → +27.0 | +8.2 → +9.1 |
+| RT 0.6 | unchanged (law pole ≥ 0.75) | | | |
+
+- **It transfers where the training regime reaches:** 4–8 dB on the unseen RT 1.8 settings at LF 0.4–2.0, one number.
+- **Where it costs, as expected:** HF 0.2 / RT 1.0 is the other regime (it needs +0.009) and loses about 1 dB; LF 0.1 was left out of the training rows (its LF residual, §22.4) and loses about 3 dB. A gate at law pole < 0.65 and LF ≠ 0.1 would avoid both, but it would be chosen after seeing these results, so it is not claimed as held out.
+- **Still open:** HF 0.2 at RT 1.0 (+0.009, a regime of its own, not predicted by its neighbours, §22.1) and the capped / b > 0 short-RT cells, where the HF correction is not identified.
+
+**The loop corrections, summed up (§22–22.5).** Transferable, held out by setting: γ under the DC floor (LF 0.1, 1 number); the smooth broadband term at LF 0.4 / 2.0 (§22.2); the HF 0.2 pole shift in its long-RT regime (1 number). Per setting only, consistent with per-cell table values (**H**): LF 0.1 at long RT, HF 0.2 at RT 1.0. Not identified: HF 0.2 at short RT. No quantisation signature in the per-loop coefficients.
