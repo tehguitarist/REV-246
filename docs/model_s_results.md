@@ -1089,6 +1089,8 @@ Shared injection with one branch per exponent α (each loop's branch through G�
 
 ### 15.9 Loop filters refitted per setting, injection frozen (`filters` stage) **[S]**
 
+*Correction (§22): this stage's fit window was capped at about 50–150 ms (a 4096-sample dummy capture), so the refitted loop numbers come from the first ~100 ms; the scores below are full length.*
+
 The flat-only injection (§15.7, 600 iterations, 6 training settings) frozen; per setting, the loops (q1's 5-number `G_loops`: loop RT, LF shelf DC and Nyquist RT ratios and pole, HF lowpass ratio) refitted against all its captures; clock and gain per capture fitted once before. All 128 settings, R, fade-compensated, null [excess over repeat]:
 
 | Loops | 50–150 ms | 150–300 ms | 300–600 ms | 600–1000 ms |
@@ -1363,6 +1365,8 @@ Aim: separate the two readings of §16.12 (library-specific fitting by the free 
 - **Correction to §16.12's second reading:** the "0–50 ms window" there is not cluster-only (CLA's reverb starts 9 / 21 ms after tap 0), and the cluster-only limit found here need not apply to the reverb. On CLA's reverb the free injection reaches −38.4 / −41.7 dB at 50–150 ms, so CLA supports at least that. The compact model is 1.4 (L) / 4.2 (R) dB short of it. Whether more is possible on CLA is not established. The free model's larger lead on the library (8–10 dB) remains consistent with library-specific fitting (**H**), not proven.
 
 ### 16.15 The loop laws saturate: two coefficient limits common to all loops (`loops --frozen`, `capped`) **[S for HF; H/partial for LF]**
+
+*Correction (§22): the `loops` stage's refits were fitted on about 50–150 ms only (the same 4096-sample cap); the caps were confirmed by full-length scoring and stand.*
 
 **Loop refit with the free (ceiling-level) injection frozen** (`loops --frozen branches_flat_0_ext1700`, all 128 settings; law loops, 5 shared and 5 per-loop numbers; `analysis/q2/loops_branches_flat_0_ext1700.json`, `loops_free.log`). Law and shared refit reproduce §15.9's `filters` stage exactly. Overall excess over the repeat-capture null (R, `nulls_free` reference): law +8.0 / +12.3 / +10.6 dB, 5 shared +5.5 / +9.6 / +7.5, 5 per loop +5.2 / +8.2 / +6.4 (50–150 / 150–300 / 300–600 ms).
 
@@ -1649,3 +1653,56 @@ With both b free the fit lands on b_ff = b_fb: **the damping is a 230 + b delay 
 So §16.17's "the two-tap AP230's −39…−43 dB first pass limits the b > 0 settings" is withdrawn. AP230's form is settled. **What limits the b > 0 settings (+10…+18 dB) is in the recirculations**, as at the other strong settings (LF 0.1, HF 0.2 at long RT): the loop filters, which a free 128-tap filter per loop fits to the repeat level (§15.9) and five law numbers per loop do not (§16.15, §16.17).
 
 **Not it: the two-tap in every loop too.** `q2_injection.py --stage final … --loopb k` multiplies each loop's per-pass response by F(k b) where the step is on. k = 1 (smoke, 1.0_0.6_0.2 and 1.0_1.0_0.2) is 2–8 dB worse in 5 of 6 windows (R, 50–600 ms) than k = 0. That is with the law loops unchanged; a joint refit with F in the loops is not done.
+
+## 22. The loops at strong settings: a free per-loop correction, read off (`tools/loop_fir.py`) **[S for the size and the sharing; H for the form]**
+
+```
+EMT_KERNEL=chain2 .venv/bin/python tools/loop_fir.py --stage fit     # one file per setting in analysis/loop_fir/chain2/ (not committed), fit_chain2.log
+EMT_KERNEL=chain2 .venv/bin/python tools/loop_fir.py --stage report  # report_chain2.log
+EMT_KERNEL=chain2 .venv/bin/python tools/loop_fir.py --stage coefs   # chain2_coefs.json, coefs_chain2.log
+```
+
+The injection is frozen (the chain2 compact model, §21). Per setting, three loop forms are fitted on the AMPL 30 + 90 captures over the whole window from 50 ms to each capture's fade and scored on AMPL 0 + 60, i.e. **held out by capture** (other captures of the same reverb; not held out by setting):
+
+- **law:** the capped law (§16.15–16.16), nothing fitted;
+- **five:** q1's 5-number loop form, shared and length-scaled, refitted;
+- **fir:** the capped law times a free 9-tap correction per loop, G_i → G_i C_i, C_i(z) = Σ c_k z⁻ᵏ at k = −4…4 (36 numbers per setting).
+
+**A correction to §15.9 and §16.15:** q2's `filters` and `loops` stages build their model with a 4096-sample dummy capture, which capped every fit window, and the clock fit before it, at about 50–150 ms. Their loop refits (the 5-number "refit" and "perloop" rows) were therefore fitted on roughly the first 100 ms and scored on everything. The caps themselves were confirmed by full-length scoring (`capped` stage) and stand. Here every window runs to the fade.
+
+**Held out by capture**, R, fade-compensated null [excess over the repeat-capture null], 128 settings, `report_chain2.log`:
+
+| Settings | Loops | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|---|
+| All | law | −48.8 [+6.1] | −44.4 [+10.4] | −39.7 [+8.7] | −35.2 [+4.2] |
+| | five | −50.9 [+5.2] | −46.4 [+7.8] | −43.0 [+5.6] | −37.3 [+0.4] |
+| | **fir** | **−51.1 [+4.8]** | **−48.6 [+6.4]** | **−44.1 [+3.7]** | **−38.9 [−0.1]** |
+| Flat | law / fir | −49.4 / −50.8 [+0.5 / +0.6] | −48.8 / −48.5 [+3.1 / +3.4] | −45.1 / −43.4 [+0.5 / +1.2] | −36.5 / −36.1 |
+| LF 0.1 | law → fir | +14.3 → +7.7 | +18.9 → +11.0 | +18.1 → +8.1 | +11.2 → +2.1 |
+| HF 0.2 | law → fir | +10.3 → +7.4 | +15.1 → +8.5 | +13.9 → +5.2 | +7.6 → −0.2 |
+| RT ≤ 1.0 | law → fir | +9.7 → +7.3 | +13.3 → +6.5 | +8.9 → +3.6 | +2.8 → −1.1 |
+| RT ≥ 1.4 | law → fir | +4.2 → +2.7 | +9.0 → +6.3 | +8.6 → +4.0 | +5.4 → +0.5 |
+
+- **The loops' own error is 5–10 dB of the strong settings' excess** (excess, 150–600 ms). On flat settings the law needs no correction (fir is no better held out). The 5-number form fitted over the whole window recovers part of it (RT ≤ 1.0 300–600 ms +8.9 → +5.3) but not LF 0.1 (+18.1 → +15.9).
+- What is left after the correction (+4…+11 dB at LF 0.1 / HF 0.2, 50–300 ms) is not the loops at this resolution: the injection's share at strong settings, or longer-lag loop structure than ±4 taps.
+
+**The corrections per pass** (median over a group's settings and the four loops; magnitude dB / phase delay samples):
+
+| Settings | 63 Hz | 500 | 1 k | 2 k | 4 k | 6.6 k | 8 k | 10 kHz |
+|---|---|---|---|---|---|---|---|---|
+| Flat | −0.003 / −0.001 | −0.002 | +0.001 | +0.008 | +0.004 | 0.000 | +0.019 | −0.012 |
+| LF 0.1 | **−0.047** / +0.005 | **−0.045** | **−0.042** | **−0.038** | **−0.053** | **−0.047** | −0.024 | −0.097 |
+| HF 0.2 | +0.001 / +0.001 | 0.000 | 0.000 | −0.003 | −0.021 | −0.006 | +0.015 | **−0.105** |
+| RT 0.6 | −0.033 / +0.005 | −0.043 | −0.044 | −0.043 | −0.070 | −0.056 | −0.025 | **−0.136** |
+| RT 1.0 | −0.006 / +0.004 | −0.009 | −0.012 | −0.011 | −0.036 | −0.024 | −0.002 | −0.090 |
+| RT 2.5 | +0.001 / 0.000 | +0.001 | +0.002 | +0.004 | −0.001 | +0.001 | +0.014 | −0.027 |
+
+Phase changes are ≤ 0.005 samples per pass. Values above 10 kHz are poorly constrained (the nulls are scored to 10 kHz) and are not used.
+
+**Read as changes of the law's own coefficients** (`coefs` stage: C − 1 ≈ Σ δθ ∂ln G/∂θ, complex, 100 Hz–10 kHz, θ = loop gain g, shelf DC gain r₀, shelf pole a, HF pole p, fractional delay d): a median **61 %** of each correction is a change of the law's coefficients (IQR 35–87 %). The loop gain needs **−1.2 % at RT 0.3, −0.28 % at RT 0.6, −0.37 % at LF 0.1**, and ≤ 0.07 % at RT ≥ 1.4; the HF pole moves by ±0.1–0.6 %; d ≤ 0.001 samples. The rest is mainly a loss at about 10 kHz (−0.03…−0.14 dB per pass, larger at short RT) that the law form (one-pole HF, first-order shelf) cannot make.
+
+**Not quantisation (S, at this resolution):**
+- the fitted gain and pole changes do not correlate with the rounding (or truncation) error of the law's coefficients on any grid from 6 to 16 bits (|r| < 0.1 throughout, for g and for p);
+- the four loops of one setting need the same relative gain change (spread across the loops 3.4e-4, setting mean 1.0e-3): a common, control-dependent law error, length-scaled like the law, not per-coefficient rounding.
+
+So exact coefficients (Q9) are not visible yet; what is visible is that **the laws damp too little where damping per pass is large** (short RT, LF 0.1), across the band, with an extra loss near 10 kHz. Next: turn the corrections into law changes (a per-pass loss term growing with the damping, and a fixed HF term near 10 kHz), refitted on some settings and **held out by setting**; then the injection's share at LF 0.1 / HF 0.2.
