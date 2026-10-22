@@ -1,0 +1,21 @@
+{
+ "form": "a + b RT",
+ "coefs": {
+  "0.4": [
+   -0.011816203569965784,
+   0.004725906986070542
+  ],
+  "2.0": [
+   0.003833931033871089,
+   -0.0013394787403242187
+  ]
+ },
+ "note": "relative change of each loop's broadband decay rate, rel(RT) = a + b RT per LF step (LF 1.0: none); fitted on the loop_fir corrections of RT 0.3/0.8/1.4/2.2/2.5 only (HF 0.6 and 1.0), model_s_results 22.2; LF 0.4 and 2.0 only (LF 0.1 is gamma's, model_s_results 22.6)",
+ "train_rt": [
+  0.3,
+  0.8,
+  1.4,
+  2.2,
+  2.5
+ ]
+}

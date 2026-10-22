@@ -1817,3 +1817,32 @@ At RT ≥ 1.4, HF 0.2 (and 0.4) carries a loop error of its own: excess +8…+13
 - **Still open:** HF 0.2 at RT 1.0 (+0.009, a regime of its own, not predicted by its neighbours, §22.1) and the capped / b > 0 short-RT cells, where the HF correction is not identified.
 
 **The loop corrections, summed up (§22–22.5).** Transferable, held out by setting: γ under the DC floor (LF 0.1, 1 number); the smooth broadband term at LF 0.4 / 2.0 (§22.2); the HF 0.2 pole shift in its long-RT regime (1 number). Per setting only, consistent with per-cell table values (**H**): LF 0.1 at long RT, HF 0.2 at RT 1.0. Not identified: HF 0.2 at short RT. No quantisation signature in the per-loop coefficients.
+
+### 22.6 The transferable loop terms combined, all 128 settings (`final --gamma --lfrt --hfdp`) **[S]**
+
+```
+EMT_KERNEL=chain2 .venv/bin/python tools/q2_injection.py --stage final --compact diffuser_tied_fix-0.707107_ap230new_chain2 \
+    --ap230 analysis/q2/ap230_g0.7071_chain2.json --gamma -0.02 --lfrt analysis/lf_rt/lfrt_train_lf04_20.json \
+    --hfdp analysis/lf_rt/hfdp_train.json                  # -> analysis/q2/final_s_chain2_refit_lfrt_gamma-0.02_hfdp.{json,log}
+```
+
+The §21 model with the three transferable loop terms of §22.3–22.5, **6 numbers, all fitted on the training RT steps (0.3 / 0.8 / 1.4 / 2.2 / 2.5) only**: γ = −0.02 under the DC floor (LF 0.1; 1 number), the linear broadband form at LF 0.4 and 2.0 (§22.2; 4 numbers; LF 0.1's pair dropped, γ covers it: `lfrt_train_lf04_20.json`), the HF 0.2 pole shift −0.0020 where the law's pole is below 0.75 (§22.5; 1 number). The 48 settings at RT 0.6 / 1.0 / 1.8 are held out by setting; the other 80 supplied the corrections the constants came from (in-sample). R, fade-compensated null [excess over the repeat-capture null], §21 → combined:
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| **Held out (48)** | −48.7 [+9.4] → **−49.1 [+8.4]** | −43.4 [+13.3] → **−45.5 [+11.4]** | −37.3 [+11.5] → **−39.1 [+8.1]** | −29.7 [+4.1] → **−31.1 [+2.0]** |
+| Training RT (80) | −49.7 [+4.9] → −49.2 [+5.0] | −46.2 [+9.7] → −45.8 [+9.3] | −41.0 [+7.9] → −41.0 [+7.1] | −37.2 [+4.8] → −37.0 [+3.8] |
+| All 128 | −49.1 [+5.9] → −49.2 [+5.8] | −44.6 [+10.8] → −45.7 [+10.1] | −39.7 [+9.0] → −40.4 [+7.5] | −35.2 [+4.5] → −35.6 [+3.1] |
+| Flat | unchanged (−50.4 [+0.6], −49.1 [+3.2], −45.3 [+0.6], −37.4 [−1.5]) | | | |
+| LF 0.1 | −42.2 [+12.8] → −46.3 [+10.5] | −37.2 [+17.7] → −40.9 [+14.5] | −28.9 [+17.1] → −33.8 [+13.5] | −25.5 [+11.1] → −30.5 [+8.0] |
+| LF 0.4 | −48.7 [+10.1] → −49.8 [+8.7] | −44.4 [+14.7] → −45.6 [+13.5] | −39.3 [+11.3] → −40.3 [+9.1] | −36.6 [+3.5] → −36.1 [+3.4] |
+| LF 2.0 | −50.7 [+3.5] → −50.3 [+4.4] | −46.9 [+7.2] → −47.3 [+6.3] | −41.9 [+6.0] → −43.7 [+5.2] | −38.0 [+3.5] → −40.0 [+1.6] |
+| HF 0.2 | −44.4 [+8.8] → −43.2 [+10.2] | −31.6 [+15.2] → −33.3 [+15.2] | −29.8 [+13.9] → −33.3 [+14.0] | −33.5 [+7.8] → −32.3 [+7.2] |
+| RT ≤ 1.0 | −43.5 [+10.3] → −46.6 [+9.3] | −34.3 [+13.9] → −38.1 [+12.3] | −26.3 [+9.5] → −31.5 [+7.0] | −23.5 [+2.8] → −26.8 [+0.1] |
+
+L / R, all 128: 0–50 ms −48.7 / −48.5 → −49.5 / −49.3; 150–300 −44.3 / −44.6 → −45.2 / −45.7; 300–600 −39.2 / −39.7 → −40.1 / −40.4. CLA (LF 1.0, HF 0.9) unchanged.
+
+- **On the 48 unseen settings the six numbers lower the excess by 1–3.4 dB in every window** (300–600 ms +11.5 → +8.1). 26 settings improve, 7 get worse and 15 are unchanged (300–600 ms, ±0.5 dB). The 7 are the known costs: LF 0.4 at RT 1.8 (+4.1…+4.5 dB, §22.2), the HF 0.2 shift at LF 0.1 / RT 1.8 and at RT 1.0 (+0.8…+2.7, §22.5), and LF 2.0 / RT 0.6 (+1.1).
+- **The training settings gain less** (+7.9 → +7.1): most are long-RT settings whose corrections are near zero, and the short-RT HF 0.2 cells, where nothing transfers, sit among them.
+- **HF 0.2 as a whole does not move:** its excess is dominated by the short-RT cells (b > 0, pole capped), where the loop correction is not identified. That, LF 0.1 at long RT (per setting, §22.4) and HF 0.2 at RT 1.0 are what is left of the loops.
+- **Against −50 dB:** flat settings stay at the target in the early windows; all 128 settings are now −49.2 / −45.7 / −40.4 dB (R, 50–150 / 150–300 / 300–600 ms), 5.8 / 10.1 / 7.5 dB above the repeat-capture null.
