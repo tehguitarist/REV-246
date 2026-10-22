@@ -55,7 +55,8 @@ Stages:
            injection, the compact 5-tap / -1/sqrt(2) model, and the 5-tap model with q1's -0.70 diffuser.
   (any)    Q2_HP=1 in the environment undoes the measured analogue high-pass on every capture (see hp_undo).
   (any)    EMT_KERNEL=<name> (tools/ml_structure.py) reads q1's cache and index for that kernel (q1 --stage data first);
-           final writes final_s_<name>.json.
+           final writes final_s_<name>.json; nulls, ap230 and diffuser outputs get the suffix _<name>, and every stage
+           reads the repeat-capture references from nulls_free_<name>.json.
   (any)    Q2_CHAIN=path:name divides every library capture by the deconvolution-kernel correction (chain_undo); the
            final stage then writes final_s_chain.json.
   diffuser the diffuser's all-pass gains (g20, g72, g230) refitted with the 5-tap tied model on the flat training settings
@@ -259,9 +260,20 @@ def _band(name):
     return sosfiltfilt(q1.LFBAND, q1.load(Q1, name), axis=0)
 
 
+def free_json():
+    """The free stage's results (EMT_KERNEL: free_<name>.json)."""
+    return os.path.join(OUT, q1.ms.tagged("free") + ".json")
+
+
+def vdir():
+    """The free stage's per-setting injections (EMT_KERNEL: v_<name>/)."""
+    return os.path.join(OUT, q1.ms.tagged("v"))
+
+
 def fit_setting(args):
-    """Free injection for one setting (variant x: excitations P_i + EXT, first-pass FIR, cluster gains)."""
-    key, g, fade, law, b230, eps0, iters = args
+    """Free injection for one setting (variant x: excitations P_i + EXT, first-pass FIR, cluster gains). refs: only the
+    in-sample fit and the repeat-capture null (no capture / time tests)."""
+    key, g, fade, law, b230, eps0, iters, refs = args
     lab = dict(lf=g["lf"], rt=g["rt"], hf=g["hf"])
     G = q1.group_spectra(lab, law, q1.grid_n(g["rt"]), b230=b230)
     fl = files_of(g)
@@ -319,28 +331,43 @@ def fit_setting(args):
     ys = {}
     res["in_sample"] = evaluate(J, v, {0, 30, 60, 90}, keep=ys)
     res["repeat"] = ceiling(ys)
-    np.save(os.path.join(OUT, "v", key + ".npy"), v.astype(np.float32))
-    J = build({30, 90}, 9.0)
-    res["capture"] = evaluate(J, J.solve(iters, x0=v), {0, 60})
-    J = build({0, 30, 60, 90}, T_FIT)
-    res["time"] = evaluate(J, J.solve(iters, x0=v), {0, 30, 60, 90})
+    np.save(os.path.join(vdir(), key + ".npy"), v.astype(np.float32))
+    tests = ("in_sample",)
+    if not refs:
+        J = build({30, 90}, 9.0)
+        res["capture"] = evaluate(J, J.solve(iters, x0=v), {0, 60})
+        J = build({0, 30, 60, 90}, T_FIT)
+        res["time"] = evaluate(J, J.solve(iters, x0=v), {0, 30, 60, 90})
+        tests = ("in_sample", "capture", "time")
     res["eps"] = eps
     res["shift"] = shift
     print(f"{key}: " + "  ".join(f"{t} " + " ".join(
         f"{w}:{'--' if x is None else '%.1f/%.1f' % tuple(x)}" for w, x in res[t][min(res[t])]["null"].items() if x is not None)
-        for t in ("in_sample", "capture", "time")), flush=True)
+        for t in tests), flush=True)
     return res
 
 
-def free_stage(workers, iters, only=None):
-    from concurrent.futures import ProcessPoolExecutor
+def free_stage(workers, iters, only=None, refs=False):
+    """Checkpointed: one result file per setting in <free>_groups/ (skipped on rerun), merged into free_json() at the end.
+    A fresh worker process every 2 settings. ap230: the AP230 table of the ap230 stage for this kernel if present."""
+    from concurrent.futures import ProcessPoolExecutor, as_completed
     info, fade, law, ap, eps0 = q1_tables()
-    os.makedirs(os.path.join(OUT, "v"), exist_ok=True)
+    ap_t = os.path.join(OUT, q1.ms.tagged("ap230_g0.7071") + ".json")
+    if q1.ms.KTAG and os.path.exists(ap_t):
+        ap = json.load(open(ap_t))
+    os.makedirs(vdir(), exist_ok=True)
+    gdir = os.path.join(OUT, q1.ms.tagged("free") + "_groups")
+    os.makedirs(gdir, exist_ok=True)
     keys = [k for k in info if only is None or k in only]
-    jobs = [(k, info[k], fade, law, ap["steps"][ap["settings"][k]["step"]], eps0, iters) for k in keys]
-    with ProcessPoolExecutor(workers) as ex:
-        res = list(ex.map(fit_setting, jobs))
-    path = os.path.join(OUT, "free.json")
+    todo = [k for k in keys if not os.path.exists(os.path.join(gdir, k + ".json"))]
+    print(f"free: {len(keys)} settings, {len(keys) - len(todo)} done, {len(todo)} to fit", flush=True)
+    jobs = [(k, info[k], fade, law, ap["steps"][ap["settings"][k]["step"]], eps0, iters, refs) for k in todo]
+    with ProcessPoolExecutor(workers, max_tasks_per_child=2) as ex:
+        for f in as_completed([ex.submit(fit_setting, j) for j in jobs]):
+            r_ = f.result()
+            json.dump(r_, open(os.path.join(gdir, r_["key"] + ".json"), "w"), indent=0)
+    res = [json.load(open(os.path.join(gdir, k + ".json"))) for k in keys if os.path.exists(os.path.join(gdir, k + ".json"))]
+    path = free_json()
     old = {r["key"]: r for r in json.load(open(path))} if os.path.exists(path) else {}
     old.update({r["key"]: r for r in res})
     json.dump(list(old.values()), open(path, "w"), indent=0)
@@ -349,10 +376,10 @@ def free_stage(workers, iters, only=None):
 
 def _rows(test, w, c, sel=lambda r: True):
     out = []
-    for r in json.load(open(os.path.join(OUT, "free.json"))):
+    for r in json.load(open(free_json())):
         if not sel(r):
             continue
-        for amp, x in r[test].items():
+        for amp, x in r.get(test, {}).items():
             x = x if test == "repeat" else x["null"]
             if x.get(w) is not None:
                 out.append(x[w][c])
@@ -362,10 +389,10 @@ def _rows(test, w, c, sel=lambda r: True):
 def _excess(test, w, c, sel=lambda r: True):
     """Per setting: median null of `test` minus the median repeat-capture null (same window); one value per setting."""
     out = []
-    for r in json.load(open(os.path.join(OUT, "free.json"))):
+    for r in json.load(open(free_json())):
         if not sel(r) or "repeat" not in r:
             continue
-        a = [x["null"][w][c] for x in r[test].values() if x["null"].get(w) is not None]
+        a = [x["null"][w][c] for x in r.get(test, {}).values() if x["null"].get(w) is not None]
         b = [x[w][c] for x in r["repeat"].values() if x.get(w) is not None]
         if a and b:
             out.append(np.median(a) - np.median(b))
@@ -373,7 +400,7 @@ def _excess(test, w, c, sel=lambda r: True):
 
 
 def report_free():
-    res = json.load(open(os.path.join(OUT, "free.json")))
+    res = json.load(open(free_json()))
     ws = [f"{a}-{b}" for a, b in WINDOWS]
     print(f"\n## Free injection per setting ({len(res)} settings; 100 Hz-10 kHz, one clock + gain per capture; median L / R)")
     print("| window (ms) | in-sample | other captures (AMPL 0, 60) | time held out (fit 0-250 ms) | repeat-capture | excess over repeat: capture / time (R) |")
@@ -408,7 +435,7 @@ def report_free():
                     continue
                 n += 1
                 for f in OCT:
-                    a = [x["octave"][str(f)][wi] for x in r["capture"].values() if x["octave"][str(f)][wi] is not None]
+                    a = [x["octave"][str(f)][wi] for x in r.get("capture", {}).values() if x["octave"][str(f)][wi] is not None]
                     b = [x["octave"][str(f)][wi] for x in r["repeat"].values() if x["octave"][str(f)][wi] is not None]
                     if a and b:
                         ex[f].append(np.median(a) - np.median(b))
@@ -466,7 +493,7 @@ def modes(i, lab, law):
 def _residues_setting(a):
     key, lab, law, vpath = a
     law["lf"] = {float(k): x for k, x in law["lf"].items()}
-    shared = not vpath.startswith(os.path.join(OUT, "v") + os.sep)     # a joint split's x0 + G.x1 (validation)
+    shared = not vpath.startswith(vdir() + os.sep)     # a joint split's x0 + G.x1 (validation)
     G = q1.group_spectra(lab, law, q1.grid_n(lab["rt"]), through_g=shared)
     J = q1.Joint([dict(G, files=[dict(y=np.zeros((4096, 2)), w=np.ones(4096), amp=0)])])        # only to split v
     _, _, xs = J.split(np.load(vpath).astype(np.float64))
@@ -494,7 +521,7 @@ def residues_stage(workers, only=None, source="free"):
     info, _, law, _, _ = q1_tables()
     if source != "free":
         law = json.load(open(os.path.join(OUT, f"split_{source}.json")))["law"]
-    vp = lambda k: os.path.join(OUT, "v", k + ".npy") if source == "free" else os.path.join(OUT, f"v_{source}.npy")
+    vp = lambda k: os.path.join(vdir(), k + ".npy") if source == "free" else os.path.join(OUT, f"v_{source}.npy")
     keys = [k for k in info if (only is None or k in only) and os.path.exists(vp(k))]
     jobs = [(k, dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]), json.loads(json.dumps(law)), vp(k)) for k in keys]
     with ProcessPoolExecutor(workers) as ex:
@@ -824,7 +851,7 @@ def filters_stage(workers, only=None):
 
 
 def filters_report(res):
-    rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, "nulls_free.json")))}
+    rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, q1.ms.tagged("nulls_free") + ".json")))}
     ws = ["50-150", "150-300", "300-600", "600-1000"]
 
     def ex(rows, w):
@@ -1008,7 +1035,7 @@ def ap230_stage(g230, only=None):
     for v in res.values():
         v["step"] = int(np.argmin([abs(v["b"] - st) for st in steps]))
     old = json.load(open(os.path.join(Q1, "ap230.json")))
-    path = os.path.join(OUT, f"ap230_g{abs(g230):.4f}" + ("_smoke" if only else "") + ".json")
+    path = os.path.join(OUT, q1.ms.tagged(f"ap230_g{abs(g230):.4f}") + ("_smoke" if only else "") + ".json")
     json.dump(dict(g230=g230, steps=steps, settings=res), open(path, "w"), indent=0)
     print(f"AP230 steps with g230 = {g230:.5f}: {np.round(steps, 4).tolist()}  (q1, g -0.70: {np.round(old['steps'], 4).tolist()})")
     nb = [v["null_db"] for v in res.values() if v["step"] > 0]
@@ -1082,8 +1109,8 @@ def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None, ap23
         dbest = float(minimize_scalar(lambda d: solve(gbest, d)[0], bounds=(d0 - 0.25, d0 + 0.25), method="bounded",
                                       options={"xatol": 0.005, "maxiter": maxfev}).x)
     cost, v, diff = solve(gbest, dbest)
-    tag = ("diffuser_tied" + ("" if gfix is None else f"_fix{gfix:g}") + ("_ap230new" if ap230 else "") + ("_dtap" if dtap else "")
-           + ("_hp" if os.environ.get("Q2_HP") == "1" else "")
+    tag = (q1.ms.tagged("diffuser_tied" + ("" if gfix is None else f"_fix{gfix:g}") + ("_ap230new" if ap230 else "") + ("_dtap" if dtap else "")
+                        + ("_hp" if os.environ.get("Q2_HP") == "1" else ""))
            + ("_smoke" if maxfev < 20 and (gfix is None or dtap) else ""))
     keys = test + sorted(np.random.default_rng(0).choice(train, min(8, len(train)), replace=False).tolist())
     if score == "all":
@@ -1177,7 +1204,7 @@ def capped_stage(workers, only=None, frozen=COMPACT, beta=0.0):
     with ProcessPoolExecutor(workers) as ex:
         res = list(ex.map(_capped_setting, jobs))
     json.dump(res, open(os.path.join(OUT, f"capped_{frozen}" + (f"_beta{beta:g}" if beta else "") + ("_smoke" if only else "") + ".json"), "w"), indent=0)
-    rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, "nulls_free.json")))}
+    rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, q1.ms.tagged("nulls_free") + ".json")))}
     ws = ["50-150", "150-300", "300-600", "600-1000"]
 
     def ex_(rows, w):
@@ -1307,7 +1334,7 @@ def loops_stage(workers, only=None, frozen=COMPACT, ap230=None):
         res = list(ex.map(_loops_setting, jobs))
     path = os.path.join(OUT, ("loops_compact" if frozen == COMPACT else f"loops_{frozen}") + ("_smoke" if only else "") + ".json")
     json.dump(res, open(path, "w"), indent=0)
-    rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, "nulls_free.json")))}
+    rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, q1.ms.tagged("nulls_free") + ".json")))}
     ws = ["50-150", "150-300", "300-600", "600-1000"]
 
     def ex_(rows, w):
@@ -1431,14 +1458,15 @@ FINAL_DIFF = dict(g20=-0.70710678, g72=-0.70710678, g230=-0.70710678, g460=0.0)
 FINAL_BETA = 0.019
 
 
-def final_injection(ext=1700):
-    """The final model's parameter vector: cluster gains and tap magnitude of the compact fit, taps without comb partners."""
+def final_injection(ext=1700, compact=None):
+    """The final model's parameter vector: cluster gains and tap magnitude of the compact fit (a diffuser-stage run name
+    in OUT, default COMPACT), taps without comb partners."""
     q1.EXT = ext
     law = q1.fit_laws(json.load(open(os.path.join(Q1, "loops.json"))))
     law["lf"] = {float(k): x for k, x in law["lf"].items()}
     G = branch_spectra(dict(lf=1.0, rt=1.4, hf=1.0), law, [0.0], 0.0, FINAL_DIFF)
     J = q1.Joint([dict(G, files=[dict(y=np.zeros((4096, 2)), w=np.ones(4096), amp=0)])])
-    v_c = np.load(os.path.join(OUT, COMPACT + ".npy"))
+    v_c = np.load(os.path.join(OUT, (compact or COMPACT) + ".npy"))
     cl = v_c[:8]                                          # cluster gains of the compact fit
     M_c = tied_map(J, tap_table(), 0.445, "tied")
     a = float(np.linalg.lstsq(M_c[:, 8:].toarray(), v_c - M_c[:, :8] @ cl, rcond=None)[0][0])   # its tap magnitude
@@ -1456,12 +1484,17 @@ def _final_setting(a_):
             for c in caps]
 
 
-def final_stage(workers, only=None):
+def final_stage(workers, only=None, compact=None, ap230=None):
+    """compact / ap230: the 9 numbers and the AP230 step table to use (default: those fitted on the old IRs, as §17);
+    either given -> output suffix _refit."""
     from concurrent.futures import ProcessPoolExecutor
     info, fade, _, _, eps0 = q1_tables()
-    ap = json.load(open(os.path.join(OUT, "ap230_g0.7071.json")))
+    ap = json.load(open(ap230 or os.path.join(OUT, "ap230_g0.7071.json")))
     ends = json.load(open(os.path.join(OUT, "ramp.json")))
-    v, law, a = final_injection()
+    v, law, a = final_injection(compact=compact)
+    cl = np.load(os.path.join(OUT, (compact or COMPACT) + ".npy"))[:8]
+    print(f"compact {compact or COMPACT}: cluster gains L {np.round(cl[:4], 4).tolist()} R {np.round(cl[4:], 4).tolist()}, tap magnitude {a:.4f}; "
+          f"AP230 steps {np.round(ap['steps'], 4).tolist()}", flush=True)
     keys = [k for k in info if only is None or k in only]
     jobs = [(k, dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]), ap["steps"][ap["settings"][k]["step"]], json.loads(json.dumps(law)),
              v, 1700, [dict(amp=a_, file=nm, eps=eps0[nm], fade2=fade[nm]) for a_, nm in files_of(info[k])], ends) for k in keys]
@@ -1478,9 +1511,11 @@ def final_stage(workers, only=None):
     _, (eg, shg, gain) = q1._clock_job((yb, mdl, 1.0, 98.4, True))
     y = q1.apply_clock(yb, eg, shg)[:n] / gain
     cla = dict(eps_ppm=eg, shift=shg, gain_db=float(20 * np.log10(gain)), null_100_10k=q1.nulls(y, mdl, 1.5, W_COMP[:6], narrow=True))
-    json.dump(dict(diff=FINAL_DIFF, beta=FINAL_BETA, p_max=P_MAX, dc_min=DC_MIN, tap_magnitude=a, rows=rows, cla=cla),
-              open(os.path.join(OUT, q1.ms.tagged("final_s") + ("_chain" if os.environ.get("Q2_CHAIN") else "") + ("_smoke" if only else "") + ".json"), "w"), indent=0)
-    rep_f = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, "nulls_free.json")))}
+    json.dump(dict(diff=FINAL_DIFF, beta=FINAL_BETA, p_max=P_MAX, dc_min=DC_MIN, tap_magnitude=a, cluster_gains=cl.tolist(), compact=compact or COMPACT,
+                   ap230=ap230, ap230_steps=ap["steps"], rows=rows, cla=cla),
+              open(os.path.join(OUT, q1.ms.tagged("final_s") + ("_chain" if os.environ.get("Q2_CHAIN") else "") + ("_refit" if compact or ap230 else "")
+                                + ("_smoke" if only else "") + ".json"), "w"), indent=0)
+    rep_f = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, q1.ms.tagged("nulls_free") + ".json")))}
     ws = ["0-50", "50-150", "150-300", "300-600", "600-1000", "1000-1500"]
 
     def med(rr, w, c):
@@ -1558,11 +1593,11 @@ def nulls_stage(source, workers, only=None):
     ends = json.load(open(os.path.join(OUT, "ramp.json")))
     jobs = []
     if source == "free":
-        for r in json.load(open(os.path.join(OUT, "free.json"))):
+        for r in json.load(open(free_json())):
             k = r["key"]
             caps = [dict(amp=a, file=nm, eps=r["eps"][nm], fade2=fade[nm]) for a, nm in files_of(info[k])]
             jobs.append((k, dict(lf=r["lf"], rt=r["rt"], hf=r["hf"]), r["b230"], json.loads(json.dumps(law_all)), False,
-                         os.path.join(OUT, "v", k + ".npy"), caps, ends))
+                         os.path.join(vdir(), k + ".npy"), caps, ends))
     else:
         R = json.load(open(os.path.join(OUT, f"split_{source}.json")))
         by = {}
@@ -1577,7 +1612,7 @@ def nulls_stage(source, workers, only=None):
         jobs = [j for j in jobs if j[0] in only]
     with ProcessPoolExecutor(workers) as ex:
         rows = [r for rr in ex.map(_nulls_setting, jobs) for r in rr]
-    json.dump(rows, open(os.path.join(OUT, f"nulls_{source}" + ("_smoke" if only else "") + ".json"), "w"), indent=0)
+    json.dump(rows, open(os.path.join(OUT, q1.ms.tagged(f"nulls_{source}") + ("_smoke" if only else "") + ".json"), "w"), indent=0)
     report_nulls(rows, source)
     return rows
 
@@ -1618,7 +1653,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "ap230", "loops", "cla", "capped", "final", "report"])
     ap.add_argument("--g230", type=float, default=-0.7071067812, help="ap230: the all-pass gain for the step measurement")
-    ap.add_argument("--ap230", default=None, help="diffuser: an AP230 step table from the ap230 stage (default: q1's)")
+    ap.add_argument("--ap230", default=None, help="diffuser, final: an AP230 step table from the ap230 stage (default: q1's; final: ap230_g0.7071.json)")
+    ap.add_argument("--compact", default=None, help="final: the compact fit's run name in OUT (default COMPACT, fitted on the old IRs)")
     ap.add_argument("--analog", nargs="?", const=True, default=False,
                     help="cla: CLA's per-unit analogue correction: bare flag = 3 parameters (HP corners, S&H pole) fitted on 0-300 ms; "
                          "'fir' = a 63-tap chain FIR per channel fitted on the cluster-only region")
@@ -1640,6 +1676,7 @@ def main():
     ap.add_argument("--source", default="free", help="nulls: 'free' or a joint split name, e.g. rt_x0+Gx1")
     ap.add_argument("--splits", default="rt,hf,lf")
     ap.add_argument("--rounds", type=int, default=1, help="joint: clock-refit rounds before the final fit (as q1)")
+    ap.add_argument("--refs", action="store_true", help="free: in-sample fit and repeat-capture null only (no capture / time tests)")
     ap.add_argument("--workers", type=int, default=10)
     ap.add_argument("--iters", type=int, default=300)
     ap.add_argument("--only", default=None, help="comma-separated setting keys (lf_rt_hf)")
@@ -1665,7 +1702,7 @@ def main():
     if a.stage == "loops":
         loops_stage(a.workers, only, a.frozen)
     if a.stage == "final":
-        final_stage(a.workers, only)
+        final_stage(a.workers, only, a.compact, a.ap230)
     if a.stage == "capped":
         capped_stage(a.workers, only, a.frozen, a.beta)
     if a.stage == "ap230":
@@ -1681,7 +1718,7 @@ def main():
     if a.stage == "nulls":
         nulls_stage(a.source, a.workers, only)
     if a.stage == "free":
-        free_stage(a.workers, a.iters, only)
+        free_stage(a.workers, a.iters, only, a.refs)
     if a.stage == "joint":
         joint_stage(a.splits.split(","), a.workers, a.iters, a.rounds, only)
     if a.stage in ("free", "report"):

@@ -1,0 +1,26 @@
+  g20 -0.7000 g72 -0.7000 g230 -0.7000 dtap +0.0000: training cost -30.09 dB, a 0.2988
+  g20 -0.7071 g72 -0.7071 g230 -0.7071 dtap +0.0000: training cost -33.14 dB, a 0.2988
+  g20 -0.7000 g72 -0.7000 g230 -0.7000 dtap +0.0000: training cost -30.09 dB, a 0.2988
+[diffuser_tied_fix-0.707107_ap230new_chain2] g20 -0.7071  g72 -0.7071  g230 -0.7071  dtap +0.0000; training cost -30.09 -> -33.14 dB (3 evaluations)
+diffuser_tied_fix-0.707107_ap230new_chain2 (8 held-out captures, 9 params): 50-150: -51.3 [-0.2]; 150-300: -49.3 [+2.4]; 300-600: -45.7 [+0.4]; 600-1000: -35.6 [-0.9]
+   by rt: 0.8: +0.3/+2.3/-0.1; 1.8: -0.7/+2.7/+1.5
+diffuser_tied_fix-0.707107_ap230new_chain2_q1diff (8 held-out captures, 9 params): 50-150: -32.3 [+18.9]; 150-300: -32.1 [+20.9]; 300-600: -31.8 [+16.2]; 600-1000: -30.5 [+4.5]
+   by rt: 0.8: +19.5/+19.4/+11.7; 1.8: +17.6/+22.0/+19.6
+       89.44 real       304.54 user         3.07 sys
+           671367168  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+              554729  page reclaims
+                 670  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                8329  voluntary context switches
+               51952  involuntary context switches
+         65557351711  instructions retired
+         13824904593  cycles elapsed
+           717685888  peak memory footprint

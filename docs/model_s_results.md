@@ -1548,3 +1548,75 @@ The carry-over model of `ml_structure.md` §7 (cluster, diffuser, 20 equal sign-
   - against LF 1.0 +3.4 / +6.1 / +3.2 and RT 2.2–2.5 +2.1…+7.0.
 - The low band can now be tested too (`ml_structure.md` §12.5): S's first pass is at the repeat level at 50–100 Hz, its recirculations 15–20 dB above it.
 - CLA unchanged (deconvolved separately).
+
+## 21. The numbers fitted on the old IRs, refitted on chain2 (`EMT_KERNEL=chain2`) **[S]**
+
+The §17 model's 9 fitted numbers and its AP230 step table were fitted on the old IRs, and §20 scored them unchanged. Here they are refitted on the chain-kernel IRs and rescored. Nothing else changes (13 law numbers, 3 limit constants, the tap table).
+
+```
+EMT_KERNEL=chain2 .venv/bin/python tools/q2_injection.py --stage ap230              # -> ap230_g0.7071_chain2.{json,log}
+EMT_KERNEL=chain2 .venv/bin/python tools/q2_injection.py --stage diffuser --gfix -0.70710678 --ap230 analysis/q2/ap230_g0.7071_chain2.json
+                                                                                     # -> diffuser_tied_fix-0.707107_ap230new_chain2.{npy,json}, diffuser_chain2.log
+EMT_KERNEL=chain2 .venv/bin/python tools/q2_injection.py --stage final --compact diffuser_tied_fix-0.707107_ap230new_chain2 \
+    --ap230 analysis/q2/ap230_g0.7071_chain2.json                                    # -> final_s_chain2_refit.{json,log}
+```
+
+**The AP230 steps don't move:** 0.0007 / 0.1711 / 0.3316 / 0.5019 on chain2 against 0.0007 / 0.1711 / 0.3316 / 0.5019 on the old IRs (§16.9), and no setting changes step. The first pass against the reference setting is also unchanged per step: −50.3 / −43.3 / −41.0 / −39.0 dB (median, b = 0 / 0.17 / 0.33 / 0.50) on both IR sets. So §16.17's open AP230 form at b > 0 is not a chain effect. (The `ap230` log's "q1" column is q1's table at g −0.70, not the old IRs at −1/√2.)
+
+**The 8 cluster gains become one.** Fitted on the 6 flat training settings with the tap magnitude (9 linear numbers, as §16.8):
+
+| | L taps 0 / 54 / 194 / 288 | R taps 0 / 143 / 194 / 353 | L / R (mean) | Tap magnitude |
+|---|---|---|---|---|
+| old IRs | 0.01146 / 0.01147 / 0.01144 / −0.01146 | 0.01136 / 0.01135 / −0.01136 / 0.01136 | +0.074 dB | 0.3001 |
+| **chain2** | **0.01135 / 0.01135 / 0.01136 / −0.01136** | **0.01135 / 0.01136 / −0.01136 / 0.01136** | **−0.001 dB** | **0.2988** |
+
+All 8 are now equal within 0.1 %. The old L gains were 0.06–0.09 dB high: the chain's 0.10 dB L/R difference (`ml_structure.md` §12.2), which the chain kernel now removes. So the cluster is **one gain with sign-only taps** (8 → 1 number; the model is fitted here with 8 for comparability).
+
+**Held out** (flat RT 0.8 / 1.8, 8 captures; old numbers on chain2 → refitted, L / R):
+
+| Window (ms) | Old 9 numbers | **Refitted** |
+|---|---|---|
+| 0–50 | −43.8 / −49.1 | **−49.5 / −49.2** |
+| 50–150 | −51.5 / −51.3 | −51.5 / −51.3 |
+| 150–300 | −49.8 / −49.3 | −49.8 / −49.3 |
+| 300–600 | −46.4 / −45.7 | −46.4 / −45.7 |
+| 600–1000 | −35.6 / −35.6 | −35.6 / −35.6 |
+
+**All 128 settings** (512 captures), L / R; from 50 ms on the table is §20's to 0.1 dB in every column, so only 0–50 ms is shown:
+
+| 0–50 ms | All 128 | Flat | RT ≥ 1.4 | RT ≤ 1.0 | CLA |
+|---|---|---|---|---|---|
+| old numbers (§20) | −44.8 / −47.1 | −43.7 / −50.1 | −44.6 / −49.1 | −45.3 / −45.6 | −37.9 / −38.9 |
+| **refitted** | **−48.7 / −48.5** | **−49.8 / −49.6** | **−49.1 / −49.1** | **−47.7 / −47.8** | −38.4 / −38.0 |
+
+- **0–50 ms gains 3.9 dB in L (flat 6.1 dB), and L and R now match.** That confirms §20's reading (**S**). The reverb windows don't change: the cluster doesn't feed the reverb, and the per-capture gain absorbs the 0.04 dB change in tap magnitude.
+- CLA moves by ±0.5–0.9 dB in 0–50 ms (L better, R worse). It is another unit and capture chain, so its own L/R balance differs.
+- **What limits S is unchanged:** the recirculations at strong settings. R excess over the repeat null at 50–150 / 150–300 / 300–600 ms is LF 0.1 +12.7 / +17.6 / +17.1, HF 0.2 +8.8 / +15.2 / +13.9, RT 0.6 +14.5 / +17.6 / +10.4. These excess figures use the chain2 repeat references (below); against the old ones they differ by ≤ 0.2 dB.
+- Parameters: 9 fitted (effectively 2: one cluster gain, one tap magnitude) + 13 law numbers + 3 constants + the AP230 table; per capture clock, shift and gain.
+
+### 21.1 The repeat-capture references and the free model on chain2 (`free --refs`, `nulls`) **[S]**
+
+```
+EMT_KERNEL=chain2 .venv/bin/python tools/q2_injection.py --stage free --refs --workers 4   # -> free_chain2.json, v_chain2/, free_chain2_groups/ (checkpoints), free_chain2.log
+EMT_KERNEL=chain2 .venv/bin/python tools/q2_injection.py --stage nulls --source free       # -> nulls_free_chain2.{json,log}
+```
+
+The repeat references (`repeat_comp`: AMPL partners against each other, fade-compensated) are taken after each capture's clock and gain are fitted against that setting's free per-setting injection (§15.3). So the free models are refitted on chain2 first, in-sample only (`--refs` skips §15.3's capture and time tests).
+
+- **Why refit first:** with the free models from the old IRs, the clocks of the cluster-anchored captures all shift by +0.17–0.19 ppm, but those of the AMPL-0 captures (which also get a free shift) don't. That moves the pairs involving AMPL 0 by 1–2 dB (smoke test, 3 settings). The old free models are 9–14 dB worse on chain2 (flat 1.0_0.8_1.0, 50–150 ms: −55.8 → −41.8 dB): they had learned the old kernel's error (§19's reading, now **S**). A biased model biases the clocks.
+- **With refitted free models the references are the old ones:** per capture, chain2 − old is within ±0.05 dB (IQR) in every window from 50 to 1500 ms, and no capture moves by more than 1 dB. Medians, R, fade-compensated: −56.1 / −54.6 / −47.7 / −40.2 dB at 50–150 / 150–300 / 300–600 / 600–1000 ms (old −56.1 / −54.6 / −47.7 / −40.2). So every excess figure since §17 stands. The compact model's excess changes by ≤ 0.2 dB (all settings +5.9 / +10.8 / +9.0 / +4.5 dB).
+- **The free model on chain2 is where it was on the old IRs:** in-sample −52.0 / −53.0 dB at 50–150 ms (old −52.1 / −53.0), excess over repeat (R) +3.4 / +9.5 / +9.5 / +3.4 dB, flat −1.1…−1.2 dB. A 28 k-coefficient fit absorbs whichever chain it is fitted on; the compact model can't, which is why it gained 3–8 dB from the chain kernel (§17 → §20, all settings) and the free model gained nothing.
+
+**Compact (9 numbers, 6 flat training settings) against free (about 28 k numbers per setting, in-sample)** on chain2, R, median per-capture difference compact − free, fade-compensated (cut at the fade in brackets):
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| All 128 | +3.7 [+3.7] | +2.3 [+3.9] | +1.5 [+2.9] | +0.9 [+2.6] |
+| Flat | +5.0 [+5.0] | +4.8 [+5.4] | +1.7 [+3.5] | +0.6 [+2.0] |
+| RT ≥ 1.4 | +3.3 [+3.3] | +4.1 [+4.1] | +3.6 [+3.6] | +2.3 [+2.7] |
+| RT ≤ 1.0 | +4.3 [+4.3] | −3.0 [+3.3] | −6.9 [−0.0] | −1.6 [+1.3] |
+| LF 0.1 | −0.1 [+0.0] | −2.1 [−0.2] | −2.6 [+2.2] | −4.3 [+3.4] |
+| HF 0.2 | +3.9 [+4.0] | −0.1 [+0.8] | −0.3 [+1.9] | +1.2 [+3.3] |
+
+- **The compact model is 3–5 dB short of the free model** on flat and long-RT settings, against 8–10 dB on the old IRs (§17). On flat settings that is 0.6–3.2 dB above the repeat-capture null, while the free model sits 1.1–1.2 dB *below* it: an in-sample fit deeper than another capture of the same reverb partly fits the capture itself. Against what the library can confirm, the compact model is within about 1–3 dB on flat settings.
+- **At the strong settings the two are level** (LF 0.1, HF 0.2, RT ≤ 1.0: −0.3…+2 dB cut at the fade), and past the free model's fit region (the fade-compensated windows at short RT) the compact model is ahead by 2–7 dB. Both use the same loop laws, so neither gets past them: what limits S there is the recirculation (loop filters at strong settings, AP230's form at b > 0), not the injection (**S**).

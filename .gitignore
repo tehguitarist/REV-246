@@ -18,3 +18,4 @@ analysis/firstpass_gap/groups_*/
 analysis/outofband/groups*/
 analysis/chain_kernel/data_*.npz
 analysis/q2/cache_*
+analysis/q2/*_groups/

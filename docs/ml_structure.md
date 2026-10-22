@@ -692,7 +692,7 @@ ml_lines.Model as in §10 (clock and shift per capture, two gains per channel); 
 
 - **Without any correction the new IRs gain 7.3 / 7.6 (S), 5.5 / 4.1 (M), 3.2 / 2.9 (L) dB in the first pass.** M is at the repeat-capture level (excess −0.1 / +0.9 dB), L +3.4 / +8.5, S +2.7 / +10.3 (+1.7 / +7.3 with the refitted kernels).
 - **A correction refitted on the new IRs is tiny:** ≤ 0.04 dB and ≤ 0.4° in every band from 100 Hz to 10 kHz (was 0.25 dB / 2.4°). With the refitted output kernels it gains only 0.6–1.2 dB in the first pass. The first-pass transfer error H = Y/T on S's b = 0 captures (`report` stage) is now within ±0.011 dB and ±0.02° in R in every band, and in L within 0.04 dB / 0.5° (100–200 Hz, at the repeat level there); it was −0.11…−0.14 dB / −1° at 100–200 Hz.
-- **What stops S at −54…−56 instead of −58:** model parts fitted on the old IRs. S's stored output kernel is a unit tap with ±0.002 side taps fitted on the old IRs: swapping it for a unit tap gains 2–4 dB. The rest is a setting-independent residual waveform (the mean residual of the even settings still removes 4 / 8 dB on the odd ones, L / R) that no FIR on the tap part removes (±48 taps: 1.8 / 3.2 dB), 44 % of it at 7–10 kHz in R. So it is no longer a transfer error of the pipeline; the stored first-pass tap parameters (positions, signs, b steps; fitted on the old IRs) are the candidates (**H**).
+- **What stops S at −54…−56 instead of −58:** model parts fitted on the old IRs. S's stored output kernel is a unit tap with ±0.002 side taps fitted on the old IRs: swapping it for a unit tap gains 2–4 dB. The rest is a setting-independent residual waveform (the mean residual of the even settings still removes 4 / 8 dB on the odd ones, L / R) that no FIR on the tap part removes (±48 taps: 1.8 / 3.2 dB), 44 % of it at 7–10 kHz in R. So it is no longer a transfer error of the pipeline; the stored first-pass tap parameters (positions, signs, b steps; fitted on the old IRs) are the candidates (**H**). *Ruled out (§12.7): refitted on the new IRs they don't move.*
 - **Repeat references moved** because the repeat model includes the model's cluster column (`ml_lines.fit_repeat`): S L −48.2 → −54.7.
 
 ### 12.4 Validation, compact S model (`q2_injection.py --stage final`, `EMT_KERNEL=chain2`, no `Q2_CHAIN`)
@@ -746,8 +746,25 @@ ml_lines.Model as in §10 (clock and shift per capture, two gains per channel); 
 - **The pipeline:** the device-domain IRs no longer need `chain.json:cluster_perch` or `Q2_CHAIN`. Use `EMT_KERNEL=chain2` for new work; the old caches stay for comparison. **S**
 - **Unit facts:** the library chain's sub-20 Hz high-pass totals about 3.5–4.5 Hz in this fit (the schematic's 4.46 Hz alone fits best), and L's chain is 0.10 dB above R's with 0.36 dB less at 12 kHz.
 - **Left (model side, not the chain):**
-  1. refit the parameters that were fitted on the old IRs: the 8 cluster gains (L/R), S's output kernel (a unit tap), the M/L output kernels (refitted here), the first-pass taps and the b steps;
+  1. ~~refit the parameters that were fitted on the old IRs: the 8 cluster gains (L/R), S's output kernel (a unit tap), the M/L output kernels (refitted here), the first-pass taps and the b steps;~~ **done (§12.7, `model_s_results.md` §21)**: the cluster gains become one (0–50 ms +3.9 dB in L); everything else holds;
   2. adopt the refitted M/L output kernels in the model (`ML_HK`; 10–12 kHz first pass +5…+15 dB, §12.5) after checking them on the recirculations;
   3. S's first-pass residual waveform at 7–10 kHz (§12.3);
   4. S's low band in the recirculations (§12.5);
   5. the repeat-capture references (`nulls_free`) recomputed on the new IRs.
+
+### 12.7 The first-pass parameters refitted on the new IRs (`ml_carryover.py --stage firstpass`, `EMT_KERNEL=chain2`) **[S]**
+
+`EMT_KERNEL=chain2 .venv/bin/python tools/ml_carryover.py --stage firstpass` → `analysis/ml_carryover/firstpass_chain2.{json,log}`. `tools/ml_lines.py` (and so `firstpass_gap.py` and `outofband.py`) reads it with `ML_FP=analysis/ml_carryover/firstpass_chain2.json`; results get `_fp`. Same training settings and procedure as §7.6: positions and signs from 6 training settings, the output kernel from their clusters, b per setting.
+
+> **Summary.** Refitted on chain2, the first-pass parameters are the old ones. In S, M and L the integer tap positions and every sign are identical (fractional parts within 0.002 samples); every b is within 0.0008 of the old value; S's output kernel comes out as a unit tap (side taps ≤ 0.0016). So §12.3's last candidate for S's residual first-pass waveform (the stored tap parameters) is ruled out (**S**). That residual is a property of the model's structure or of the library, not of a stale fit.
+
+| | Positions (rounded) | Signs | b, max change | Output kernel |
+|---|---|---|---|---|
+| S | identical (max fractional change 0.002) | identical | 0.0004 | unit tap, side taps ≤ 0.0016 (old ≤ 0.0022) |
+| M | identical (0.002) | identical | 0.0005 | 0.952 centre, +0.021 / +0.027 at ∓1; changes ≤ 0.0024 |
+| L | identical (0.002) | identical | 0.0008 | 0.783 centre, +0.112 / +0.121; changes ≤ 0.0017 |
+
+- **The M/L output kernels agree with §12.2's** (refitted with the chain kernel, clock per capture) in magnitude to 0.02 dB up to 10 kHz (0.10 / 0.19 dB at 12 kHz, M / L). They differ in their asymmetry (M ±1 taps 0.021 / 0.027 here against 0.024 / 0.022 there), i.e. in a fractional delay. This bench fits no capture clock, so §12.2's kernels are the better-identified ones: use `ML_HK=analysis/chain_kernel/chain2.json`. With S as a unit tap and positions and b unchanged, §12.3's row "new, none, refitted output kernels" is the held-out validation of this refit (S −54.1 / −56.4, M −51.5 / −48.9, L −47.3 / −45.4 dB first pass).
+- **This bench's own held-out nulls** (no clock fit, so below the `lines` bench; first pass, b fitted, L / R, old IRs → chain2): S −42.8 / −41.5 → −45.0 / −43.0, M −40.7 / −39.2 → −41.6 / −39.9, L −36.6 / −35.9 → −36.8 / −36.1 dB. Cluster and gap: S −49.1 / −44.1 → −52.9 / −48.8, M −46.6 / −42.0 → −50.9 / −45.1, L −43.0 / −38.8 → −46.0 / −40.4 dB.
+- **The b table is S's four steps in every program** (0.001 / 0.17 / 0.33 / 0.50), unchanged; so is the compact S model's AP230 table (`model_s_results.md` §21).
+

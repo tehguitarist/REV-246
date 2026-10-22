@@ -30,6 +30,9 @@ deterministic part [0, onset + shortest line) only, which no line reaches. Every
   report  breakdowns of the law files by control, the capture-to-capture / model error split, the limit scans.
   ML_HK=<chain_kernel json> in the environment replaces the stored output kernels (firstpass.json) by the ones
   refitted with the chain kernel (tools/chain_kernel.py), and S's by a unit tap.
+  ML_FP=<firstpass json> reads the first-pass parameters (positions, signs, kernel, b per setting) from that file
+  instead of analysis/ml_carryover/firstpass.json, e.g. firstpass_chain2.json refitted on the chain-kernel IRs.
+  Tools that honour either suffix their outputs with SUFFIX (_fp, _hk).
   fitted(prog, key)  (a function, no stage) rebuilds one group's captures with their models from the law files.
   fit     per setting, the line law's three numbers (Nyquist-end RT, DC RT ratio, HF RT factor at f_ref; shelf pole
           and f_ref fixed, length-scaled over the four lines) fitted to the band decay of all captures of the group:
@@ -60,6 +63,15 @@ OCT_SOS = {f: butter(3, [f / np.sqrt(2), min(f * np.sqrt(2), 10500)], btype="ban
 FRAME = 1024                                                # band-energy frame (39 ms)
 FADE = 0.70 + 0.02                                          # Tomkin's fade ramp plus a guard (s before the last sample)
 HK_FILE = os.environ.get("ML_HK", "")                       # output kernels from a chain_kernel.py write (S: none)
+FP_FILE = os.environ.get("ML_FP", "")                       # first-pass parameters other than firstpass.json
+SUFFIX = ("_fp" if FP_FILE else "") + ("_hk" if HK_FILE else "")
+
+
+def fp_path():
+    """The first-pass parameter file (ML_FP, else ml_carryover's firstpass.json)."""
+    if not FP_FILE:
+        return os.path.join(cc.OUT, "firstpass.json")
+    return FP_FILE if os.path.isabs(FP_FILE) else os.path.join(ROOT, FP_FILE)
 ALIAS_DB = 160.0                                            # exponential weighting: wrap-around suppressed this far
 
 
@@ -129,7 +141,7 @@ class Model:
     """The carry-over model of one program with its lines closed; parts rendered per capture clock."""
 
     def __init__(self, prog):
-        fp = json.load(open(os.path.join(cc.OUT, "firstpass.json")))[prog]
+        fp = json.load(open(fp_path()))[prog]
         self.prog = prog
         self.P = cc.LINES[prog]
         self.pos = np.array(fp["positions"])

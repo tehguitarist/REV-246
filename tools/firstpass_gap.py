@@ -45,7 +45,7 @@ import ml_lines  # noqa: E402
 OUT = os.path.join(ROOT, "analysis", "firstpass_gap")
 K0 = mc.K0
 PAD = 64                        # extra tap-part samples kept either side of the window (for the FIR test)
-HK = "_hk" if ml_lines.HK_FILE else ""                       # ML_HK (ml_lines): outputs suffixed _hk
+HK = ml_lines.SUFFIX                                         # ML_FP / ML_HK (ml_lines): outputs suffixed _fp / _hk
 SPAN = 600                      # chain stage: samples kept after the first pass (spans start at index 0, lag -K0)
 
 
@@ -132,7 +132,7 @@ def gdir(model):
 
 def collect_stage(workers, model, only=None):
     os.makedirs(gdir(model), exist_ok=True)
-    fp = json.load(open(os.path.join(mc.OUT, "firstpass.json")))
+    fp = json.load(open(ml_lines.fp_path()))
     jobs = []
     for p in "SML":
         P = np.array(fp[p]["positions"])

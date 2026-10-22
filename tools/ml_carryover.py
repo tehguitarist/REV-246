@@ -26,7 +26,8 @@ Stages:
              tap gain; per setting the last all-pass's two-tap damping b (as S's AP230 step), fitted on the high-AMPL
              capture. Nulls (100 Hz-10 kHz) in the cluster-and-gap window [0, onset) and the first pass [onset, onset +
              shortest line), for b = 0, b fitted, and b fitted without the kernel, against the repeat-capture null of the
-             group with the same freedoms (another capture as the model).
+             group with the same freedoms (another capture as the model). With EMT_KERNEL=<name> (tools/ml_structure.py)
+             it reads that kernel's IRs and writes firstpass_<name>.json (tools/ml_lines.py takes it with ML_FP=).
 """
 import argparse, json, os, sys
 from concurrent.futures import ProcessPoolExecutor
@@ -578,7 +579,7 @@ def firstpass_stage(workers, only=None):
     out = {p: dict(train=tp[p]["train"], positions=Pp[p].tolist(), signs=Sg[p].astype(int).tolist(),
                    kernel=Hk[p][0].tolist(), kernel_std=Hk[p][1].tolist(),
                    rows=[r for q, rr in res if q == p for r in rr]) for p in "SML"}
-    json.dump(out, open(os.path.join(OUT, "firstpass" + ("_smoke" if only else "") + ".json"), "w"), indent=1)
+    json.dump(out, open(os.path.join(OUT, ml.tagged("firstpass") + ("_smoke" if only else "") + ".json"), "w"), indent=1)
     for p in "SML":
         rr = out[p]["rows"]
         print(f"\n## {p}: first pass, held out ({len({r['key'] for r in rr})} groups, {len(rr)} captures; trained on {out[p]['train']}); "

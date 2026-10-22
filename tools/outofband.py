@@ -51,7 +51,7 @@ from core import _band_window, to_device_grid  # noqa: E402
 from sample_hold import highpass  # noqa: E402
 
 OUT = os.path.join(ROOT, "analysis", "outofband")
-HK = "_hk" if mlines.HK_FILE else ""                     # ML_HK (ml_lines): refitted output kernels, outputs suffixed _hk
+HK = mlines.SUFFIX                                        # ML_FP / ML_HK (ml_lines): refitted first pass / output kernels
 GDIR = os.path.join(OUT, ml.tagged("groups") + HK)      # EMT_KERNEL=<name>: that kernel's cache, outputs suffixed
 FS, K0 = cc.FS, cc.K0
 BANDS = {"25-50": (25, 50), "50-100": (50, 100), "100-200": (100, 200), "5k-10k": (5000, 10000),
@@ -378,7 +378,7 @@ def _kernel_job(a):
 def kernel_stage(workers):
     """Measured kernel response (every third group), gain matched to the stored kernel at 2-6 kHz; against the stored
     11-tap kernel and symmetric 3- and 5-tap kernels fitted to the measured magnitude in band (0.2-10 kHz)."""
-    fp = json.load(open(os.path.join(cc.OUT, "firstpass.json")))
+    fp = json.load(open(mlines.fp_path()))
     out = {}
     for prog in "ML":
         with ProcessPoolExecutor(workers) as ex:
