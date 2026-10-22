@@ -1458,3 +1458,24 @@ The flat column includes the 6 flat training settings; held out on flat (RT 0.8 
 3. LF 0.1 at short RT;
 4. the values between the library's control steps;
 5. exact coefficients (Q9) and fixed-point behaviour (Q10), best done once the M/L structures are known, since the arithmetic engine is shared.
+
+## 18. Third source: the Altiverb 246 S presets, held out (`tools/altiverb_predict.py`) **[S]**
+
+Code: `.venv/bin/python tools/altiverb_predict.py` → `analysis/altiverb/predict.json`. The §17 model (trained on the Tomkin library, nothing refitted) predicts the five Altiverb S presets (`library_notes.md` §6; RT 0.6 / 1.0 / 1.6 / 2.0 / 2.2) at the settings inferred from the decay and the cluster level (`EMT246_unit_facts.md` §5c): LF 1.0, HF 0.9 (as CLA, a step the library lacks), AMPL 80, RT from the preset name, AP230 step 0. Device domain, 100 Hz–10 kHz, L / R.
+
+**Fitted on the Altiverb IR:** per preset a clock ratio (+42.1…+42.9 ppm in all five, so one clock for the plugin), one common shift (+0.05 sample) and one gain; plus **a 7-tap FIR per channel (14 numbers) fitted on the cluster-only region** (L before 225, R before 555 device samples after tap 0), so no reverb sample enters it. The 0–50 ms window therefore overlaps the FIR's fit region (in-sample); 50 ms onward is held out. AMPL could not be scanned (the FIR absorbs the cluster gain), so AMPL rests on the tap/reverb ratio.
+
+| Preset | 0–50 (in-sample FIR) | 50–150 | 150–300 | 300–600 | 600–1000 | 1000–1500 |
+|---|---|---|---|---|---|---|
+| RT 0.6 | −38.1 / −37.4 | −34.6 / −34.3 | −31.2 / −31.8 | −24.7 / −23.9 | tail below the floor | — |
+| RT 1.0 | −38.1 / −37.3 | −35.1 / −34.8 | −33.9 / −34.0 | −32.6 / −32.1 | −27.2 / −26.9 | tail below the floor |
+| RT 1.6 | −38.2 / −37.3 | −35.5 / −35.0 | −35.1 / −34.7 | −35.0 / −34.5 | −34.3 / −33.5 | −26.1 / −26.4 |
+| RT 2.0 | −38.1 / −37.3 | −35.7 / −35.1 | −35.4 / −34.9 | −35.5 / −34.9 | −34.9 / −34.1 | −31.6 / −30.9 |
+| RT 2.2 | −38.2 / −37.4 | −35.7 / −35.3 | −35.5 / −34.9 | −35.9 / −34.9 | −35.6 / −34.2 | −33.3 / −31.9 |
+| CLA (§17, HF 0.9, RT 1.0) | −37.9 / −38.9 | −37.0 / −37.5 | −36.4 / −37.4 | −35.9 / −37.2 | −29.0 / −34.9 | −8.8 / −15.3 |
+
+- **Floor:** the sweep deconvolution agrees with an exact frequency-domain one to −74 dB (100 Hz–10 kHz, 2 s) and two renders at different levels agree to −104 dB. The data are not the limit; the nulls are model-limited. "Tail below the floor" marks windows where the preset has decayed far below the IR's RMS, so the null reads the floor, not the model.
+- **The model transfers to a third unit at the CLA level:** −35 dB at 50–600 ms (RT ≥ 1.6), within 1–2 dB of CLA, with 9 injection numbers + 13 law numbers + 3 constants + the AP230 table from the library, 3 per preset (clock, shift, gain) and 14 for the channel FIR on the Altiverb.
+- **Without the channel FIR the prediction fails, at −12 / −15 dB at every window including the cluster.** Cause (measured against CLA, `--stage direct` and checks in the session): **R is CLA's R scaled by 0.736 (−2.6 dB), tap 0 matches to −52.6 dB with a pure gain**; **L needs a 3-tap filter on top of the gain, [1.02, −0.22, −0.07] on tap 0 (an HF lift against its DC gain of 0.74)**, which then predicts the other L taps to −43 / −34 / −31 dB. The model assumes equal L and R levels and one chain shape, so it cannot represent either. Plus polarity inverted (the pipeline normalises it away; the raw IRs show it).
+- **Direct, no model: Altiverb against CLA (same panel setting)** with the same per-channel FIR: **−42 / −46, −37 / −40, −35.5 / −37.6, −33 / −34, −25 / −27 dB** at 0–50 … 600–1000 ms (clock −55.5 ppm, the difference of the two fitted clocks). **The two units differ from each other as much as the model differs from either** (−35…−37 dB), and not like copies of one capture (which would null near the noise floor). So the §16.12 reading "a cross-unit ceiling compresses the differences" is supported: on a held-out unit the model sits at about −35 dB because the units themselves are about that far apart (**S**); the library's −44 dB held out is a within-capture-chain figure.
+- **Not tested:** the AP230 step at RT 0.6 with HF 0.9 (step 0 used; step 1 is the HF 0.6 value), AMPL, and LF/HF beyond the inferred values. The Altiverb is a static convolution: no time-variance information, and M/L reverbs are not null targets.
