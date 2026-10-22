@@ -1479,3 +1479,31 @@ Code: `.venv/bin/python tools/altiverb_predict.py` → `analysis/altiverb/predic
 - **Without the channel FIR the prediction fails, at −12 / −15 dB at every window including the cluster.** Cause (measured against CLA, `--stage direct` and checks in the session): **R is CLA's R scaled by 0.736 (−2.6 dB), tap 0 matches to −52.6 dB with a pure gain**; **L needs a 3-tap filter on top of the gain, [1.02, −0.22, −0.07] on tap 0 (an HF lift against its DC gain of 0.74)**, which then predicts the other L taps to −43 / −34 / −31 dB. The model assumes equal L and R levels and one chain shape, so it cannot represent either. Plus polarity inverted (the pipeline normalises it away; the raw IRs show it).
 - **Direct, no model: Altiverb against CLA (same panel setting)** with the same per-channel FIR: **−42 / −46, −37 / −40, −35.5 / −37.6, −33 / −34, −25 / −27 dB** at 0–50 … 600–1000 ms (clock −55.5 ppm, the difference of the two fitted clocks). **The two units differ from each other as much as the model differs from either** (−35…−37 dB), and not like copies of one capture (which would null near the noise floor). So the §16.12 reading "a cross-unit ceiling compresses the differences" is supported: on a held-out unit the model sits at about −35 dB because the units themselves are about that far apart (**S**); the library's −44 dB held out is a within-capture-chain figure.
 - **Not tested:** the AP230 step at RT 0.6 with HF 0.9 (step 0 used; step 1 is the HF 0.6 value), AMPL, and LF/HF beyond the inferred values. The Altiverb is a static convolution: no time-variance information, and M/L reverbs are not null targets.
+
+### 18.1 The free flat injection on the Altiverb S presets: its lead shrinks to 1–2.5 dB **[S]**
+
+`altiverb_predict.py --stage free`: the 27,924-number free flat injection (§15.7, the library-trained one) in place of the 9-number model, the same fits (clock, shift, gain, 14-number channel FIR on the cluster-only region). L / R, 100 Hz–10 kHz, dB:
+
+| Preset | Model | 50–150 | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|---|
+| RT 1.6 | free | −36.5 / −37.4 | −36.3 / −36.9 | −36.1 / −36.3 | −35.2 / −35.1 |
+| | compact | −35.5 / −35.0 | −35.1 / −34.7 | −35.0 / −34.5 | −34.3 / −33.5 |
+| RT 2.2 | free | −36.7 / −37.6 | −36.7 / −37.2 | −36.8 / −37.1 | −36.4 / −36.5 |
+| | compact | −35.7 / −35.3 | −35.5 / −34.9 | −35.9 / −34.9 | −35.6 / −34.2 |
+
+- **The free model leads by 0.9–1.3 dB on L and 1.7–2.6 dB on R** (RT 1.6–2.2, 50–600 ms), against 8–10 dB on the library and 1.4–1.8 / 3.2–4.2 dB on CLA (§16.12). Both models sit at −35…−37 dB on this unit and on CLA.
+- **Reading:** the free injection's large lead on the library is mostly library-specific fitting (it learns the library's chain and processing); on another unit the two models are within about 2 dB, and both are limited by the unit-to-unit difference (§18, Altiverb against CLA −35…−37 dB). The compact model's own error on a third unit is therefore about 1–2.5 dB, not the 8–10 dB the library's repeat-capture null suggested. Still **S**, not proof: the Altiverb IR may itself be processed, and the model was not given an Altiverb-specific chain beyond the channel FIR.
+- RT 0.6 and 1.0 behave as in §18 (the tail decays below the floor early); numbers in `analysis/altiverb/predict.json`.
+
+### 18.2 The M/L carry-over model on the Altiverb MED and LONG presets (`--stage ml`) **[S for the cluster and the damping step; open for the first pass]**
+
+The carry-over model of `ml_structure.md` §7 (cluster, diffuser, 20 equal sign-only taps per channel, output kernel; positions and signs from the Tomkin training groups, nothing refitted on the Altiverb), with the plugin clock (+42.8 ppm, from S) removed first and a per-channel 11-tap FIR fitted on the cluster-only region (22 numbers; so the cluster-and-gap window shares its fit region). Per preset: one shift and per channel a cluster gain and a tap gain, and the last all-pass's damping b (one number). 100 Hz–10 kHz, L / R:
+
+| | Cluster and gap | First pass | Tomkin held out (§7.6): cluster and gap | first pass |
+|---|---|---|---|---|
+| M (10 presets, RT ≥ 1.0) | −37.8 / −35.8 | −30.8 / −27.6 | −46.6 / −42.0 | −40.7 / −39.2 |
+| L (RT ≥ 4.0) | −28.5 / −29.1 | −24.9 / −22.8 | −43.0 / −38.8 | −36.6 / −35.9 |
+
+- **The cluster itself fits: every tap to −55…−60 dB** (L: tap 0, 216, 776; R: 0, 570, 776, 1407) with the same chain as S: R a pure gain (0.83), L the filter [1.15, −0.24, −0.07]. The residual in the cluster window is 92–99 % between the taps (the gap), at −38…−43 dB re the signal. So the 24 positions and signs transfer.
+- **The first pass is 9–13 dB worse than on the library** (M −31 / −28 against −41 / −39, L −25 / −23 against −37 / −36). Open: a different frozen realisation of the time-variant M/L structure (`ml_structure.md` §4), Altiverb processing, or part of the chain not in a 22-number FIR. The model has no LF or HF dependence in this window, so a wrong inferred setting cannot be the cause. Not enough to say which.
+- **The damping step carries over and snaps to the library's values:** the fitted b is **0.32 for M at RT 0.5 and 0.48 / 0.155 for L at RT 2 / 3, and 0 at longer RT** (the library's steps are 0 / 0.17 / 0.33 / 0.50; the library's rule is b > 0 only at short RT and low HF, HF here 0.7 and 0.4). Without b the first pass is −7…−12 dB at those presets; with it −25…−31 (**S**: three presets on a third unit; the cell rule itself is still open).

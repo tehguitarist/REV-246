@@ -1,7 +1,7 @@
 """Altiverb 246 S presets against the consolidated S model (model_s_results.md §17), held out, and the differences
 from the CLA and Tomkin captures. Results: model_s_results.md §18, docs/EMT246_unit_facts.md §5c.
 
-    .venv/bin/python tools/altiverb_predict.py [--stage all|predict|direct|diag] [--out analysis/altiverb]
+    .venv/bin/python tools/altiverb_predict.py [--stage all|predict|free|ml|direct|diag] [--out analysis/altiverb]
 
 Needs analysis/altiverb/cache/ (tools/altiverb_compare.py --stage deconv) and analysis/q1, analysis/q2, analysis/shortRT.
 Writes <out>/predict.json.
@@ -13,6 +13,13 @@ Writes <out>/predict.json.
             the Altiverb's R is 0.74 x CLA's and its L has a different chain shape). Nulls 100 Hz-10 kHz per window and channel.
   direct    The Altiverb RT 1.0 IR against the CLA IR (the same panel setting: LF 1.0, RT 1.0, HF 0.9, AMPL 80): clock,
             shift and gain, then with the per-channel FIR. Shows how far the two units and captures are apart without a model.
+  free      As predict, with the free flat injection (27,924 numbers, model_s_results.md §15.7) instead of the 9-number model:
+            separates model error from unit difference (a free model that is no better than the compact one on a third unit
+            means the unit-to-unit gap, not the model, sets the ceiling).
+  ml        The M/L carry-over model (ml_carryover.py: cluster + diffuser + 20 equal sign-only taps per channel + output kernel,
+            positions and signs from the Tomkin training groups) against the Altiverb MED / LONG presets: cluster-and-gap
+            and first-pass nulls with a per-channel 11-tap FIR fitted on the cluster-only region and the plugin clock
+            (+42.8 ppm, from S) removed first. Held out: the first pass; the cluster-and-gap window shares the FIR's region.
   diag      Polarity, L/R offset, device-domain clock, and the first-arrival structure of the Altiverb, CLA and Tomkin S files.
 
 Floor: the sweep deconvolution agrees with an exact frequency-domain deconvolution to -74 dB (100 Hz-10 kHz, first 2 s),
@@ -73,11 +80,22 @@ def fit_clock(yb, mdl, starts=range(-300, 301, 100)):
     return best[1:4]
 
 
-def model_for(rt, n, amp, v, law, b230=0.0):
-    w = 2 * np.pi * np.fft.rfftfreq(q1.grid_n(rt))
+def model_for(rt, n, amp, v, law, b230=0.0, free=False):
     lab = dict(LAB, rt=rt, amp=amp)
-    G = q2.make_G(lab, law, q2.G_capped(lab, law, w, beta=q2.FINAL_BETA), b230, q2.FINAL_DIFF)
+    if free:    # the free flat injection with q1's -0.70 diffuser, as CLA_MODELS in q2_injection.py
+        G = q2.branch_spectra(lab, law, [0.0], 0.0, None)
+    else:
+        w = 2 * np.pi * np.fft.rfftfreq(q1.grid_n(rt))
+        G = q2.make_G(lab, law, q2.G_capped(lab, law, w, beta=q2.FINAL_BETA), b230, q2.FINAL_DIFF)
     return q1.Joint([dict(G, files=[dict(y=np.zeros((n, 2)), w=np.ones(n), amp=amp)])]).render(v, G, n, amp)
+
+
+def free_model():
+    q1.EXT = 1700
+    spec = os.path.join(q2.OUT, "branches_flat_0_ext1700")
+    law = json.load(open(spec + ".json"))["law"]
+    law["lf"] = {float(k): x for k, x in law["lf"].items()}
+    return np.load(spec + ".npy"), law
 
 
 def channel_fir(y, mdl, K=3):
@@ -93,11 +111,15 @@ def channel_fir(y, mdl, K=3):
     return out, hs
 
 
-def stage_predict(out):
-    q1.EXT = 1700
-    v, law, a = q2.final_injection()
+def stage_predict(out, free=False):
+    if free:
+        v, law = free_model()
+        E0.setdefault("eps", 42.8)
+    else:
+        q1.EXT = 1700
+        v, law, a = q2.final_injection()
     res = {}
-    print("S model (9 numbers + library laws), nothing fitted on the Altiverb except as stated")
+    print(("free flat injection (27,924 numbers)" if free else "S model (9 numbers + library laws)") + ", nothing fitted on the Altiverb except as stated")
     print("window (ms): " + " ".join(f"{a_}-{b_}".rjust(11) for a_, b_ in WIN) + "   (L / R, dB re the Altiverb IR, 100 Hz-10 kHz)")
     for name, rt in PRESETS.items():
         if ONLY and name != ONLY:
@@ -107,7 +129,7 @@ def stage_predict(out):
         n = len(yb) - 600
         r = {"info": info}
         for amp in (80,):  # AMPL cannot be scanned here: the cluster FIR absorbs the cluster gain (AMPL comes from the tap/reverb ratio)
-            mdl = model_for(rt, n, amp, v, law)
+            mdl = model_for(rt, n, amp, v, law, free=free)
             eg, shg, gain = fit_clock(yb, mdl, starts=[E0["eps"]] if "eps" in E0 else range(-300, 301, 100))
             E0["eps"] = eg
             y = q1.apply_clock(yb, eg, shg)[:n] / gain
@@ -123,6 +145,74 @@ def stage_predict(out):
             print(f"RT {name} {tag:5s}: clock {a80['eps_ppm']:+.1f} ppm shift {a80['shift']:+.3f} | "
                   + " ".join((f"{x[0]:.1f}/{x[1]:.1f}" if x else "--").rjust(11) for x in a80["null"].values()))
         print("   channel FIR (L, R), 7 taps each:", r["amp80_fir"]["fir"])
+    return res
+
+
+def stage_free(out):
+    return stage_predict(out, free=True)
+
+
+def device_k0(rt_name, k0_target):
+    """Altiverb preset (cache name) -> device-rate IR (N x 2), tap 0 at index k0_target, plugin clock removed."""
+    ir = np.load(os.path.join(ROOT, "analysis", "altiverb", "cache", rt_name + ".npy")).T
+    fa = int(np.argmax(np.abs(ir[:, 0]) > np.abs(ir[:, 0]).max() * 10 ** (-40 / 20)))
+    x = ir[fa - 240: fa + int(1.2 * FS48)]
+    h, t0, offs = ai.recover(x, FS48, ai.FS_DEV)
+    k0 = ai.cluster_taps(h)[0]["first_tap_index"]
+    h = h * (np.sign(h[k0].sum()) or 1.0)
+    h = q1.apply_clock(h, E0.get("eps", 42.8), 0.0)
+    import ml_structure as mls
+    return sosfiltfilt(mls.BAND, h[k0 - k0_target: k0 - k0_target + 12000], axis=0)   # the carry-over parts are 100 Hz-10 kHz band-passed
+
+
+def stage_ml(out):
+    import ml_carryover as mc
+    from scipy.optimize import minimize_scalar
+    fp = json.load(open(os.path.join(ROOT, "analysis", "ml_carryover", "firstpass.json")))
+    res = {}
+    KH = mc.KH
+    for prog, pre in (("M", "MED RT"), ("L", "LONG RT")):
+        P, sg = np.array(fp[prog]["positions"]), np.array(fp[prog]["signs"])
+        cl = mc.cluster_taps(prog)
+        W = mc.win(prog)
+        n = mc.K0 + W[1][1][1] + 400
+        names = sorted([os.path.basename(x)[:-4] for x in __import__("glob").glob(os.path.join(ROOT, "analysis", "altiverb", "cache", pre + " *.npy"))],
+                       key=lambda t: float(t.split(" ")[-1][:-1]))
+        print(f"\n## {prog}: Altiverb {pre} presets, carry-over model (positions, signs from Tomkin training groups {fp[prog]['train'][:2]}...)")
+        res[prog] = {}
+        c0 = mc.render(prog, np.zeros((2, 0)), np.zeros((2, 0)), cl, n + 50)[0]
+        for nm in names:
+            y = device_k0(nm, mc.K0)[:n]
+            hs = []                                     # per-channel FIR on the cluster-only region (no reverb used)
+            for ch in (0, 1):
+                sl = slice(mc.K0 - 30, mc.K0 + mc.ONSET[prog][ch] - 3 - KH)
+                X = np.stack([np.roll(c0[:, ch], k)[sl] for k in range(-KH, KH + 1)], 1)
+                hs.append(np.linalg.lstsq(X, y[sl, ch], rcond=None)[0])
+
+            def parts(b):
+                C, T = mc.render(prog, P, sg, cl, n, b=b)
+                f = lambda A: np.stack([sum(hs[ch][k + KH] * np.roll(A[:, ch], k) for k in range(-KH, KH + 1)) for ch in (0, 1)], 1)
+                return f(C), f(T)
+
+            def cost(b):
+                null, _ = mc.fit_null(y, parts(b), prog, True)
+                return sum(10 ** (x / 10) for x in null["first_pass"])
+            b = float(minimize_scalar(cost, bounds=(0.0, 0.6), method="bounded", options={"xatol": 0.002}).x)
+            r = {"b": b}
+            for tag, bb in (("b0", 0.0), ("bfit", b)):
+                r[tag], r["shift_" + tag] = mc.fit_null(y, parts(bb), prog, True)
+            res[prog][nm] = r
+            print(f"{nm:14s} b {b:.3f} | b0: cluster+gap {r['b0']['cluster_gap'][0]:.1f}/{r['b0']['cluster_gap'][1]:.1f}, first pass {r['b0']['first_pass'][0]:.1f}/{r['b0']['first_pass'][1]:.1f}"
+                  f" | b fitted: first pass {r['bfit']['first_pass'][0]:.1f}/{r['bfit']['first_pass'][1]:.1f}")
+        for tag in ("b0", "bfit"):
+            for w in ("cluster_gap", "first_pass"):
+                x = np.array([res[prog][k][tag][w] for k in res[prog]])
+                print(f"  median {tag} {w}: {np.median(x[:, 0]):.1f} / {np.median(x[:, 1]):.1f}")
+        rows = fp[prog]["rows"]
+        for tag in ("b0", "bfit"):
+            for w in ("cluster_gap", "first_pass"):
+                x = np.array([r[tag][w] for r in rows if not r["train"] and w in r[tag]])
+                print(f"  Tomkin held out, {tag} {w}: {np.median(x[:, 0]):.1f} / {np.median(x[:, 1]):.1f}")
     return res
 
 
@@ -164,7 +254,7 @@ def stage_diag(out):
     return res
 
 
-STAGES = {"predict": stage_predict, "direct": stage_direct, "diag": stage_diag}
+STAGES = {"predict": stage_predict, "free": stage_free, "ml": stage_ml, "direct": stage_direct, "diag": stage_diag}
 
 
 def main():
