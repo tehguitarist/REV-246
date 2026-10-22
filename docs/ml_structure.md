@@ -5,13 +5,14 @@ Everything below comes from `.venv/bin/python tools/ml_structure.py` on the Tomk
 through the same code as the control and the calibration. Labels as in `EMT246_unit_facts.md`
 (**C** confirmed, **S** strong, **H** hypothesis).
 
-*October 2026. Answers `NEXT_STEPS.md` Q3 and changes the picture of the "stochastic control" (§8 there). §8 below adds the line gains and filters (Q4–Q7 for M/L).*
+*October 2026. Answers `NEXT_STEPS.md` Q3 and changes the picture of the "stochastic control" (§8 there). §8 below adds the line gains and filters (Q4–Q7 for M/L), §9 the time variance itself (Q3b).*
 
 > **Summary.**
 > - **Early section = program S's, time-scaled by 2 (M) and 4 (L).** Same 8-tap cluster with the same signs, the reverb onset and the L/R onset gap all scale (§1, §2).
 > - **The late reverb is S's four loops, ×2 / ×4 and coupled (§7, superseding §3's reading).** S is four parallel loops: the product of four combs predicts its tail to **−45 dB held out**. M and L follow one five-term recursion each (L 10826/11384/11618/12176/23002, M 5416/5694/5812/6090/11506, §3). §7 shows why: the same four lines scaled (M 2641/2775/2919/3171, L 5279/5547/5837/6339) are cross-coupled by an orthogonal 2 + 2 matrix, whose characteristic polynomial has exactly these five lags (pair sums and the sum of all four) and their signs.
 > - **The carry-over test (§7):** M's and L's diffuser, 20 read taps per channel, R routing and AP damping steps are S's, time-scaled (with small exact integer offsets); M and L add an output smoothing kernel. Held out, the first pass nulls as well as S's own compact model does.
 > - **M and L are time-variant; S is not.** Separate captures of the same M or L setting decorrelate progressively (L: −25 dB at 0.15–0.3 s → −3 dB at 2–4 s), flat across frequency. S's repeat captures agree to −52…−59 dB once a per-capture clock ratio is fitted (§4.1). This is the first direct evidence of the "stochastic control" and its program dependence (§4).
+> - **What varies (§9):** one common rotation angle of the coupling's two 2 × 2 blocks, periodic at 0.83 Hz with a random phase per capture, about 0.11–0.14 rad rms. Rendered through a simulated sweep, the rotating model decorrelates between renders the way Tomkin's AMPL pairs do, and it explains §8.3's small RT shortfall.
 > - **Consequence for the null target:** past the first recirculation, M and L can't be nulled waveform-for-waveform against one capture; two captures of the same unit don't null each other (§5).
 > - **Noise floor vs the CLA capture (§4.2):** not the same. CLA levels off at −71/−77 dB (L/R) below its 50–300 ms reverb level; the library shows no capture noise down to its 24-bit floor, about −88 dB below. What limits a comparison against the library is the capture clock, not noise: with it fitted, the S repeat-capture ceiling is about −57 dB.
 
@@ -181,8 +182,8 @@ All three M pairings agree (R, 0.15–0.3 / 0.3–0.6 / 0.6–1.0 / 1–2 s): 60
 
 *Done since: the S carry-over (§7) and the line laws (§8). With the deterministic model complete, items 1–2 can now be tested inside it (which matrix entries, line gains or taps vary).*
 
-1. **Decorrelation rate vs settings:** does the pair-null decay rate depend on RT, HF or LF? Does it scale per recirculation (per N samples) or per second? This separates "random change per pass" from a free-running clock.
-2. **Which part varies:** compare the pair difference with the five-tap recursion: is it consistent with randomised tap gains (β, γ), switched tap positions, or a varying read-out?
+1. *(Done, §9: per second, 0.83 Hz, no dependence on RT, LF or HF.)* **Decorrelation rate vs settings:** does the pair-null decay rate depend on RT, HF or LF? Does it scale per recirculation (per N samples) or per second? This separates "random change per pass" from a free-running clock.
+2. *(Done, §9: the coupling's rotation angle.)* **Which part varies:** compare the pair difference with the five-tap recursion: is it consistent with randomised tap gains (β, γ), switched tap positions, or a varying read-out?
 3. ~~**Loop gains and filters from the recursion** at RT/HF/LF steps (Q4–Q7 for M/L), using the deterministic part.~~ Done (§8): S's laws, length-scaled.
 4. **Harness:** per-program cluster templates (§1) with a 60 ms window, and the M/L lag sets as known loop sets.
 5. **Non-Lin:** its late part (`1108-1254-1386` and `231-628-…` in the harness) through the same predictor.
@@ -421,3 +422,101 @@ Band levels at the onset agree with the model within ±0.15 dB in every octave a
 - **Q4–Q7 for M/L (line gains and filters) are answered at the library's steps:** S's laws at the M/L line lengths with S's limits. The per-program control laws are one set: what changes between programs is the line lengths, the coupling and the kernel, not the control arithmetic. **Parameters added for M/L: none** (13 law numbers and 3 limits from S, the §7 structure trained on 6 settings, 6 per capture: shift, clock, and per channel a cluster gain and one reverb gain shared by all lines).
 - **For the null target:** the reverb windows are now limited by the time variance, not the model (e below v). By the M/L rule in `NEXT_STEPS.md` §2 the next proof is statistical, the decorrelation curve, which needs a model of the variation itself.
 - **Next (Q3b):** with the deterministic model in hand, the model-minus-capture residual in each recirculation window is the variation itself (plus e, 2–9 dB lower). `ml_lines.fitted(prog, key)` returns each capture of a setting with its model and usable end, from the stored clock and gains (no refit; reproduces the stored nulls exactly). Test which part varies (line gains, matrix signs, tap positions, the output kernel as averaged address jitter) by how that residual grows per pass, and check whether the 0.2–2 % RT shortfall follows it.
+
+## 9. The time variance: a slowly rotating coupling (Q3b, October 2026)
+
+`.venv/bin/python tools/ml_variance.py [--stage rot|report|sim|all]` → `analysis/ml_variance/` (`rot/` one file per AMPL group, `report.log`, `sim/`, `sim.log`). Works on the residual capture − model of §8 (`ml_lines.fitted`: stored clocks and gains, nothing refitted).
+
+> **Summary.**
+> - **What varies is the coupling, and only in one way:** both 2 × 2 blocks of F (§7.3) rotate by **one common angle θ(t)**, F(θ) = F_b R(θ). The coupling stays orthogonal at every instant, so the decay is untouched, the variation is flat across frequency, and S, which has no coupling, has none. This is the "stochastic control … without perceptible FM" of the 1986 review. **S**
+> - **θ is periodic, 0.83 Hz, with a random phase per capture**, free-running in seconds (one cosine fits M's and L's autocorrelations at 0.11, 0.22 and 0.44 s within 0.1); depth about **0.11–0.14 rad rms (6–8°, ±9–11° if sinusoidal)**. **S** (mechanism, rate), **H** (sine shape, exact depth)
+> - **Accuracy test passed (`NEXT_STEPS.md` §2, metric 3):** the model with θ = 0.155 sin(2π · 0.83 t + φ), rendered through a simulated exponential sweep with random φ, decorrelates between renders the way Tomkin's AMPL pairs do, from the first recirculation to 2–4 s; the library's spread of model and repeat nulls is the periodic θ's signature. **S**
+> - **The 0.2–2 % RT shortfall of §8.3 follows from it:** the simulated sweep of the rotating model shows the same shortfall (largest in L at 125 Hz), so the unit's decay is the law's and the sweep loses the decorrelating part. **S**
+> - **Order:** the rotation acts on the line outputs and the 20 taps read after it (the read-out form, the transpose of §8's algebra). **S**
+
+### 9.1 Method: kernels on derivatives, held out across channels
+
+The residual past the first pass is mostly each capture's own random part (§8.1). Any candidate for what varies is a derivative of the model. A parameter that wanders during a sine sweep shows up, after deconvolution, as a **kernel on that derivative's response**: a slow modulation at f_m becomes a pair of ghosts at lags ±L·f_m/f for an exponential sweep with time constant L (lags shrinking with frequency). So per capture and window the residual is fitted as kernel ∗ derivative (ridge, lags ±300 in M, ±600 in L) on **one channel** and scored on **the other**: L and R read the same four lines through different taps, so only a line-side variation predicts across channels.
+
+### 9.2 What is ruled out, and what fits
+
+Recirculation 1 (`M 1.2_5.0_0.9`, first prototype; library-wide numbers in §9.4):
+
+| Candidate (per capture) | Cross-channel null, from −18.5 dB |
+|---|---|
+| Static change of the 4 line gains, 4 line lengths or the 8 coupling entries (also per octave) | −18.5…−18.6 (nothing) |
+| Kernels per line, per destination, per connection (±4…±128 lags) | ≤ 1 dB, or worse |
+| **One kernel on the rotation derivative F_b J (J = [[0, −1], [1, 0]]), both blocks** | **−30.5…−33.7** |
+| the two blocks with separate kernels | the same (one angle) |
+| the blocks rotated in opposite senses; a common gain change of F | −18.3…−18.7 (nothing) |
+
+- **Unique:** over all 128 sign patterns on F's support (one kernel each), the rotation pattern (+ on line 1 ← loop 2 and line 4 ← loop 3, − on the other six) is best by 5.7 dB; patterns on F's zero entries do nothing. Algebraically Fᵀ·dF is antisymmetric, the same J in both blocks: the tangent of a rotation.
+- **Per capture, not common:** a capture's kernel applied to the other captures of its group makes them worse, and recirc1 kernels of different captures are uncorrelated (§9.4). One group (`M 1.2_2.6_0.9`) has a residual 90 % common to its captures (model error 8 dB above the variation there); its common part is also fitted by a rotation kernel, so the model's error and the variation are not separable by this test in that group.
+
+### 9.3 Rate, timing and order
+
+- **Ghost lags halve per octave:** the recirc1 kernel's median |lag| is 77 / 37 / 19 / 12 samples at 1 / 2 / 4 / 8 kHz in M and 73 / 38 / 19 / 12 in L (§9.4), lag × f ≈ 2.8–2.9 s·Hz (3.6 at 8 kHz, where 12 samples is coarse), the same in both programs, and it is symmetric (98–99.6 % of its energy): the exponential-sweep signature of a slow real modulation (ghost pairs at ±Δt(f) combine into a zero-phase kernel for any modulation phase). This fixes only f_m · L.
+- **Rate in seconds, from the passes:** in recirculation k the rotation acts at up to k coupling events, one line length apart. One kernel per event, each correlated with recirculation 1's (1–9 kHz), gives θ's autocorrelation at a known lag with no sweep needed. Calibrated on simulations with a known θ (§9.5): at 0.83 Hz the estimator returns 0.83 / 0.42 for a true 0.84 / 0.42 (M) and 0.42 / −0.58 for 0.42 / −0.65 (L), against the library's 0.82 / 0.38 and 0.42 / −0.56. Library medians (§9.4): M ρ(0.11 s) = 0.78–0.82, ρ(0.22 s) = 0.38; L ρ(0.22 s) = 0.31–0.42, ρ(0.44 s) = −0.56. **One cosine, f_m = 0.83 Hz, fits all six** (0.84 / 0.41 / −0.66); per pass the programs disagree (one pass: M 0.8, L 0.4), so **θ runs in time, not per pass**. With f_m · L ≈ 2.85 this puts Tomkin's sweep time constant at L ≈ 3.4 s (≈ 24 s for a 20 Hz–20 kHz sweep, **H**).
+- **Order:** grouping each recirculation's events by when they happen in the read-out form (rotation on the line outputs, taps after) beats the opposite grouping held out (L recirc2 −25.0 against −22.6 dB, recirc3 −20.0 against −16.6). So the lines are written with the diffused input plus the rotated line outputs, and the 20 taps read the lines, as in the EMT 250 patent's tapped read-out (`period_dsp_practice.md`).
+- **Not tied to the output kernel (§7.5):** the cluster does not pass through the lines, so the rotation cannot make it; the kernel's cause stays open.
+
+### 9.4 Library-wide (rot stage)
+
+Every M and L group (M 160 groups / 479 captures, L 180 / 360), per capture, held out across channels (mean of L → R and R → L), dB re the capture, median [10–90 %]:
+
+| Window | M base | M rotation | L base | L rotation |
+|---|---|---|---|---|
+| Recirculation 1 | −21.3 [−27.1 … −18.9] | **−33.1** [−35.2 … −29.9] | −19.3 [−22.3 … −18.2] | **−31.4** [−32.8 … −30.4] |
+| Recirculation 2 | −16.2 [−17.6 … −15.5] | **−27.3** [−28.9 … −19.6] | −15.9 [−16.8 … −15.3] | **−25.7** [−26.2 … −22.6] |
+| Recirculation 3 | −12.8 [−13.4 … −11.9] | **−20.2** [−22.9 … −12.2] | −12.7 [−13.2 … −12.4] | **−20.7** [−21.2 … −17.4] |
+
+| Recirculation 1 control (median) | M | L |
+|---|---|---|
+| two blocks, separate angles | −32.6 | −30.8 |
+| blocks in opposite senses | −20.9 | −18.9 |
+| common gain change of F | −21.6 | −19.7 |
+| **recirc2 / recirc3: one kernel for all events** | −25.1 / −18.8 | −21.3 / −15.4 |
+| **recirc2 / recirc3: events grouped in the opposite time order** | −25.8 / −19.4 | −22.9 / −17.2 |
+
+- **The rotation removes 12 dB of recirculation 1 in both programs** (8–11 dB in recirc 2, 7–8 in recirc 3), at every RT, LF and HF step (recirc1 rotation −30.8…−34.5 dB in M, −30.9…−32.4 in L per step; least at HF 0.1, where little is left above 1 kHz). The controls stay at the base level everywhere.
+- **θ's size is the same everywhere:** kernel norm 0.110 [0.107 … 0.113] rad (M), 0.109 [0.106 … 0.112] (L); per RT, LF and HF step 0.106–0.113. Depth does not depend on the program or a control. (Calibrated, §9.5: about 0.14 rad true.)
+- **Per capture:** recirc1 kernels of different captures of one group correlate +0.02 (M) / +0.16 (L) in the median, [−0.8 … +0.8]: each capture has its own phase.
+- **Ghosts per octave** (recirc1, median |lag| holding 50 / 90 % of the kernel's energy, samples; lag50 × f; symmetric fraction): M 77 / 273, 2.92, 0.989 (1 kHz); 37 / 65, 2.81, 0.994 (2 kHz); 19 / 32, 2.88, 0.995 (4 kHz); 12 / 18, 3.64, 0.996 (8 kHz). L 73 / 145, 2.77, 0.984; 38 / 68, 2.88, 0.987; 19 / 32, 2.88, 0.994; 12 / 17, 3.64, 0.995.
+- **θ's autocorrelation** (median correlation with recirc1's kernel, divided by the same-instant one): M 0.82 at 0.11 s (recirc2), 0.78 / 0.38 at 0.11 / 0.22 s (recirc3); L 0.42 at 0.22 s, 0.31 / −0.56 at 0.22 / 0.44 s. Same-instant correlations 0.94–0.98: recirculations 1–3 see one and the same θ.
+
+### 9.5 The accuracy test: the rotating model through a simulated sweep (sim stage)
+
+The model in the time domain in the read-out form (blocks of one shortest line; with θ = 0 it reproduces §8's model to about −100 dB), θ(t) = 0.155 sin(2π · 0.83 t + φ), measured with a 10 Hz–13 kHz exponential sweep of time constant 3.4 s at the device rate and deconvolved; 6 renders with random φ per setting. Pair nulls (one gain per window and channel; recirc windows R, time windows mean of L and R), median [range]:
+
+| Setting (LF / RT / HF) | | recirc1 | recirc2 | recirc3 | 0.3–0.6 s | 0.6–1.0 s | 1.0–2.0 s | 2.0–4.0 s |
+|---|---|---|---|---|---|---|---|---|
+| M 1.2 / 5.0 / 0.9 | Tomkin | −17.0 [−15.0 … −19.7] | −13.8 [−12.0 … −16.3] | −11.0 [−9.1 … −13.7] | −10.7 [−9.0 … −13.7] | −8.2 [−6.6 … −11.1] | −6.5 [−5.1 … −8.6] | −6.5 [−5.6 … −7.6] |
+|  | model | −17.4 [−15.3 … −60.0] | −14.3 [−11.9 … −56.9] | −11.6 [−9.2 … −53.9] | −11.5 [−9.3 … −53.7] | −8.5 [−6.6 … −50.9] | −6.7 [−4.6 … −49.1] | −6.4 [−4.6 … −48.8] |
+| M 2.0 / 0.8 / 0.9 | Tomkin | −19.6 [−17.5 … −23.6] | −14.9 [−13.1 … −19.0] | −11.4 [−9.3 … −15.1] | −11.9 [−10.0 … −15.8] | −10.0 [−8.4 … −14.0] | – | – |
+|  | model | −22.9 [−18.9 … −46.4] | −18.2 [−14.4 … −41.5] | −14.3 [−10.3 … −37.0] | −14.9 [−10.9 … −37.9] | −11.0 [−7.5 … −35.2] | −8.9 [−5.3 … −33.1] | −10.8 [−6.6 … −35.0] |
+| M 0.7 / 3.0 / 0.2 | Tomkin | −18.4 [−15.9 … −18.6] | −14.1 [−11.2 … −14.9] | −11.0 [−8.2 … −12.7] | −10.7 [−8.1 … −13.0] | −8.0 [−5.5 … −11.5] | −6.3 [−4.3 … −10.1] | – |
+|  | model | −21.3 [−17.4 … −49.3] | −17.0 [−12.8 … −44.9] | −13.6 [−9.3 … −41.7] | −13.8 [−9.6 … −41.4] | −10.3 [−7.1 … −37.6] | −8.2 [−4.4 … −36.2] | −7.0 [−3.5 … −34.1] |
+| M 0.1 / 1.8 / 0.4 | Tomkin | −15.5 [−15.1 … −26.6] | −10.8 [−10.4 … −22.9] | −7.7 [−7.5 … −20.1] | −7.7 [−7.4 … −20.2] | −5.2 [−5.1 … −17.8] | – | – |
+|  | model | −24.3 [−17.8 … −36.1] | −20.0 [−14.0 … −32.1] | −16.7 [−10.8 … −28.9] | −17.0 [−10.8 … −29.0] | −14.0 [−7.3 … −25.8] | −11.6 [−5.6 … −23.4] | −10.6 [−4.2 … −22.6] |
+| L 1.2 / 20.0 / 1.0 | Tomkin | −18.0 | −15.0 | −12.1 | −16.7 | −12.3 | −7.9 | −5.0 |
+|  | model | −17.0 [−14.6 … −59.7] | −14.2 [−12.0 … −56.6] | −11.4 [−9.2 … −53.8] | −15.8 [−13.6 … −58.4] | −11.6 [−9.4 … −54.0] | −7.2 [−5.2 … −49.6] | −4.5 [−2.6 … −46.6] |
+| L 1.2 / 4.5 / 0.8 | Tomkin | −20.4 | −17.3 | −13.7 | −19.2 | −14.2 | −10.9 | −8.0 |
+|  | model | −19.6 [−15.7 … −43.0] | −16.5 [−12.7 … −40.0] | −13.3 [−9.5 … −36.9] | −18.3 [−14.4 … −41.8] | −13.6 [−9.9 … −37.1] | −9.8 [−6.1 … −33.2] | −6.7 [−3.2 … −30.0] |
+| L 2.0 / 2.6 / 0.5 | Tomkin | −15.9 | −12.6 | −9.0 | −14.4 | −9.4 | −5.9 | −2.5 |
+|  | model | −20.8 [−16.7 … −48.6] | −17.3 [−13.5 … −44.8] | −13.7 [−9.9 … −41.2] | −19.1 [−15.2 … −46.9] | −14.0 [−10.2 … −41.6] | −10.1 [−6.5 … −37.6] | −6.8 [−3.3 … −33.9] |
+| L 0.1 / 10.0 / 0.3 | Tomkin | −19.3 | −15.9 | −13.1 | −17.8 | −13.2 | −8.9 | −6.2 |
+|  | model | −22.3 [−16.1 … −34.3] | −19.4 [−12.9 … −31.2] | −16.2 [−9.9 … −28.1] | −21.1 [−14.7 … −33.0] | −16.5 [−10.2 … −28.4] | −12.3 [−6.2 … −24.2] | −9.3 [−3.4 … −21.1] |
+
+Tomkin: its AMPL pairs (M 3, L 1 per setting); model: 15 pairs of 6 renders; ranges least to most similar. A pure sine makes some render pairs nearly identical (Δφ ≈ 0), hence the deep model minima.
+
+- **The library's null spreads are a periodic θ's signature** (`report`, from §8's law files, R): against the θ = 0 model every capture is nearly the same distance (IQR 4.6 / 1.3 / 0.6 dB in M recirc1–3, 1.7 / 0.9 / 0.4 in L), while repeat pairs spread 5.4–7.5 dB. A sine with a random phase per capture predicts exactly that: a pair differs by 2(1 − cos Δφ) times the model residual, Δφ uniform, so the repeat median is the model median + 3.0 dB and the 90th percentile + 5.9 dB. Observed M recirc2 −14.1 / −10.4 against −13.0 / −10.1 predicted, L −13.4 / −10.4 against −12.7 / −9.8. Only the deep tail is shallower (10th percentile −20.7 against −26.1 in M recirc2; 1st −25 against −46): about −25 dB of each capture's variation is not periodic, or the repeat fit's freedoms floor it (**H**). Narrowband noise in place of the sine would spread the model nulls as much as the pairs.
+- **Tomkin's pairs lie inside the model's range** (between its least and most similar render pair), or within 1.5 dB of its least similar end (M 2.0 / 0.8 / 0.9, L 2.0 / 2.6 / 0.5), in every window out to 2–4 s, **except M 0.1 / 1.8 / 0.4** (LF 0.1, short RT), whose two less similar pairs are 2.2–3.6 dB less similar than any render pair (θ larger there, a capped-LF effect, or chance with 6 phases: open). The medians differ by −1…+9 dB (the model's more often deeper), because 6 random phases sample 2(1 − cos Δφ) coarsely and Tomkin has 1–3 pairs per setting; the library-wide distribution above is the stronger test. Nothing in the model is fitted to these pairs: θ's depth, rate and the sweep constant come from the rot stage.
+- **The RT shortfall (§8.3):** decay per octave of the rotating renders against the θ = 0 model: M 0.992 / 1.000 / 1.000 / 0.996 / 0.998 / 0.997 / 0.996 (125 Hz–8 kHz), L 0.958 / 0.992 / 0.984 / 0.985 / 0.992 / 0.994 / 0.992; measured (§8.3, LF 1.2) M 0.988–0.997, L 0.972 at 125 Hz and 0.987–0.997 above. The sweep of a time-variant unit decays faster than its energy; the line laws need no correction.
+- **Depth calibration:** on the renders the recirc1 kernel norm reads 0.081–0.087 for a true 0.110 rad rms (ridge shrinkage and the ±LK window), so the library's kernel norm (§9.4) corresponds to about 0.14 rad; the pair nulls favour 0.11–0.12. Depth 0.11–0.14 rad rms (**H** within that range).
+
+### 9.6 What this answers, and what's next
+
+- **Q3b, which part varies: answered.** One common rotation angle of the two coupling blocks; nothing else in the lines, taps or read-out varies at a level this test sees (the leftover after the rotation kernel is −30…−34 dB in recirc1, near the kernel method's floor on simulations, −35…−37 dB).
+- **Per pass or per second: per second** (the same 0.83 Hz in M and L), periodic with a random phase per capture (**H**: a sine; a triangle or other smooth periodic shape is not excluded).
+- **Budget:** 8 coefficient multiplies per sample as before (the two blocks), with (cos θ, sin θ) rewritten by the control side at a rate well above 0.83 Hz; a table or recursive oscillator suffices.
+- **Next:** the shape and exact depth of θ (ghost phase versus frequency within one capture; more renders per setting against the library-wide null distribution), the non-periodic remainder (the shallow deep tail), and whether θ's rate or depth depends on the program or a control (§9.4 shows none at this precision). For the plugin: the read-out form with F(θ(t)), θ = a sin(2π f_m t + φ₀), a ≈ 0.155–0.2 rad, f_m ≈ 0.83 Hz.
