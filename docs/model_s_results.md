@@ -1729,3 +1729,36 @@ So exact coefficients (Q9) are not visible yet; what is visible is that **the la
 - **The LF part of the correction is smooth in RT and carries to unseen settings (S):** at LF 0.1 the interpolated correction gains 6.5–8 dB at 50–1000 ms, as much as the setting's own fit (within 0.5–3 dB); LF 0.4 gains 1–3 dB. So the LF law's departures at short RT can be a law (or the unit's own table) in RT.
 - **The HF 0.2 part does not transfer:** each setting's own correction gains 6–10 dB, but its neighbours' interpolated corrections do not (−1…+3 dB). At HF 0.2 the short-RT neighbours' corrections are unidentified, and the HF pole cap and the AP230 step change state between RT steps, so a linear interpolation across them is the wrong form. Open.
 - Parameters: interp uses the neighbours' 36 numbers per setting (a table, not yet a law); the next step is a compact form for the LF part per LF step (its RT dependence: about constant to RT 1.0, fading to 0 by 2.5) and a separate look at HF 0.2.
+
+### 22.2 A compact LF form in RT, held out by setting (`final --lfrt`) **[S for LF 0.1; partial for LF 0.4 / 2.0]**
+
+**The data** (`loop_fir` corrections, HF 0.6 and 1.0, broadband = median over 63 Hz–2 kHz and the four loops, as a fraction of the law's broadband decay rate 60 / (hi · RT)):
+
+| LF \ RT | 0.3 | 0.6 | 0.8 | 1.0 | 1.4 | 1.8 | 2.2 | 2.5 |
+|---|---|---|---|---|---|---|---|---|
+| 0.1 | −2.97 % | −2.78 | −2.63 | −2.50 | −2.32 | −1.60 | −0.18 | +0.52 |
+| 0.4 | −1.23 | −0.96 | −0.70 | −0.48 | −0.29 | −0.20 | −0.17 | −0.11 |
+| 1.0 | +0.52 | +0.09 | +0.04 | +0.04 | −0.01 | −0.07 | −0.13 | −0.16 |
+| 2.0 | +0.35 | +0.26 | +0.26 | +0.21 | +0.22 | +0.15 | +0.04 | +0.08 |
+
+**No one-constant mechanism fits it:**
+- a fixed normalisation frequency (each loop's broadband gain set so that RT(f_n) is the label's, f_n 0.3–13 kHz): at best (≈ 1.5 kHz) LF 0.1's size but the wrong shape (a peak at RT 1.4), LF 0.4 three times too large, LF 2.0 the wrong sign;
+- an extra loss proportional to the DC floor's lift, or to the shelf depth: fits LF 0.1 at RT 0.3–1.0 but not LF 0.4 with the same constant.
+
+**The empirical form:** per LF step, the broadband decay rate × (1 + a + b · RT); LF 1.0 unchanged. Of a + b/RT, a/RT + b/RT², a + b ln RT, a/RT and a + b RT, the last generalises best with each RT step held out (rms 0.55 / 0.21 / 0.04 % at LF 0.1 / 0.4 / 2.0; ln RT is a little better at LF 0.4 alone). **Fitted on RT 0.3 / 0.8 / 1.4 / 2.2 / 2.5 only** (`analysis/lf_rt/lfrt_train.json`): (a, b) = (−0.0387, +0.0164) at LF 0.1, (−0.0118, +0.0047) at LF 0.4, (+0.0038, −0.0013) at LF 2.0. **6 numbers.** Each loop's per-pass response is multiplied by 10^(rel · rate · Pᵢ / (20 fs)), at every HF step.
+
+**Held out by setting** (the 48 settings at RT 0.6 / 1.0 / 1.8, all captures; `analysis/lf_rt/final_lfrt_test.{json,log}`), R, excess over the repeat-capture null, law → LF form [interpolated table of §22.1, AMPL 0 + 60 only]:
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| All 48 | +9.4 → +7.7 | +13.3 → +11.5 | +11.5 → +8.1 | +4.1 → +1.9 |
+| LF 0.1 | +16.0 → **+10.0** [+8.9] | +20.2 → **+14.5** [+13.7] | +18.8 → **+12.0** [+12.0] | +11.3 → **+5.9** [+3.4] |
+| LF 0.1, RT 0.6 / 1.0 / 1.8 (300–600) | | | +18.5 → +9.6; +20.3 → +12.5; +16.5 → +14.7 | |
+| LF 0.4 | +14.0 → +11.7 [+12.9] | +16.7 → +15.0 [+13.9] | +12.1 → +11.0 [+9.2] | +3.3 → +2.2 [+0.3] |
+| LF 0.4, RT 1.8 | +4.9 → +4.8 | +11.2 → +12.3 | +9.8 → +12.2 | +6.1 → +7.8 |
+| LF 2.0 | +4.6 → +5.5 | +7.3 → +6.6 | +6.3 → +5.5 | +2.5 → +0.6 |
+
+- **Six numbers do what the interpolated table did** (§22.1) at LF 0.1 and on average; on unseen settings LF 0.1 gains 6–9 dB in every window, LF 0.4 1–2 dB.
+- **Where it costs:** LF 0.4 at RT 1.8 (1–2.4 dB from 150 ms on) and LF 2.0 at 50–150 ms (0.9 dB). At LF 0.4 / RT 1.8 the setting's own correction was already no better than the law held out, so the small long-RT values in the table there are probably fit noise and the form should go to zero sooner at LF 0.4.
+- **What it does not reach:** LF 0.1 at RT 1.8, the knee where the correction falls from −2.3 % to −0.2 % (+16.5 → +14.7 at 300–600 ms); a straight line in RT cannot follow the knee. It coincides with the DC floor stopping, so the floor's value (DC_MIN, fitted in §16.15 on ~50–150 ms windows) may be part of it (**H**).
+- The HF 0.2 part is separate and open (§22.1).
