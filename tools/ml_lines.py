@@ -28,6 +28,7 @@ deterministic part [0, onset + shortest line) only, which no line reaches. Every
           band energy ratio measured / model per frame, from the onset to the fade; its slope (dB/s) is the decay
           error (energy-based, so the M/L time variance does not bias it) and gives RT(f) = 60 / (60 / RT_law(f) - slope).
   report  breakdowns of the law files by control, the capture-to-capture / model error split, the limit scans.
+  fitted(prog, key)  (a function, no stage) rebuilds one group's captures with their models from the law files.
   fit     per setting, the line law's three numbers (Nyquist-end RT, DC RT ratio, HF RT factor at f_ref; shelf pole
           and f_ref fixed, length-scaled over the four lines) fitted to the band decay of all captures of the group:
           against S's laws per LF and HF step.
@@ -391,6 +392,25 @@ def law_stage(progs, workers, only=None, chunk=None):
 def load_rows(prog, tag=""):
     import glob
     return [r for f in sorted(glob.glob(os.path.join(group_dir(tag), f"{prog}_*.json"))) for r in json.load(open(f))]
+
+
+def fitted(prog, key, tag="", **variant):
+    """Rebuild the law stage's result for one AMPL group without refitting: per AMPL, (capture, model, usable end), on
+    the K0 grid, band-limited, with the stored clock and gains. variant: coefs= / F= as in Model.parts (default: the
+    law). The residual y - model past the first pass is what Q3b works on (ml_structure §8.4)."""
+    rows = {r["amp"]: r for r in json.load(open(group_path(prog, key, tag)))}
+    M = Model(prog)
+    g = cc.groups(prog)[key]
+    caps, _, amps = cc.captures(prog, key, max(len(cc._IR(f)) for f in g.values()) + 200)
+    n = len(caps[amps[-1]])
+    C, R = M.parts(n, key, **variant)
+    out = {}
+    for amp in amps:
+        r = rows[amp]
+        Cw, Rw = warp(C, *r["clock"]), warp(R, *r["clock"])
+        mdl = np.stack([r["gains"][ch][0] * Cw[:, ch] + r["gains"][ch][1] * Rw[:, ch] for ch in (0, 1)], 1)
+        out[amp] = (caps[amp], mdl, usable_end(caps[amp]))
+    return out
 
 
 def rt_law_bands(prog, key):
