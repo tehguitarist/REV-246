@@ -5,7 +5,7 @@ Everything below comes from `.venv/bin/python tools/ml_structure.py` on the Tomk
 through the same code as the control and the calibration. Labels as in `EMT246_unit_facts.md`
 (**C** confirmed, **S** strong, **H** hypothesis).
 
-*October 2026. Answers `NEXT_STEPS.md` Q3 and changes the picture of the "stochastic control" (§8 there). §8 below adds the line gains and filters (Q4–Q7 for M/L), §9 the time variance itself (Q3b).*
+*October 2026. §12 replaces the library's deconvolution kernel with a per-channel chain kernel (`EMT_KERNEL=chain2`). Answers `NEXT_STEPS.md` Q3 and changes the picture of the "stochastic control" (§8 there). §8 below adds the line gains and filters (Q4–Q7 for M/L), §9 the time variance itself (Q3b).*
 
 > **Summary.**
 > - **Early section = program S's, time-scaled by 2 (M) and 4 (L).** Same 8-tap cluster with the same signs, the reverb onset and the L/R onset gap all scale (§1, §2).
@@ -525,7 +525,7 @@ Tomkin: its AMPL pairs (M 3, L 1 per setting); model: 15 pairs of 6 renders; ran
 
 `.venv/bin/python tools/firstpass_gap.py --stage collect|report|chain [--model carry|lines]` → `analysis/firstpass_gap/` (`report_*.log`, `chain.{json,log}`; the per-group residual caches `groups_*/` are not committed). `NEXT_STEPS.md` §5 item 5: the first pass (cluster + diffuser + 20 taps, §7.6 / §8.1) sat 4–15 dB above the repeat-capture null in S, M and L alike. What is the residual?
 
-> **Summary.** It is a fixed, setting- and program-independent error of the library's device-domain IRs: the 5.2 ms deconvolution kernel (`analysis/library/tomkin96/kernels/kernel_96000.npz`, the mean of 8 R tap-0 waveforms, used for both channels) leaves a small low-frequency tail 2–6 ms after every impulse. **A per-channel correction kernel fitted only on the cluster-only regions (no reverb sample in the fit) predicts the first pass to the repeat-capture level, held out**: S −58.4 / −57.8, M −53.9 / −49.6, L −49.5 / −46.5 dB (L / R), against −44.7 / −45.7, −44.5 / −44.1, −44.3 / −42.7 without it. The reverb structure of §7–8 needs no change. **S** (cause: **H**, strongly indicated).
+> **Summary.** It is a fixed, setting- and program-independent error of the library's device-domain IRs: the 5.2 ms deconvolution kernel (`analysis/library/tomkin96/kernels/kernel_96000.npz`, the mean of 8 R tap-0 waveforms, used for both channels) leaves a small low-frequency tail 2–6 ms after every impulse. **A per-channel correction kernel fitted only on the cluster-only regions (no reverb sample in the fit) predicts the first pass to the repeat-capture level, held out**: S −58.4 / −57.8, M −53.9 / −49.6, L −49.5 / −46.5 dB (L / R), against −44.7 / −45.7, −44.5 / −44.1, −44.3 / −42.7 without it. The reverb structure of §7–8 needs no change. **S** (cause: **H**, strongly indicated). *Update (§12): cause confirmed. A per-channel chain kernel (19 ms FIR × the unit's high-pass, fitted on the same cluster-only windows) holds exactly this ripple. With the caches rebuilt from it (`EMT_KERNEL=chain2`), the correction is no longer needed: a correction refitted on the new IRs is ≤ 0.04 dB / 0.4° in band.*
 
 ### 10.1 Without a clock fit, part of the gap is the clock
 
@@ -556,7 +556,7 @@ One causal kernel g (lags −32…400) applied to the whole fitted model, m → 
 - **Program S held out completely** (kernel from M's and L's clusters only) reaches −56…−58 dB in both windows: the correction is not per program.
 - Per channel matters (S cluster/gap −53 → −60 dB): the library kernel was built from R tap-0 waveforms and is applied to L too, and each channel has its own output S&H and trimmer (unit facts §2b).
 - **In band the correction is small:** −47 dB of energy; 64–67 % in lags 40–200 (peak 93–98), 20–23 % within ±10 samples. Response L / R: +0.18 / +0.17 dB at 100 Hz (−2°), −0.23 / −0.25 at 150, −0.17 / −0.18 at 200, +0.15 / +0.13 at 300 Hz, within ±0.06 dB from 500 Hz to 10 kHz (L −0.06 dB at 10 kHz). Its out-of-band part (−13 dB, lags −12…−8) is unconstrained and is cut off wherever the kernel is applied.
-- **Reading (H):** the analogue and capture chain's response continues past the 5.2 ms kernel (its tail is −52 dB at 4 ms, and the high-passes at 0.2–3.4 Hz, `analog_results.md` §3.5, are far longer), so the truncated kernel's deconvolution leaves this low-frequency ripple on every impulse, cluster and reverb alike. It belongs to the measurement pipeline, not to the unit's algorithm, and affects every device-domain comparison made so far by about this much. The principled fix is a longer, per-channel chain kernel in `tools/harness` (rebuild of the IR caches); until then the correction is `chain.json:cluster_perch`.
+- **Reading (H):** the analogue and capture chain's response continues past the 5.2 ms kernel (its tail is −52 dB at 4 ms, and the high-passes at 0.2–3.4 Hz, `analog_results.md` §3.5, are far longer), so the truncated kernel's deconvolution leaves this low-frequency ripple on every impulse, cluster and reverb alike. It belongs to the measurement pipeline, not to the unit's algorithm, and affects every device-domain comparison made so far by about this much. The principled fix is a longer, per-channel chain kernel in `tools/harness` (rebuild of the IR caches); until then the correction is `chain.json:cluster_perch`. *Done (§12): `chain2`; confirmed **S**.*
 - **What it explains elsewhere (H):** the free 28 k-coefficient S injection's 8–10 dB lead over the compact model on the library shrank to 1–2.5 dB on CLA and the Altiverb (`model_s_results.md` §16.12, §18.1): a free injection can absorb a library-wide kernel error; on another chain there was none to absorb.
 
 ## 11. Out of band: 25–100 Hz and 10–12 kHz (October 2026)
@@ -624,4 +624,130 @@ Median nulls, strict (in-band gains) L / R [repeat capture], dB:
 
 - **The algorithm was not mis-identified by the band limit:** structure, HF laws and pole limit hold to 12 kHz; S's LF decay holds to 25 Hz; M/L's LF decay holds once the sweep's time-variance artefact is accounted for.
 - **Measurement-side items:** the deconvolution kernel (§10; also the low-band level and S's L channel at 11–12 kHz) and the M/L output kernel's phase above 9 kHz.
-- **Next:** (1) a per-channel, longer chain kernel and a cache rebuild, then repeat this check below 100 Hz for level and waveform; (2) refit the M/L output kernel over 100 Hz–12 kHz on the cluster windows (with P(f)), then rescore the high band; (3) S at LF 0.1 (+2…4 % RT at 25–100 Hz).
+- *Update (§12.5), with the chain kernel: the low-band level offset is gone (+0.2 / −0.0 / +0.1 dB at 25–50 Hz); S's first pass reaches the repeat-capture null at 50–100 Hz (−37 / −42 dB) and its recirculations stay 15–20 dB above it (the model's LF side, now testable); S's L channel at 11–12 kHz matches R.*
+- **Next:** (1) ~~a per-channel, longer chain kernel and a cache rebuild, then repeat this check below 100 Hz for level and waveform~~ done (§12); (2) ~~refit the M/L output kernel over 100 Hz–12 kHz on the cluster windows (with P(f)), then rescore the high band~~ refitted alongside the chain kernel (§12.5: L's 11–12 kHz first pass −21 → −35 dB); not yet adopted in the model; (3) S at LF 0.1 (+2…4 % RT at 25–100 Hz).
+
+## 12. A per-channel chain kernel replaces the correction (October 2026)
+
+`.venv/bin/python tools/chain_kernel.py --stage data|align|fit|write` → `analysis/chain_kernel/` (`fit.{json,log}`, `chain2.json`, `shifts.json`; the windows `data_*.npz` are not committed) and the kernel `analysis/library/tomkin96/kernels/chain2.npz`. Any tool that reads the device-domain IRs takes it with **`EMT_KERNEL=chain2`** in the environment (`tools/ml_structure.py`): the caches go to `analysis/ml_structure/cache_chain2/` and `analysis/q1/cache_chain2/` (+ `data_chain2.json`), and every result file gets the suffix `_chain2`. Without it everything reads the library kernel as before, so old and new compare directly. `ML_HK=analysis/chain_kernel/chain2.json` (`tools/ml_lines.py`) also swaps the model's stored output kernels for the ones refitted with the chain kernel (S: a unit tap); results get `_hk`. `NEXT_STEPS.md` §5 item 5, §10–11 above.
+
+> **Summary.** The library's deconvolution kernel is replaced by a per-channel chain kernel: a **19 ms FIR per channel times the unit's analytic sub-20 Hz high-pass** (the schematic's 3.35 / 0.72 / 0.23 / 0.16 Hz, nothing fitted), fitted only on the cluster-only windows of 884 S, M and L captures with a capture clock per capture. **Without any correction the rebuilt IRs now carry no measurable transfer error** (S first pass ≤ 0.04 dB, ≤ 0.5° per band, was 0.14 dB / 1°); the low-band level offset is gone (25–50 Hz +1.2 → +0.2 / −0.0 / +0.1 dB in S / M / L) and S's L channel at 11–12 kHz now matches R. The §10 correction is no longer needed: on the compact S model (`model_s_results.md` §19–20) the new IRs beat the corrected old ones by up to 4 dB at 50–300 ms and match them later. The first pass with nothing fitted on the reverb reaches S −52.0 / −53.3, M −50.0 / −48.2, L −47.5 / −45.6 dB (repeat −54.7 / −63.6, −49.9 / −49.1, −50.9 / −54.1); S stays 1.4–6.3 dB short of the corrected old figure. That comes from model parts fitted on the old IRs (the stored output kernels and a residual waveform, §12.3), not the chain. **S** (pipeline); **H** (what limits S's first pass now).
+
+### 12.1 The fit (`fit` stage; held out on the odd settings)
+
+Before the reverb starts a capture holds only the cluster. Per channel there are 4 sign-only taps at known device offsets (§1), for M and L through the program's output kernel (§7.5), all with one gain per capture. The model is the chain kernel c_ch = h_ch ∗ HP:
+- h_ch, a free FIR per channel on a 4× device grid (the taps sit on the device grid, so the problem splits into 4 polyphase problems with one Gram matrix);
+- HP, the schematic's high-pass, divided out of the capture first (causal, from the file start), so its slow tail, far longer than any window, is known rather than truncated.
+
+The windows run from 25 device samples before tap 0 to 6 before the reverb onset (`ml_carryover.ONSET`: 9 / 18 / 36 ms in L, 22 / 43 / 86 ms in R for S / M / L), so **no reverb sample enters the fit**. Per capture the fit has:
+- a gain;
+- a sub-sample shift and **a capture clock** (`align` stage, from 13 ppm; fitted 10–14 ppm). Without the clock, M's and L's long windows can't share a kernel with S: 13 ppm moves L's last cluster tap by 0.02 samples, −28 dB at 10 kHz;
+- a slow additive term {1, t, t²} per channel, projected out of model and data. It has the same shape in every capture but does not scale with AMPL (M: 0.54 / 0.59 at AMPL 60 / 99), so it is capture-side (an offset, or a wrapped tail), not the chain.
+
+The M and L output kernels (taps −8…8) are refitted alongside: the stored ones (fitted on the old IRs) leak into a joint kernel and cost 3–15 dB. S is weighted ×3 so S alone sets the short lags. The fit uses AMPL ≥ 30 captures: M's AMPL 10 clusters are 19 dB down, and 20 of them have none.
+
+Nulls over the window, median over the AMPL ≥ 60 captures of the odd settings (kernel fitted on the even ones), L / R, dB, with a gain, shift, clock and slow term refitted per capture. Bands: 100 Hz–10 kHz / 25–100 Hz / 10–12 kHz:
+
+| Kernel | Numbers | S | M | L |
+|---|---|---|---|---|
+| library kernel (5.2 ms, R only) | 0 | −41.2 / −45.4 · −40.4 / −24.4 · −33.6 / −49.0 | −43.8 / −42.4 · −27.5 / −20.5 · −41.5 / −36.7 | −38.7 / −37.0 · −24.2 / −20.3 · −24.7 / −22.6 |
+| **chosen: FIR 500 × schematic high-pass** | 4200 + 34 | **−58.8 / −57.3 · −72.1 / −57.1 · −47.0 / −46.3** | **−65.6 / −61.9 · −59.3 / −41.8 · −56.7 / −52.6** | **−51.3 / −50.7 · −37.5 / −38.5 · −39.1 / −38.4** |
+| output kernels stored, not refitted | 4200 | −55.8 / −51.9 · −71.4 / −34.6 · −43.7 / −42.6 | −52.0 / −47.4 · −59.7 / −26.2 · −38.8 / −36.4 | −39.3 / −38.7 · −37.7 / −23.8 · −23.8 / −22.9 |
+| no high-pass (FIR alone) | 4234 | −58.8 / −56.2 · −72.3 / −44.9 · … | −65.8 / −55.5 · −59.6 / −31.5 · … | −48.1 / −49.5 · −29.2 / −29.5 · … |
+| schematic + Tomkin's 1.8 Hz (`analog_results.md` §3.5) | 4234 | −58.8 / −56.6 · −72.1 / −44.6 | −65.4 / −57.6 · −59.3 / −35.8 | −51.4 / −50.1 · −39.1 / −33.7 |
+| FIR 2300 (87 ms, the longest window) | 18634 | −58.4 / −56.5 · −69.4 / −58.5 | −63.3 / −61.2 · −60.1 / −50.0 | −52.9 / −52.7 · −51.3 / −45.6 |
+| *repeat capture (AMPL 60 from the group's highest)* | | *−53.8 / −52.1 · −66.8 / −55.5 · −41.8 / −40.5* | *−66.0 / −66.3 · −56.6 / −46.4 · −55.9 / −55.6* | (no second cluster capture) |
+| S fitted on M and L only (stored output kernels) | 4200 | −43.3 / −43.1 · −63.9 / −47.6 · −31.0 / −32.5 | | |
+
+(`analysis/chain_kernel/fit.log` has the full set: FIR 300 / 800 / 1200, S weight 1, the slow term as a DC offset only.)
+
+- **Excess over the repeat-capture null (100 Hz–10 kHz):** S −5.0 / −5.2 dB (the kernel nulls deeper than another, noisier capture does), M +0.4 / +4.4 dB; at 10–12 kHz S −5.2 / −5.8, M −0.8 / +3.0. L has no repeat cluster capture.
+- **The FIR length:** with the high-pass prior the FIR decays to −47 / −53 dB (L / R) at 300–600 lags, and its DC gain stays at 5.1–5.4 × its peak (old kernel 4.7). Longer FIRs score a little better in the R windows' low band, but their long lags are only weakly identified next to the slow term (energy −22 dB at 600–1200 lags in L, DC gain swinging between −6.7 and +3.9 × the peak): unphysical, so not used. 300 lags is too short (M −53, L −49 dB).
+- **The high-pass:** the schematic's corners alone (4.46 Hz) score best in the low band. Adding Tomkin's 1.8 Hz (the 6.25 Hz that `analog_results.md` §3.5 fitted with a high-pass-only model on 20 ms windows) is 4.8–12.5 dB worse in the R windows' low band once the FIR is free (L within ±1.6 dB); half the schematic + 1.8 Hz (3.5 Hz) is as good as the schematic. So the data fix the total near 3.5–4.5 Hz, not its split (**S** for the total, **H** for the split).
+- **Cross-program:** S from M and L only stays at −43 dB, held back by the stored M/L output kernels (with refitted ones S and the M/L kernels can't be separated). The even/odd split is the held-out test.
+
+### 12.2 The kernel (`write` stage: all AMPL ≥ 30 captures)
+
+R's mid-band gain and delay are pinned to the library kernel at 300–3000 Hz (+0.18 dB and −0.001 samples removed), so levels and timing in the caches keep their convention. L keeps its own relative to R: **+0.10 dB, −0.008 samples (96 kHz)**. Response relative to the library kernel, L / R (`analysis/chain_kernel/chain2.json`):
+
+| | 25 Hz | 50 | 100 | 160 | 280 | 400 | 1 k | 4 k | 8 k | 11 k | 11.5 k | 12 kHz |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| dB | +1.12 / +0.83 | +1.18 / +1.04 | +0.36 / +0.21 | −0.16 / −0.25 | +0.20 / +0.13 | +0.02 / −0.09 | +0.10 / −0.00 | +0.10 / +0.02 | +0.05 / −0.01 | −0.07 / −0.02 | −0.13 / +0.01 | −0.36 / +0.04 |
+| deg | +13.8 / +11.9 | +0.8 / +1.8 | −3.1 / −2.6 | −1.0 / −0.7 | +0.4 / +0.4 | 0.0 / −0.1 | +0.1 / 0.0 | +0.2 / 0.0 | +0.2 / −0.1 | −0.6 / 0.0 | −1.3 / +0.1 | −1.1 / +0.3 |
+
+It holds exactly the §10 ripple (−0.2 dB at 160 Hz, +0.13 at 280 Hz), the 25–100 Hz excess of §11.2, and an L channel 0.36 dB down at 12 kHz (§11.1: S's L channel 4–8 dB worse there). The refitted output kernels: M 0.955 centre, +0.024 / +0.022 at ±1; L 0.782, +0.122 / +0.115 at ±1 (stored: 0.952 / 0.783 and similar sides; the outer taps differ most). In the deconvolution (`tools/harness/core.py`, `Kernel` with `lead` and `hp_hz`) each channel uses its own kernel, and a kernel with high-pass corners also gets a zero-phase low band edge at 3–12 Hz, so nothing below 3 Hz is inverted. Regularisation costs ≤ 0.02 dB below 12 kHz for both kernels, so `outofband`'s P(f) (the band window) still holds. The library kernel deconvolves bit-identically as before.
+
+### 12.3 Validation, first pass (`firstpass_gap.py --stage collect|chain`, `EMT_KERNEL=chain2`)
+
+ml_lines.Model as in §10 (clock and shift per capture, two gains per channel); first pass held out (nothing in the kernel fit or the correction saw a reverb sample). Medians over all captures, L / R, dB:
+
+| IRs, model | Free numbers | S cluster/gap | S first pass | M cluster/gap | M first pass | L cluster/gap | L first pass |
+|---|---|---|---|---|---|---|---|
+| old, none | 0 | −49.4 / −46.3 | −44.7 / −45.7 | −48.5 / −45.7 | −44.5 / −44.1 | −44.9 / −45.5 | −44.3 / −42.7 |
+| old + `cluster_perch` (§10.3) | 866 | −61.6 / −59.7 | −58.3 / −57.8 | −63.5 / −64.1 | −53.9 / −49.7 | −57.1 / −57.1 | −49.5 / −46.5 |
+| **new, none** | 0 (kernel: 4200) | **−54.4 / −54.2** | **−52.0 / −53.3** | **−54.0 / −53.6** | **−50.0 / −48.2** | **−52.3 / −52.5** | **−47.5 / −45.6** |
+| new, none, refitted output kernels (S: unit tap) | 34 | −58.1 / −58.0 | −54.1 / −56.4 | −57.5 / −57.0 | −51.5 / −48.9 | −51.5 / −51.1 | −47.3 / −45.4 |
+| new + a correction refitted on it | 866 | −62.1 / −60.0 | −56.5 / −58.0 | −63.6 / −63.3 | −52.4 / −49.6 | −56.4 / −58.0 | −49.0 / −46.5 |
+| *repeat capture (new / new, refitted kernels)* | | | *−54.7 / −63.6 · −55.8 / −63.7* | | *−49.9 / −49.1 · −50.9 / −49.1* | | *−50.9 / −54.1 · −50.4 / −54.0* |
+
+- **Without any correction the new IRs gain 7.3 / 7.6 (S), 5.5 / 4.1 (M), 3.2 / 2.9 (L) dB in the first pass.** M is at the repeat-capture level (excess −0.1 / +0.9 dB), L +3.4 / +8.5, S +2.7 / +10.3 (+1.7 / +7.3 with the refitted kernels).
+- **A correction refitted on the new IRs is tiny:** ≤ 0.04 dB and ≤ 0.4° in every band from 100 Hz to 10 kHz (was 0.25 dB / 2.4°). With the refitted output kernels it gains only 0.6–1.2 dB in the first pass. The first-pass transfer error H = Y/T on S's b = 0 captures (`report` stage) is now within ±0.011 dB and ±0.02° in R in every band, and in L within 0.04 dB / 0.5° (100–200 Hz, at the repeat level there); it was −0.11…−0.14 dB / −1° at 100–200 Hz.
+- **What stops S at −54…−56 instead of −58:** model parts fitted on the old IRs. S's stored output kernel is a unit tap with ±0.002 side taps fitted on the old IRs: swapping it for a unit tap gains 2–4 dB. The rest is a setting-independent residual waveform (the mean residual of the even settings still removes 4 / 8 dB on the odd ones, L / R) that no FIR on the tap part removes (±48 taps: 1.8 / 3.2 dB), 44 % of it at 7–10 kHz in R. So it is no longer a transfer error of the pipeline; the stored first-pass tap parameters (positions, signs, b steps; fitted on the old IRs) are the candidates (**H**).
+- **Repeat references moved** because the repeat model includes the model's cluster column (`ml_lines.fit_repeat`): S L −48.2 → −54.7.
+
+### 12.4 Validation, compact S model (`q2_injection.py --stage final`, `EMT_KERNEL=chain2`, no `Q2_CHAIN`)
+
+`analysis/q2/final_s_chain2.{json,log}`; nothing in the §17 model refitted (9 + 13 + 3 numbers and the AP230 table, all fitted on the old IRs), per capture clock, shift and gain. All 128 settings, L / R [excess R over the repeat-capture null of `nulls_free`, which is from the old IRs]:
+
+| Window (ms) | old (§17) | old, corrected (§19) | **new** | Flat, corrected | **Flat, new** |
+|---|---|---|---|---|---|
+| 0–50 | −42.9 / −44.3 | −46.2 / −46.3 | **−44.8 / −47.1** | −46.8 / −46.2 | **−43.7 / −50.1** |
+| 50–150 | −41.0 / −42.3 [+13.5] | −44.9 / −44.9 [+11.0] | **−48.7 / −49.1 [+5.9]** | −45.6 / −45.7 [+5.9] | **−50.5 / −50.4 [+0.6]** |
+| 150–300 | −39.6 / −38.8 [+16.1] | −43.4 / −42.6 [+13.2] | **−44.3 / −44.6 [+10.8]** | −44.5 / −46.8 [+6.6] | **−49.4 / −49.1 [+3.2]** |
+| 300–600 | −36.4 / −35.3 [+13.0] | −38.7 / −40.2 [+10.4] | **−39.2 / −39.7 [+9.2]** | −42.2 / −45.3 [+0.5] | **−46.1 / −45.3 [+0.6]** |
+| 600–1000 | −32.0 / −32.6 [+7.1] | −34.5 / −35.5 [+4.8] | **−35.0 / −35.2 [+4.4]** | −37.2 / −37.5 | −37.6 / −37.4 |
+
+- **The new IRs beat the corrected old ones** by 3.8 / 4.2 dB at 50–150 ms, 0.9 / 2.0 at 150–300, and match them from 300 ms on (L +0.5, R −0.5 dB). On flat settings: 4.7–4.9 dB better at 50–150 ms, 4.9 / 2.3 at 150–300, 3.9 / 0.0 at 300–600, equal after.
+- **0–50 ms in L is 1.4 dB worse** (flat: 3.1 dB; R 3.9 dB better). The likely reason is that the per-channel kernel takes out the chain's 0.10 dB L/R level difference, which the 8 cluster gains (fitted on the old IRs, per channel) had absorbed. 0.10 dB alone is a −39 dB error (**H**; refitting the 8 gains on the new IRs would show it).
+- By control (R excess, 50–150 / 150–300 / 300–600 ms): HF 0.2 +8.8 / +15.2 / +13.9, LF 0.1 +12.7 / +17.6 / +17.1, RT 0.6 +14.5 / +17.6 / +10.4, but LF 1.0 +3.4 / +6.1 / +3.2, RT 2.2–2.5 +2.1…+7.0. The remainder is where the loop laws are weakest, as §19 found.
+- CLA unchanged (its own IR, not deconvolved here).
+
+### 12.5 Validation, out of band (`outofband.py --stage score|report`, `EMT_KERNEL=chain2`)
+
+`analysis/outofband/report_chain2.{json,log}` (stored output kernels) and `report_chain2_hk.{json,log}` (refitted). Strict model nulls L / R, dB [repeat capture]:
+
+- **Level at onset (capture re model):** 25–50 Hz +1.18 / +1.23 / +1.17 → **+0.16 / −0.02 / +0.05 dB** (S / M / L); 50–100 Hz +0.53 / +0.68 / +0.68 → **+0.03 / +0.06 / +0.07**; 100–200 Hz −0.15…−0.09 → +0.02…+0.04.
+- **Low-band nulls now test the model**, S:
+
+  | S | 25–50 Hz, old | **25–50 Hz, new** | 50–100 Hz, old | **50–100 Hz, new** |
+  |---|---|---|---|---|
+  | first pass | −16.4 / −14.9 [−17.7 / −31.3] | **−25.9 / −28.2** [−29.4 / −35.8] | −21.9 / −23.1 [−25.9 / −36.0] | **−37.3 / −41.7** [−36.1 / −45.4] |
+  | recirc 1 | −16.1 / −14.3 [−24.9 / −38.6] | **−25.8 / −27.3** [−40.2 / −43.3] | −20.1 / −20.4 [−51.2 / −56.1] | **−35.3 / −37.9** [−53.9 / −58.1] |
+  | recirc 2 | | −33.3 / −31.3 [−51.4 / −47.9] | | −32.6 / −40.8 [−62.0 / −60.8] |
+
+  S's first pass is at the repeat-capture level at 50–100 Hz; its recirculations stay 15–20 dB above it. That is the model's low band (the LF laws, the DC floor, β; S LF 0.1), now measurable (**S**). The model with the high-passes added is now 10–20 dB *worse* (the IRs no longer carry them). M and L: first pass at the repeat level in both low bands (M 25–50 Hz −24.5 / −26.2 [−24.8 / −26.0], L −25.1 / −25.8 [−21.6 / −24.5]); their recirculations are time-variance-limited (model ≈ repeat).
+- **Decay, 25–100 Hz:** S's RT ratio 1.007 / 1.008 → 0.991 / 1.003 (25–50 / 50–100 Hz). M and L unchanged (0.990 / 0.995, 0.963 / 0.972): the sweep artefact of §11.2 stays.
+- **S's L channel at 11–12 kHz now matches R:** cluster/gap −32.8 / −43.4 → **−41.3 / −41.7**, first pass −32.7 / −43.0 → **−40.1 / −41.4** [repeat −39.9 / −40.5]; 10–11 kHz L −41.2 → −43.5. **S** (the L-channel chain was the cause).
+- **With the stored output kernels, R loses a little at 10–11 kHz** (S first pass −47.4 → −44.4; M and L also lose 1–8 dB at 10–12 kHz): those kernels were fitted on the old IRs. **With the refitted ones (`ML_HK`, 34 numbers, cluster windows only) the high band improves everywhere**, first pass L / R [repeat]:
+
+  | | 5–10 kHz | 10–11 kHz | 11–12 kHz |
+  |---|---|---|---|
+  | S, old (§11.1) | −50.0 / −52.1 | −41.2 / −47.4 | −32.7 / −43.0 |
+  | **S, chain2 + refitted** | **−54.9 / −56.1** [−57.6 / −58.6] | **−51.1 / −49.7** [−48.6 / −47.6] | **−42.5 / −42.5** [−40.8 / −40.5] |
+  | M, old | −51.3 / −48.9 | −47.1 / −39.4 | −40.8 / −33.1 |
+  | **M, chain2 + refitted** | **−53.5 / −51.0** [−59.5 / −66.3] | **−50.8 / −46.9** [−56.7 / −60.7] | **−47.1 / −45.5** [−51.2 / −54.4] |
+  | L, old | −46.0 / −42.3 | −31.3 / −29.2 | −21.3 / −19.8 |
+  | **L, chain2 + refitted** | **−44.8 / −42.4** [−49.3 / −65.3] | **−40.2 / −38.7** [−44.4 / −55.8] | **−35.7 / −35.0** [−38.4 / −48.2] |
+
+  So most of §11.1's L-program phase error above 9 kHz (cluster window −21 dB at 11–12 kHz) was the old IRs plus a kernel fitted on them: refitted with the chain kernel, L's 11–12 kHz first pass gains 14–15 dB. S at 10–12 kHz is now at or below the repeat-capture null. `analysis/outofband/report_chain2_hk.{json,log}`.
+
+### 12.6 What this settles, and what's left
+
+- **The pipeline:** the device-domain IRs no longer need `chain.json:cluster_perch` or `Q2_CHAIN`. Use `EMT_KERNEL=chain2` for new work; the old caches stay for comparison. **S**
+- **Unit facts:** the library chain's sub-20 Hz high-pass totals about 3.5–4.5 Hz in this fit (the schematic's 4.46 Hz alone fits best), and L's chain is 0.10 dB above R's with 0.36 dB less at 12 kHz.
+- **Left (model side, not the chain):**
+  1. refit the parameters that were fitted on the old IRs: the 8 cluster gains (L/R), S's output kernel (a unit tap), the M/L output kernels (refitted here), the first-pass taps and the b steps;
+  2. adopt the refitted M/L output kernels in the model (`ML_HK`; 10–12 kHz first pass +5…+15 dB, §12.5) after checking them on the recirculations;
+  3. S's first-pass residual waveform at 7–10 kHz (§12.3);
+  4. S's low band in the recirculations (§12.5);
+  5. the repeat-capture references (`nulls_free`) recomputed on the new IRs.

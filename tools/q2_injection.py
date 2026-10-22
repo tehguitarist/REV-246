@@ -54,6 +54,8 @@ Stages:
            100 Hz-10 kHz and 20 Hz-11 kHz -> cla_compare.json. Models: q1's shared injection (reference), the free flat
            injection, the compact 5-tap / -1/sqrt(2) model, and the 5-tap model with q1's -0.70 diffuser.
   (any)    Q2_HP=1 in the environment undoes the measured analogue high-pass on every capture (see hp_undo).
+  (any)    EMT_KERNEL=<name> (tools/ml_structure.py) reads q1's cache and index for that kernel (q1 --stage data first);
+           final writes final_s_<name>.json.
   (any)    Q2_CHAIN=path:name divides every library capture by the deconvolution-kernel correction (chain_undo); the
            final stage then writes final_s_chain.json.
   diffuser the diffuser's all-pass gains (g20, g72, g230) refitted with the 5-tap tied model on the flat training settings
@@ -199,7 +201,7 @@ def raw_end_dev(nm):
     import soundfile as sf
     import ml_structure as ms
     from core import PAD
-    info = json.load(open(os.path.join(Q1, "data.json")))
+    info = json.load(open(os.path.join(Q1, q1.DATA)))
     x, fs = sf.read(next(p for p in ms.files("S") if os.path.basename(p) == nm), always_2d=True)
     a = np.abs(x).max(1)
     main = int(np.argmax(a > a.max() * 0.1))
@@ -239,7 +241,7 @@ def comp_end(y, g):
 
 
 def q1_tables():
-    info = json.load(open(os.path.join(Q1, "data.json")))
+    info = json.load(open(os.path.join(Q1, q1.DATA)))
     fade = json.load(open(os.path.join(OUT, "fade2.json")))
     fits = json.load(open(os.path.join(Q1, "loops.json")))
     law = json.load(open(os.path.join(Q1, "laws.json")))
@@ -417,9 +419,9 @@ def joint_stage(splits, workers, iters, rounds, only=None):
     """q1 run_split with the corrected windows; outputs split_<name>.json and v_<name>.npy in OUT (cache -> analysis/q1)."""
     info, fade, _, ap, _ = q1_tables()
     fits = json.load(open(os.path.join(Q1, "loops.json")))
-    link = os.path.join(OUT, "cache")
+    link = os.path.join(OUT, q1.CACHE)
     if not os.path.exists(link):
-        os.symlink(os.path.join(Q1, "cache"), link)
+        os.symlink(os.path.join(Q1, q1.CACHE), link)
     for sp in splits:
         keys = [k for k in info if only is None or k in only]
         test = [k for k in keys if q1.SPLITS[sp](info[k])]
@@ -978,7 +980,7 @@ def tied_stage(mode, g460s, workers, iters, rounds, ext, score, dense=0, gfix=No
 def ap230_stage(g230, only=None):
     """q1.ap230_stage with the all-pass gain g230 (the ratio AP230(b) / AP230(0) depends on it)."""
     from scipy.optimize import minimize_scalar
-    info = json.load(open(os.path.join(Q1, "data.json")))
+    info = json.load(open(os.path.join(Q1, q1.DATA)))
     N = 1 << 14
     w = 2 * np.pi * np.fft.rfftfreq(N)
     ref = sosfiltfilt(q1.LFBAND, q1.load(Q1, info[q1.AP230_REF]["files"]["0"]["file"]), axis=0)
@@ -1477,7 +1479,7 @@ def final_stage(workers, only=None):
     y = q1.apply_clock(yb, eg, shg)[:n] / gain
     cla = dict(eps_ppm=eg, shift=shg, gain_db=float(20 * np.log10(gain)), null_100_10k=q1.nulls(y, mdl, 1.5, W_COMP[:6], narrow=True))
     json.dump(dict(diff=FINAL_DIFF, beta=FINAL_BETA, p_max=P_MAX, dc_min=DC_MIN, tap_magnitude=a, rows=rows, cla=cla),
-              open(os.path.join(OUT, "final_s" + ("_chain" if os.environ.get("Q2_CHAIN") else "") + ("_smoke" if only else "") + ".json"), "w"), indent=0)
+              open(os.path.join(OUT, q1.ms.tagged("final_s") + ("_chain" if os.environ.get("Q2_CHAIN") else "") + ("_smoke" if only else "") + ".json"), "w"), indent=0)
     rep_f = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, "nulls_free.json")))}
     ws = ["0-50", "50-150", "150-300", "300-600", "600-1000", "1000-1500"]
 

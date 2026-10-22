@@ -10,7 +10,8 @@ comb460 . AP20 . AP72 . AP230 in series, the 8-tap cluster (gain x AMPL/90), per
 What changes with the controls: the loop responses (control laws) and a stepped damping in AP230.
 
 Stages:
-  data     device-rate IRs (analysis/ml_structure/cache) re-aligned per channel so cluster tap 0 sits on
+  data     device-rate IRs (analysis/ml_structure/cache; with EMT_KERNEL=<name> cache_<name> -> cache_<name>/ and
+           data_<name>.json here) re-aligned per channel so cluster tap 0 sits on
            index PRE; AMPL-0 captures (no cluster) are aligned to their AMPL-90 partner by cross-correlation.
   loops    per capture: loop RT, LF shelf, HF lowpass and clock ratio from the annihilator (loops x the
            diffuser's denominator), window from 0.30 s to where the natural decay ends.
@@ -38,6 +39,8 @@ from core import subsample_peak  # noqa: E402
 
 FS = ms.FSD
 PRE = 96                       # device index of cluster tap 0 in the aligned arrays (as model_s.PRE)
+CACHE = ms.tagged("cache")     # per-file arrays in <out>/<CACHE>/ and their index <out>/<DATA> (EMT_KERNEL, ml_structure)
+DATA = ms.tagged("data") + ".json"
 P = np.array([1321, 1389, 1461, 1587])
 
 
@@ -82,7 +85,7 @@ def _xalign(ref, x, a=0.03, b=0.4, maxlag=600):
 
 
 def data_stage(ir, out):
-    os.makedirs(os.path.join(out, "cache"), exist_ok=True)
+    os.makedirs(os.path.join(out, CACHE), exist_ok=True)
     groups = ms.ampl_groups("S")
     info = {}
     for key, d in groups.items():
@@ -100,17 +103,17 @@ def data_stage(ir, out):
                 if amp:                                          # check: the cluster tap lands on PRE
                     rows.setdefault("_tap0_check", {})[amp] = [round(float(subsample_peak(x[:, c], PRE)[0] - PRE), 4) for c in range(2)]
                 s = [v + PRE for v in s]
-            np.save(os.path.join(out, "cache", os.path.basename(f)[:-4] + ".npy"), x.astype(np.float32))
+            np.save(os.path.join(out, CACHE, os.path.basename(f)[:-4] + ".npy"), x.astype(np.float32))
             rows[amp] = {"file": os.path.basename(f), "shift_LR": [round(float(v), 4) for v in s], "n": len(x)}
         info["_".join(map(str, key))] = {"lf": key[0], "rt": key[1], "hf": key[2], "tap0_LminusR": round(t0L - t0R, 4), "files": rows}
-    json.dump(info, open(os.path.join(out, "data.json"), "w"), indent=1)
+    json.dump(info, open(os.path.join(out, DATA), "w"), indent=1)
     lr = [v["tap0_LminusR"] for v in info.values()]
     print(f"{len(info)} groups; L-R tap-0 offset after the cache's 19.19 us shift: median {np.median(lr):.4f}, range {min(lr):.4f}..{max(lr):.4f}")
     return info
 
 
 def load(out, name, band=False):
-    h = np.load(os.path.join(out, "cache", name[:-4] + ".npy")).astype(np.float64)
+    h = np.load(os.path.join(out, CACHE, name[:-4] + ".npy")).astype(np.float64)
     return sosfiltfilt(ms.BAND, h, axis=0) if band else h
 
 
@@ -805,7 +808,7 @@ def check_stage(out, n=8, seed=0, workers=8, tol_db=0.2):
     evaluation path (rendering, clock fit, windows), not the training."""
     import glob
     from concurrent.futures import ProcessPoolExecutor
-    info = json.load(open(os.path.join(out, "data.json")))
+    info = json.load(open(os.path.join(out, DATA)))
     fade = json.load(open(os.path.join(out, "fade.json")))
     eps0, _ = file_eps(json.load(open(os.path.join(out, "loops.json"))))
     ap = json.load(open(os.path.join(out, "ap230.json")))
@@ -973,10 +976,10 @@ def main():
     ap.add_argument("--variant", default="x0+Gx1", choices=["x", "x0+Gx1"])
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
-    ir = ms.IRs(os.path.join(ROOT, "analysis", "ml_structure", "cache"))
+    ir = ms.IRs(ms.CACHE)
     if a.stage in ("all", "data"):
         data_stage(ir, a.out)
-    info = json.load(open(os.path.join(a.out, "data.json")))
+    info = json.load(open(os.path.join(a.out, DATA)))
     if a.stage in ("all", "loops"):
         loops_stage(a.out, info)
     if a.stage in ("all", "laws"):

@@ -41,7 +41,7 @@ import ml_structure as ml  # noqa: E402
 from core import subsample_peak  # noqa: E402
 
 OUT = os.path.join(ROOT, "analysis", "ml_carryover")
-CACHE = os.path.join(ROOT, "analysis", "ml_structure", "cache")
+CACHE = ml.CACHE
 K0, FS = ml.K0, ml.FSD
 SC = {"S": 1, "M": 2, "L": 4}
 G_AP = -1 / np.sqrt(2)

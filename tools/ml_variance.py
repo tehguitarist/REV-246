@@ -90,7 +90,7 @@ def paths(M, n, key, kinds=("rot", "gain", "anti", "rot1", "rot2"), kmax=3):
         bb = M.b.get(key, 0.0) if k == len(Ms) - 1 else 0.0
         Fz = zd(Mk) * ((1 - bb) + bb * zi)
         D *= (-cc.G_AP + Fz) / (1 - cc.G_AP * Fz)
-    Hk = sum(hk * zd(K0 + k - cc.KH) for k, hk in enumerate(M.h))
+    Hk = sum(hk * zd(K0 + k - M.kh) for k, hk in enumerate(M.h))
     Lam = mll.line_resp(coefs, zi) * np.stack([zd(Pj) for Pj in M.P], 1)
     T = np.zeros((len(w), 4, 2), complex)
     for ch in (0, 1):
@@ -384,7 +384,7 @@ def sweep_measure(M, key, theta_fn, tail_s=6.0):
     for k, Mk in enumerate(cc.DIFF[M.prog]):
         x = cc.ap(x, Mk, cc.G_AP, M.b.get(key, 0.0) if k == len(cc.DIFF[M.prog]) - 1 else 0.0)
     y = core(M, key, x, theta_fn(np.arange(len(x)) / FS))
-    y = np.stack([np.convolve(y[:, ch], M.h)[cc.KH:cc.KH + len(y)] for ch in (0, 1)], 1)
+    y = np.stack([np.convolve(y[:, ch], M.h)[M.kh:M.kh + len(y)] for ch in (0, 1)], 1)
     ref = fftconvolve(s, inv)
     i0 = int(np.argmax(np.abs(ref)))
     out = np.zeros((tail + K0, 2))

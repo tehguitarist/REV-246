@@ -20,6 +20,7 @@ from analyze_ir import edc, rt_from_edc  # noqa: E402
 
 VERSION = "2"
 F_ROLL, F_HI = 11000.0, 12300.0     # analysis band edge (device Nyquist is 13.19 kHz)
+F_LO = (3.0, 12.0)                  # low band edge, only for kernels with high-pass corners (nothing inverted below 3 Hz)
 PAD = 4096                          # zeros prepended so taps at t≈0 don't wrap in the FFT
 SIG_S = 0.3                         # signature length (s, device rate)
 BANDS = {"lf": (44, 88), "mid": (707, 1414), "hf": (5900, 8300)}
@@ -42,26 +43,44 @@ def dev_ratio(fs, cfg):
 
 
 class Kernel:
-    """Impulse response of the analogue output chain (one cluster tap), at a given capture rate."""
+    """Impulse response of the analogue output chain (one cluster tap), at a given capture rate.
 
-    def __init__(self, g, fs, source=""):
+    g is (n,) for one kernel used on both channels (the library kernel) or (n, 2) per channel (L, R); `lead` samples of
+    it come before the tap's time (index 0 otherwise), and `hp_hz` are first-order analogue high-pass corners applied
+    on top (analytic, so their long tails are not truncated)."""
+
+    def __init__(self, g, fs, source="", lead=0, hp_hz=()):
         self.g, self.fs, self.source = np.asarray(g, float), float(fs), str(source)
+        self.lead, self.hp_hz = int(lead), [float(v) for v in hp_hz]
         self._cache = {}
 
     @classmethod
     def load(cls, path):
         z = np.load(path if os.path.isabs(path) else os.path.join(ROOT, path))
-        return cls(z["g"], float(z["fs"]), str(z["source"]))
+        return cls(z["g"], float(z["fs"]), str(z["source"]), int(z["lead"]) if "lead" in z else 0,
+                   z["hp_hz"] if "hp_hz" in z else ())
 
     def save(self, path):
-        np.savez(path, g=self.g, fs=self.fs, source=self.source)
+        np.savez(path, g=self.g, fs=self.fs, source=self.source, lead=self.lead, hp_hz=np.array(self.hp_hz))
 
     def at(self, fs):
         fs = int(round(fs))
         if fs not in self._cache:
             fr = Fraction(fs, int(round(self.fs)))
-            self._cache[fs] = self.g if fr == 1 else resample_poly(self.g, fr.numerator, fr.denominator)
+            if fr != 1 and self.lead:
+                raise ValueError("a kernel with a lead is only defined at its own rate")
+            self._cache[fs] = self.g if fr == 1 else resample_poly(self.g, fr.numerator, fr.denominator, axis=0)
         return self._cache[fs]
+
+    def response(self, N, fs=None):
+        """Frequency response on an N-point rfft grid at rate fs: (N/2+1,) or (N/2+1, 2)."""
+        fs = self.fs if fs is None else fs
+        f = np.fft.rfftfreq(N, 1 / fs)
+        G = np.fft.rfft(self.at(fs), N, axis=0)
+        H = np.exp(2j * np.pi * f * self.lead / fs)
+        for fc in self.hp_hz:
+            H = H * (1j * f / fc) / (1 + 1j * f / fc)
+        return G * (H[:, None] if G.ndim == 2 else H)
 
 
 # ---------------------------------------------------------------- signal helpers
@@ -87,17 +106,23 @@ def subsample_peak(d, i, up=32, half=24):
 
 
 def deconvolve(x, fs, kernel, eps_rel=1e-3):
-    """Remove the analogue chain: each cluster tap becomes a unit band-limited impulse."""
-    g = kernel.at(fs)
+    """Remove the analogue chain: each cluster tap becomes a unit band-limited impulse. A per-channel kernel deconvolves
+    each channel with its own; a kernel with high-pass corners also gets a low band edge (F_LO, zero phase)."""
     n = len(x)
-    N = 1 << int(np.ceil(np.log2(2 * (n + len(g)))))
+    N = 1 << int(np.ceil(np.log2(2 * (n + len(kernel.g) + 2 * kernel.lead))))
     f = np.fft.rfftfreq(N, 1 / fs)
-    G = np.fft.rfft(g, N)
-    W = np.conj(G) / (np.abs(G) ** 2 + eps_rel * np.max(np.abs(G)) ** 2) * _band_window(f)
-    d = np.fft.irfft(np.fft.rfft(x, N, axis=0) * W[:, None], N, axis=0)[:n]
-    dg = np.roll(np.fft.irfft(G * W, N), 64)[:256]
-    _, c = subsample_peak(dg, int(np.argmax(np.abs(dg))))
-    return d / abs(c)
+    G = kernel.response(N, fs)
+    G2 = G if G.ndim == 2 else G[:, None]
+    win = _band_window(f)
+    if kernel.hp_hz:
+        win = win * np.sin(np.pi / 2 * np.clip((f - F_LO[0]) / (F_LO[1] - F_LO[0]), 0, 1)) ** 2
+    W = np.conj(G2) / (np.abs(G2) ** 2 + eps_rel * np.max(np.abs(G2), 0) ** 2) * win[:, None]
+    d = np.fft.irfft(np.fft.rfft(x, N, axis=0) * (W if x.ndim == 2 else W[:, 0]), N, axis=0)[:n]
+    norm = []
+    for c in range(G2.shape[1]):
+        dg = np.roll(np.fft.irfft(G2[:, c] * W[:, c], N), 64)[:256]
+        norm.append(abs(subsample_peak(dg, int(np.argmax(np.abs(dg))))[1]))
+    return d / (np.array(norm) if G.ndim == 2 else norm[0])
 
 
 def to_device_grid(dc, fs, anchor, k0, cfg):

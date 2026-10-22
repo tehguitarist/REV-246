@@ -7,7 +7,8 @@ Its held-out nulls sit 10-15 dB above the repeat-capture null; this tool asks wh
     .venv/bin/python tools/firstpass_gap.py --stage report [--model lines|carry]
     .venv/bin/python tools/firstpass_gap.py --stage chain                 # needs collect --model lines
 
-Results: docs/ml_structure.md §10. Models: "lines" (default) is ml_lines.Model with a shift and clock ratio fitted per
+Results: docs/ml_structure.md §10, §12. With EMT_KERNEL=<name> (tools/ml_structure.py) the captures come from that
+kernel's cache and every output file gets the suffix _<name>. Models: "lines" (default) is ml_lines.Model with a shift and clock ratio fitted per
 capture (§8.1); "carry" is ml_carryover's first pass without a clock fit (§7.6).
 
 Stages:
@@ -44,6 +45,7 @@ import ml_lines  # noqa: E402
 OUT = os.path.join(ROOT, "analysis", "firstpass_gap")
 K0 = mc.K0
 PAD = 64                        # extra tap-part samples kept either side of the window (for the FIR test)
+HK = "_hk" if ml_lines.HK_FILE else ""                       # ML_HK (ml_lines): outputs suffixed _hk
 SPAN = 600                      # chain stage: samples kept after the first pass (spans start at index 0, lag -K0)
 
 
@@ -125,7 +127,7 @@ def _collect_job(a):
 
 
 def gdir(model):
-    return os.path.join(OUT, f"groups_{model}")
+    return os.path.join(OUT, mc.ml.tagged(f"groups_{model}") + HK)
 
 
 def collect_stage(workers, model, only=None):
@@ -291,7 +293,7 @@ def report_stage(model):
     out = {}
     for p in "SML":
         report_prog(p, out, model)
-    json.dump(out, open(os.path.join(OUT, f"report_{model}.json"), "w"), indent=1)
+    json.dump(out, open(os.path.join(OUT, mc.ml.tagged(f"report_{model}") + HK + ".json"), "w"), indent=1)
 
 
 
@@ -407,7 +409,7 @@ def chain_stage(workers):
     with ProcessPoolExecutor(workers) as ex:
         rows = [r for rr in ex.map(_score_job, [(p, K) for p in paths], chunksize=2) for r in rr]
     json.dump(dict(lags=LAGS.tolist(), kernels={k: (None if g is None else [x.tolist() for x in g]) for k, g in K.items()},
-                   rows=rows), open(os.path.join(OUT, "chain.json"), "w"))
+                   rows=rows), open(os.path.join(OUT, mc.ml.tagged("chain") + HK + ".json"), "w"))
     names = list(K)
     for q in "SML":
         print(f"\n## {q}: one kernel on the whole model (cluster + reverb), lags {LAGS[0]}..{LAGS[-1]}; median null L / R, dB; "

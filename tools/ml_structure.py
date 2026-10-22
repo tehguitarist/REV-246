@@ -3,7 +3,9 @@ loop recursion and time variance, with program S as the control. Results: docs/m
 
     .venv/bin/python tools/ml_structure.py [--stage all|clusters|loops|lags|pairs] [--out analysis/ml_structure]
 
-Writes <out>/summary.json (and caches device-rate IRs as <out>/cache/*.npy, not committed).
+Writes <out>/summary.json (and caches device-rate IRs as <out>/cache/*.npy, not committed). EMT_KERNEL=<name> in the
+environment deconvolves with analysis/library/tomkin96/kernels/<name>.npz instead (cache_<name>/; chain2 is the
+per-channel chain kernel of tools/chain_kernel.py, docs/ml_structure.md §12).
 
 Methods (all on device-rate IRs: deconvolved with the library kernel, resampled to 19.2 MHz/728):
 
@@ -38,7 +40,18 @@ from core import PAD, Kernel, deconvolve, fs_dev, load_config, subsample_peak, t
 CFG = load_config()
 FSD = fs_dev(CFG)
 LIB = os.path.join(ROOT, "irs", "EMT 246 captures", "96kHz")
-KERNEL = os.path.join(ROOT, "analysis", "library", "tomkin96", "kernels", "kernel_96000.npz")
+# EMT_KERNEL=<name> in the environment deconvolves with analysis/library/tomkin96/kernels/<name>.npz instead of the
+# library kernel (kernel_96000); every cache and result file that depends on it gets the suffix "_<name>" (tagged()).
+KTAG = os.environ.get("EMT_KERNEL", "")
+KERNEL = os.path.join(ROOT, "analysis", "library", "tomkin96", "kernels", (KTAG or "kernel_96000") + ".npz")
+
+
+def tagged(path):
+    """path with the kernel's suffix (unchanged for the library kernel)."""
+    return f"{path}_{KTAG}" if KTAG else path
+
+
+CACHE = tagged(os.path.join(ROOT, "analysis", "ml_structure", "cache"))
 PROG = {"Short RT": "S", "Med RT": "M", "Long RT": "L"}
 LR_US = 19.19                  # library L/R offset (library_notes.md §3)
 K0 = 50                        # device index of the onset in the cached IRs
@@ -482,7 +495,7 @@ def main():
     ap.add_argument("--stage", default="all", choices=["all", "clusters", "loops", "lags", "pairs", "floors", "clock"])
     ap.add_argument("--out", default=os.path.join(ROOT, "analysis", "ml_structure"))
     a = ap.parse_args()
-    ir = IRs(os.path.join(a.out, "cache"))
+    ir = IRs(tagged(os.path.join(a.out, "cache")))
     print("device-rate IRs ...", flush=True)
     ir.build(files("S") + files("M") + files("L"))
     path = os.path.join(a.out, "summary.json")

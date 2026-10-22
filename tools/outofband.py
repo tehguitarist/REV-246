@@ -51,7 +51,8 @@ from core import _band_window, to_device_grid  # noqa: E402
 from sample_hold import highpass  # noqa: E402
 
 OUT = os.path.join(ROOT, "analysis", "outofband")
-GDIR = os.path.join(OUT, "groups")
+HK = "_hk" if mlines.HK_FILE else ""                     # ML_HK (ml_lines): refitted output kernels, outputs suffixed _hk
+GDIR = os.path.join(OUT, ml.tagged("groups") + HK)      # EMT_KERNEL=<name>: that kernel's cache, outputs suffixed
 FS, K0 = cc.FS, cc.K0
 BANDS = {"25-50": (25, 50), "50-100": (50, 100), "100-200": (100, 200), "5k-10k": (5000, 10000),
          "10k-11k": (10000, 11000), "11k-12k": (11000, 12000)}
@@ -308,7 +309,7 @@ def report_stage(tag=""):
                         print(f"    {rt_:>5}: " + " ".join(f"{np.median(grid[(rt_, l)]):6.3f}" if (rt_, l) in grid else "     -" for l in lfs))
                     res[b]["decay"]["grid"] = {f"{k[0]}_{k[1]}": float(np.median(v)) for k, v in grid.items()}
         out[p] = res
-    json.dump(out, open(os.path.join(OUT, f"report{tag}.json"), "w"), indent=1)
+    json.dump(out, open(os.path.join(OUT, ml.tagged("report") + HK + f"{tag}.json"), "w"), indent=1)
 
 
 # ---------------------------------------------------------------- sweep: the low-band shortfall of a time-variant unit
@@ -403,7 +404,7 @@ def kernel_stage(workers):
                      sym3_db=20 * np.log10(abs(sym[3][k])), sym5_db=20 * np.log10(abs(sym[5][k])))
             out[prog][fq] = {a: float(b) for a, b in v.items()}
             print(f"  {fq:>6} Hz: {v['mag_db']:+.2f} dB, {v['phase_deg']:+.1f} deg | {v['stored_db']:+.2f} / {v['sym3_db']:+.2f} / {v['sym5_db']:+.2f}")
-    json.dump(out, open(os.path.join(OUT, "kernel.json"), "w"), indent=1)
+    json.dump(out, open(os.path.join(OUT, ml.tagged("kernel") + ".json"), "w"), indent=1)
 
 
 def main():

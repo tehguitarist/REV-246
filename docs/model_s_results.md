@@ -1453,7 +1453,7 @@ The flat column includes the 6 flat training settings; held out on flat (RT 0.8 
 **Against the null target:** −50 dB is reached on flat settings by the free 28 k-coefficient injection (§15.7), not yet by this 9-number model (about 8 dB short on the library, 1.4–4 dB short of the free model on CLA, §16.12–16.14).
 
 **Open for S** (none blocks M/L):
-1. the compact model's remaining gap (part may be library-specific, §16.14). *Update: part of it was the library's deconvolution kernel; corrected, every window gains 2.3–4 dB and the first pass reaches −58 dB (§19, `ml_structure.md` §10). The rest is in the recirculations;*
+1. the compact model's remaining gap (part may be library-specific, §16.14). *Update: part of it was the library's deconvolution kernel; corrected, every window gains 2.3–4 dB and the first pass reaches −58 dB (§19, `ml_structure.md` §10). The rest is in the recirculations Now built into the IRs (§20, `EMT_KERNEL=chain2`): −48.7 / −49.1 dB at 50–150 ms on all settings, −50.5 / −50.4 on flat ones;*
 2. AP230's damping form where b > 0 (§16.17);
 3. LF 0.1 at short RT;
 4. the values between the library's control steps;
@@ -1524,3 +1524,27 @@ The carry-over model of `ml_structure.md` §7 (cluster, diffuser, 20 equal sign-
 - The repeat-capture reference is unaffected by the correction (a capture against a capture), so the excess figures compare directly with §17's.
 - CLA is unchanged (another capture chain, not corrected).
 - **Revised reading of §16.11–16.12, §18.1 (H):** the free injection's 8–10 dB lead on the library was largely the deconvolution kernel's error, which a 28 k-coefficient free injection can absorb and a 9-number model can't.
+- *Superseded by §20: the IRs are now rebuilt with a per-channel chain kernel (`EMT_KERNEL=chain2`, `ml_structure.md` §12), and the correction isn't needed. Use §20's table as the baseline.*
+
+## 20. The consolidated model on the chain-kernel IRs (`EMT_KERNEL=chain2`, no correction) **[S]**
+
+`EMT_KERNEL=chain2 .venv/bin/python tools/q1_generalise.py --stage data`, then `EMT_KERNEL=chain2 .venv/bin/python tools/q2_injection.py --stage final` → `analysis/q2/final_s_chain2.{json,log}`. The library IRs are deconvolved with the per-channel chain kernel of `ml_structure.md` §12: a 19 ms FIR per channel times the schematic's sub-20 Hz high-pass, 4,200 numbers fitted only on the cluster-only windows of S, M and L. No reverb sample of any window entered it, so every window from 0–50 ms on is held out for the kernel. Nothing in the §17 model is refitted (all its numbers come from the old IRs); per capture clock, shift and gain. L / R [excess R over the repeat-capture null of `nulls_free`, which is still from the old IRs]:
+
+| Window (ms) | All 128, §17 | All 128, corrected (§19) | **All 128, chain2** | Flat, corrected | **Flat, chain2** | **RT ≤ 1.0, chain2** |
+|---|---|---|---|---|---|---|
+| 0–50 | −42.9 / −44.3 | −46.2 / −46.3 | **−44.8 / −47.1** | −46.8 / −46.2 | **−43.7 / −50.1** | −45.3 / −45.6 |
+| 50–150 | −41.0 / −42.3 [+13.5] | −44.9 / −44.9 [+11.0] | **−48.7 / −49.1 [+5.9]** | −45.6 / −45.7 [+5.9] | **−50.5 / −50.4 [+0.6]** | −42.7 / −43.5 [+10.3] |
+| 150–300 | −39.6 / −38.8 [+16.1] | −43.4 / −42.6 [+13.2] | **−44.3 / −44.6 [+10.8]** | −44.5 / −46.8 [+6.6] | **−49.4 / −49.1 [+3.2]** | −33.6 / −34.3 [+13.9] |
+| 300–600 | −36.4 / −35.3 [+13.0] | −38.7 / −40.2 [+10.4] | **−39.2 / −39.7 [+9.2]** | −42.2 / −45.3 [+0.5] | **−46.1 / −45.3 [+0.6]** | −25.9 / −26.3 [+9.5] |
+| 600–1000 | −32.0 / −32.6 [+7.1] | −34.5 / −35.5 [+4.8] | **−35.0 / −35.2 [+4.4]** | −37.2 / −37.5 | −37.6 / −37.4 [−1.5] | −22.9 / −23.5 [+2.8] |
+| 1000–1500 | −30.8 / −30.7 [+3.0] | −32.3 / −33.1 [+0.4] | −32.7 / −33.1 [+0.6] | −32.6 / −33.0 | −33.0 / −32.7 [−2.3] | −19.3 / −20.2 [−1.6] |
+
+- **Without any correction the rebuilt IRs beat the corrected old ones** by 3.8 / 4.2 dB at 50–150 ms and 0.9 / 2.0 at 150–300, and match them from 300 ms on. On flat settings the compact 9-number model now reaches **−50.5 / −50.4 dB at 50–150 ms and −49.4 / −49.1 at 150–300**, about 0.6–3.2 dB above the repeat-capture null (R). That is the −50 dB target on flat settings in the early windows; the flat column includes the 6 settings the 9 numbers were fitted on (§17).
+- **0–50 ms, L: 1.4 dB worse (flat 3.1 dB), R better.** The per-channel kernel removes the chain's 0.10 dB L/R level difference, which the 8 cluster gains (fitted per channel on the old IRs) had absorbed (**H**; refit them on the new IRs).
+- What is left above the repeat captures is where the loop laws are weakest. R excess at 50–150 / 150–300 / 300–600 ms:
+  - HF 0.2 +8.8 / +15.2 / +13.9;
+  - LF 0.1 +12.7 / +17.6 / +17.1;
+  - RT 0.6 +14.5 / +17.6 / +10.4;
+  - against LF 1.0 +3.4 / +6.1 / +3.2 and RT 2.2–2.5 +2.1…+7.0.
+- The low band can now be tested too (`ml_structure.md` §12.5): S's first pass is at the repeat level at 50–100 Hz, its recirculations 15–20 dB above it.
+- CLA unchanged (deconvolved separately).

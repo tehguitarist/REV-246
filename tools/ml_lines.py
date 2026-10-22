@@ -28,6 +28,8 @@ deterministic part [0, onset + shortest line) only, which no line reaches. Every
           band energy ratio measured / model per frame, from the onset to the fade; its slope (dB/s) is the decay
           error (energy-based, so the M/L time variance does not bias it) and gives RT(f) = 60 / (60 / RT_law(f) - slope).
   report  breakdowns of the law files by control, the capture-to-capture / model error split, the limit scans.
+  ML_HK=<chain_kernel json> in the environment replaces the stored output kernels (firstpass.json) by the ones
+  refitted with the chain kernel (tools/chain_kernel.py), and S's by a unit tap.
   fitted(prog, key)  (a function, no stage) rebuilds one group's captures with their models from the law files.
   fit     per setting, the line law's three numbers (Nyquist-end RT, DC RT ratio, HF RT factor at f_ref; shelf pole
           and f_ref fixed, length-scaled over the four lines) fitted to the band decay of all captures of the group:
@@ -57,6 +59,7 @@ OCT = [125, 250, 500, 1000, 2000, 4000, 8000]
 OCT_SOS = {f: butter(3, [f / np.sqrt(2), min(f * np.sqrt(2), 10500)], btype="band", fs=FS, output="sos") for f in OCT}
 FRAME = 1024                                                # band-energy frame (39 ms)
 FADE = 0.70 + 0.02                                          # Tomkin's fade ramp plus a guard (s before the last sample)
+HK_FILE = os.environ.get("ML_HK", "")                       # output kernels from a chain_kernel.py write (S: none)
 ALIAS_DB = 160.0                                            # exponential weighting: wrap-around suppressed this far
 
 
@@ -132,6 +135,10 @@ class Model:
         self.pos = np.array(fp["positions"])
         self.sgn = np.array(fp["signs"])
         self.h = np.array(fp["kernel"])
+        if HK_FILE:                                         # ML_HK: S a unit tap, M and L the kernels refitted there
+            hk = json.load(open(HK_FILE if os.path.isabs(HK_FILE) else os.path.join(ROOT, HK_FILE)))["output_kernels"]
+            self.h = np.array(hk[prog]) if prog in hk else np.array([1.0])
+        self.kh = (len(self.h) - 1) // 2
         self.b = {}
         for r in fp["rows"]:
             self.b[r["key"]] = r["b"]
@@ -158,7 +165,7 @@ class Model:
             bb = self.b.get(key, 0.0) if k == len(Ms) - 1 else 0.0
             Fz = zd(M) * ((1 - bb) + bb * zi)
             D *= (-cc.G_AP + Fz) / (1 - cc.G_AP * Fz)
-        Hk = sum(hk * zd(K0 + k - cc.KH) for k, hk in enumerate(self.h))
+        Hk = sum(hk * zd(K0 + k - self.kh) for k, hk in enumerate(self.h))
         G = line_resp(coefs, zi) * np.stack([zd(Pj) for Pj in self.P], 1)          # (nb, 4)
         A = np.eye(4)[None] - G[:, :, None] * F[None]
         C = np.zeros((len(w), 2), complex)
