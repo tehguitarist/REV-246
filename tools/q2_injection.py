@@ -1150,7 +1150,8 @@ def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None, gamma=0.0, hf_d
     floor lifts the shelf by D dB, the broadband (Nyquist-end) gain drops by beta . D dB, the DC end staying at dc_min.
     gamma: where the floor acts, the whole loop response also x 10^(gamma . rate . P / (20 fs)), rate = 60 / (hi RT) the
     law's broadband decay rate (gamma < 0: faster decay; a constant share, not proportional to the lift; model_s_results 22.3).
-    hf_dp: {"<hf>": dp, "p_below": x}: the HF pole + dp at that HF step where the law's pole is below x (model_s_results 22.5)."""
+    hf_dp: {"<hf>": dp, "p_below": x, "exclude_lf": [..]}: the HF pole + dp at that HF step where the law's pole is below x,
+    except at the listed LF steps (model_s_results 22.5, 22.7)."""
     beta = BETA_LF if beta is None else beta
     import model_s as m
     rt, lf, hf = lab["rt"], lab["lf"], lab["hf"]
@@ -1172,7 +1173,7 @@ def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None, gamma=0.0, hf_d
                 H = H * 10 ** (gamma * 60 / (L["hi"] * rt) * Pi / (20 * q1.FS))
         if hf < 1.0:
             p = min(float(q1.onepole_for(np.array(10 ** (kk / rt * L["k"] * (1 / hf - 1))), law["f_ref"])), p_max)
-            if hf_dp and str(hf) in hf_dp and p < hf_dp["p_below"]:
+            if hf_dp and str(hf) in hf_dp and p < hf_dp["p_below"] and lf not in hf_dp.get("exclude_lf", []):
                 p = p + hf_dp[str(hf)]
             H = H * (1 - p) / (1 - p * np.exp(-1j * w))
         out.append(g * H)
@@ -1495,6 +1496,8 @@ def _final_setting(a_):
     if lfrt and str(lab["lf"]) in lfrt["coefs"]:  # --lfrt: broadband rate x (1 + a + b RT) per LF step (model_s_results 22.2)
         a_, b_ = lfrt["coefs"][str(lab["lf"])]
         rel = a_ + b_ * lab["rt"]
+        if str(lab["lf"]) in lfrt.get("clip", []) and rel * a_ <= 0:   # a form that stops at zero (model_s_results 22.7)
+            rel = 0.0
         rate = 60 / (law["lf"][lab["lf"]]["hi"] * lab["rt"])
         Gs = [Gi * 10 ** (rel * rate * Pi / (20 * q1.FS)) for Gi, Pi in zip(Gs, q1.P)]
     if bbtilt:                                      # --bbtilt c: broadband loss x (1 + c (hi - 1)), hi the LF step's Nyquist RT ratio

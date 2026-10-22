@@ -1846,3 +1846,31 @@ L / R, all 128: 0–50 ms −48.7 / −48.5 → −49.5 / −49.3; 150–300 −
 - **The training settings gain less** (+7.9 → +7.1): most are long-RT settings whose corrections are near zero, and the short-RT HF 0.2 cells, where nothing transfers, sit among them.
 - **HF 0.2 as a whole does not move:** its excess is dominated by the short-RT cells (b > 0, pole capped), where the loop correction is not identified. That, LF 0.1 at long RT (per setting, §22.4) and HF 0.2 at RT 1.0 are what is left of the loops.
 - **Against −50 dB:** flat settings stay at the target in the early windows; all 128 settings are now −49.2 / −45.7 / −40.4 dB (R, 50–150 / 150–300 / 300–600 ms), 5.8 / 10.1 / 7.5 dB above the repeat-capture null.
+
+### 22.7 The gates, tested on a fresh split (RT 0.8 / 1.4 / 2.2 held out) **[S]**
+
+§22.6's held-out results suggested two gates: the HF 0.2 pole shift only where the law's pole is below 0.65 and not at LF 0.1; LF 0.4's broadband form reaching zero by RT 1.8. Chosen after seeing those results, they are tested here on **a different split: RT 0.8 / 1.4 / 2.2 held out (48 settings), every constant refitted on RT 0.3 / 0.6 / 1.0 / 1.8 / 2.5** (`analysis/lf_rt/split2_*.json`):
+
+- γ = −0.03 (the floor grid on the new training steps; its cost is flat between −0.02 and −0.03);
+- LF 0.4 / 2.0 linear pairs (−0.0122, +0.0050) / (+0.0035, −0.0011) (ungated); gated, LF 0.4 = a · max(0, 1.8 − RT) with a = −0.0078 (1 number; `lfrt` `clip`);
+- HF 0.2 pole shift −0.0009 (ungated: law pole < 0.75; the RT 1.0 rows, which want +0.009, pull it towards zero) and −0.0017 gated (pole < 0.65, LF ≠ 0.1; `hf_dp` `exclude_lf`).
+
+R excess over the repeat-capture null on the 48 held-out settings, law / ungated / gated (`analysis/lf_rt/split2_{ungated,gated}.{json,log}`):
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| **All 48** | +5.7 / +4.8 / +4.9 | +10.2 / +9.0 / **+8.8** | +9.8 / +7.5 / **+7.4** | +4.5 / +2.8 / **+1.9** |
+| LF 0.1 | +12.0 / +6.6 / +5.6 | +17.4 / +11.8 / +11.7 | +18.1 / +10.5 / +10.5 | +10.8 / +6.1 / +5.9 |
+| LF 0.4 | +9.0 / +6.5 / +6.8 | +13.9 / +11.8 / +11.4 | +11.4 / +9.9 / +8.7 | +3.0 / +3.2 / +1.2 |
+| LF 0.4, RT 1.4 / 2.2 | +6.4 / +5.3 / +5.6 | +10.7 / +11.5 / +11.0 | +8.6 / +11.5 / +9.2 | +3.4 / +4.6 / +3.8 |
+| LF 1.0 / 2.0 | about unchanged (±0.4 / −1.2…+0.8) | | | |
+| HF 0.2, RT 1.4 / 2.2 | +7.5 / +6.6 / +6.0 | +12.6 / +10.9 / **+9.9** | +12.8 / +11.0 / **+9.1** | +6.4 / +4.8 / **+4.2** |
+| RT 0.8 | +10.7 / +7.4 / +7.4 | +14.6 / +10.6 / +10.6 | +13.9 / +7.0 / +6.9 | +2.5 / −1.1 / −1.1 |
+| RT 1.4 | +7.6 / +5.6 / +5.2 | +12.0 / +11.0 / +9.9 | +12.6 / +8.9 / +8.1 | +5.2 / +4.1 / +3.0 |
+| RT 2.2 | +2.0 / +2.0 / +2.4 | +6.7 / +6.8 / +7.7 | +6.6 / +6.7 / +7.1 | +5.2 / +4.9 / +5.4 |
+
+Nulls (R, all 48): 300–600 ms −41.8 (law) → −42.4 / −42.5 dB. At 300–600 ms the gated set improves 20 settings and worsens 4 (ungated: 21 / 7).
+
+- **The transferable terms hold on a second split** (300–600 ms +9.8 → +7.4; 600–1000 +4.5 → +1.9), with constants close to the first split's (γ −0.03 vs −0.02; the LF pairs within 0.0005).
+- **The gates hold on settings that did not choose them:** gated ≥ ungated on average, better late (600–1000 ms +1.9 vs +2.8), fewer losses (4 vs 7), and LF 0.4 at long RT less damaged (300–600 ms +9.2 vs +11.5; law +8.6).
+- **What is left points at the same two places, more narrowly:** the HF 0.2 shift helps at RT 1.4 (law pole ≈ 0.5–0.6) but costs at RT 2.2 (pole < 0.5, where the per-loop fits wanted only ≈ −0.0006, §22.5), so it belongs to a pole band ≈ 0.5–0.65; LF 0.4 still loses at RT 1.4 / HF 1.0 (+3.4 dB at 300–600 ms), where that setting's own correction never beat the law. Narrowing them again would mean tuning on this split's test settings; any further gate should be chosen by leave-one-RT-out cross-validation instead. The remaining gain there is about a dB.
