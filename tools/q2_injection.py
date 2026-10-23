@@ -1152,14 +1152,15 @@ DC_MIN = 0.18         # smallest total per-pass gain at DC (refit, LF 0.1 / RT 0
 BETA_LF = 0.0         # under the LF cap: extra top-end loss per pass = BETA_LF x the cap's lift at DC (dB per dB)
 
 
-def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None, gamma=0.0, hf_dp=None, p_map=None):
+def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None, gamma=0.0, hf_dp=None, p_map=None, gamma_dc=True):
     """q1.G_law with the two coefficient limits: HF pole <= p_max; g . r0 (per-pass gain at DC) >= dc_min. Where the DC
     floor lifts the shelf by D dB, the broadband (Nyquist-end) gain drops by beta . D dB, the DC end staying at dc_min.
     gamma: where the floor acts, the whole loop response also x 10^(gamma . rate . P / (20 fs)), rate = 60 / (hi RT) the
     law's broadband decay rate (gamma < 0: faster decay; a constant share, not proportional to the lift; model_s_results 22.3).
     hf_dp: {"<hf>": dp, "p_below": x, "exclude_lf": [..]}: the HF pole + dp at that HF step where the law's pole is below x,
     except at the listed LF steps (model_s_results 22.5, 22.7).
-    p_map: a function of the law's (uncapped) HF pole replacing min(p, p_max) (model_s_results 22.8)."""
+    p_map: a function of the law's (uncapped) HF pole replacing min(p, p_max) (model_s_results 22.8).
+    gamma_dc=False: gamma's extra loss on the Nyquist end only, the DC end held at dc_min (model_s_results 25.6)."""
     beta = BETA_LF if beta is None else beta
     import model_s as m
     rt, lf, hf = lab["rt"], lab["lf"], lab["hf"]
@@ -1176,8 +1177,10 @@ def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None, gamma=0.0, hf_d
                 floored = True
                 lift = 20 * np.log10(dc_min / (g * r0))
                 g = g * 10 ** (-beta * lift / 20)
+            if floored and gamma and not gamma_dc:
+                g = g * 10 ** (gamma * 60 / (L["hi"] * rt) * Pi / (20 * q1.FS))
             H = m.shelf(w, max(r0, dc_min / g), 1.0, law["a"])
-            if floored and gamma:
+            if floored and gamma and gamma_dc:
                 H = H * 10 ** (gamma * 60 / (L["hi"] * rt) * Pi / (20 * q1.FS))
         if hf < 1.0:
             p_law = float(q1.onepole_for(np.array(10 ** (kk / rt * L["k"] * (1 / hf - 1))), law["f_ref"]))
@@ -1494,28 +1497,34 @@ def final_injection(ext=1700, compact=None):
 
 
 def _final_setting(a_):
-    key, lab, b230, law, v, ext, caps, ends, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp = a_
+    key, lab, b230, law, v, ext, caps, ends, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp, fc = a_
     q1.EXT = ext
     law["lf"] = {float(k): x for k, x in law["lf"].items()}
-    G = final_G(lab, b230, law, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp)
+    fl = {}
+    if fc:                                          # --floorcells: this setting's floor constants (model_s_results 25.6)
+        law["lf"][0.1]["dc"] = fc["dc"]
+        gamma, fl = fc["gamma"], dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
+    G = final_G(lab, b230, law, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp, **fl)
     return [dict(key=key, **lab, amp=c["amp"], file=c["file"], **score_capture(G, v, c["amp"], c["file"], c["fade2"], c["eps"], ends[c["file"]], ext))
             for c in caps]
 
 
-def final_G(lab, b230, law, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, Gmod=None):
+def final_G(lab, b230, law, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, Gmod=None, dc_min=DC_MIN, beta=FINAL_BETA,
+            gamma_dc=True):
     """The final model's group spectra for one setting with the loop terms of final_stage (law["lf"] keyed by float).
     Gmod: a function (lab, law, w, Gs) -> Gs applied to the loop responses last (a candidate change on top)."""
     w = 2 * np.pi * np.fft.rfftfreq(q1.grid_n(lab["rt"]))
-    Gs = final_Gs(lab, law, w, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp, b230)
+    Gs = final_Gs(lab, law, w, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp, b230, dc_min, beta, gamma_dc)
     if Gmod:
         Gs = Gmod(lab, law, w, Gs)
     return make_G(lab, law, Gs, b230, FINAL_DIFF)
 
 
-def final_Gs(lab, law, w, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, b230=0.0, dc_min=DC_MIN, beta=FINAL_BETA):
+def final_Gs(lab, law, w, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, b230=0.0, dc_min=DC_MIN, beta=FINAL_BETA,
+             gamma_dc=True):
     """final_G's loop responses on the grid w (dc_min, beta: the DC floor's constants, model_s_results 25.5)."""
     p_map = (lambda p: min(p + pramp[0] * max(0.0, p - pramp[1]), P_MAX)) if pramp else None   # --pramp c,p0 (model_s_results 22.8)
-    Gs = G_capped(lab, law, w, dc_min=dc_min, beta=beta, gamma=gamma, hf_dp=hfdp, p_map=p_map)
+    Gs = G_capped(lab, law, w, dc_min=dc_min, beta=beta, gamma=gamma, hf_dp=hfdp, p_map=p_map, gamma_dc=gamma_dc)
     if tilt and str(lab["lf"]) in tilt:            # --tilt: a per-LF-step magnitude shape in dB/s on every loop (model_s_results 22.4)
         S = np.interp(w / (2 * np.pi) * q1.FS, tilt["f_hz"], tilt[str(lab["lf"])])
         Gs = [Gi * 10 ** (S * Pi / (20 * q1.FS)) for Gi, Pi in zip(Gs, q1.P)]
@@ -1535,7 +1544,8 @@ def final_Gs(lab, law, w, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None
     return Gs
 
 
-def final_stage(workers, only=None, compact=None, ap230=None, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, lfdc=None):
+def final_stage(workers, only=None, compact=None, ap230=None, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, lfdc=None,
+                floorcells=None):
     """compact / ap230: the 9 numbers and the AP230 step table to use (default: those fitted on the old IRs, as §17);
     either given -> output suffix _refit. lfdc: {lf: dc} replacing the law's shelf DC ratio at those LF steps (§25)."""
     from concurrent.futures import ProcessPoolExecutor
@@ -1549,10 +1559,11 @@ def final_stage(workers, only=None, compact=None, ap230=None, loopk=0.0, bbtilt=
     print(f"compact {compact or COMPACT}: cluster gains L {np.round(cl[:4], 4).tolist()} R {np.round(cl[4:], 4).tolist()}, tap magnitude {a:.4f}; "
           f"AP230 steps {np.round(ap['steps'], 4).tolist()}", flush=True)
     keys = [k for k in info if only is None or k in only]
+    fcs = json.load(open(floorcells)) if floorcells else {}
     jobs = [(k, dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]), ap["steps"][ap["settings"][k]["step"]], json.loads(json.dumps(law)),
              v, 1700, [dict(amp=a_, file=nm, eps=eps0[nm], fade2=fade[nm]) for a_, nm in files_of(info[k])], ends, loopk, bbtilt,
              json.load(open(lfrt)) if lfrt else None, gamma, json.load(open(tilt)) if tilt else None,
-             json.load(open(hfdp)) if hfdp else None, pramp) for k in keys]
+             json.load(open(hfdp)) if hfdp else None, pramp, fcs.get(k)) for k in keys]
     with ProcessPoolExecutor(workers) as ex:
         rows = [r for rr in ex.map(_final_setting, jobs) for r in rr]
     # CLA (another unit): clock, shift and gain fitted on CLA only
@@ -1569,7 +1580,7 @@ def final_stage(workers, only=None, compact=None, ap230=None, loopk=0.0, bbtilt=
     json.dump(dict(diff=FINAL_DIFF, beta=FINAL_BETA, p_max=P_MAX, dc_min=DC_MIN, tap_magnitude=a, cluster_gains=cl.tolist(), compact=compact or COMPACT,
                    ap230=ap230, ap230_steps=ap["steps"], rows=rows, cla=cla),
               open(os.path.join(OUT, q1.ms.tagged("final_s") + ("_chain" if os.environ.get("Q2_CHAIN") else "") + ("_refit" if compact or ap230 else "")
-                                + (f"_loopb{loopk:g}" if loopk else "") + (f"_bbtilt{bbtilt:g}" if bbtilt else "") + ("_lfrt" if lfrt else "") + (f"_gamma{gamma:g}" if gamma else "") + ("_tilt" if tilt else "") + ("_hfdp" if hfdp else "") + (f"_pramp{pramp[0]:g}_{pramp[1]:g}" if pramp else "") + ("_lfdc" if lfdc else "") + ("_smoke" if only else "") + ".json"), "w"), indent=0)
+                                + (f"_loopb{loopk:g}" if loopk else "") + (f"_bbtilt{bbtilt:g}" if bbtilt else "") + ("_lfrt" if lfrt else "") + (f"_gamma{gamma:g}" if gamma else "") + ("_tilt" if tilt else "") + ("_hfdp" if hfdp else "") + (f"_pramp{pramp[0]:g}_{pramp[1]:g}" if pramp else "") + ("_lfdc" if lfdc else "") + ("_cells" if floorcells else "") + ("_smoke" if only else "") + ".json"), "w"), indent=0)
     rep_f = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, q1.ms.tagged("nulls_free") + ".json")))}
     ws = ["0-50", "50-150", "150-300", "300-600", "600-1000", "1000-1500"]
 
@@ -1713,6 +1724,7 @@ def main():
     ap.add_argument("--hfdp", default=None, help="final: a JSON {\"<hf>\": dp, \"p_below\": x}: HF pole shift at that HF step (G_capped hf_dp)")
     ap.add_argument("--tilt", default=None, help="final: a JSON of per-LF-step magnitude shapes in dB/s (loop_fir.py --stage tilt)")
     ap.add_argument("--gamma", type=float, default=0.0, help="final: where the DC floor acts, the loop's broadband decay rate x (1 - gamma) (G_capped)")
+    ap.add_argument("--floorcells", default=None, help="final: a JSON {key: {dc, dc_min, beta, gamma, gamma_dc}}: per-setting floor constants (model_s_results 25.6)")
     ap.add_argument("--lfdc", default=None, help="final: 'lf:dc[,lf:dc]': the law's shelf DC ratio at those LF steps (model_s_results 25)")
     ap.add_argument("--lfrt", default=None, help="final: a JSON of per-LF-step (a, b): each loop's broadband decay rate x (1 + a + b RT)")
     ap.add_argument("--bbtilt", type=float, default=0.0, help="final: each loop's broadband loss x (1 + c (hi - 1)), hi the LF step's Nyquist RT ratio")
@@ -1767,7 +1779,7 @@ def main():
     if a.stage == "final":
         final_stage(a.workers, only, a.compact, a.ap230, a.loopb, a.bbtilt, a.lfrt, a.gamma, a.tilt, a.hfdp,
                     [float(x) for x in a.pramp.split(",")] if a.pramp else None,
-                    dict(x.split(":") for x in a.lfdc.split(",")) if a.lfdc else None)
+                    dict(x.split(":") for x in a.lfdc.split(",")) if a.lfdc else None, a.floorcells)
     if a.stage == "capped":
         capped_stage(a.workers, only, a.frozen, a.beta)
     if a.stage == "ap230":

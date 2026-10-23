@@ -6,6 +6,9 @@ Results: docs/model_s_results.md §22.9.
     for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage run --rt $rt; done
     EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage report         # -> report.log
 
+--cells (any stage, implies --lf04dc): also the DC floor's constants per (LF, RT) cell under the floor (model_s_results
+§25.6: lowband_shelf.py's floor grid with gamma on the Nyquist end, chosen per cell on its other HF steps, so held out by
+setting) -> cells.json; outputs in analysis/loop_cv/cells/, reported against the lf04dc folds.
 --lf04dc (any stage): also LF 0.4's shelf DC ratio per fold (model_s_results §25: the median of the per-setting best
 of lowband_shelf.py's dc stage, lfrt kept, chain3, over the fold's training RT steps); outputs in analysis/loop_cv/lf04dc/,
 reported against the §22.9 folds above.
@@ -39,6 +42,20 @@ OUT = os.path.join(ROOT, "analysis", "loop_cv")
 LFIR = lf_.OUT                                    # analysis/loop_fir/<kernel>
 BASE_OUT = OUT
 SHELF_DC = os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_dcK")   # lowband_shelf.py --stage dc --keep-lfrt
+SHELF_FLOOR = os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_floorN")   # lowband_shelf.py --stage floor --gamma-nyq
+CELLS = False
+
+
+def cells_table():
+    """Per setting under the floor (LF 0.1, LF 0.4 / RT 0.3): the floor constants of its cell chosen on the cell's other
+    HF steps (lowband_shelf.cell_choice)."""
+    import lowband_shelf as ls
+    D = [json.load(open(p)) for p in glob.glob(os.path.join(SHELF_FLOOR, "*.json"))]
+    out = {}
+    for d in D:
+        (dc, dc_min, beta, gamma), _ = ls.cell_choice(D, d["key"])
+        out[d["key"]] = dict(dc=float(dc), dc_min=float(dc_min), beta=float(beta), gamma=float(gamma), gamma_dc=False)
+    return out
 
 
 def lf04_dc(tr):
@@ -133,6 +150,12 @@ def constants_stage():
         line = (f"{'all RT steps' if hold == 'all' else f'hold RT {hold}'}: gamma {gamma:+.2f}; LF 0.4 a {a04:+.5f}; LF 2.0 ({a20:+.5f}, {b20:+.5f}); HF 0.2 dp {dpb:+.4f} "
                 f"(n {len(band)}); ramp c {cramp:.3f} from {sorted(fold['ramp_cells'])}" + (f"; LF 0.4 dc {fold['lfdc']['0.4']:.5f}" if "lfdc" in fold else ""))
         print(line); log.append(line)
+    if CELLS:
+        t = cells_table()
+        json.dump(t, open(os.path.join(OUT, "cells.json"), "w"), indent=1)
+        for k in sorted(t):
+            line = f"cell {k}: " + ", ".join(f"{n} {x:g}" for n, x in t[k].items() if n != "gamma_dc")
+            print(line); log.append(line)
     open(os.path.join(OUT, "constants.log"), "w").write("\n".join(log) + "\n")
 
 
@@ -148,9 +171,11 @@ def run_stage(rt, workers):
            "--pramp", f"{fold['pramp'][0]},{fold['pramp'][1]}", "--only", keys, "--workers", str(workers)]
     if "lfdc" in fold:
         cmd += ["--lfdc", ",".join(f"{k}:{x}" for k, x in fold["lfdc"].items())]
+    if CELLS:
+        cmd += ["--floorcells", os.path.join(OUT, "cells.json")]
     with open(os.path.join(OUT, f"fold_{rt}.log"), "w") as f:
         subprocess.run(cmd, check=True, stdout=f, stderr=subprocess.STDOUT)
-    src = sorted(glob.glob(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit_lfrt_gamma*_hfdp_pramp*" + ("_lfdc" if "lfdc" in fold else "") + "_smoke.json")),
+    src = sorted(glob.glob(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit_lfrt_gamma*_hfdp_pramp*" + ("_lfdc" if "lfdc" in fold else "") + ("_cells" if CELLS else "") + "_smoke.json")),
                  key=os.path.getmtime)[-1]
     os.replace(src, os.path.join(OUT, f"fold_{rt}_rows.json"))
 
@@ -158,8 +183,9 @@ def run_stage(rt, workers):
 def report_stage():
     if OUT == BASE_OUT:                             # §21 -> the CV loop terms
         a = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit.json")))["rows"]}
-    else:                                           # the §22.9 folds -> the same plus LF 0.4's dc
-        a = {(r["key"], r["amp"]): r for p in glob.glob(os.path.join(BASE_OUT, "fold_*_rows.json")) for r in json.load(open(p))["rows"]}
+    else:                                           # the §22.9 folds -> the same plus LF 0.4's dc (--cells: the lf04dc folds -> plus the floor cells)
+        ref = os.path.join(BASE_OUT, "lf04dc") if CELLS else BASE_OUT
+        a = {(r["key"], r["amp"]): r for p in glob.glob(os.path.join(ref, "fold_*_rows.json")) for r in json.load(open(p))["rows"]}
     c = {(r["key"], r["amp"]): r for p in glob.glob(os.path.join(OUT, "fold_*_rows.json")) for r in json.load(open(p))["rows"]}
     rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("nulls_free") + ".json")))}
     ws = ["0-50", "50-150", "150-300", "300-600", "600-1000", "1000-1500"]
@@ -173,7 +199,7 @@ def report_stage():
         return np.median(e) if e else np.nan
     ks = list(c)
     out = [f"## All loop terms, leave-one-RT-out ({len({k[0] for k in ks})} settings, {len(ks)} captures; every setting scored with constants "
-           f"fitted without its RT step); R null [excess over repeat]: " + ("§21 -> CV" if OUT == BASE_OUT else "§22.9 -> + LF 0.4 dc") + "; kernel " + str(q1.ms.KTAG)]
+           f"fitted without its RT step); R null [excess over repeat]: " + ("§21 -> CV" if OUT == BASE_OUT else "§25.4 -> + floor cells" if CELLS else "§22.9 -> + LF 0.4 dc") + "; kernel " + str(q1.ms.KTAG)]
     out.append("| Settings | " + " | ".join(ws[1:5]) + " |\n|---|" + "---|" * 4)
     groups = [("All 128", lambda r: True), ("Flat", lambda r: r["lf"] == 1.0 and r["hf"] == 1.0), ("LF 0.1", lambda r: r["lf"] == 0.1),
               ("LF 0.4", lambda r: r["lf"] == 0.4), ("LF 2.0", lambda r: r["lf"] == 2.0), ("HF 0.2", lambda r: r["hf"] == 0.2),
@@ -199,10 +225,12 @@ def main():
     ap.add_argument("--rt", type=float, default=None)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--lf04dc", action="store_true")
+    ap.add_argument("--cells", action="store_true")
     a = ap.parse_args()
-    if a.lf04dc:
-        global OUT
-        OUT = os.path.join(BASE_OUT, "lf04dc")
+    if a.lf04dc or a.cells:
+        global OUT, CELLS
+        CELLS = a.cells
+        OUT = os.path.join(BASE_OUT, "cells" if a.cells else "lf04dc")
         os.makedirs(OUT, exist_ok=True)
     if a.stage == "constants":
         constants_stage()

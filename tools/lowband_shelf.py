@@ -13,7 +13,10 @@ dc      LF 0.4: the law's shelf DC ratio (0.412) replaced by one constant on a g
 floor   LF 0.1 (and LF 0.4 / RT 0.3, the other setting under the floor), on the §25.4 baseline: the law's LF 0.1 DC
         ratio, DC_MIN, beta and gamma on a joint grid, the 25-1000 Hz and 100 Hz-10 kHz costs per setting;
 floorscore  each setting with the constants chosen on LF 0.1 leaving its RT step out (mean of the two relative costs);
+cellscore / cellreport  the same with the constants chosen per (LF, RT) cell on its other HF steps (a per-step table);
 floorreport  the choices per fold and the held-out nulls -> analysis/lowband/<kernel>_shelf_floor_report.log.
+perloop  LF 0.1 and LF 0.4 / RT <= 1.0 on the §25.4 baseline: each loop's DC and Nyquist gain changed freely (8 numbers),
+        held out by capture: the unit's DC loss per loop against the law's (perloopreport).
 report  free: the fitted numbers and nulls by LF / RT; dc: the constant chosen leaving one RT step out (median of the
         per-setting best over the other RT steps), each RT step scored with its own constant, against the baseline and
         the repeat capture (lowband.py's score stage on chain3).
@@ -47,7 +50,8 @@ WS, BANDS = ("150-300", "300-600", "600-1000"), ("25-50", "50-100", "100-200", "
 
 
 def outdir(stage, keep=False):
-    return os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_{stage}" + ("K" if keep else ""))
+    nyq = stage.startswith(("floor", "cell")) and not GAMMA_DC
+    return os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_{stage}" + ("K" if keep else "") + ("N" if nyq else ""))
 
 
 def base_r0(lab, law):
@@ -172,8 +176,9 @@ def run(stage, only, keep):
     od = outdir(stage, keep)
     os.makedirs(od, exist_ok=True)
     sel = {"free": lambda g: True, "dc": lambda g: g["lf"] == LF_DC,
-           "floor": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] == 0.3)}
-    sel["floorscore"] = sel["floor"]
+           "floor": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] == 0.3),
+           "perloop": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] <= 1.0)}
+    sel["floorscore"] = sel["cellscore"] = sel["floor"]
     keys = sorted(k for k in info if (only is None or k in only) and sel[stage](info[k]))
     keys = [k for k in keys if not os.path.exists(os.path.join(od, k + ".json"))]
     print(f"{stage}: {len(keys)} settings to do", flush=True)
@@ -182,7 +187,7 @@ def run(stage, only, keep):
         if stage == "dc":
             dc(k, path, keep)
         else:
-            {"free": free, "floor": floor, "floorscore": floorscore}[stage](k, path)
+            {"free": free, "floor": floor, "floorscore": floorscore, "cellscore": cellscore, "perloop": perloop}[stage](k, path)
         print(f"  {i + 1}/{len(keys)} {k}", flush=True)
 
 
@@ -240,6 +245,7 @@ FL_DCMIN = np.round(np.arange(0.170, 0.2001, 0.005), 4)               # DC_MIN (
 FL_BETA = (0.0, 0.01, 0.019, 0.03, 0.04)                              # beta (0.019)
 FL_GAMMA = (-0.05, -0.04, -0.03, -0.02, -0.01, 0.0)                   # gamma (fold: -0.02 / -0.03)
 FL_GRID = [(a, b, c, e) for a in FL_DC for b in FL_DCMIN for c in FL_BETA for e in FL_GAMMA]
+GAMMA_DC = True                                                       # --gamma-nyq: gamma on the Nyquist end only (§25.6)
 
 
 def cv_fold(rt):
@@ -257,7 +263,7 @@ def floor_Gs(d, dc01, dc_min, beta, gamma):
     law = dict(d["law"], lf={**d["law"]["lf"], 0.1: dict(d["law"]["lf"][0.1], dc=float(dc01))})
     t = dict(d["terms"], gamma=gamma)
     return q2.final_Gs(d["lab"], law, d["w"], lfrt=t["lfrt"], gamma=t["gamma"], hfdp=t["hfdp"], pramp=t["pramp"], b230=d["b230"],
-                       dc_min=dc_min, beta=beta)
+                       dc_min=dc_min, beta=beta, gamma_dc=GAMMA_DC)
 
 
 def floored(lab, law, dc01, dc_min):
@@ -279,7 +285,7 @@ def floor(key, path):
     d = prep(key, cv_terms, cv_fold(rt)["lfdc"])
     lab, law = d["lab"], d["law"]
     G0 = floor_Gs(d, law["lf"][0.1]["dc"], q2.DC_MIN, q2.FINAL_BETA, d["terms"]["gamma"])
-    chk = max(float(np.max(np.abs(a - b))) for a, b in zip(G0, d["Gs0"]))
+    chk = max(float(np.max(np.abs(a - b))) for a, b in zip(G0, d["Gs0"]))           # 0 unless --gamma-nyq (then the change itself)
     r0 = reverb(d, d["Gs0"])
     base = [float(np.sum(residual(d, None, d["caps"], r=r0) ** 2)), float(np.sum(residual(d, None, d["caps"], sos=SOSB, norm="normB", r=r0) ** 2))]
     cache, rows = {}, []
@@ -321,11 +327,30 @@ def floorscore(key, path):
                    held=[lb.band_nulls(c["y"], model(d, c, r) * c["g"], c["te"]) for c in d["caps"]]), open(path, "w"))
 
 
-def report_floor():
+def cell_choice(D, key):
+    """Per (LF, RT) cell: the floor_choice rule over the cell's other settings (held out by HF step)."""
+    me = next(d for d in D if d["key"] == key)
+    return floor_choice([d for d in D if d["lf"] == me["lf"] and d["rt"] == me["rt"] and d["key"] != key], [me["rt"]])
+
+
+def cellscore(key, path):
+    """Per setting: band nulls of every capture with the floor constants of its (LF, RT) cell chosen on the cell's other
+    HF steps (a per-step table, model_s_results 25.6)."""
+    (dc01, dc_min, beta, gamma), _ = cell_choice(floor_load(), key)
+    rt = q2.q1_tables()[0][key]["rt"]
+    d = prep(key, cv_terms, cv_fold(rt)["lfdc"])
+    r = reverb(d, floor_Gs(d, dc01, dc_min, beta, gamma))
+    json.dump(dict(key=key, **d["lab"], chosen=[dc01, dc_min, beta, gamma], amps=[c["amp"] for c in d["caps"]],
+                   base=[lb.band_nulls(c["y"], c["mdl"] * c["g"], c["te"]) for c in d["caps"]],
+                   held=[lb.band_nulls(c["y"], model(d, c, r) * c["g"], c["te"]) for c in d["caps"]]), open(path, "w"))
+
+
+def report_floor(score="floorscore"):
     D = floor_load()
     D1 = [d for d in D if d["lf"] == 0.1]
     rts = sorted({d["rt"] for d in D1})
-    out = [f"## The DC floor and LF 0.1's DC ratio ({len(D)} settings; grid {len(FL_GRID)} points; law dc 0.1317, DC_MIN 0.18, beta 0.019)",
+    out = [f"## The DC floor and LF 0.1's DC ratio ({len(D)} settings; grid {len(FL_GRID)} points; law dc 0.1317, DC_MIN 0.18, beta 0.019; "
+           f"gamma {'on the whole loop' if GAMMA_DC else 'on the Nyquist end only'})",
            f"render check (grid point at the baseline's constants vs the baseline): max |dG| {max(d['check'] for d in D):.1e}"]
     for rt in rts + ["all"]:
         tr = [r for r in rts if r != rt]
@@ -334,7 +359,7 @@ def report_floor():
         out.append(f"- {'all RT steps' if rt == 'all' else f'hold RT {rt}'}: dc {a:.4f}, DC_MIN {b:.3f}, beta {c:g}, gamma {e:+.2f} "
                    f"(training mean cost change: low {dl:+.2f} dB, broad {db:+.2f} dB)" +
                    ("" if rt == "all" else "; own best per setting: " + ", ".join(f"({x[0]:.4f}, {x[1]:.3f}, {x[2]:g}, {x[3]:+.2f})" for x in own)))
-    S = [json.load(open(p)) for p in glob.glob(os.path.join(outdir("floorscore"), "*.json"))]
+    S = [json.load(open(p)) for p in glob.glob(os.path.join(outdir(score), "*.json"))]
     if not S:
         return out
     rep = {(k, r["amp"]): r["repeat"] for k in {s_["key"] for s_ in S} for r in json.load(open(os.path.join(lb.outdir("base"), k + ".json")))}
@@ -343,7 +368,8 @@ def report_floor():
         x = [s_[f][j][b][w][1][0] - (rep[(s_["key"], a)][b][w][1][0] if excess else 0) for s_ in ss for j, a in enumerate(s_["amps"])
              if w in s_[f][j][b] and (not excess or w in rep[(s_["key"], a)][b])]
         return np.median(x) if x else np.nan
-    out.append("\n### Held out by RT step: R null, median over captures, §25.4 baseline -> chosen constants [excess over repeat]")
+    out.append("\n### Held out by " + ("RT step" if score == "floorscore" else "HF step within each (LF, RT) cell") +
+               ": R null, median over captures, §25.4 baseline -> chosen constants [excess over repeat]")
     groups = [("LF 0.1", lambda s_: s_["lf"] == 0.1)] + [(f"LF 0.1 RT {rt}", lambda s_, rt=rt: s_["lf"] == 0.1 and s_["rt"] == rt) for rt in rts] + \
              [("LF 0.4 RT 0.3", lambda s_: s_["lf"] == 0.4)]
     for b in BANDS:
@@ -356,15 +382,71 @@ def report_floor():
     return out
 
 
+# ---------------------------------------------------------------- per-loop DC and Nyquist gains (model_s_results 25.6)
+def law_dc_loss(lab, law):
+    """Per loop: the law's DC loss per pass in dB (before the floor) and the broadband (Nyquist-end) loss."""
+    L = law["lf"][lab["lf"]]
+    return ([20 * 3 * Pi / (q1.FS * L["dc"] * lab["rt"]) for Pi in q1.P], [20 * 3 * Pi / (q1.FS * L["hi"] * lab["rt"]) for Pi in q1.P])
+
+
+def perloop(key, path):
+    """Per setting on the §25.4 baseline: each loop's response x a first-order section (the shelf's pole) changing its DC
+    gain by x_i dB and its Nyquist gain by y_i dB (8 numbers), fitted on the 25-1000 Hz residual, held out by capture."""
+    rt = q2.q1_tables()[0][key]["rt"]
+    d = prep(key, cv_terms, cv_fold(rt)["lfdc"])
+    a = d["law"]["a"]
+    sh = lambda x, y: [m.shelf(d["w"], 10 ** (x[i] / 20), 10 ** (y[i] / 20), a) for i in range(4)]
+    Gs = lambda th: [Gi * c for Gi, c in zip(d["Gs0"], sh(th[:4], th[4:]))]
+    res = {}
+    for ho, c in enumerate(d["caps"]):
+        tr = [x for j, x in enumerate(d["caps"]) if j != ho]
+        fit = least_squares(lambda th: residual(d, Gs(th), tr), np.zeros(8), x_scale=0.05, diff_step=1e-3, max_nfev=80)
+        r = reverb(d, Gs(fit.x))
+        res[c["amp"]] = dict(th=fit.x.tolist(), base=lb.band_nulls(c["y"], c["mdl"] * c["g"], c["te"]),
+                             fit=lb.band_nulls(c["y"], model(d, c, r) * c["g"], c["te"]))
+    ldc, lhi = law_dc_loss(d["lab"], d["law"])
+    json.dump(dict(key=key, **d["lab"], law_dc_db=ldc, law_hi_db=lhi, base_dc_db=[float(-20 * np.log10(abs(G[0]))) for G in d["Gs0"]],
+                   base_ny_db=[float(-20 * np.log10(abs(G[-1]))) for G in d["Gs0"]], res=res), open(path, "w"))
+
+
+def report_perloop():
+    D = [json.load(open(p)) for p in glob.glob(os.path.join(outdir("perloop"), "*.json"))]
+    out = ["## Per-loop DC / Nyquist changes on the §25.4 baseline, held out by capture (8 numbers per setting); per loop: "
+           "law DC loss -> baseline (floor, gamma) -> unit (baseline - x), dB per pass; Nyquist change y; median over HF and folds"]
+    rows = []
+    for lf in sorted({d["lf"] for d in D}):
+        for rt in sorted({d["rt"] for d in D if d["lf"] == lf}):
+            u = [d for d in D if d["lf"] == lf and d["rt"] == rt]
+            th = np.median([r["th"] for d in u for r in d["res"].values()], 0)
+            ldc = np.median([d["law_dc_db"] for d in u], 0)
+            bdc = np.median([d["base_dc_db"] for d in u], 0)
+            cells = [f"{ldc[i]:.2f} -> {bdc[i]:.2f} -> {bdc[i] - th[i]:.2f} (y {th[4 + i]:+.3f})" for i in range(4)]
+            g = lambda f, b, w: np.median([r[f][b][w][1][0] for d in u for r in d["res"].values() if w in r[f][b]])
+            out.append(f"- LF {lf} RT {rt}: " + "; ".join(cells) + f" | R 100-200 Hz 150-300 {g('base', '100-200', '150-300'):.1f} -> "
+                       f"{g('fit', '100-200', '150-300'):.1f}, 100-10k {g('base', '100-10k', '150-300'):.1f} -> {g('fit', '100-10k', '150-300'):.1f}")
+            rows += [(lf, rt, ldc[i], bdc[i] - th[i]) for i in range(4)]
+    out.append("\n### Unit DC loss against the law's, all loops (sorted by law): law -> unit [LF, RT]")
+    out.append("  " + "; ".join(f"{l:.1f}->{t:.2f} [{lf:g},{rt:g}]" for lf, rt, l, t in sorted(rows, key=lambda r: r[2])))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "report", "floorreport"], required=True)
+    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "cellscore", "perloop", "report", "floorreport", "cellreport", "perloopreport"], required=True)
     ap.add_argument("--only", default=None)
     ap.add_argument("--keep-lfrt", action="store_true")
+    ap.add_argument("--gamma-nyq", action="store_true", help="floor stages: gamma on the Nyquist end only, DC held at DC_MIN")
     a = ap.parse_args()
-    if a.stage == "floorreport":
-        out = report_floor()
-        open(os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_floor_report.log"), "w").write("\n".join(out) + "\n")
+    global GAMMA_DC
+    GAMMA_DC = not a.gamma_nyq
+    if a.stage == "perloopreport":
+        out = report_perloop()
+        open(os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_perloop_report.log"), "w").write("\n".join(out) + "\n")
+        print("\n".join(out))
+    elif a.stage in ("floorreport", "cellreport"):
+        out = report_floor("floorscore" if a.stage == "floorreport" else "cellscore")
+        name = "floor" if a.stage == "floorreport" else "cell"
+        open(os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_{name}{'' if GAMMA_DC else 'N'}_report.log"), "w").write("\n".join(out) + "\n")
         print("\n".join(out))
     elif a.stage == "report":
         out = report_free() + [""] + report_dc(False) + [""] + report_dc(True)

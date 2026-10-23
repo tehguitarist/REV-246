@@ -2183,3 +2183,48 @@ On the §25.4 baseline (its fold terms and LF 0.4 dc), the four constants that a
 - **Why (per setting, from the same grids):** with β 0.019, γ −0.03 and dc 0.1324 fixed, the best DC_MIN by either cost is 0.18–0.20 at RT 0.3 / 0.6 / 0.8 / 1.0 (mostly 0.185–0.19; RT 0.3 / HF 0.2 alone 0.170), also at **LF 0.4 / RT 0.3** (0.185–0.19); **0.175 at RT 1.4 at all four HF steps**; 0.185–0.19 at RT 1.8 (where raising DC_MIN floors more of the four loops); RT 2.2 / 2.5 have no floored loop. With γ's extra loss included (0.03 · 60 / (hi · RT) · P / fs dB per pass), the **deep floor is one level: 14.7 dB per pass at DC** at RT 0.3–1.0 and across LF 0.1 / 0.4 (**S**), against the model's 14.9 + γ. **Just past the knee (RT 1.4, law 16–20 dB per pass) the unit loses about 15.2 dB; just before it (RT 1.8, law 13–15 dB) it loses less than the law** (§25.1: ddc +0.32 dB per pass). The true DC loss is not min(law, floor): it overshoots the deep floor near the knee and undercuts the law below it. That is the plateau-and-knee of §22.2–22.3 seen at DC.
 - **Not a constant shift of the law's dc either:** dc acts only on loops above the floor (and through β's lift); its choice, 0.1324 (+0.5 %), is stable but cannot act at RT ≤ 1.4.
 - **Open (H):** the floor's form near the knee. Candidates: a smooth knee with overshoot from a clamp on one shelf coefficient (the DC gain then keeps moving with the law beyond the knee), a length-scaled floor (a minimum DC RT), or β's lift-proportional Nyquist loss in another form (§25.1's dhi: −0.14 / −0.05 / −0.03 / 0.00 / +0.01 dB per pass at RT 0.3 / 0.6 / 0.8 / 1.0 / 1.4, against β · lift = 1.3 / 0.5 / 0.3 / 0.19 / 0.06). Each is a few constants on the same grid machinery, chosen held out by RT step across the knee (RT 1.4 and 1.8 must be predicted, not fitted).
+
+### 25.6 The floor's form: DC held at DC_MIN, and per-cell constants (`lowband_shelf.py --stage perloop`, `--gamma-nyq`, `cellscore`; `loop_cv.py --cells`) **[S for DC = 0.180 and the per-cell transfer across HF; H for a per-step table; baseline]**
+
+```
+EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 3 -- .venv/bin/python tools/lowband_shelf.py --stage perloop             # chain3_shelf_perloop/
+EMT_KERNEL=chain3 .venv/bin/python tools/lowband_shelf.py --stage perloopreport                                                           # chain3_shelf_perloop_report.log
+EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 3 -- .venv/bin/python tools/lowband_shelf.py --stage floor|floorscore|cellscore --gamma-nyq
+EMT_KERNEL=chain3 .venv/bin/python tools/lowband_shelf.py --stage floorreport|cellreport --gamma-nyq                                      # chain3_shelf_floorN_report.log, chain3_shelf_cellN_report.log
+EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --cells --stage constants|run|report                                                  # analysis/loop_cv/cells/ (cells.json, report.log)
+```
+
+**Per-loop DC and Nyquist gains (`perloop`).** On the §25.4 baseline, each loop's response times a first-order section with the shelf's pole changing its DC gain by xᵢ dB and its Nyquist gain by yᵢ dB, 8 numbers per setting fitted on 25–1000 Hz, held out by capture; LF 0.1 and LF 0.4 / RT 0.3–1.0 (48 settings, 0.84 GB, 11 min). The unit's DC loss per loop against the law's falls on **one curve for LF 0.1 and LF 0.4** (`chain3_shelf_perloop_report.log`):
+
+| Law DC loss, dB per pass | ≤ 11 | 12.1–14.5 | 15.2 | 16.3–19.6 (RT 1.4) | 22.8–91 (RT ≤ 1.0; LF 0.4 / RT 0.3) |
+|---|---|---|---|---|---|
+| Unit | = law (±0.03) | law − 0.03…−0.17 | 14.83 | 14.97–15.06 | **14.89–14.91** (RT 0.6–1.0); 14.77–14.89 (RT 0.3) |
+
+- **Deep under the floor the DC gain is exactly DC_MIN = 0.180** (14.89 dB). The model applies γ to the whole loop, DC included, so its DC loss there is 14.94–15.08 dB; that 0.05–0.2 dB is what §25.5's DC_MIN 0.185 was compensating. γ's loss belongs at the Nyquist end: there the unit's extra loss over the law's broadband rate B is 1.50–1.83 dB at RT 0.3, 0.58–0.76 at 0.6, 0.36–0.49 at 0.8, 0.23–0.34 at 1.0, 0.07–0.15 at 1.4 (HF 1.0), ≈ 0.021 · lift + 0.029 · B against the model's 0.019 · lift + 0.03 · B.
+- **The knee is soft on both sides:** below it (law 12–15 dB) the unit loses up to 0.17 dB less than the law; just past it (RT 1.4) 0.1–0.17 dB more than the deep floor.
+
+**γ on the Nyquist end only (`G_capped(gamma_dc=False)`, `--gamma-nyq`).** §25.5's grid and held-out-by-RT choice redone with that form: the choice is again dc 0.1324, DC_MIN 0.185, β 0.019, γ −0.03 in every fold; LF 0.1 at RT 0.3–1.0 gains more in the low band than §25.5 (50–100 Hz 150–300 ms −28 → −43…−46 dB), LF 0.4 / RT 0.3 at 100–200 Hz −21 → −30, but RT 1.4 (−4…−6 dB) and LF 0.4 / RT 0.3's broadband (−1.6 dB) still lose. The knee cannot be predicted from the RT steps around it.
+
+**Per cell, held out by HF step (`cellscore`).** The same rule (lowest low-band cost without worsening the broadband) applied within each (LF, RT) cell on its other three HF settings, scored on the fourth. The cell's choice is stable across its four folds (DC_MIN 0.185 at RT 0.3–1.0, 0.175 at RT 1.4, 0.19 at RT 1.8; dc 0.1306–0.1344). R, §25.4 → per cell [excess over repeat], 150–300 / 300–600 ms (`chain3_shelf_cellN_report.log`):
+
+| Settings | 100–200 Hz | 100 Hz–10 kHz |
+|---|---|---|
+| LF 0.1 | −28.4 → −42.5 / −24.0 → −34.7 [+28.8 → +16.0 / +13.4 → +4.4] | −41.9 → −46.1 / −36.4 → −39.7 [+13.2 → +9.1 / +11.4 → +7.9] |
+| LF 0.1, RT 0.3 | −22.7 → −41.1 / −18.2 → −28.2 | −27.6 → −39.7 / −19.7 → −24.7 |
+| LF 0.1, RT 1.4 | −29.3 → −34.1 / −24.5 → −29.8 | −44.3 → −45.8 / −38.7 → −40.9 |
+| LF 0.1, RT 1.8 | −27.2 → −39.9 / −21.7 → −31.9 | −42.5 → −44.9 / −36.7 → −37.1 |
+| LF 0.4, RT 0.3 | −21.2 → −36.6 / −16.3 → −27.8 | −27.8 → −38.6 / −19.4 → −24.3 |
+
+Every cell holds or gains in every band except RT 1.4 at 25–100 Hz (≤ +1.4 dB in one window). **The floor's constants transfer across HF steps but not across RT steps: a per-(LF, RT) table, as §22.4 suspected for LF 0.1 (H).** Constants: up to 4 per cell (dc, DC_MIN, β, γ) for the 9 cells with LF 0.1 or a floored loop, 36 at most; at RT 2.2 / 2.5 only dc acts.
+
+**In the baseline (`loop_cv.py --cells`).** The §25.4 folds unchanged, plus `cells.json`: per setting the constants of its cell chosen on the cell's other HF steps, with γ on the Nyquist end (`q2_injection.py --stage final --floorcells`); chain2, `nulls_free_chain2` references; 2.2–2.4 GB, 40–147 s per fold. All 128 settings, 512 captures, 100 Hz–10 kHz, R, §25.4 → **§25.6** [excess]:
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| **All 128** | −49.9 [+5.3] → **−50.4 [+5.1]** | −46.3 [+8.8] → **−47.0 [+7.7]** | −41.5 [+6.9] → **−42.3 [+5.6]** | −36.4 [+1.8] → **−36.8 [+0.8]** |
+| LF 0.1 | −47.8 [+8.4] → −49.9 [+7.6] | −42.0 [+13.4] → −46.4 [+9.1] | −36.5 [+11.7] → −39.5 [+7.7] | −32.0 [+6.5] → −33.1 [+5.8] |
+| RT ≤ 1.0 | −48.9 [+7.5] → −49.8 [+7.0] | −39.6 [+11.2] → −43.2 [+7.7] | −34.0 [+5.8] → −36.8 [+4.3] | −28.0 [−0.7] → −28.8 [−1.2] |
+
+- L / R all 128: 0–50 ms −50.5 / −50.4, 50–150 −49.9 / −50.4, 150–300 −46.5 / −47.0, 300–600 −41.9 / −42.3, 600–1000 −36.6 / −36.8 dB. LF 1.0 / 2.0 and LF 0.4 except RT 0.3 unchanged.
+- Per setting (300–600 ms excess): 23 better by > 0.5 dB, 2 worse (0.1_1.0_0.2 +1.8, 0.1_0.3_0.2 +0.7), 100 within ±0.5.
+- **This is the S baseline from here on.** Left at LF 0.1: +7.7…+9.1 dB over repeat at 150–600 ms; the knee's soft shape (a smooth form would replace the table if the cells follow one curve, as the per-loop DC losses suggest); HF 0.2 at LF 0.1.
