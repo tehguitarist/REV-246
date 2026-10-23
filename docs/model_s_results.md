@@ -1456,7 +1456,7 @@ The flat column includes the 6 flat training settings; held out on flat (RT 0.8 
 
 **Against the null target:** −50 dB is reached on flat settings by the free 28 k-coefficient injection (§15.7), not yet by this 9-number model (about 8 dB short on the library, 1.4–4 dB short of the free model on CLA, §16.12–16.14).
 
-**Open for S** (none blocks M/L):
+**Open for S** (none blocks M/L). *Superseded as the baseline by §22.9 (this model refitted on the chain-kernel IRs, §21, plus 7 cross-validated loop numbers): all 128 settings −49.8 / −46.1 / −41.1 dB (R, 50–150 / 150–300 / 300–600 ms) held out by setting, 0–50 ms −50.3 / −50.1.*
 1. the compact model's remaining gap (part may be library-specific, §16.14). *Update: part of it was the library's deconvolution kernel; corrected, every window gains 2.3–4 dB and the first pass reaches −58 dB (§19, `ml_structure.md` §10). The rest is in the recirculations Now built into the IRs (§20, `EMT_KERNEL=chain2`): −48.7 / −49.1 dB at 50–150 ms on all settings, −50.5 / −50.4 on flat ones;*
 2. ~~AP230's damping form where b > 0 (§16.17)~~ *settled (§21.2): the two-tap form is right; §16.17's first-pass limit was the test's artefact. The b > 0 excess is in the recirculations;*
 3. LF 0.1 at short RT;
@@ -1909,3 +1909,43 @@ The worst cells sit just *below* the 0.84 cap, where the per-pass HF loss is mos
 
 - **The worst held-out cell gains 8–14 dB in every window, at every LF step** (300–600 ms −20.1 → −34.3 dB), and HF 0.4 / RT 0.3, another HF step and RT in the same pole range, reaches the repeat-capture level. Below the knee nothing changes (RT 1.4 within 0.3 dB).
 - **Still open:** HF 0.2 / RT 0.6 (capped, b = 0.5; no pole change helps, +22 / +29 / +12 dB) and the rest of RT 0.8 (+16…+26 dB after the ramp; its own best pole there exceeds 0.84 for the longest loop, so the ramp and the cap may meet differently than a hard min). The ramp's c from one cell is coarse (the grid's step 0.01 in Δp); a finer fit belongs in a cross-validated pass with the other loop terms.
+
+### 22.9 All loop terms, leave-one-RT-out, all 128 settings: the new S baseline (`tools/loop_cv.py`) **[S]**
+
+```
+EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage constants      # analysis/loop_cv/fold_<rt>.json, fold_all.json, constants.log
+for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage run --rt $rt; done
+EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage report         # analysis/loop_cv/report.log
+```
+
+Every loop term of §22.3–22.8, with the gates validated in §22.7, **every constant refitted leaving one RT step out (8 folds) and every setting scored with the constants of the fold that held out its RT step**, so all 128 settings are held out by setting:
+
+| Term | Form (gate) | Fold constants (min…max) | All RT steps |
+|---|---|---|---|
+| γ | where the DC floor acts: whole loop × 10^(γ · rate · Pᵢ / (20 fs)) | −0.02…−0.03 | **−0.03** |
+| LF 0.4 | broadband rate × (1 + a · max(0, 1.8 − RT)) | a −0.0073…−0.0079 | **−0.0076** |
+| LF 2.0 | broadband rate × (1 + a + b · RT) | a +0.0034…+0.0037, b −0.0011…−0.0014 | **+0.0036, −0.0012** |
+| HF 0.2 shift | pole + Δp where 0.5 ≤ p < 0.62 and LF ≠ 0.1 | −0.0021…−0.0026 | **−0.0025** |
+| HF ramp | p = min(p_law + c · max(0, p_law − 0.62), 0.84), every HF < 1 | c 0.128–0.130 | **0.128** |
+
+**7 numbers** (γ 1, LF 0.4 1, LF 2.0 2, HF shift 1, ramp 1, plus the ramp's knee 0.62) on top of §21's model (9 fitted numbers, 13 law numbers, 3 limit constants, the AP230 table). The constants barely move between folds.
+
+**Held out by setting, all 128** (R, fade-compensated null [excess over the repeat-capture null]; `analysis/loop_cv/report.log`), §21 → cross-validated:
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| **All 128** | −49.1 [+5.9] → **−49.8 [+5.3]** | −44.6 [+10.8] → **−46.1 [+9.0]** | −39.7 [+9.0] → **−41.1 [+7.0]** | −35.2 [+4.5] → **−36.3 [+2.0]** |
+| Flat | −50.4 [+0.6] (unchanged) | −49.1 [+3.2] | −45.3 [+0.6] | −37.4 [−1.5] |
+| LF 0.1 | −42.2 [+12.8] → −47.8 [+8.4] | −37.2 [+17.7] → −42.0 [+13.4] | −28.9 [+17.1] → −36.5 [+11.7] | −25.5 [+11.1] → −32.0 [+6.5] |
+| LF 0.4 | −48.7 [+10.1] → −49.9 [+7.9] | −44.4 [+14.7] → −46.7 [+12.3] | −39.3 [+11.3] → −42.3 [+7.6] | −36.6 [+3.5] → −38.2 [+0.9] |
+| LF 2.0 | −50.7 [+3.5] → −50.6 [+4.0] | −46.9 [+7.2] → −47.8 [+6.2] | −41.9 [+6.0] → −44.2 [+5.0] | −38.0 [+3.5] → −40.5 [+1.7] |
+| HF 0.2 | −44.4 [+8.8] → **−50.0 [+6.7]** | −31.6 [+15.2] → −40.8 [+12.3] | −29.8 [+13.9] → −36.5 [+9.6] | −33.5 [+7.8] → −35.7 [+4.5] |
+| RT ≤ 1.0 | −43.5 [+10.3] → −48.8 [+7.7] | −34.3 [+13.9] → −39.5 [+11.3] | −26.3 [+9.5] → −34.0 [+6.1] | −23.5 [+2.8] → −27.9 [−0.6] |
+| RT ≥ 1.4 | −50.5 [+4.2] → −51.3 [+3.3] | −48.4 [+8.9] → −48.5 [+8.2] | −44.2 [+8.6] → −44.4 [+7.4] | −39.2 [+5.9] → −39.7 [+4.4] |
+
+All 128, L / R: **0–50 ms −48.7 / −48.5 → −50.3 / −50.1**; 50–150 −48.7 / −49.1 → −49.3 / −49.8; 150–300 −44.3 / −44.6 → −45.7 / −46.1; 300–600 −39.2 / −39.7 → −40.9 / −41.1; 600–1000 −35.0 / −35.2 → −36.2 / −36.3.
+
+- **On settings whose RT step never touched the constants, 62 of 125 settings improve at 300–600 ms and 2 get worse** (LF 0.4 / RT 1.4 / HF 1.0 +3.3 dB, the cell whose own correction never beat the law; LF 2.0 / RT 0.6 / HF 1.0 +1.0); 3 RT 0.3 settings have no 300–600 ms window.
+- **0–50 ms is at −50 dB on all settings**; 50–150 ms is −49.8 dB (R), 0.2 dB from the target.
+- **Where the excess is now** (300–600 ms, R): LF 0.1 +11.7, HF 0.2 +9.6, RT 1.4–1.8 +8…+9, the rest +5…+7. The loop-law work leaves: HF 0.2 / RT 0.6 (capped, b 0.5), the rest of HF 0.2 / RT 0.8, LF 0.1 at long RT (per setting, §22.4), LF 0.4 / RT 1.4 / HF 1.0.
+- **This is the S baseline from here on** (§17's model + §21's refit + these 7 numbers; constants `analysis/loop_cv/fold_all.json`). CLA is unchanged (LF 1.0 / HF 0.9: none of the terms act there).

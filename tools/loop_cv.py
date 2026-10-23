@@ -1,0 +1,189 @@
+"""NEXT_STEPS §5 item 5: the transferable loop terms of docs/model_s_results.md §22.3-22.8 together, every constant
+chosen leaving one RT step out (8 folds), each setting scored with the constants of the fold that held out its RT step.
+Results: docs/model_s_results.md §22.9.
+
+    EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage constants      # -> analysis/loop_cv/fold_<rt>.json, constants.log
+    for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage run --rt $rt; done
+    EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage report         # -> report.log
+
+The terms (G_capped / q2_injection final options) and how each fold fits them, from the other RT steps only:
+  gamma   a constant extra broadband loss where the DC floor acts (LF 0.1): the floor grid (loop_fir floor stage), DC_MIN
+          0.18 / beta 0.019, the gamma with the lowest mean cost re gamma = 0 over the LF 0.1 settings;
+  lfrt    LF 2.0: rate x (1 + a + b RT) and LF 0.4: rate x (1 + a max(0, 1.8 - RT)) (gated, §22.7), least squares on the
+          broadband corrections of the loop_fir fits (median over HF 0.6 / 1.0, 63 Hz-2 kHz, the four loops);
+  hfdp    HF 0.2: the pole + dp where 0.5 <= p < 0.62 and LF != 0.1 (§22.5, §22.7), the median of the loop_fir corrections
+          read as a pole change (loops with that law pole);
+  pramp   p = min(p_law + c max(0, p_law - 0.62), 0.84) (§22.8): per cell above the knee its best constant offset from the
+          hfcap grid (cap 0.84), c = the median of dp / (median law pole - 0.62) over the cells.
+"""
+import argparse, glob, json, os, subprocess, sys
+
+import numpy as np
+from scipy.optimize import least_squares
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.path.insert(0, HERE)
+import loop_fir as lf_  # noqa: E402
+
+q2 = lf_.q2
+q1 = q2.q1
+FS = q1.FS
+RTS = (0.3, 0.6, 0.8, 1.0, 1.4, 1.8, 2.2, 2.5)
+KNEE, LF04_END, BAND = 0.62, 1.8, (0.5, 0.62)
+OUT = os.path.join(ROOT, "analysis", "loop_cv")
+LFIR = lf_.OUT                                    # analysis/loop_fir/<kernel>
+
+
+def law():
+    lw = q1.fit_laws(json.load(open(os.path.join(q2.Q1, "loops.json"))))
+    lw["lf"] = {float(k): x for k, x in lw["lf"].items()}
+    return lw
+
+
+def tables():
+    """Per setting from the loop_fir fits: the broadband correction (fraction of the law's broadband rate) and, per loop,
+    the correction read as a pole change (dp) with the law's pole."""
+    lw = law()
+    F = np.array([63, 125, 250, 500, 1000, 2000]); w = 2 * np.pi * F / FS
+    f2 = np.linspace(100, 9000, 200); w2 = 2 * np.pi * f2 / FS; z1 = np.exp(-1j * w2)
+    op = lambda p: (1 - p) / (1 - p * z1)
+    bb, dp = {}, []
+    for path in glob.glob(os.path.join(LFIR, "*.json")):
+        s = json.load(open(path))
+        lab = dict(lf=s["lf"], rt=s["rt"], hf=s["hf"])
+        if s["hf"] in (0.6, 1.0):
+            v = [np.median(20 * np.log10(np.abs(np.exp(-1j * np.outer(w, s["lags"])) @ np.array(c)))) * FS / Pi for c, Pi in zip(s["fir"], q1.P)]
+            bb[(s["lf"], s["hf"], s["rt"])] = np.median(v) / (60 / (lw["lf"][s["lf"]]["hi"] * s["rt"]))
+        if s["hf"] < 1.0 and s["lf"] != 0.1:
+            E = np.exp(-1j * np.outer(w2, s["lags"]))
+            for i, c in enumerate(s["fir"]):
+                p = lf_.law_coefs(lab, lw)[i][3]
+                C = E @ np.array(c)
+
+                def r(u):
+                    d = np.log((1 + u[1]) * op(p + u[0]) / op(p)) - np.log(C)
+                    return np.r_[d.real, d.imag]
+                u = least_squares(r, [0.0, 0.0], bounds=([-0.3, -0.2], [min(0.3, 0.999 - p), 0.2])).x
+                dp.append(dict(**lab, p=p, dp=float(u[0])))
+    return bb, dp
+
+
+def constants_stage():
+    os.makedirs(OUT, exist_ok=True)
+    bb, dp = tables()
+    floor = json.load(open(lf_.OUT + "_floor.json"))
+    hfcap = json.load(open(lf_.OUT + "_hfcap.json"))
+    lw = law()
+    log = []
+    for hold in RTS + ("all",):                    # "all": every RT step, the constants of the consolidated model
+        tr = [r for r in RTS if r != hold]
+        # gamma
+        gs = sorted({g["gamma"] for g in floor[0]["grid"]})
+        cost = lambda s, ga: next(g["cost"] for g in s["grid"] if (g["dc_min"], g["beta"], g["gamma"]) == (0.18, 0.019, ga))
+        tot = {ga: np.mean([cost(s, ga) / cost(s, 0.0) for s in floor if s["lf"] == 0.1 and s["rt"] in tr]) for ga in gs}
+        gamma = min(tot, key=tot.get)
+        # LF forms
+        y = lambda lf, rts: np.array([np.median([bb[(lf, hf, rt)] for hf in (0.6, 1.0)]) for rt in rts])
+        r_ = np.array(tr)
+        a20, b20 = np.linalg.lstsq(np.stack([np.ones_like(r_), r_], 1), y(2.0, tr), rcond=None)[0]
+        x4 = np.maximum(0, LF04_END - r_); a04 = float(np.dot(x4, y(0.4, tr)) / np.dot(x4, x4))
+        # HF 0.2 shift in the band
+        band = [d["dp"] for d in dp if d["hf"] == 0.2 and d["rt"] in tr and BAND[0] <= d["p"] < BAND[1]]
+        dpb = float(np.median(band)) if band else 0.0
+        # ramp: cells above the knee (by their median law pole), best constant offset at cap 0.84
+        cells = {}
+        for s in hfcap:
+            if s["rt"] not in tr:
+                continue
+            pm = np.median([float(q1.onepole_for(np.array(10 ** (-3 * Pi / FS / s["rt"] * lw["lf"][s["lf"]]["k"] * (1 / s["hf"] - 1))), lw["f_ref"]))
+                            for Pi in q1.P])                       # the law's uncapped pole
+            if KNEE + 0.03 < pm < 0.84:
+                base = next(g["cost"] for g in s["grid"] if g["pmax"] is None)
+                cells.setdefault((s["hf"], s["rt"]), dict(p=pm, rel={}))
+                for g in s["grid"]:
+                    if g["pmax"] == 0.84:
+                        cells[(s["hf"], s["rt"])]["rel"].setdefault(g["dp"], []).append(g["cost"] / base)
+        cs = []
+        for (hf, rt), c in cells.items():
+            best = min(c["rel"], key=lambda d: np.mean(c["rel"][d]))
+            cs.append(best / (c["p"] - KNEE))
+        cramp = float(np.median(cs)) if cs else 0.0
+        fold = dict(hold=hold, train_rt=tr, gamma=gamma,
+                    lfrt=dict(form="a + b RT", coefs={"0.4": [LF04_END * a04, -a04], "2.0": [float(a20), float(b20)]}, clip=["0.4"]),
+                    hfdp={"0.2": dpb, "p_above": BAND[0], "p_below": BAND[1], "exclude_lf": [0.1]},
+                    pramp=[cramp, KNEE], ramp_cells={f"{hf}_{rt}": c["p"] for (hf, rt), c in cells.items()})
+        json.dump(fold, open(os.path.join(OUT, f"fold_{hold}.json"), "w"), indent=1)
+        line = (f"{'all RT steps' if hold == 'all' else f'hold RT {hold}'}: gamma {gamma:+.2f}; LF 0.4 a {a04:+.5f}; LF 2.0 ({a20:+.5f}, {b20:+.5f}); HF 0.2 dp {dpb:+.4f} "
+                f"(n {len(band)}); ramp c {cramp:.3f} from {sorted(fold['ramp_cells'])}")
+        print(line); log.append(line)
+    open(os.path.join(OUT, "constants.log"), "w").write("\n".join(log) + "\n")
+
+
+def run_stage(rt, workers):
+    fold = json.load(open(os.path.join(OUT, f"fold_{rt}.json")))
+    for k in ("lfrt", "hfdp"):
+        json.dump(fold[k], open(os.path.join(OUT, f"fold_{rt}_{k}.json"), "w"), indent=1)
+    info = json.load(open(os.path.join(q2.Q1, q1.DATA)))
+    keys = ",".join(k for k, g in info.items() if g["rt"] == rt)
+    cmd = [sys.executable, os.path.join(HERE, "q2_injection.py"), "--stage", "final", "--compact", lf_.COMPACT,
+           "--ap230", os.path.join(q2.OUT, lf_.AP230), "--gamma", str(fold["gamma"]),
+           "--lfrt", os.path.join(OUT, f"fold_{rt}_lfrt.json"), "--hfdp", os.path.join(OUT, f"fold_{rt}_hfdp.json"),
+           "--pramp", f"{fold['pramp'][0]},{fold['pramp'][1]}", "--only", keys, "--workers", str(workers)]
+    with open(os.path.join(OUT, f"fold_{rt}.log"), "w") as f:
+        subprocess.run(cmd, check=True, stdout=f, stderr=subprocess.STDOUT)
+    src = sorted(glob.glob(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit_lfrt_gamma*_hfdp_pramp*_smoke.json")), key=os.path.getmtime)[-1]
+    os.replace(src, os.path.join(OUT, f"fold_{rt}_rows.json"))
+
+
+def report_stage():
+    a = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit.json")))["rows"]}
+    c = {(r["key"], r["amp"]): r for p in glob.glob(os.path.join(OUT, "fold_*_rows.json")) for r in json.load(open(p))["rows"]}
+    rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("nulls_free") + ".json")))}
+    ws = ["0-50", "50-150", "150-300", "300-600", "600-1000", "1000-1500"]
+
+    def med(ks, src, w, ch):
+        x = [src[k]["null_comp"][w][ch] for k in ks if src[k]["null_comp"].get(w)]
+        return np.median(x) if x else np.nan
+
+    def ex(ks, src, w):
+        e = [src[k]["null_comp"][w][1] - rep[k]["repeat_comp"][w][1] for k in ks if src[k]["null_comp"].get(w) and rep.get(k) and rep[k]["repeat_comp"].get(w)]
+        return np.median(e) if e else np.nan
+    ks = list(c)
+    out = [f"## All loop terms, leave-one-RT-out ({len({k[0] for k in ks})} settings, {len(ks)} captures; every setting scored with constants "
+           f"fitted without its RT step); R null [excess over repeat]: §21 -> CV"]
+    out.append("| Settings | " + " | ".join(ws[1:5]) + " |\n|---|" + "---|" * 4)
+    groups = [("All 128", lambda r: True), ("Flat", lambda r: r["lf"] == 1.0 and r["hf"] == 1.0), ("LF 0.1", lambda r: r["lf"] == 0.1),
+              ("LF 0.4", lambda r: r["lf"] == 0.4), ("LF 2.0", lambda r: r["lf"] == 2.0), ("HF 0.2", lambda r: r["hf"] == 0.2),
+              ("HF 0.4", lambda r: r["hf"] == 0.4), ("RT <= 1.0", lambda r: r["rt"] <= 1.0), ("RT >= 1.4", lambda r: r["rt"] >= 1.4)] + \
+             [(f"RT {rt}", lambda r, rt=rt: r["rt"] == rt) for rt in RTS]
+    for g, sel in groups:
+        kk = [k for k in ks if sel(c[k])]
+        out.append(f"| {g} | " + " | ".join(f"{med(kk, a, w, 1):.1f} [{ex(kk, a, w):+.1f}] -> {med(kk, c, w, 1):.1f} [{ex(kk, c, w):+.1f}]" for w in ws[1:5]) + " |")
+    out.append("- All 128, L / R: " + "; ".join(f"{w}: {med(ks, a, w, 0):.1f} / {med(ks, a, w, 1):.1f} -> {med(ks, c, w, 0):.1f} / {med(ks, c, w, 1):.1f}" for w in ws))
+    sets = sorted({k[0] for k in ks})
+    d = {s: ex([k for k in ks if k[0] == s], c, "300-600") - ex([k for k in ks if k[0] == s], a, "300-600") for s in sets}
+    d = {s: v for s, v in d.items() if np.isfinite(v)}                  # settings with no 300-600 ms window (RT 0.3) drop out
+    out.append(f"- per setting, change of the 300-600 ms excess: median {np.median(list(d.values())):+.1f} dB; better (< -0.5) {sum(v < -0.5 for v in d.values())}, "
+               f"worse (> +0.5) {sum(v > 0.5 for v in d.values())} of {len(d)}; worst: " +
+               ", ".join(f"{s} {v:+.1f}" for s, v in sorted(d.items(), key=lambda kv: -kv[1])[:6]))
+    open(os.path.join(OUT, "report.log"), "w").write("\n".join(out) + "\n")
+    print("\n".join(out))
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--stage", choices=["constants", "run", "report"], required=True)
+    ap.add_argument("--rt", type=float, default=None)
+    ap.add_argument("--workers", type=int, default=4)
+    a = ap.parse_args()
+    if a.stage == "constants":
+        constants_stage()
+    elif a.stage == "run":
+        run_stage(a.rt, a.workers)
+    else:
+        report_stage()
+
+
+if __name__ == "__main__":
+    main()

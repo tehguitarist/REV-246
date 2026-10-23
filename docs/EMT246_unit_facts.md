@@ -119,7 +119,7 @@ Source: `sources/emt-documents/EMT 246S service manual 1/2.pdf` (OCR of the Engl
 
 ## 5. Program S algorithm (measured from the CLA IR)
 
-**Consolidated model (October 2026, `model_s_results.md` §17):** cluster; AP20 · AP72 · AP230 at −1/√2 with AP230's step table; no comb460; 5 equal sign-only taps per loop, R via 26 / 332; laws with the HF pole ≤ 0.84, per-pass DC gain ≥ 0.18 and β = 0.019. Baseline all 128 settings −41 / −39 / −36 dB (L), CLA −37 dB. Rows below give the evidence; where an older row differs, the §16–17 rows hold.
+**Current baseline: `model_s_results.md` §22.9** (§17's model on the chain-kernel IRs plus 7 cross-validated loop numbers; all 128 settings −49.8 / −46.1 / −41.1 dB held out by setting). **Consolidated model (October 2026, `model_s_results.md` §17):** cluster; AP20 · AP72 · AP230 at −1/√2 with AP230's step table; no comb460; 5 equal sign-only taps per loop, R via 26 / 332; laws with the HF pole ≤ 0.84, per-pass DC gain ≥ 0.18 and β = 0.019. Baseline all 128 settings −41 / −39 / −36 dB (L), CLA −37 dB. Rows below give the evidence; where an older row differs, the §16–17 rows hold.
 
 
 The CLA IR settings, from a numeric display with some dead segments: **SHORT RT, LP 12, DELAY 10 ms, AMPL 80 %, LF ×1.0, RT 1.0 s, HF ×0.9** (S).

@@ -1175,7 +1175,7 @@ def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None, gamma=0.0, hf_d
         if hf < 1.0:
             p_law = float(q1.onepole_for(np.array(10 ** (kk / rt * L["k"] * (1 / hf - 1))), law["f_ref"]))
             p = p_map(p_law) if p_map else min(p_law, p_max)
-            if hf_dp and str(hf) in hf_dp and p < hf_dp["p_below"] and lf not in hf_dp.get("exclude_lf", []):
+            if hf_dp and str(hf) in hf_dp and hf_dp.get("p_above", 0.0) <= p < hf_dp["p_below"] and lf not in hf_dp.get("exclude_lf", []):
                 p = p + hf_dp[str(hf)]
             H = H * (1 - p) / (1 - p * np.exp(-1j * w))
         out.append(g * H)
