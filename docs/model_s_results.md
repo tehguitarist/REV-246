@@ -1964,7 +1964,9 @@ EMT_KERNEL=chain2 .venv/bin/python tools/lowband.py --stage slopes --only <keys>
 
 Every null of §14–22 is 100 Hz–10 kHz. `ml_structure.md` §12.5 found S's recirculations 15–20 dB above the repeat-capture null at 25–100 Hz with ml_lines' law model. Here the §22.9 baseline itself is scored there: per capture exactly as `q2_injection --stage final` (refactored into `final_G` / `fit_capture`, which `final` still uses), each setting with the loop constants of the fold that held out its RT step, then nulls per window in 25–50 / 50–100 / 100–200 Hz and the 100 Hz–10 kHz control (3rd-order zero-phase band-passes). The control reproduces `analysis/loop_cv` to 0.1 dB. The repeat reference is the next AMPL capture, as in q2's `nulls`. **Before 150 ms it is not a reference in these bands:** the AMPL-dependent cluster rings into 50–150 ms through the narrow band-passes, so only windows from 150 ms on are read.
 
-> **Summary.** Below 200 Hz the S baseline is 11–21 dB above the repeat-capture null at 150–600 ms (R), even at 100–200 Hz, inside the scored band (+13…+16 dB). It has two parts. **(1) A fixed transfer error**, the same in every setting at LF 0.4–2.0 (±0.1°), ±0.2–0.6 dB and up to 2.5° at 20–150 Hz, different in L and R. Fitted on half the RT steps (LF 1.0 / 2.0, HF 1.0) and applied to the other half, it removes 10–20 dB of the 25–50 Hz excess on LF 1.0 / 2.0 (300–600 ms +21 → +3 dB) and 4–8 dB at 50–200 Hz. **In L it is the chain:** its impulse response peaks at lag 501, just past the chain kernel's last lag (500), and fitted on S alone it improves M's and L's first pass in the L channel by 2.5–5 dB at 50–200 Hz. **In R it is S-specific:** M and L gain nothing. **(2) A decay error at LF 0.4** (and LF 0.1): the model's loops lose 10–100 milli-dB per pass too much at 80–250 Hz, the same at every HF step, shrinking about as RT^−1.5. A shelf-pole shift explains 20–30 % of it.
+> *Update (§24, `ml_structure.md` §13): a chain kernel with a smooth long tail (chain3), fitted on cluster windows only, removes 82 % / 85 % of the fixed transfer's energy in L / R. R's part was mostly the chain too; the "S-specific" reading below is superseded.*
+
+> **Summary.** Below 200 Hz the S baseline is 11–21 dB above the repeat-capture null at 150–600 ms (R), even at 100–200 Hz, inside the scored band (+13…+16 dB). It has two parts. **(1) A fixed transfer error**, the same in every setting at LF 0.4–2.0 (±0.1°), ±0.2–0.6 dB and up to 2.5° at 20–150 Hz, different in L and R. Fitted on half the RT steps (LF 1.0 / 2.0, HF 1.0) and applied to the other half, it removes 10–20 dB of the 25–50 Hz excess on LF 1.0 / 2.0 (300–600 ms +21 → +3 dB) and 4–8 dB at 50–200 Hz. **In L it is the chain:** its impulse response peaks at lag 501, just past the chain kernel's last lag (500), and fitted on S alone it improves M's and L's first pass in the L channel by 2.5–5 dB at 50–200 Hz. **In R it is S-specific:** M and L gain nothing *(superseded, §24: mostly the chain as well)*. **(2) A decay error at LF 0.4** (and LF 0.1): the model's loops lose 10–100 milli-dB per pass too much at 80–250 Hz, the same at every HF step, shrinking about as RT^−1.5. A shelf-pole shift explains 20–30 % of it.
 
 ### 23.1 The baseline below 200 Hz
 
@@ -2010,7 +2012,7 @@ T(f) = Σ Y M* / Σ |M|² over the reverb (150 ms to each capture's compensated 
   | 100–200 Hz | −9.6 / −9.0 | **−2.5** / −0.1 | **−5.0** / −0.1 |
   | cluster / gap window | +0.4…+1.2 | −0.9…+2.4 | −0.4…+0.4 |
 
-  **The L part carries over to M and L, so in L it is the chain** (**S**): L's cluster-only windows are the shortest (9 / 18 / 36 ms), so its FIR's long lags are the least identified, and the response it should have past lag 500 is missing. **The R part does not carry over:** it is in S's own model (**H**; R's routing via 26 / 332 is S's, ×2 / ×4 in M / L). M's and L's own first-pass transfers, measured the same way, are well determined (two halves of the groups agree to 0.02 dB / 0.4°) but their short windows put much of T − 1 at negative lags (edge effects), so they don't identify the chain on their own.
+  **The L part carries over to M and L, so in L it is the chain** (**S**): L's cluster-only windows are the shortest (9 / 18 / 36 ms), so its FIR's long lags are the least identified, and the response it should have past lag 500 is missing. **The R part does not carry over** *(superseded, §24: chain3 removes 85 % of it, so it is mostly the chain; M's and L's R first pass is held at −32…−34 dB by something else)*: it is in S's own model (**H**; R's routing via 26 / 332 is S's, ×2 / ×4 in M / L). M's and L's own first-pass transfers, measured the same way, are well determined (two halves of the groups agree to 0.02 dB / 0.4°) but their short windows put much of T − 1 at negative lags (edge effects), so they don't identify the chain on their own.
 - **Not used in the baseline yet.** T is a free low-band correction (~520 numbers) and a measurement-side one in L. The clean fix for L is a chain kernel with longer L lags (refit, cache rebuild); for R, the cause in S's model.
 
 ### 23.3 What the fixed transfer is not
@@ -2042,3 +2044,30 @@ The difference of decay rates, capture − model (dB/s, 10 log₁₀ E_capture /
 
 - **The low band was hiding real errors:** below 200 Hz the S baseline is 11–21 dB above the repeat null; 100–200 Hz, inside the scored band, +13…+16 dB, invisible in the band-wide 100 Hz–10 kHz null (energy is dominated by 0.3–3 kHz).
 - **Next:** (1) refit the chain kernel with longer L lags, held out by setting, and rebuild the caches; (2) the R part of the fixed transfer in S's model (e.g. what S's R routing does below 200 Hz); (3) the LF shelf's form at LF 0.4 / 0.1 (a two-parameter change, or second order), fitted on the low band held out by RT, with the decay measured on AMPL 0 captures; (4) the AMPL-0 capture of 1.0_0.6_1.0 (`12_0_0_10_06_10_dc.wav`: half its partners' length, aligned with a 293-sample shift against 48, broadband −6…−26 dB in every band), which is in the §22.9 medians too.
+
+## 24. The S baseline on the chain3 IRs (`EMT_KERNEL=chain3`, nothing refitted) **[S]**
+
+```
+EMT_KERNEL=chain3 .venv/bin/python tools/lowband.py --stage score     # analysis/lowband/chain3/ (not committed)
+EMT_KERNEL=chain3 .venv/bin/python tools/lowband.py --stage report    # analysis/lowband/chain3_base_report.log
+EMT_KERNEL=chain3 .venv/bin/python tools/lowband.py --stage transfer --only <LF 1.0 / 2.0, HF 1.0 keys>
+```
+
+The §22.9 baseline unchanged (compact fit, AP230 table and loop constants as fitted on chain2; each setting with its RT fold's constants), scored on the IRs deconvolved with chain3 (`ml_structure.md` §13): a kernel fitted on cluster-only windows, so nothing here was fitted on S's reverb. Repeat references from the same tool (next AMPL capture); they don't change with the kernel (±0.1 dB).
+
+> **Summary.** chain3 does in a model-independent way what §23.2's correction (fitted on S's reverb) did: the low-band excess falls 4–11 dB on LF 1.0 / 2.0 (50–100 Hz as much as with the correction; 25–50 Hz about half). The leftover transfer over S's reverb is 18 % / 15 % of chain2's in energy (L / R; rms |T − 1| 0.0217 → 0.0091, 0.0166 → 0.0064), mostly a −1.1…−1.4° phase at 25 Hz. **This corrects §23.2: R's part was mostly the chain too**, not S's model. 100 Hz–10 kHz is unchanged (±0.1 dB), so §22.9's figures stand on chain3. LF 0.4 / 0.1 keep their decay errors (§23.4).
+
+All 128, median null L / R, chain2 → chain3 (chain2 with §23.2's correction), [excess R over repeat, chain2 → chain3]:
+
+| Band | 150–300 ms | 300–600 ms | 600–1000 ms |
+|---|---|---|---|
+| 25–50 Hz | −29.8 / −31.0 → **−38.9 / −39.6** (−34.0 / −44.2) [+11.9 → +7.4] | −28.1 / −30.4 → **−34.5 / −35.6** (−33.7 / −42.4) [+20.2 → +12.5] | −29.3 / −28.1 → −33.8 / −32.4 [+9.5 → +6.5] |
+| 50–100 Hz | −36.1 / −40.7 → **−42.9 / −44.5** (−42.2 / −45.0) [+20.6 → +16.0] | −33.5 / −37.4 → −38.0 / −39.6 [+10.7 → +7.5] | −33.2 / −33.8 → −35.0 / −35.2 [+5.0 → +2.6] |
+| 100–200 Hz | −42.4 / −45.1 → −44.6 / −45.0 [+16.3 → +16.1] | −37.9 / −40.6 → −39.4 / −40.3 [+12.8 → +12.4] | [+3.5 → +3.0] |
+| 100 Hz–10 kHz | −45.7 / −46.1 → −46.1 / −46.1 | −40.9 / −41.2 → −41.0 / −41.1 | −36.2 / −36.4 → −36.3 / −36.4 |
+
+50–150 ms: 25–50 Hz −27.9 / −28.5 → −36.1 / −38.8, 50–100 Hz −35.8 / −43.3 → −44.5 / −50.3 dB. Excess R by LF step (150–300 / 300–600 / 600–1000 ms): LF 1.0 25–50 Hz +16.3 / +21.3 / +18.7 → +7.1 / +13.9 / +10.1, 50–100 Hz +13.3 / +11.1 / +8.5 → +4.9 / +6.3 / +4.3; LF 2.0 25–50 Hz +21 / +24 / +23 → +10 / +16 / +14, 50–100 Hz +16 / +15 / +14 → +7 / +10 / +9; LF 0.4 −0…−4.5 dB; LF 0.1 unchanged (their decay errors dominate, §23.4).
+
+- **Leftover transfer** (`transfer` on chain3, LF 1.0 / 2.0, HF 1.0, RT ≥ 1.0), L ; R, dB / deg: 25 Hz −0.01 / −1.4 ; +0.01 / −1.1; 30 Hz −0.07 / −0.4 ; 0.00 / −0.1; 40 Hz 0.00 / +0.5 ; +0.07 / −0.1; 50 Hz +0.06 / +0.1 ; −0.02 / −0.1; ≤ 0.02 dB and 0.2° from 60 Hz up. The 25 Hz phase is what keeps 25–50 Hz short of §23.2's figure; not a clean high-pass corner error (that would fall as 1/f: −1.2° at 30 Hz, measured −0.1…−0.4°). Open.
+- **What's left in S's low band:** the 25 Hz phase above; the LF 0.4 / 0.1 decay errors at 80–250 Hz (§23.4); 100–200 Hz at +12…+16 dB on all settings, which neither the kernel nor §23.2 moves much and which is not a fixed transfer (open: §23.4's decay error reaches into LF 1.0 / 2.0 at short RT?).
+- **The §22.9 headline on chain3:** 100 Hz–10 kHz moves ≤ 0.4 dB per window, so it stands. Its excess figures use `nulls_free` (the free per-setting models' repeat references); per NEXT_STEPS §2 those must be refitted before being taken on new IRs (`q2_injection.py --stage free --refs`, then `nulls`), not done here.

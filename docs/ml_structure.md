@@ -768,3 +768,62 @@ ml_lines.Model as in §10 (clock and shift per capture, two gains per channel); 
 - **This bench's own held-out nulls** (no clock fit, so below the `lines` bench; first pass, b fitted, L / R, old IRs → chain2): S −42.8 / −41.5 → −45.0 / −43.0, M −40.7 / −39.2 → −41.6 / −39.9, L −36.6 / −35.9 → −36.8 / −36.1 dB. Cluster and gap: S −49.1 / −44.1 → −52.9 / −48.8, M −46.6 / −42.0 → −50.9 / −45.1, L −43.0 / −38.8 → −46.0 / −40.4 dB.
 - **The b table is S's four steps in every program** (0.001 / 0.17 / 0.33 / 0.50), unchanged; so is the compact S model's AP230 table (`model_s_results.md` §21).
 
+
+## 13. chain3: the chain kernel's long tail (October 2026) **[S]**
+
+`.venv/bin/python tools/chain_kernel.py --stage tail` → `analysis/chain_kernel/tail.{json,log}`; `--stage write --name chain3` → `analysis/library/tomkin96/kernels/chain3.npz`, `analysis/chain_kernel/chain3.json`. Caches: `EMT_KERNEL=chain3` (`ml_structure.IRs.build` for S / M / L, then `q1_generalise.py --stage data`). Motivated by `model_s_results.md` §23: S's reverb against the S baseline on chain2 showed a fixed transfer error below 200 Hz whose L part peaks at lag 501, just past chain2's last FIR lag.
+
+> **Summary.** chain2's FIR stops at lag 500, and its per-capture slow term {1, t, t²} absorbs whatever lies beyond: that is why §12.1 found longer FIRs "unphysical". With the slow term as a **DC offset only** (passed through the known high-pass inversion, the physical form of a capture-side offset) and the lags from 300 to 1000 as a **smooth cubic B-spline tail** (knots every 40 samples), the kernel fitted on the cluster-only windows alone (no reverb, no model) **reproduces the transfer error measured independently over S's reverb**: 86 % / 58 % of its energy (L / R) at 20–200 Hz. chain3 has 2,768 numbers (chain2: 4,200). Held out, its cluster windows gain 6–12 dB at 25–100 Hz in M and L and lose ≤ 0.3 dB anywhere in S. On the rebuilt IRs, with nothing in any model refitted, M's and L's first pass gain 1.8–4.3 dB in L at 50–200 Hz, and S's reverb loses 82 % / 85 % of the transfer error's energy (L / R). **Use `EMT_KERNEL=chain3` for new device-domain work.**
+
+### 13.1 Which tail form (`tail` stage)
+
+Fitted on all captures; the new kernel's response over chain2's (gain and delay matched at 300–3000 Hz) against T(f), the capture / model transfer over S's reverb on chain2 (`model_s_results.md` §23.2; rms |T − 1| at 20–200 Hz L 0.0206, R 0.0151). Residual = rms |ratio − T|:
+
+| Slow term, FIR | Numbers | L: change / residual | R: change / residual |
+|---|---|---|---|
+| quad, 500 (chain2) | 4200 | 0 / 0.0206 | 0 / 0.0151 |
+| quad, L 800 free | 5400 | 0.082 / 0.069 | |
+| quad, L 1000, tail from 300 | 3484 | 0.133 / 0.127 | |
+| dc, 500 | 4200 | 0.003 / 0.0196 | 0.018 / 0.018 |
+| dc, L 800 / 1000 / 1200, tail from 300 (knots 40 or 80) | 3448–3504 | 0.018–0.019 / **0.0077–0.0083** | |
+| dc, L 1000 free | 6200 | 0.018 / 0.0079 | |
+| dc, L 1000, tail from 200 / 400 | 3092 / 3872 | 0.028 / 0.0206, 0.024 / 0.0163 | |
+| **chain3: dc, both 1000, tail from 300 / 40** | **2768** | **0.018 / 0.0077** | **0.018 / 0.0098** |
+
+- **With the quadratic slow term the long lags run away** (residual 3–6 × T itself): the quadratic and the tail trade off, as §12.1 saw. With the DC term the result doesn't depend on the FIR length (800–1200) or the knot spacing, and a free 1000-lag FIR gives the same as the spline (the spline only removes numbers).
+- The match, chain3 / chain2 against T (dB / deg), L: 25 Hz +0.29 / −1.8 against +0.31 / −2.5; 30 Hz +0.06 / −2.3 against +0.05 / −2.2; 35 Hz −0.13 / −1.9 against −0.15 / −1.3; 40 Hz −0.23 / −0.9 against −0.19 / −1.3; 50 Hz −0.15 / +0.8 against −0.08 / +0.8; 70 Hz +0.15 / −0.2 against +0.14 / −1.2. Correlation over 20–200 Hz +0.93.
+- **Two independent data sets agree**: the cluster-only windows (no reverb sample) and S's reverb (through the S model). So the tail is the chain's, not a model error fitted into the kernel.
+- Tail energy (re total): L −46.6 dB at lags 300–600, −54.7 at 600–1200; R −45.4 / −51.1. chain3's R mid-band gain is pinned to the library kernel as chain2's (+0.244 dB removed); L / R difference +0.099 dB, −0.008 samples, as chain2.
+
+### 13.2 Held out on the cluster windows (fit on even settings, score odd)
+
+Median nulls L / R, dB, 100 Hz–10 kHz | 25–100 Hz | 10–12 kHz, per-capture freedoms as §12.1 (slow term {1, t, t²} in the scoring):
+
+| Kernel | S | M | L |
+|---|---|---|---|
+| chain2 | −58.8 / −57.3 · −72.1 / −57.1 · −47.0 / −46.3 | −65.6 / −61.9 · −59.3 / −41.8 · −56.7 / −52.6 | −51.3 / −50.7 · −37.5 / −38.5 · −39.1 / −38.4 |
+| dc, 500 | −58.8 / −56.6 · −71.3 / −45.9 · −47.0 / −46.3 | −65.7 / −58.4 · −60.0 / −36.2 · −56.6 / −52.5 | −51.1 / −50.2 · −39.3 / −34.3 · −39.1 / −38.4 |
+| **chain3** | −58.5 / −56.8 · −71.8 / −58.7 · −46.7 / −46.1 | −64.9 / **−64.1** · −60.5 / **−50.5** · −56.0 / **−55.0** | **−52.0 / −51.3 · −49.3 / −43.7** · −39.3 / −38.9 |
+
+With a DC-only slow term in the scoring the ranking is the same (`tail.log`). The DC-only slow term alone (dc, 500) is worse in R's low band; the tail is what helps.
+
+### 13.3 On the rebuilt IRs (nothing in any model refitted)
+
+- **S, M, L first pass** (`lowband.py --stage mlcheck`, ml_lines' law model with each kernel's refitted output kernels, `ML_HK=analysis/chain_kernel/chain3.json`; every 4th group, AMPL ≥ 30; median change per capture L / R, dB; held out in time, no kernel fit sees a first-pass sample):
+
+  | | S first pass | S recirc 1 | M first pass | L first pass |
+  |---|---|---|---|---|
+  | 25–50 Hz | −0.9 / −4.8 | −2.8 / −6.9 | −0.7 / −0.9 | −1.1 / −1.8 |
+  | 50–100 Hz | −1.9 / −3.2 | −8.6 / −6.8 | **−2.9** / 0.0 | **−2.8** / −0.1 |
+  | 100–200 Hz | −5.8 / −1.6 | −4.6 / −1.3 | **−1.8** / −0.1 | **−4.3** / 0.0 |
+  | 100 Hz–10 kHz | −1.9 / +0.1 | −0.3 / 0.0 | −1.4 / −0.1 | −0.4 / −0.1 |
+  | cluster / gap, 25–200 Hz | +0.4…+1.4 | | −0.2…+3.4 | −0.0…+0.3 |
+
+  M's and L's R channels don't move: their R first pass is at −32…−34 dB at 50–100 Hz, held by something else there (open). The cluster / gap windows (9–86 ms) barely resolve the low bands; their strict nulls lose a little because chain3 no longer fits a free quadratic per capture.
+- **S's reverb**: `model_s_results.md` §24.
+
+### 13.4 What this settles
+
+- **The chain's response runs on past 19 ms with a smooth low-frequency tail** in both channels (−45…−47 dB at lags 300–600), and the library's capture-side slow term is a DC offset, not a free quadratic. **S**
+- §12.1's "longer FIRs are unphysical" was the quadratic slow term, not the data.
+- Left in S's reverb after chain3: a phase of −1.1…−1.4° at 25 Hz (both channels), ±0.07 dB above 30 Hz (`model_s_results.md` §24).

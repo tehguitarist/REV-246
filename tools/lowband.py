@@ -298,7 +298,8 @@ def _ml_check(a_):
             ob.apply_f(mlines.warp(Rraw, *u) * np.array([gs[ch][1] for ch in (0, 1)])[None], P)
         end = mlines.usable_end(yb)
         row = dict(prog=prog, key=key, amp=amp, nulls={})
-        for vn, mv in (("model", m), ("tfix", post_filter(m, 0.6))):          # rt 0.6 -> fold A's T
+        variants = [("model", m)] + ([("tfix", post_filter(m, 0.6))] if os.path.exists(tfix_path("A")) else [])  # rt 0.6 -> fold A
+        for vn, mv in variants:
             row["nulls"][vn] = {}
             for b, sos in SOS.items():
                 yf, mf = sosfiltfilt(sos, yr, axis=0), sosfiltfilt(sos, mv, axis=0)

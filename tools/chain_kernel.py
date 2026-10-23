@@ -4,7 +4,8 @@ deconvolution kernel (docs/ml_structure.md §10-11). Results: docs/ml_structure.
     .venv/bin/python tools/chain_kernel.py --stage data     # capture windows -> analysis/chain_kernel/data_*.npz (not committed)
     .venv/bin/python tools/chain_kernel.py --stage align    # per-capture tap-0 time and clock -> shifts.json, windows rebuilt
     .venv/bin/python tools/chain_kernel.py --stage fit      # held-out scores of the kernel and its variants -> fit.{json,log}
-    .venv/bin/python tools/chain_kernel.py --stage write [--name chain2]
+    .venv/bin/python tools/chain_kernel.py --stage tail     # chain3's smooth long tail against chain2 and S's reverb T -> tail.{json,log}
+    .venv/bin/python tools/chain_kernel.py --stage write [--name chain2|chain3]   (KERNELS: the configurations)
         -> analysis/library/tomkin96/kernels/<name>.npz and analysis/chain_kernel/<name>.json; use with EMT_KERNEL=<name>
            (tools/ml_structure.py: caches and results get the suffix _<name>)
 
@@ -58,7 +59,9 @@ HP_SETS = {"schematic": SCHEMATIC_HZ,                     # the high-pass divide
            "schematic+1.8": SCHEMATIC_HZ + [1.80],        # + Tomkin's chain corner as analog_results.md §3.5 measured it
            "half+1.8": [v / 2 for v in SCHEMATIC_HZ] + [1.80],
            "none": []}
-VAR, LK, W_S, ROUNDS, FREE_HK = "schematic", 500, 3.0, 8, "shared"     # the written kernel
+VAR, LK, W_S, ROUNDS, FREE_HK = "schematic", 500, 3.0, 8, "shared"     # the written kernel's defaults
+KERNELS = {"chain2": dict(nuis="quad", lk=500, tail=None),                # ml_structure §12
+           "chain3": dict(nuis="dc", lk=(1000, 1000), tail=((300, 40), (300, 40)))}   # model_s_results §24: longer, smooth tail
 PPM0 = 13.0                     # starting capture clock (ppm; ml_lines' law-stage clocks are 11.6-13.6 in M and L)
 SOS4 = {b: butter(4, lohi, btype="band", fs=4 * ml.FSD, output="sos")
         for b, lohi in {"band": (100, 10000), "low": (25, 100), "high": (10000, 12000)}.items()}
@@ -239,21 +242,41 @@ def stacked(D, p, var, ch, nr, rows=None):
     return seg[:, :4 * nr].astype(np.float64).reshape(len(seg), nr, 4)
 
 
-def solve(D, var=VAR, lk=LK, sel=lambda p, k: True, rounds=ROUNDS, ridge=1e-7, free_hk=FREE_HK, w_s=W_S):
+def tail_basis(lk, tail):
+    """(lk + LEAD, n) basis of one polyphase column: free lags below tail[0], and from there cubic B-splines of knot
+    spacing tail[1] device samples (a smooth, low-frequency tail: the long lags' high frequencies are not identified)."""
+    if not tail or tail[0] >= lk:
+        return np.eye(lk + LEAD)
+    from scipy.interpolate import BSpline
+    t0, dk = tail
+    lag = np.arange(-LEAD, lk)
+    knots = np.r_[[t0 - 3 * dk, t0 - 2 * dk, t0 - dk], np.arange(t0, lk + dk, dk), [lk + dk, lk + 2 * dk, lk + 3 * dk]]
+    nb = len(knots) - 4
+    S = np.stack([BSpline(knots, np.eye(nb)[i], 3, extrapolate=False)(lag) for i in range(nb)], 1)
+    S = np.nan_to_num(S) * (lag >= t0)[:, None]
+    S = S[:, S.any(0)]
+    return np.hstack([np.eye(lk + LEAD)[:, lag < t0], S])
+
+
+def solve(D, var=VAR, lk=LK, sel=lambda p, k: True, rounds=ROUNDS, ridge=1e-7, free_hk=FREE_HK, w_s=W_S, tail=None):
     """Per channel the 4x-grid kernel (4 (lk + LEAD),) from the captures with sel(prog, key) True; gains alternate, and
     with free_hk the M and L output kernels too ("shared" by the channels or "perch"; scaled to the stored ones' sums).
     w_s weights program S's captures. Every capture's window is projected off its nuisance {1, t, t^2}, model and data
-    alike. Returns the kernels, the gains and the output kernels."""
+    alike. lk: one FIR length or (L, R); tail: None or per channel (from, knot spacing) or None, the lags from `from` on
+    as a smooth B-spline tail (tail_basis). Returns the kernels, the gains and the output kernels."""
+    lks = tuple(lk) if np.ndim(lk) else (lk, lk)
+    tails = tuple(tail) if tail is not None else (None, None)
+    Bs = [tail_basis(lks[ch], tails[ch]) for ch in (0, 1)]
     hk = {p: v.copy() for p, v in HK0.items()}
     A = {p: D[p]["A0"].copy() for p in "SML"}
     use = {p: np.array([sel(p, k) for k in D[p]["key"]]) & (D[p]["amp"] >= AMP_FIT) for p in "SML"}
-    rows = {(p, ch): design(p, ch, lk)[1] for p in "SML" for ch in (0, 1)}
+    rows = {(p, ch): design(p, ch, lks[ch])[1] for p in "SML" for ch in (0, 1)}
     Qs = {pc: nuis(nr, var) for pc, nr in rows.items()}
     Y = {pc: proj(Qs[pc], stacked(D, pc[0], var, pc[1], rows[pc])) for pc in rows}
     for it in range(rounds):
         PU = {}
         for (p, ch), Q in Qs.items():
-            U = design(p, ch, lk, hk)[0]
+            U = design(p, ch, lks[ch], hk)[0]
             PU[(p, ch)] = U - Q @ (Q.T @ U)
         c = []
         for ch in (0, 1):
@@ -266,8 +289,9 @@ def solve(D, var=VAR, lk=LK, sel=lambda p, k: True, rounds=ROUNDS, ridge=1e-7, f
                 wp = w_s if p == "S" else 1.0
                 G = G + wp * (a @ a) * (PU[(p, ch)].T @ PU[(p, ch)])
                 v = v + wp * PU[(p, ch)].T @ np.tensordot(a, Y[(p, ch)][use[p]], 1)
+            G, v = Bs[ch].T @ G @ Bs[ch], Bs[ch].T @ v
             G = G + ridge * np.trace(G) / len(G) * np.eye(len(G))
-            c.append(np.linalg.solve(G, v))                       # (lk + LEAD, 4)
+            c.append(Bs[ch] @ np.linalg.solve(G, v))              # (lk + LEAD, 4)
         for p in "SML":                                           # gains: one per capture, both channels
             num = den = 0
             for ch in (0, 1):
@@ -431,8 +455,10 @@ def align_stage(rounds):
         data_stage(4)
 
 
-def fir_numbers(lk):
-    return 2 * 4 * (lk + LEAD)
+def fir_numbers(lk, tail=None):
+    lks = tuple(lk) if np.ndim(lk) else (lk, lk)
+    tails = tuple(tail) if tail is not None else (None, None)
+    return 4 * sum(tail_basis(lks[ch], tails[ch]).shape[1] for ch in (0, 1))
 
 
 def tail_db(c4):
@@ -495,11 +521,77 @@ def fit_stage():
     open(os.path.join(OUT, "fit.log"), "w").write("\n".join(lines) + "\n")
 
 
-def write_stage(name):
-    """Fit on all captures, convert to 96 kHz, pin R's mid-band gain and delay to the old kernel (the cache's level
-    and time convention; L keeps its own relative to R), save."""
+def tail_stage():
+    """chain3 (model_s_results §24): longer FIRs with a smooth B-spline tail and a DC-only slow term. (1) Held-out
+    cluster nulls (fit on even settings, odd scored) with either slow term in the scoring; (2) per variant, fitted on all
+    captures, the response ratio new / chain2 per channel against T(f) = capture / model measured over S's reverb with
+    the S baseline on the chain2 IRs (lowband.py transfer + tfit, folds A and B averaged), 20-200 Hz -> tail.{json,log}."""
+    global NUIS
     D = load_data()
-    c4, A, hk = solve(D)
+    keys = {p: sorted(set(D[p]["key"])) for p in "SML"}
+    even = lambda p, k: keys[p].index(k) % 2 == 0
+    odd = lambda p, k: not even(p, k)
+    lines, res = [], dict(heldout={}, transfer={})
+    variants = {"chain2": KERNELS["chain2"], "dc, 500": dict(nuis="dc", lk=500, tail=None), "chain3": KERNELS["chain3"]}
+    fits = {}
+    for name, cfg in variants.items():
+        NUIS = cfg["nuis"]
+        fits[name] = solve(D, sel=even, lk=cfg["lk"], tail=cfg["tail"])
+    for nu in ("quad", "dc"):
+        NUIS = nu
+        lines.append(f"\n## Held out (fit even, score odd), slow term '{nu}' in the scoring; L / R dB: 100 Hz-10 kHz | 25-100 Hz | 10-12 kHz | 20 Hz-12.3 kHz")
+        for name, (c, _, hk) in fits.items():
+            sc = score(D, VAR, c, odd, hk)
+            res["heldout"][f"{nu}: {name}"] = sc
+            lines.append(f"- {name}: " + "; ".join(f"{p} " + " | ".join(f"{s_[b][0]:.1f} / {s_[b][1]:.1f}" for b in ("band", "low", "high", "full"))
+                                                   for p, s_ in sc.items()))
+    lt = os.path.join(ROOT, "analysis", "lowband")
+    T = [sum(np.array(json.load(open(os.path.join(lt, f"chain2_tfix_{fo}.json")))["T_re"][ch]) + 1j *
+             np.array(json.load(open(os.path.join(lt, f"chain2_tfix_{fo}.json")))["T_im"][ch]) for fo in "AB") / 2 for ch in (0, 1)]
+    fT = np.array(json.load(open(os.path.join(lt, "chain2_tfix_A.json")))["f"])
+    band = (fT >= 20) & (fT <= 200)
+    fs4, N = 4 * ml.FSD, 1 << 18
+    f = np.fft.rfftfreq(N, 1 / fs4)
+    m = (f > 300) & (f < 3000)
+    resp = lambda c: np.fft.rfft(c, N)
+    NUIS = "quad"
+    c0 = solve(D)[0]
+    lines.append("\n## Fitted on all captures: response / chain2, gain and delay matched at 300-3000 Hz, against S's reverb T (20-200 Hz rms)")
+    lines.append(f"- T from S's reverb: rms |T - 1| L {np.sqrt(np.mean(np.abs(T[0][band] - 1) ** 2)):.4f}, R {np.sqrt(np.mean(np.abs(T[1][band] - 1) ** 2)):.4f}")
+    scan = [("quad, L 800", "quad", (800, 500), None), ("quad, L 1000 tail 300/40", "quad", (1000, 500), ((300, 40), None)),
+            ("quad, L 700 tail 300/40", "quad", (700, 500), ((300, 40), None)), ("dc, 500", "dc", 500, None),
+            ("dc, L 800 tail 300/40", "dc", (800, 500), ((300, 40), None)), ("dc, L 1000 tail 300/40", "dc", (1000, 500), ((300, 40), None)),
+            ("dc, L 1200 tail 300/40", "dc", (1200, 500), ((300, 40), None)), ("dc, L 1000 tail 300/80", "dc", (1000, 500), ((300, 80), None)),
+            ("dc, L 1000 tail 200/40", "dc", (1000, 500), ((200, 40), None)), ("dc, L 1000 tail 400/40", "dc", (1000, 500), ((400, 40), None)),
+            ("dc, L 1000 free", "dc", (1000, 500), None), ("chain3: dc, both 1000 tail 300/40", "dc", (1000, 1000), ((300, 40), (300, 40)))]
+    for name, nu, lk, tl in scan:
+        NUIS = nu
+        c = solve(D, lk=lk, tail=tl)[0]
+        row = {}
+        for ch in (0, 1):
+            r = resp(c[ch]) / resp(c0[ch])
+            ph = np.polyfit(f[m], np.unwrap(np.angle(r[m])), 1)
+            r = r / np.exp(np.mean(np.log(np.abs(r[m])))) * np.exp(-1j * ph[0] * f)
+            ri = np.interp(fT, f, r.real) + 1j * np.interp(fT, f, r.imag)
+            row["LR"[ch]] = dict(change=float(np.sqrt(np.mean(np.abs(ri[band] - 1) ** 2))), resid=float(np.sqrt(np.mean(np.abs(ri[band] - T[ch][band]) ** 2))),
+                                 at={str(fb): [round(float(20 * np.log10(abs(ri[i]))), 3), round(float(np.angle(ri[i], deg=True)), 2)]
+                                     for fb in (25, 30, 35, 40, 50, 60, 70, 100, 150) for i in [int(np.searchsorted(fT, fb))]})
+        res["transfer"][name] = dict(row, tail_db=tail_db(c), numbers=fir_numbers(lk, tl))
+        lines.append(f"- {name} ({fir_numbers(lk, tl)} numbers): " + "; ".join(f"{ch} change {v['change']:.4f}, residual vs T {v['resid']:.4f}" for ch, v in row.items()))
+    NUIS = "quad"
+    json.dump(res, open(os.path.join(OUT, "tail.json"), "w"), indent=1)
+    open(os.path.join(OUT, "tail.log"), "w").write("\n".join(lines) + "\n")
+    print("\n".join(lines))
+
+
+def write_stage(name):
+    """Fit on all captures with the KERNELS[name] configuration, convert to 96 kHz, pin R's mid-band gain and delay to
+    the old kernel (the cache's level and time convention; L keeps its own relative to R), save."""
+    global NUIS
+    cfg = KERNELS[name]
+    NUIS = cfg["nuis"]
+    D = load_data()
+    c4, A, hk = solve(D, lk=cfg["lk"], tail=cfg["tail"])
     lead96 = int(round(4 * LEAD * R4))
     g = np.stack([resample_poly(c, 91, 100) for c in c4], 1)
     hp = HP_SETS[VAR]
@@ -515,7 +607,8 @@ def write_stage(name):
     Nk = 1 << int(np.ceil(np.log2(len(g) + 512)))
     shift = np.exp(2j * np.pi * np.fft.rfftfreq(Nk) * tau)[:, None]
     g = np.fft.irfft(np.fft.rfft(g, Nk, axis=0) * shift, Nk, axis=0)[:len(g)] / gain
-    src = (f"chain_kernel.py: per-channel chain kernel, FIR {LK} + {LEAD} device samples x high-pass {hp} Hz, fitted on "
+    src = (f"chain_kernel.py: per-channel chain kernel {name}, FIR {cfg['lk']} + {LEAD} device samples (smooth tail "
+           f"{cfg['tail']}, slow term {cfg['nuis']}) x high-pass {hp} Hz, fitted on "
            f"the cluster-only windows of {sum(int((D[p]['amp'] >= AMP_FIT).sum()) for p in 'SML')} S/M/L captures; "
            f"R pinned to kernel_96000 at 300-3000 Hz (gain {20 * np.log10(gain):+.3f} dB, delay {tau:+.4f} samples removed)")
     k = Kernel(g, FS96, source=src, lead=lead96, hp_hz=hp)
@@ -524,7 +617,8 @@ def write_stage(name):
     rel = Gn / Go[:, None]
     LR = Gn[m, 0] / Gn[m, 1]
     pl = np.polyfit(f[m], np.unwrap(np.angle(LR)), 1)
-    info = dict(name=name, source=src, hp_hz=hp, fir_device_samples=LK, lead96=lead96, numbers=fir_numbers(LK),
+    info = dict(name=name, source=src, hp_hz=hp, fir_device_samples=cfg["lk"], tail=cfg["tail"], slow_term=cfg["nuis"],
+                lead96=lead96, numbers=fir_numbers(cfg["lk"], cfg["tail"]),
                 pinned_gain_db=float(20 * np.log10(gain)), pinned_delay_samples=float(tau),
                 L_vs_R_300_3000=dict(gain_db=float(np.mean(20 * np.log10(np.abs(LR)))),
                                      delay_samples=float(-pl[0] / (2 * np.pi) * FS96)),
@@ -540,7 +634,7 @@ def write_stage(name):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--stage", required=True, choices=["data", "align", "fit", "write"])
+    ap.add_argument("--stage", required=True, choices=["data", "align", "fit", "tail", "write"])
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--rounds", type=int, default=2, help="align: rounds")
     ap.add_argument("--name", default="chain2", help="write: kernel name")
@@ -551,6 +645,8 @@ def main():
         align_stage(a.rounds)
     elif a.stage == "fit":
         fit_stage()
+    elif a.stage == "tail":
+        tail_stage()
     else:
         write_stage(a.name)
 
