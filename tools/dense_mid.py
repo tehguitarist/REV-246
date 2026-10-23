@@ -119,10 +119,11 @@ def keys_for(rts):
 
 def tag(fold):
     return fold + ("_" + "_".join(f"{c}{v:g}" for c, v in sorted(SUBSET.items())) if SUBSET else "") + ("_G" if THROUGH_G else "") + \
-        ("" if BASIS == "dense" else "_" + BASIS) + ("" if FIT_BAND == BAND else f"_band{FIT_BAND[0]}-{FIT_BAND[1]}")
+        ("" if BASIS == "dense" else "_" + BASIS) + ("" if FIT_BAND == BAND else f"_band{FIT_BAND[0]}-{FIT_BAND[1]}") + \
+        ("" if WIN is None else f"_win{WIN[0]}-{WIN[1]}")
 
 
-BASIS = "dense"                                                     # --basis dense | taps | kernelK
+BASIS = "dense"                                                     # --basis dense | taps | kernelK | common
 FIT_BAND, SOS_FIT = BAND, SOSM                                      # --band lo,hi: the fitting band (prep's residual is 80-1500 Hz)
 
 
@@ -136,6 +137,14 @@ def basis_map(J):
         for i, L in enumerate(J.Lx):
             off[(c, i)] = o
             o += L
+    if BASIS == "common":                                           # one correction per channel shared by the four loops
+        n = min(J.Lx)
+        M = lil_matrix((o, 2 * n))
+        for c in (0, 1):
+            for i in range(4):
+                for t in range(n):
+                    M[off[(c, i)] + t, c * n + t] = 1.0
+        return M.tocsr()
     taps = q2.tap_table()
     K = int(BASIS[6:]) if BASIS.startswith("kernel") else 0
     M = lil_matrix((o, len(taps) if BASIS == "taps" else 2 * K + 1))
@@ -148,9 +157,18 @@ def basis_map(J):
     return M.tocsr()
 
 
+WIN = None                                                          # --win s0,ext: the correction's support (default q1's 230, 1700)
+
+
+def set_win():
+    q1.EXT = 1700 if WIN is None else WIN[1]
+    if WIN is not None:
+        q1.S0 = WIN[0]
+
+
 def fit(fold, iters):
     from scipy.sparse.linalg import LinearOperator, lsqr
-    q1.EXT = 1700
+    set_win()
     groups = [load(k) for k in keys_for(FOLDS[fold])]
     J = q1.Joint(groups)
     off = 8 + 2 * q1.LFIR
@@ -171,7 +189,7 @@ def fit(fold, iters):
 
 
 def score(fold):
-    q1.EXT = 1700
+    set_win()
     x = np.load(os.path.join(OUT, f"x_{tag(fold)}.npy"))
     test = [r for r in sorted({rt for f_ in FOLDS.values() for rt in f_}) if r not in FOLDS[fold]]
     os.makedirs(os.path.join(OUT, f"score_{tag(fold)}"), exist_ok=True)
@@ -233,8 +251,10 @@ def main():
     ap.add_argument("--through-g", action="store_true")
     ap.add_argument("--basis", default="dense")
     ap.add_argument("--band", default=None)
+    ap.add_argument("--win", default=None)
     a = ap.parse_args()
-    global THROUGH_G, BASIS, FIT_BAND, SOS_FIT
+    global THROUGH_G, BASIS, FIT_BAND, SOS_FIT, WIN
+    WIN = tuple(int(x) for x in a.win.split(",")) if a.win else None
     THROUGH_G, BASIS = a.through_g, a.basis
     if a.band:
         FIT_BAND = tuple(int(x) for x in a.band.split(","))
