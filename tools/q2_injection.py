@@ -1506,8 +1506,16 @@ def final_G(lab, b230, law, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=No
     """The final model's group spectra for one setting with the loop terms of final_stage (law["lf"] keyed by float).
     Gmod: a function (lab, law, w, Gs) -> Gs applied to the loop responses last (a candidate change on top)."""
     w = 2 * np.pi * np.fft.rfftfreq(q1.grid_n(lab["rt"]))
+    Gs = final_Gs(lab, law, w, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp, b230)
+    if Gmod:
+        Gs = Gmod(lab, law, w, Gs)
+    return make_G(lab, law, Gs, b230, FINAL_DIFF)
+
+
+def final_Gs(lab, law, w, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, b230=0.0, dc_min=DC_MIN, beta=FINAL_BETA):
+    """final_G's loop responses on the grid w (dc_min, beta: the DC floor's constants, model_s_results 25.5)."""
     p_map = (lambda p: min(p + pramp[0] * max(0.0, p - pramp[1]), P_MAX)) if pramp else None   # --pramp c,p0 (model_s_results 22.8)
-    Gs = G_capped(lab, law, w, beta=FINAL_BETA, gamma=gamma, hf_dp=hfdp, p_map=p_map)
+    Gs = G_capped(lab, law, w, dc_min=dc_min, beta=beta, gamma=gamma, hf_dp=hfdp, p_map=p_map)
     if tilt and str(lab["lf"]) in tilt:            # --tilt: a per-LF-step magnitude shape in dB/s on every loop (model_s_results 22.4)
         S = np.interp(w / (2 * np.pi) * q1.FS, tilt["f_hz"], tilt[str(lab["lf"])])
         Gs = [Gi * 10 ** (S * Pi / (20 * q1.FS)) for Gi, Pi in zip(Gs, q1.P)]
@@ -1524,9 +1532,7 @@ def final_G(lab, b230, law, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=No
     if loopk:                                       # --loopb: the AP230 step's two-tap F(k b) in every loop as well
         bl = loopk * b230
         Gs = [Gi * ((1 - bl) + bl * np.exp(-1j * w)) for Gi in Gs]
-    if Gmod:
-        Gs = Gmod(lab, law, w, Gs)
-    return make_G(lab, law, Gs, b230, FINAL_DIFF)
+    return Gs
 
 
 def final_stage(workers, only=None, compact=None, ap230=None, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, lfdc=None):

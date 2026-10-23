@@ -2155,3 +2155,31 @@ All 128 settings, 512 captures, 100 Hz–10 kHz, R null, fade-compensated [exces
 - **In the scored band the gain is small** (LF 0.4 +0.9…+1.2 dB, all 128 +0.2…+0.4), because 100 Hz–10 kHz energy is dominated by 0.3–3 kHz. **Below 200 Hz it is §25.2's table**, the same per-fold constants: LF 0.4 at 100–200 Hz −40.2 / −35.7 → −49.3 / −47.1 dB (chain3), the other LF steps untouched.
 - **This is the S baseline from here on** (constants `analysis/loop_cv/lf04dc/fold_all.json`). Not yet re-scored on chain3 against refitted repeat references (`nulls_free` on chain3, NEXT_STEPS §2).
 
+
+### 25.5 LF 0.1 and the DC floor (`lowband_shelf.py --stage floor | floorscore | floorreport`) **[S for the deep floor's level; open for its form at the knee; baseline unchanged]**
+
+```
+EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 3 -- .venv/bin/python tools/lowband_shelf.py --stage floor        # chain3_shelf_floor/ (not committed)
+EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 3 -- .venv/bin/python tools/lowband_shelf.py --stage floorscore   # chain3_shelf_floorscore/
+EMT_KERNEL=chain3 .venv/bin/python tools/lowband_shelf.py --stage floorreport                                                       # analysis/lowband/chain3_shelf_floor_report.log
+```
+
+On the §25.4 baseline (its fold terms and LF 0.4 dc), the four constants that act on LF 0.1 searched jointly: the law's LF 0.1 DC ratio (0.1300–0.1360, step 0.0002; law 0.1317), DC_MIN (0.170–0.200, step 0.005; 0.18), β (0–0.04; 0.019) and γ (−0.05–0; fold −0.02 / −0.03), 6,510 points per setting (`q2.final_Gs`, the loop responses of `final_G` with the floor's constants as arguments; the point at the baseline's constants reproduces it exactly). Costs per setting over all captures from 150 ms to the compensated end: 25–1000 Hz and 100 Hz–10 kHz. All 32 LF 0.1 settings, plus LF 0.4 / RT 0.3 (the only other setting under the floor) as a transfer check. **Choice per RT step, from the other RT steps' LF 0.1 settings:** the lowest mean low-band change (dB) among the points that do not worsen the mean broadband cost. 0.5 GB, 60 min for the grid, 8 min to score.
+
+- **The chosen constants are the same in every fold:** dc 0.1322–0.1326, **DC_MIN 0.185**, β 0.019, γ −0.03 (training: low band −3.0…−5.3 dB, broadband −1.6…−3.1 dB).
+- **Held out by RT step** (R, median over captures, §25.4 → chosen [excess over repeat]), 100–200 Hz and 100 Hz–10 kHz at 150–300 / 300–600 ms:
+
+  | Settings | 100–200 Hz | 100 Hz–10 kHz |
+  |---|---|---|
+  | LF 0.1, all | −28.4 → −35.6 / −24.0 → −31.3 [+28.8 → +21.8 / +13.4 → +7.2] | −41.9 → −44.5 / −36.4 → −38.3 [+13.2 → +11.3 / +11.4 → +9.0] |
+  | LF 0.1, RT 0.6 | −26.1 → −34.5 / −21.9 → −29.2 | −36.0 → −42.9 / −28.5 → −36.5 |
+  | LF 0.1, RT 0.8 | −27.9 → −38.6 / −23.4 → −32.6 | −38.0 → −46.1 / −30.8 → −41.5 |
+  | LF 0.1, RT 1.0 | −28.9 → −42.7 / −24.2 → −36.1 | −42.5 → −46.8 / −36.6 → −42.3 |
+  | **LF 0.1, RT 1.4** | −29.3 → **−24.4** / −24.5 → **−19.5** | −44.3 → **−41.1** / −38.7 → **−35.2** |
+  | LF 0.1, RT 1.8 / 2.2 / 2.5 | +2.3 / +4.2 / −2.8 dB (150–300), +2.4 / +3.5 / +1.2 (300–600) | within ±0.7 dB |
+  | **LF 0.4, RT 0.3** (transfer) | −21.2 → −23.1 / −16.3 → −17.9 | −27.8 → **−25.6** / −19.4 → **−17.4** |
+
+  RT 0.3–1.0 gain 4–14 dB, but RT 1.4 and the transfer setting lose 2–5 dB. **One set of floor constants does not transfer across the knee**, so it is not adopted.
+- **Why (per setting, from the same grids):** with β 0.019, γ −0.03 and dc 0.1324 fixed, the best DC_MIN by either cost is 0.18–0.20 at RT 0.3 / 0.6 / 0.8 / 1.0 (mostly 0.185–0.19; RT 0.3 / HF 0.2 alone 0.170), also at **LF 0.4 / RT 0.3** (0.185–0.19); **0.175 at RT 1.4 at all four HF steps**; 0.185–0.19 at RT 1.8 (where raising DC_MIN floors more of the four loops); RT 2.2 / 2.5 have no floored loop. With γ's extra loss included (0.03 · 60 / (hi · RT) · P / fs dB per pass), the **deep floor is one level: 14.7 dB per pass at DC** at RT 0.3–1.0 and across LF 0.1 / 0.4 (**S**), against the model's 14.9 + γ. **Just past the knee (RT 1.4, law 16–20 dB per pass) the unit loses about 15.2 dB; just before it (RT 1.8, law 13–15 dB) it loses less than the law** (§25.1: ddc +0.32 dB per pass). The true DC loss is not min(law, floor): it overshoots the deep floor near the knee and undercuts the law below it. That is the plateau-and-knee of §22.2–22.3 seen at DC.
+- **Not a constant shift of the law's dc either:** dc acts only on loops above the floor (and through β's lift); its choice, 0.1324 (+0.5 %), is stable but cannot act at RT ≤ 1.4.
+- **Open (H):** the floor's form near the knee. Candidates: a smooth knee with overshoot from a clamp on one shelf coefficient (the DC gain then keeps moving with the law beyond the knee), a length-scaled floor (a minimum DC RT), or β's lift-proportional Nyquist loss in another form (§25.1's dhi: −0.14 / −0.05 / −0.03 / 0.00 / +0.01 dB per pass at RT 0.3 / 0.6 / 0.8 / 1.0 / 1.4, against β · lift = 1.3 / 0.5 / 0.3 / 0.19 / 0.06). Each is a few constants on the same grid machinery, chosen held out by RT step across the knee (RT 1.4 and 1.8 must be predicted, not fitted).

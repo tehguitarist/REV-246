@@ -10,6 +10,10 @@ free    per setting, the baseline's shelf replaced by one with pole a + da and t
         At LF 1.0 there is no shelf and da is undetermined (a control only).
 dc      LF 0.4: the law's shelf DC ratio (0.412) replaced by one constant on a grid, the lfrt LF 0.4 term removed
         (--keep-lfrt: kept); per setting the 25-1000 Hz cost and the band nulls of every capture at each grid value.
+floor   LF 0.1 (and LF 0.4 / RT 0.3, the other setting under the floor), on the §25.4 baseline: the law's LF 0.1 DC
+        ratio, DC_MIN, beta and gamma on a joint grid, the 25-1000 Hz and 100 Hz-10 kHz costs per setting;
+floorscore  each setting with the constants chosen on LF 0.1 leaving its RT step out (mean of the two relative costs);
+floorreport  the choices per fold and the held-out nulls -> analysis/lowband/<kernel>_shelf_floor_report.log.
 report  free: the fitted numbers and nulls by LF / RT; dc: the constant chosen leaving one RT step out (median of the
         per-setting best over the other RT steps), each RT step scored with its own constant, against the baseline and
         the repeat capture (lowband.py's score stage on chain3).
@@ -35,6 +39,7 @@ q2, q1 = lb.q2, lb.q1
 m = q1.m
 FS, PRE = q2.FS, q2.PRE
 SOSF = butter(3, (25, 1000), btype="band", fs=FS, output="sos")    # the fitting band
+SOSB = butter(3, (100, 10000), btype="band", fs=FS, output="sos")  # floor stage: the broadband guard
 PBAR = float(np.mean(q1.P))
 GRID = np.round(np.arange(0.405, 0.43001, 0.00025), 5)               # dc stage: LF 0.4's DC ratio
 LF_DC = 0.4
@@ -62,30 +67,34 @@ def base_r0(lab, law):
     return out
 
 
-def prep(key, terms=None):
+def prep(key, terms=None, lfdc=None):
     """The baseline for one setting: loop responses, excitation spectra, cluster, and every capture fitted (clock,
-    shift, gain, fade) as lowband.py. terms: a replacement for lowband.fold_terms."""
+    shift, gain, fade) as lowband.py. terms: a replacement for lowband.fold_terms; lfdc: {lf: law DC ratio}."""
     info, fade, _, _, eps0 = q2.q1_tables()
     ap = json.load(open(os.path.join(q2.OUT, lb.lf_.AP230)))
     ends = json.load(open(os.path.join(q2.OUT, "ramp.json")))
     v, law, _ = q2.final_injection(compact=lb.lf_.COMPACT)
+    for lf_k, x in (lfdc or {}).items():
+        law["lf"][float(lf_k)]["dc"] = float(x)
     q1.EXT = 1700
     lab = dict(lf=info[key]["lf"], rt=info[key]["rt"], hf=info[key]["hf"])
     b230 = ap["steps"][ap["settings"][key]["step"]]
     keep = []
-    G = q2.final_G(lab, b230, law, **(terms or lb.fold_terms)(lab["rt"]), Gmod=lambda l_, w_, ww, Gs: keep.append(Gs) or Gs)
+    ft = (terms or lb.fold_terms)(lab["rt"])
+    G = q2.final_G(lab, b230, law, **ft, Gmod=lambda l_, w_, ww, Gs: keep.append(Gs) or Gs)
     caps = []
     for amp, nm in q2.files_of(info[key]):
         y, mdl, g, te = q2.fit_capture(G, v, amp, nm, fade[nm], eps0[nm], ends[nm], 1700)
         n = len(y)
         i0, i1 = PRE + int(0.15 * FS), min(PRE + int(te * FS), n)
-        caps.append(dict(amp=amp, y=y, mdl=mdl, g=g, te=te, norm=float(np.sqrt(np.sum(sosfiltfilt(SOSF, y, axis=0)[i0:i1] ** 2)))))
+        caps.append(dict(amp=amp, y=y, mdl=mdl, g=g, te=te, norm=float(np.sqrt(np.sum(sosfiltfilt(SOSF, y, axis=0)[i0:i1] ** 2))),
+                         normB=float(np.sqrt(np.sum(sosfiltfilt(SOSB, y, axis=0)[i0:i1] ** 2)))))
     N = G["N"]
     J = q1.Joint([dict(G, files=[dict(y=np.zeros((N, 2)), w=np.ones(N), amp=0)])])
     cl, f, xs = J.split(v)
     F, X = J._spectra(f, xs, N)
     return dict(key=key, lab=lab, law=law, G=G, N=N, w=2 * np.pi * np.fft.rfftfreq(N), F=F, X=X, Gs0=keep[0],
-                clus=J.cluster(cl), caps=caps, r0=base_r0(lab, law))
+                clus=J.cluster(cl), caps=caps, r0=base_r0(lab, law), terms=ft, b230=b230)
 
 
 def loops(d, th):
@@ -113,14 +122,14 @@ def model(d, c, r):
     return (c["amp"] / 90) * d["clus"][:n] + r[:n]
 
 
-def residual(d, Gs, caps, t0=0.15):
-    r = reverb(d, Gs)
+def residual(d, Gs, caps, t0=0.15, sos=SOSF, norm="norm", r=None):
+    r = reverb(d, Gs) if r is None else r
     out = []
     for c in caps:
         n = len(c["y"])
         i0, i1 = PRE + int(t0 * FS), min(PRE + int(c["te"] * FS), n)
-        e = sosfiltfilt(SOSF, c["y"] - model(d, c, r) * c["g"][:n], axis=0)[i0:i1]      # g is (n, 2)
-        out.append(e.ravel() / c["norm"])
+        e = sosfiltfilt(sos, c["y"] - model(d, c, r) * c["g"][:n], axis=0)[i0:i1]      # g is (n, 2)
+        out.append(e.ravel() / c[norm])
     return np.concatenate(out)
 
 
@@ -162,11 +171,18 @@ def run(stage, only, keep):
     info = q2.q1_tables()[0]
     od = outdir(stage, keep)
     os.makedirs(od, exist_ok=True)
-    keys = sorted(k for k in info if (only is None or k in only) and (stage == "free" or info[k]["lf"] == LF_DC))
+    sel = {"free": lambda g: True, "dc": lambda g: g["lf"] == LF_DC,
+           "floor": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] == 0.3)}
+    sel["floorscore"] = sel["floor"]
+    keys = sorted(k for k in info if (only is None or k in only) and sel[stage](info[k]))
     keys = [k for k in keys if not os.path.exists(os.path.join(od, k + ".json"))]
     print(f"{stage}: {len(keys)} settings to do", flush=True)
     for i, k in enumerate(keys):                                         # one process, ~0.6 GB (measured)
-        free(k, os.path.join(od, k + ".json")) if stage == "free" else dc(k, os.path.join(od, k + ".json"), keep)
+        path = os.path.join(od, k + ".json")
+        if stage == "dc":
+            dc(k, path, keep)
+        else:
+            {"free": free, "floor": floor, "floorscore": floorscore}[stage](k, path)
         print(f"  {i + 1}/{len(keys)} {k}", flush=True)
 
 
@@ -217,13 +233,140 @@ def report_dc(keep):
     return out
 
 
+# ---------------------------------------------------------------- the DC floor and LF 0.1's DC ratio (model_s_results 25.5)
+CV04 = os.path.join(ROOT, "analysis", "loop_cv", "lf04dc")           # the §25.4 baseline's folds
+FL_DC = np.round(np.arange(0.1300, 0.13601, 0.0002), 5)               # LF 0.1's DC ratio (law 0.1317)
+FL_DCMIN = np.round(np.arange(0.170, 0.2001, 0.005), 4)               # DC_MIN (0.18)
+FL_BETA = (0.0, 0.01, 0.019, 0.03, 0.04)                              # beta (0.019)
+FL_GAMMA = (-0.05, -0.04, -0.03, -0.02, -0.01, 0.0)                   # gamma (fold: -0.02 / -0.03)
+FL_GRID = [(a, b, c, e) for a in FL_DC for b in FL_DCMIN for c in FL_BETA for e in FL_GAMMA]
+
+
+def cv_fold(rt):
+    return json.load(open(os.path.join(CV04, f"fold_{rt}.json")))
+
+
+def cv_terms(rt):
+    """The §25.4 fold's loop terms for RT step rt, as final_G arguments."""
+    f = cv_fold(rt)
+    return dict(gamma=f["gamma"], lfrt=f["lfrt"], hfdp=f["hfdp"], pramp=tuple(f["pramp"]))
+
+
+def floor_Gs(d, dc01, dc_min, beta, gamma):
+    """The §25.4 loop responses with LF 0.1's DC ratio and the floor's constants replaced."""
+    law = dict(d["law"], lf={**d["law"]["lf"], 0.1: dict(d["law"]["lf"][0.1], dc=float(dc01))})
+    t = dict(d["terms"], gamma=gamma)
+    return q2.final_Gs(d["lab"], law, d["w"], lfrt=t["lfrt"], gamma=t["gamma"], hfdp=t["hfdp"], pramp=t["pramp"], b230=d["b230"],
+                       dc_min=dc_min, beta=beta)
+
+
+def floored(lab, law, dc01, dc_min):
+    """Per loop: is the DC floor acting (G_capped's test)?"""
+    L = dict(law["lf"][lab["lf"]], **({"dc": dc01} if lab["lf"] == 0.1 else {}))
+    out = []
+    for Pi in q1.P:
+        kk = -3 * Pi / q1.FS
+        g = 10 ** (kk / (L["hi"] * lab["rt"]))
+        out.append(L["dc"] != L["hi"] and g * 10 ** (kk * (1 / (L["dc"] * lab["rt"]) - 1 / (L["hi"] * lab["rt"]))) < dc_min)
+    return out
+
+
+def floor(key, path):
+    """Per setting: the 25-1000 Hz and 100 Hz-10 kHz costs (150 ms to the compensated end, all captures) over FL_GRID.
+    Grid points that leave every loop's response unchanged share one evaluation (key: per loop, floored -> the floor's
+    constants and the DC ratio, which sets the floor's lift and with it beta's share; else the DC ratio only)."""
+    rt = q2.q1_tables()[0][key]["rt"]
+    d = prep(key, cv_terms, cv_fold(rt)["lfdc"])
+    lab, law = d["lab"], d["law"]
+    G0 = floor_Gs(d, law["lf"][0.1]["dc"], q2.DC_MIN, q2.FINAL_BETA, d["terms"]["gamma"])
+    chk = max(float(np.max(np.abs(a - b))) for a, b in zip(G0, d["Gs0"]))
+    r0 = reverb(d, d["Gs0"])
+    base = [float(np.sum(residual(d, None, d["caps"], r=r0) ** 2)), float(np.sum(residual(d, None, d["caps"], sos=SOSB, norm="normB", r=r0) ** 2))]
+    cache, rows = {}, []
+    for dc01, dc_min, beta, gamma in FL_GRID:
+        fl = floored(lab, law, dc01, dc_min)
+        dk = (dc01,) if lab["lf"] == 0.1 else ()
+        k = tuple(dk + (dc_min, beta, gamma) if f else dk for f in fl)
+        if k not in cache:
+            r = reverb(d, floor_Gs(d, dc01, dc_min, beta, gamma))
+            cache[k] = [float(np.sum(residual(d, None, d["caps"], r=r) ** 2)), float(np.sum(residual(d, None, d["caps"], sos=SOSB, norm="normB", r=r) ** 2))]
+        rows.append(cache[k])
+    json.dump(dict(key=key, **lab, check=chk, base=base, n_eval=len(cache), grid=[list(x) for x in FL_GRID], cost=rows), open(path, "w"))
+
+
+def floor_choice(D, train):
+    """Over the training settings, mean dB change of each cost re the §25.4 baseline; among the grid points that do not
+    worsen the broadband (mean <= 0 dB), the one with the lowest low-band change. Returns it and (low, broad) dB."""
+    u = [d for d in D if d["rt"] in train]
+    low = np.mean([10 * np.log10(np.array(d["cost"])[:, 0] / d["base"][0]) for d in u], 0)
+    brd = np.mean([10 * np.log10(np.array(d["cost"])[:, 1] / d["base"][1]) for d in u], 0)
+    ok = brd <= 1e-9
+    i = int(np.argmin(np.where(ok, low, np.inf))) if ok.any() else int(np.argmin(brd))
+    return FL_GRID[i], (float(low[i]), float(brd[i]))
+
+
+def floor_load():
+    return [json.load(open(p)) for p in glob.glob(os.path.join(outdir("floor"), "*.json"))]
+
+
+def floorscore(key, path):
+    """Per setting: band nulls of every capture with the floor constants chosen leaving its RT step out (on LF 0.1)."""
+    D = [d for d in floor_load() if d["lf"] == 0.1]
+    rt = q2.q1_tables()[0][key]["rt"]
+    (dc01, dc_min, beta, gamma), _ = floor_choice(D, [r for r in sorted({d["rt"] for d in D}) if r != rt])
+    d = prep(key, cv_terms, cv_fold(rt)["lfdc"])
+    r = reverb(d, floor_Gs(d, dc01, dc_min, beta, gamma))
+    json.dump(dict(key=key, **d["lab"], chosen=[dc01, dc_min, beta, gamma], amps=[c["amp"] for c in d["caps"]],
+                   base=[lb.band_nulls(c["y"], c["mdl"] * c["g"], c["te"]) for c in d["caps"]],
+                   held=[lb.band_nulls(c["y"], model(d, c, r) * c["g"], c["te"]) for c in d["caps"]]), open(path, "w"))
+
+
+def report_floor():
+    D = floor_load()
+    D1 = [d for d in D if d["lf"] == 0.1]
+    rts = sorted({d["rt"] for d in D1})
+    out = [f"## The DC floor and LF 0.1's DC ratio ({len(D)} settings; grid {len(FL_GRID)} points; law dc 0.1317, DC_MIN 0.18, beta 0.019)",
+           f"render check (grid point at the baseline's constants vs the baseline): max |dG| {max(d['check'] for d in D):.1e}"]
+    for rt in rts + ["all"]:
+        tr = [r for r in rts if r != rt]
+        (a, b, c, e), (dl, db) = floor_choice(D1, tr)
+        own = [floor_choice([d], [d["rt"]])[0] for d in D1 if d["rt"] == rt]
+        out.append(f"- {'all RT steps' if rt == 'all' else f'hold RT {rt}'}: dc {a:.4f}, DC_MIN {b:.3f}, beta {c:g}, gamma {e:+.2f} "
+                   f"(training mean cost change: low {dl:+.2f} dB, broad {db:+.2f} dB)" +
+                   ("" if rt == "all" else "; own best per setting: " + ", ".join(f"({x[0]:.4f}, {x[1]:.3f}, {x[2]:g}, {x[3]:+.2f})" for x in own)))
+    S = [json.load(open(p)) for p in glob.glob(os.path.join(outdir("floorscore"), "*.json"))]
+    if not S:
+        return out
+    rep = {(k, r["amp"]): r["repeat"] for k in {s_["key"] for s_ in S} for r in json.load(open(os.path.join(lb.outdir("base"), k + ".json")))}
+
+    def cell(ss, b, w, f, excess):
+        x = [s_[f][j][b][w][1][0] - (rep[(s_["key"], a)][b][w][1][0] if excess else 0) for s_ in ss for j, a in enumerate(s_["amps"])
+             if w in s_[f][j][b] and (not excess or w in rep[(s_["key"], a)][b])]
+        return np.median(x) if x else np.nan
+    out.append("\n### Held out by RT step: R null, median over captures, §25.4 baseline -> chosen constants [excess over repeat]")
+    groups = [("LF 0.1", lambda s_: s_["lf"] == 0.1)] + [(f"LF 0.1 RT {rt}", lambda s_, rt=rt: s_["lf"] == 0.1 and s_["rt"] == rt) for rt in rts] + \
+             [("LF 0.4 RT 0.3", lambda s_: s_["lf"] == 0.4)]
+    for b in BANDS:
+        out.append(f"#### {b} Hz, " + " | ".join(WS))
+        for g, sel in groups:
+            ss = [s_ for s_ in S if sel(s_)]
+            if ss:
+                out.append(f"  {g:14s} " + " | ".join(f"{cell(ss, b, w, 'base', False):.1f} -> {cell(ss, b, w, 'held', False):.1f} "
+                                                      f"[{cell(ss, b, w, 'base', True):+.1f} -> {cell(ss, b, w, 'held', True):+.1f}]" for w in WS))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["free", "dc", "report"], required=True)
+    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "report", "floorreport"], required=True)
     ap.add_argument("--only", default=None)
     ap.add_argument("--keep-lfrt", action="store_true")
     a = ap.parse_args()
-    if a.stage == "report":
+    if a.stage == "floorreport":
+        out = report_floor()
+        open(os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_floor_report.log"), "w").write("\n".join(out) + "\n")
+        print("\n".join(out))
+    elif a.stage == "report":
         out = report_free() + [""] + report_dc(False) + [""] + report_dc(True)
         open(os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_report.log"), "w").write("\n".join(out) + "\n")
         print("\n".join(out))
