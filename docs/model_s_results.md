@@ -2071,3 +2071,62 @@ All 128, median null L / R, chain2 → chain3 (chain2 with §23.2's correction),
 - **Leftover transfer** (`transfer` on chain3, LF 1.0 / 2.0, HF 1.0, RT ≥ 1.0), L ; R, dB / deg: 25 Hz −0.01 / −1.4 ; +0.01 / −1.1; 30 Hz −0.07 / −0.4 ; 0.00 / −0.1; 40 Hz 0.00 / +0.5 ; +0.07 / −0.1; 50 Hz +0.06 / +0.1 ; −0.02 / −0.1; ≤ 0.02 dB and 0.2° from 60 Hz up. The 25 Hz phase is what keeps 25–50 Hz short of §23.2's figure; not a clean high-pass corner error (that would fall as 1/f: −1.2° at 30 Hz, measured −0.1…−0.4°). Open.
 - **What's left in S's low band:** the 25 Hz phase above; the LF 0.4 / 0.1 decay errors at 80–250 Hz (§23.4); 100–200 Hz at +12…+16 dB on all settings, which neither the kernel nor §23.2 moves much and which is not a fixed transfer (open: §23.4's decay error reaches into LF 1.0 / 2.0 at short RT?).
 - **The §22.9 headline on chain3:** 100 Hz–10 kHz moves ≤ 0.4 dB per window, so it stands. Its excess figures use `nulls_free` (the free per-setting models' repeat references); per NEXT_STEPS §2 those must be refitted before being taken on new IRs (`q2_injection.py --stage free --refs`, then `nulls`), not done here.
+
+## 25. The LF shelf below 400 Hz: LF 0.4's DC constant (`tools/lowband_shelf.py`) **[S for LF 0.4 at RT ≥ 0.8; open for RT ≤ 0.6, LF 0.1]**
+
+```
+EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 3 -- .venv/bin/python tools/lowband_shelf.py --stage free             # analysis/lowband/chain3_shelf_free/ (not committed)
+EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 3 -- .venv/bin/python tools/lowband_shelf.py --stage dc [--keep-lfrt]  # chain3_shelf_dc[K]/
+EMT_KERNEL=chain3 .venv/bin/python tools/lowband_shelf.py --stage report                                                                 # analysis/lowband/chain3_shelf_report.log
+```
+
+§24 left S's 100–200 Hz band at +12…+16 dB over the repeat-capture null on all 128 settings. By LF step (`chain3_base_report.log`) that is almost all LF 0.1 and 0.4: +26…+29 dB at 150–300 ms against +5…+8 dB at LF 1.0 / 2.0, so it is §23.4's decay error. Model and captures as `lowband.py` (§22.9 baseline, each setting with its RT fold's loop terms, clock / shift / gain per capture, fade-compensated, chain3); nulls are R unless stated, repeat reference = the next AMPL capture.
+
+> **Summary.** The shelf's pole does not move; its **DC gain** is off. At LF 0.4 one constant fixes most of it: the shelf's DC RT ratio is **0.414, not the law's 0.412** (the law's value is a median of per-capture annihilator fits on the old IRs, §14.2). Chosen leaving each RT step out (0.4136–0.4140 in every fold) and with nothing else changed, so no new parameter, all LF 0.4 settings gain 4–12 dB below 200 Hz (100–200 Hz −40.2 / −35.7 → **−49.3 / −47.1 dB** at 150–300 / 300–600 ms) and 1 dB in 100 Hz–10 kHz; no RT step loses more than 0.7 dB in any band. RT 0.3 / 0.6 need more than a constant, and LF 0.1 has a larger DC error tangled with the DC floor (open).
+
+### 25.1 A free shelf per setting (`free`)
+
+The baseline's shelf replaced by one with pole a + da and DC / Nyquist per-pass gains changed by ddc / dhi dB × Pᵢ / P̄ (length-scaled, as the laws): 3 numbers per setting, fitted on the 25–1000 Hz residual from 150 ms to each capture's compensated end on all but one capture, scored on the one left out (held out by capture only, so this shows the form, not a law). Median over HF steps and folds:
+
+| LF, RT | da | ddc dB/pass | dhi dB/pass | 100–200 Hz, 150–300 / 300–600 ms | 100 Hz–10 kHz |
+|---|---|---|---|---|---|
+| 0.4, 0.8 | −0.0001 | +0.101 | +0.002 | −34.7 → −49.4 / −28.9 → −42.5 | −44.7 → −47.7 / −38.9 → −41.3 |
+| 0.4, 1.0 | −0.0002 | +0.064 | +0.008 | −38.3 → −53.0 / −32.6 → −45.7 | −45.5 → −45.9 / −39.9 → −39.0 |
+| 0.4, 1.4 | −0.0002 | +0.035 | +0.006 | −42.2 → −56.4 / −36.3 → −52.6 | −48.8 → −51.5 / −43.6 → −46.8 |
+| 0.4, 2.5 | −0.0002 | +0.015 | +0.004 | −48.6 → −58.1 / −42.3 → −55.3 | −49.9 → −49.7 / −46.2 → −46.5 |
+| 0.4, 0.6 | 0.0000 | +0.347 | −0.016 | −24.3 → −35.4 / −19.2 → −28.7 | −37.3 → −42.9 / −31.1 → −36.6 |
+| 0.1, 0.6–1.0 | −0.0001 | +0.28…+0.31 | −0.05…+0.00 | −26…−29 → −47…−48 / −22…−24 → −33…−38 | +4…+9 dB |
+| 0.1, 1.4 | −0.0003 | **−0.163** | +0.013 | −29.3 → −34.9 / −24.5 → −29.8 | +1 dB |
+| 0.1, 1.8 / 2.2 / 2.5 | −0.0002 | +0.318 / +0.083 / +0.042 | ≈ 0 | +3…+13 dB | 0…+3 dB |
+| 2.0, 0.6–1.0 | −0.0004 | +0.004…+0.007 | −0.006…−0.024 | +3…+6 dB | +3…+5 dB |
+| 2.0, ≥ 1.4 | −0.0004 | ≤ 0.004 | ≈ 0 | +1…+3 dB | +0.5…+2 dB |
+
+- **The pole stays at the law's 0.9167** (|da| ≤ 0.0004 at every LF 0.4 / 0.1 / 2.0 step except LF 0.4 / RT 0.3), so §23.4's pole-shift reading (20–30 % of the error) is ruled out. The free per-capture annihilator fits (§14.2, old IRs) showed the pole rising to 0.922 at short RT; that was a trade-off inside those fits.
+- **LF 0.4:** the model loses too much at DC, by 0.10 / 0.064 / 0.035 / 0.015 dB per pass at RT 0.8 / 1.0 / 1.4 / 2.5. Against the law's DC loss per pass (∝ 1 / (dc · RT)) that is one ratio: 0.414–0.416 at every RT from 0.8 (§25.2). RT 0.6 wants +0.35 (ratio 0.423), RT 0.3 (under the DC floor) more.
+- **LF 0.1:** ddc ≈ +0.3 dB per pass wherever the DC floor (0.18 per pass) acts or nearly acts (RT ≤ 1.8), except a sign flip at RT 1.4; small at RT 2.2 / 2.5. Not one constant: the floor, β and γ (§22.3) take part.
+- **LF 1.0** is only a control: there is no shelf and da is undetermined (the fits wander, some held-out captures get worse). Read nothing from it.
+- Parameters: 3 per setting; held out by capture only.
+
+### 25.2 LF 0.4: the DC constant held out by RT step (`dc`)
+
+The law's LF 0.4 DC ratio replaced by one constant on a grid (0.405–0.430, step 0.00025; the null swings 3–10 dB per 0.001 near the optimum), per setting the 25–1000 Hz cost on all captures. For each RT step the constant is the median of the per-setting best over the *other* RT steps; that step's settings are scored with it on every capture. Two variants: with the `lfrt` LF 0.4 term (§22.2, rate × (1 − 0.0076 · max(0, 1.8 − RT))) removed (same constant count as §22.9) or kept (the law's dc re-estimated, nothing added). Gating the training steps to RT ≥ 0.8 changes the constants by ≤ 0.0002 and the nulls by ≤ 1 dB.
+
+- **Constants chosen per held-out RT:** 0.41363–0.41400 (both variants, both gates). In-sample best per RT: 0.405 / 0.4228 / 0.4158 / 0.4148 / 0.4139 / 0.4133 / 0.4134 / 0.4134 at RT 0.3 / 0.6 / 0.8 / 1.0 / 1.4 / 1.8 / 2.2 / 2.5 (lfrt kept).
+- **lfrt kept (adopt):** all 32 LF 0.4 settings, 128 captures, null R base → held out [excess over repeat]:
+
+  | Band | 150–300 ms | 300–600 ms | 600–1000 ms |
+  |---|---|---|---|
+  | 25–50 Hz | −34.3 → −39.2 [+9.2 → +5.1] | −31.0 → −38.1 [+20.3 → +13.8] | −20.3 → −22.5 [+3.0 → +0.5] |
+  | 50–100 Hz | −38.6 → −47.2 [+24.4 → +16.7] | −34.2 → −44.5 [+16.2 → +7.9] | −26.2 → −30.0 [+2.7 → +0.3] |
+  | 100–200 Hz | −40.2 → **−49.3** [+26.1 → +17.2] | −35.7 → **−47.1** [+16.4 → +9.5] | −28.6 → −33.2 [+3.6 → +0.1] |
+  | 100 Hz–10 kHz | −46.6 → −47.8 [+11.1 → +10.1] | −42.3 → −43.3 [+7.4 → +6.6] | −38.2 → −38.0 [+0.9 → +0.9] |
+
+  By RT, 100–200 Hz at 300–600 ms: RT 0.8 −28.9 → −33.7, 1.0 −32.6 → −40.7, 1.4 −36.3 → −52.0, 2.5 −42.3 → −50.5; 100 Hz–10 kHz +1.7…+2.4 dB at RT 0.8 / 1.0, within ±0.8 dB elsewhere; RT 0.3 unchanged, RT 0.6 +1…+1.5 dB.
+- **lfrt removed:** the low band 0.5–2 dB better still at RT 0.8–1.4 (100–200 Hz −48.9 at 300–600 ms), but 100 Hz–10 kHz loses 2–5 dB at RT 0.6–1.0 (RT 0.8 300–600 ms −38.9 → −34.1): lfrt carries a real mid-band term, so keep it.
+- 600–1000 ms at RT ≤ 1.0 lies past most captures' compensated end (both columns read 0 dB there); the "all" medians in that window are RT ≥ 1.4.
+
+### 25.3 What this answers, and what's next
+
+- **The LF 0.4 shelf's DC constant is 0.414** (**S**: one constant, chosen held out by RT step, transfers to every RT ≥ 0.8; the law's 0.412 was off by 0.5 %, enough to leave LF 0.4 15–20 dB above the repeat null at 50–200 Hz). Not yet in the baseline code (`q1.fit_laws` still gives 0.4118); the clean way is an override of the law's LF 0.4 dc in `q2.final_G`'s callers, then re-run `loop_cv` so lfrt's constants are refitted on it.
+- **Left at LF 0.4:** +10…+17 dB over repeat below 200 Hz (the free fit reaches 3–5 dB further with its Nyquist term and per-RT ddc); RT 0.6 (in-sample best 0.423) and RT 0.3 (under the DC floor), which one constant does not fit.
+- **Next:** LF 0.1, where the DC error is about +0.3 dB per pass and follows the DC floor (DC_MIN 0.18, β, γ refitted on the low band, held out by RT); then LF 0.4 at RT ≤ 0.6 with the same floor terms; LF 2.0's small Nyquist term.
