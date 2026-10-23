@@ -1501,9 +1501,11 @@ def _final_setting(a_):
     q1.EXT = ext
     law["lf"] = {float(k): x for k, x in law["lf"].items()}
     fl = {}
-    if fc:                                          # --floorcells: this setting's floor constants (model_s_results 25.6)
+    if fc and "dc_min" in fc:                       # --floorcells: this setting's floor constants (model_s_results 25.6)
         law["lf"][0.1]["dc"] = fc["dc"]
         gamma, fl = fc["gamma"], dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
+    if fc and "hf_dp" in fc:                        # and its HF pole shift, on every loop (model_s_results 25.7)
+        hfdp = {str(lab["hf"]): fc["hf_dp"], "p_above": 0.0, "p_below": 1.0, "exclude_lf": []}
     G = final_G(lab, b230, law, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp, **fl)
     return [dict(key=key, **lab, amp=c["amp"], file=c["file"], **score_capture(G, v, c["amp"], c["file"], c["fade2"], c["eps"], ends[c["file"]], ext))
             for c in caps]
@@ -1724,7 +1726,7 @@ def main():
     ap.add_argument("--hfdp", default=None, help="final: a JSON {\"<hf>\": dp, \"p_below\": x}: HF pole shift at that HF step (G_capped hf_dp)")
     ap.add_argument("--tilt", default=None, help="final: a JSON of per-LF-step magnitude shapes in dB/s (loop_fir.py --stage tilt)")
     ap.add_argument("--gamma", type=float, default=0.0, help="final: where the DC floor acts, the loop's broadband decay rate x (1 - gamma) (G_capped)")
-    ap.add_argument("--floorcells", default=None, help="final: a JSON {key: {dc, dc_min, beta, gamma, gamma_dc}}: per-setting floor constants (model_s_results 25.6)")
+    ap.add_argument("--floorcells", default=None, help="final: a JSON {key: {dc, dc_min, beta, gamma, gamma_dc, hf_dp}}: per-setting floor constants and HF pole shift (model_s_results 25.6-25.7)")
     ap.add_argument("--lfdc", default=None, help="final: 'lf:dc[,lf:dc]': the law's shelf DC ratio at those LF steps (model_s_results 25)")
     ap.add_argument("--lfrt", default=None, help="final: a JSON of per-LF-step (a, b): each loop's broadband decay rate x (1 + a + b RT)")
     ap.add_argument("--bbtilt", type=float, default=0.0, help="final: each loop's broadband loss x (1 + c (hi - 1)), hi the LF step's Nyquist RT ratio")

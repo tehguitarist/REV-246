@@ -2228,3 +2228,33 @@ Every cell holds or gains in every band except RT 1.4 at 25–100 Hz (≤ +1.4 d
 - L / R all 128: 0–50 ms −50.5 / −50.4, 50–150 −49.9 / −50.4, 150–300 −46.5 / −47.0, 300–600 −41.9 / −42.3, 600–1000 −36.6 / −36.8 dB. LF 1.0 / 2.0 and LF 0.4 except RT 0.3 unchanged.
 - Per setting (300–600 ms excess): 23 better by > 0.5 dB, 2 worse (0.1_1.0_0.2 +1.8, 0.1_0.3_0.2 +0.7), 100 within ±0.5.
 - **This is the S baseline from here on.** Left at LF 0.1: +7.7…+9.1 dB over repeat at 150–600 ms; the knee's soft shape (a smooth form would replace the table if the cells follow one curve, as the per-loop DC losses suggest); HF 0.2 at LF 0.1.
+
+### 25.7 The HF pole per (HF, RT) cell (`lowband_shelf.py --stage hfcell`, `loop_cv.py --hfcells`) **[S for the transfer across LF; H for a per-step table; baseline]**
+
+```
+EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 3 -- .venv/bin/python tools/lowband_shelf.py --stage hfcell   # chain3_shelf_hfcell/ (not committed)
+EMT_KERNEL=chain3 .venv/bin/python tools/lowband_shelf.py --stage hfcellreport                                                  # analysis/lowband/chain3_shelf_hfcell_report.log
+EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --hfcells --stage constants|run|report                                      # analysis/loop_cv/hfcells/
+```
+
+§22.5 found the HF corrections "cell-specific": a pole shift that transfers across RT only within a regime (−0.002 at RT 1.4–1.8, +0.009 wanted at RT 1.0). §25.6 suggests the question to ask: do they transfer **across LF** within an (HF, RT) cell? On the §25.6 baseline (floor cells included), each of the 96 HF < 1 settings with the HF one-pole's pole shifted by dp on every loop (replacing the fold's hfdp; −0.012…+0.012, step 0.0005), the 100 Hz–10 kHz cost and nulls of every capture (0.5 GB, 22 min). The shift for each setting is the one with the lowest mean cost change over **its cell's other three LF steps**, so held out by setting.
+
+- **Within a cell the LF steps agree** (own best, LF 0.1 / 0.4 / 1.0 / 2.0): HF 0.2 at RT 0.6 +0.008 / +0.009 / 0.000 / +0.004, RT 0.8 +0.0015…+0.003, RT 1.0 −0.0015 (three of four), RT 1.4 −0.0025…−0.003, RT 1.8 −0.002…−0.0025 (LF 0.1 −0.0005), RT 2.2 0, RT 2.5 +0.0005; HF 0.4 at RT 1.0–2.2 +0.0005…+0.002; HF 0.6 at RT 0.6–0.8 +0.0015…+0.004, at RT ≥ 1.8 −0.0005. The signs and sizes change from cell to cell with no smooth RT law (HF 0.2: + at RT 0.6–0.8, − at 1.0–1.8, 0 at 2.2): **a per-(HF, RT) table (H)**, like the floor's (§25.6). HF 0.2 / RT 0.3 sits at the grid's edge (−0.012, against the 0.84 cap; −1 dB); HF 0.4 / RT 0.3 does not transfer (LF 2.0 +3.6 dB).
+- **Held out across LF** (`chain3_shelf_hfcell_report.log`, R, §25.6 → chosen [excess]): all HF < 1 at 150–300 / 300–600 / 600–1000 ms −46.2 → −47.7 / −41.5 → −43.7 / −36.4 → −37.2 [+8.2 → +7.0 / +6.6 → +4.1 / +2.5 → +0.4]; HF 0.2 / RT 0.6 −21.7 → −31.6 / −18.5 → −24.1; HF 0.2 / RT 1.4 and 1.8 3–5 dB.
+- Constants: one per (HF, RT) cell, 24.
+
+**In the baseline** (`q2_injection.py --floorcells` entries `hf_dp`; `loop_cv.py --hfcells`: the §25.6 folds and floor table plus the HF table; chain2, `nulls_free_chain2`; 1.8–2.3 GB, 41–134 s per fold). All 128 settings, 512 captures, 100 Hz–10 kHz, R, §25.6 → **§25.7** [excess]:
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| **All 128** | −50.4 [+5.1] → **−51.5 [+4.4]** | −47.0 [+7.7] → **−48.9 [+6.0]** | −42.3 [+5.6] → **−44.1 [+3.7]** | −36.8 [+0.8] → **−37.4 [+0.1]** |
+| HF 0.2 | −49.8 [+6.6] → −51.1 [+6.0] | −40.8 [+12.0] → −44.0 [+9.9] | −37.7 [+9.6] → −37.8 [+6.0] | −35.5 [+4.5] → −38.7 [+2.6] |
+| HF 0.4 | −50.2 [+6.3] → −51.7 [+4.8] | −46.2 [+8.8] → −49.2 [+6.1] | −42.0 [+5.6] → −44.7 [+4.2] | −36.8 [+2.3] → −37.4 [−0.2] |
+| LF 0.1 | −49.9 [+7.6] → −51.3 [+6.2] | −46.4 [+9.1] → −47.5 [+7.5] | −39.5 [+7.7] → −40.4 [+5.7] | −33.1 [+5.8] → −33.1 [+4.0] |
+| RT ≤ 1.0 | −49.8 [+7.0] → −51.0 [+5.9] | −43.2 [+7.7] → −45.2 [+5.9] | −36.8 [+4.3] → −38.5 [+2.5] | −28.8 [−1.2] → −29.1 [−1.5] |
+| RT ≥ 1.4 | −51.4 [+3.4] → −52.3 [+3.0] | −48.9 [+7.8] → −50.4 [+6.1] | −45.0 [+7.2] → −47.1 [+5.1] | −40.2 [+4.4] → −41.8 [+2.2] |
+
+- L / R all 128: 0–50 ms −51.2 / −50.9, 50–150 −50.9 / −51.5, 150–300 −48.1 / −48.9, 300–600 −43.5 / −44.1, 600–1000 −37.3 / −37.4 dB. Flat settings unchanged (HF 1.0).
+- Per setting (300–600 ms excess): median −1.0 dB; 66 better by > 0.5 dB, 7 worse (2.0_0.3_0.4 +3.9, 0.4_0.6_0.4 +2.1, 1.0_0.8_0.4 +1.2, 2.0_0.6_0.4 +1.1, 2.0_1.8_0.6 +0.7), 52 within ±0.5.
+- **This is the S baseline from here on.** Since §22.9: 50–150 ms −49.8 → −51.5, 150–300 −46.1 → −48.9, 300–600 −41.1 → −44.1 dB; excess +5.3 / +9.0 / +7.0 → +4.4 / +6.0 / +3.7 dB. Constants: §22.9's 13 law + 7 loop numbers, the law's LF 0.4 dc re-estimated, up to 36 floor-table and 24 HF-table values.
+- **Open:** whether the tables follow a curve in the coefficient domain (the firmware would hold coefficients, not dB; a smooth map from (HF, RT) to the pole value would replace 24 numbers); HF 0.4 / RT 0.3, HF 0.2 / RT 0.3 (grid edge); the HF 0.4 settings at short RT that got worse.

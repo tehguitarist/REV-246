@@ -6,6 +6,8 @@ Results: docs/model_s_results.md §22.9.
     for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage run --rt $rt; done
     EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage report         # -> report.log
 
+--hfcells (any stage, implies --cells): also the HF pole shift per (HF, RT) cell (model_s_results §25.7: lowband_shelf.py's
+hfcell grid, chosen per cell on its other LF steps) in cells.json; outputs in analysis/loop_cv/hfcells/, reported against cells/.
 --cells (any stage, implies --lf04dc): also the DC floor's constants per (LF, RT) cell under the floor (model_s_results
 §25.6: lowband_shelf.py's floor grid with gamma on the Nyquist end, chosen per cell on its other HF steps, so held out by
 setting) -> cells.json; outputs in analysis/loop_cv/cells/, reported against the lf04dc folds.
@@ -43,7 +45,21 @@ LFIR = lf_.OUT                                    # analysis/loop_fir/<kernel>
 BASE_OUT = OUT
 SHELF_DC = os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_dcK")   # lowband_shelf.py --stage dc --keep-lfrt
 SHELF_FLOOR = os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_floorN")   # lowband_shelf.py --stage floor --gamma-nyq
+SHELF_HF = os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_hfcell")      # lowband_shelf.py --stage hfcell
 CELLS = False
+HFCELLS = False
+
+
+def hfcells_table():
+    """Per setting with HF < 1: the HF pole shift of its (HF, RT) cell chosen on the cell's other LF steps (lowest mean
+    100 Hz-10 kHz cost change, lowband_shelf.report_hfcell's rule)."""
+    D = [json.load(open(p)) for p in glob.glob(os.path.join(SHELF_HF, "*.json"))]
+    rel = {d["key"]: np.array([10 * np.log10(g["cost"] / d["base"]) for g in d["grid"]]) for d in D}
+    out = {}
+    for d in D:
+        oth = [rel[e["key"]] for e in D if e["hf"] == d["hf"] and e["rt"] == d["rt"] and e["key"] != d["key"]]
+        out[d["key"]] = float(d["grid"][int(np.argmin(np.mean(oth, 0)))]["dp"])
+    return out
 
 
 def cells_table():
@@ -152,6 +168,9 @@ def constants_stage():
         print(line); log.append(line)
     if CELLS:
         t = cells_table()
+        if HFCELLS:
+            for k, dp in hfcells_table().items():
+                t.setdefault(k, {})["hf_dp"] = dp
         json.dump(t, open(os.path.join(OUT, "cells.json"), "w"), indent=1)
         for k in sorted(t):
             line = f"cell {k}: " + ", ".join(f"{n} {x:g}" for n, x in t[k].items() if n != "gamma_dc")
@@ -184,7 +203,7 @@ def report_stage():
     if OUT == BASE_OUT:                             # §21 -> the CV loop terms
         a = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit.json")))["rows"]}
     else:                                           # the §22.9 folds -> the same plus LF 0.4's dc (--cells: the lf04dc folds -> plus the floor cells)
-        ref = os.path.join(BASE_OUT, "lf04dc") if CELLS else BASE_OUT
+        ref = os.path.join(BASE_OUT, "cells" if HFCELLS else "lf04dc") if CELLS else BASE_OUT
         a = {(r["key"], r["amp"]): r for p in glob.glob(os.path.join(ref, "fold_*_rows.json")) for r in json.load(open(p))["rows"]}
     c = {(r["key"], r["amp"]): r for p in glob.glob(os.path.join(OUT, "fold_*_rows.json")) for r in json.load(open(p))["rows"]}
     rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("nulls_free") + ".json")))}
@@ -199,7 +218,7 @@ def report_stage():
         return np.median(e) if e else np.nan
     ks = list(c)
     out = [f"## All loop terms, leave-one-RT-out ({len({k[0] for k in ks})} settings, {len(ks)} captures; every setting scored with constants "
-           f"fitted without its RT step); R null [excess over repeat]: " + ("§21 -> CV" if OUT == BASE_OUT else "§25.4 -> + floor cells" if CELLS else "§22.9 -> + LF 0.4 dc") + "; kernel " + str(q1.ms.KTAG)]
+           f"fitted without its RT step); R null [excess over repeat]: " + ("§21 -> CV" if OUT == BASE_OUT else "§25.6 -> + HF cells" if HFCELLS else "§25.4 -> + floor cells" if CELLS else "§22.9 -> + LF 0.4 dc") + "; kernel " + str(q1.ms.KTAG)]
     out.append("| Settings | " + " | ".join(ws[1:5]) + " |\n|---|" + "---|" * 4)
     groups = [("All 128", lambda r: True), ("Flat", lambda r: r["lf"] == 1.0 and r["hf"] == 1.0), ("LF 0.1", lambda r: r["lf"] == 0.1),
               ("LF 0.4", lambda r: r["lf"] == 0.4), ("LF 2.0", lambda r: r["lf"] == 2.0), ("HF 0.2", lambda r: r["hf"] == 0.2),
@@ -226,11 +245,12 @@ def main():
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--lf04dc", action="store_true")
     ap.add_argument("--cells", action="store_true")
+    ap.add_argument("--hfcells", action="store_true", help="also the HF pole shift per (HF, RT) cell (implies --cells)")
     a = ap.parse_args()
-    if a.lf04dc or a.cells:
-        global OUT, CELLS
-        CELLS = a.cells
-        OUT = os.path.join(BASE_OUT, "cells" if a.cells else "lf04dc")
+    if a.lf04dc or a.cells or a.hfcells:
+        global OUT, CELLS, HFCELLS
+        CELLS, HFCELLS = a.cells or a.hfcells, a.hfcells
+        OUT = os.path.join(BASE_OUT, "hfcells" if a.hfcells else "cells" if a.cells else "lf04dc")
         os.makedirs(OUT, exist_ok=True)
     if a.stage == "constants":
         constants_stage()

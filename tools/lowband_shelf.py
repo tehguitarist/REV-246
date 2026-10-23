@@ -17,6 +17,8 @@ cellscore / cellreport  the same with the constants chosen per (LF, RT) cell on 
 floorreport  the choices per fold and the held-out nulls -> analysis/lowband/<kernel>_shelf_floor_report.log.
 perloop  LF 0.1 and LF 0.4 / RT <= 1.0 on the §25.4 baseline: each loop's DC and Nyquist gain changed freely (8 numbers),
         held out by capture: the unit's DC loss per loop against the law's (perloopreport).
+hfcell  HF < 1 on the §25.6 baseline: the HF pole shifted on a grid (100 Hz-10 kHz cost and nulls); hfcellreport chooses
+        it per (HF, RT) cell on the cell's other LF steps.
 report  free: the fitted numbers and nulls by LF / RT; dc: the constant chosen leaving one RT step out (median of the
         per-setting best over the other RT steps), each RT step scored with its own constant, against the baseline and
         the repeat capture (lowband.py's score stage on chain3).
@@ -177,7 +179,8 @@ def run(stage, only, keep):
     os.makedirs(od, exist_ok=True)
     sel = {"free": lambda g: True, "dc": lambda g: g["lf"] == LF_DC,
            "floor": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] == 0.3),
-           "perloop": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] <= 1.0)}
+           "perloop": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] <= 1.0),
+           "hfcell": lambda g: g["hf"] < 1.0}
     sel["floorscore"] = sel["cellscore"] = sel["floor"]
     keys = sorted(k for k in info if (only is None or k in only) and sel[stage](info[k]))
     keys = [k for k in keys if not os.path.exists(os.path.join(od, k + ".json"))]
@@ -187,7 +190,7 @@ def run(stage, only, keep):
         if stage == "dc":
             dc(k, path, keep)
         else:
-            {"free": free, "floor": floor, "floorscore": floorscore, "cellscore": cellscore, "perloop": perloop}[stage](k, path)
+            {"free": free, "floor": floor, "floorscore": floorscore, "cellscore": cellscore, "perloop": perloop, "hfcell": hfcell}[stage](k, path)
         print(f"  {i + 1}/{len(keys)} {k}", flush=True)
 
 
@@ -430,16 +433,107 @@ def report_perloop():
     return out
 
 
+# ---------------------------------------------------------------- the HF pole per (HF, RT) cell (model_s_results 25.7)
+CELLS_JSON = os.path.join(ROOT, "analysis", "loop_cv", "cells", "cells.json")   # the §25.6 floor table
+HF_DP = np.round(np.arange(-0.012, 0.01201, 0.0005), 4)                          # absolute HF pole shift on every loop
+
+
+def base_kw(key):
+    """The §25.6 baseline's final_Gs arguments for one setting (fold terms, LF 0.4 dc, the floor cell)."""
+    rt = q2.q1_tables()[0][key]["rt"]
+    t = cv_terms(rt)
+    fc = json.load(open(CELLS_JSON)).get(key)
+    lfdc = dict(cv_fold(rt)["lfdc"])
+    kw = {}
+    if fc:
+        lfdc["0.1"] = fc["dc"]
+        t["gamma"] = fc["gamma"]
+        kw = dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
+    return t, lfdc, kw
+
+
+def nulls_broad(y, m, te):
+    """100 Hz-10 kHz strict nulls per window and channel (band_nulls' 100-10k part only)."""
+    yf, mf = sosfiltfilt(SOSB, y, axis=0), sosfiltfilt(SOSB, m, axis=0)
+    d = {}
+    for a_ms, b_ms in q2.W_COMP:
+        i0, i1 = PRE + int(a_ms / 1000 * FS), min(PRE + int(b_ms / 1000 * FS), PRE + int(te * FS), len(y))
+        if i1 - i0 >= int(0.05 * FS):
+            d[f"{a_ms}-{b_ms}"] = [float(10 * np.log10(np.sum((yf[i0:i1, c] - mf[i0:i1, c]) ** 2) / np.sum(yf[i0:i1, c] ** 2))) for c in (0, 1)]
+    return d
+
+
+def hfcell(key, path):
+    """Per setting (HF < 1): the §25.6 baseline with the HF one-pole's pole shifted by dp on every loop (replacing the
+    fold's hfdp), on HF_DP: the 100 Hz-10 kHz cost and nulls of every capture."""
+    t, lfdc, kw = base_kw(key)
+    d = prep(key, lambda rt: dict(t), lfdc)
+    G0 = q2.final_Gs(d["lab"], d["law"], d["w"], lfrt=t["lfrt"], gamma=t["gamma"], hfdp=t["hfdp"], pramp=t["pramp"], b230=d["b230"], **kw)
+    d["Gs0"] = G0                                          # the floor cell is not in prep's final_G call
+    r0 = reverb(d, G0)
+    hf = str(d["lab"]["hf"])
+    base = float(np.sum(residual(d, None, d["caps"], sos=SOSB, norm="normB", r=r0) ** 2))
+    rows = []
+    for dp in HF_DP:
+        Gs = q2.final_Gs(d["lab"], d["law"], d["w"], lfrt=t["lfrt"], gamma=t["gamma"], pramp=t["pramp"], b230=d["b230"],
+                         hfdp={hf: float(dp), "p_above": 0.0, "p_below": 1.0, "exclude_lf": []}, **kw)
+        r = reverb(d, Gs)
+        rows.append(dict(dp=float(dp), cost=float(np.sum(residual(d, None, d["caps"], sos=SOSB, norm="normB", r=r) ** 2)),
+                         nulls=[nulls_broad(c["y"], model(d, c, r) * c["g"], c["te"]) for c in d["caps"]]))
+    json.dump(dict(key=key, **d["lab"], base=base, base_nulls=[nulls_broad(c["y"], model(d, c, r0) * c["g"], c["te"]) for c in d["caps"]],
+                   amps=[c["amp"] for c in d["caps"]], grid=rows), open(path, "w"))
+
+
+def report_hfcell():
+    D = [json.load(open(p)) for p in glob.glob(os.path.join(outdir("hfcell"), "*.json"))]
+    rep = {(k, r["amp"]): r["repeat"]["100-10k"] for k in {d["key"] for d in D} for r in json.load(open(os.path.join(lb.outdir("base"), k + ".json")))}
+    rel = {d["key"]: np.array([10 * np.log10(g["cost"] / d["base"]) for g in d["grid"]]) for d in D}
+    out = [f"## HF pole shift per (HF, RT) cell on the §25.6 baseline ({len(D)} settings; dp {HF_DP[0]:+.4f}..{HF_DP[-1]:+.4f}); 100 Hz-10 kHz, R"]
+    choice = {}
+    for d in D:                                            # held out across LF: the cell's other LF steps
+        oth = [rel[e["key"]] for e in D if e["hf"] == d["hf"] and e["rt"] == d["rt"] and e["key"] != d["key"]]
+        choice[d["key"]] = int(np.argmin(np.mean(oth, 0)))
+    for hf in sorted({d["hf"] for d in D}):
+        for rt in sorted({d["rt"] for d in D}):
+            u = [d for d in D if d["hf"] == hf and d["rt"] == rt]
+            own = [HF_DP[int(np.argmin(rel[d["key"]]))] for d in sorted(u, key=lambda d: d["lf"])]
+            held = [HF_DP[choice[d["key"]]] for d in sorted(u, key=lambda d: d["lf"])]
+            out.append(f"- HF {hf} RT {rt}: own best dp by LF 0.1/0.4/1.0/2.0 " + "/".join(f"{x:+.4f}" for x in own) +
+                       "; held-out choice " + "/".join(f"{x:+.4f}" for x in held) +
+                       "; held-out cost change " + "/".join(f"{rel[d['key']][choice[d['key']]]:+.2f}" for d in sorted(u, key=lambda d: d["lf"])) + " dB")
+
+    def cell(ss, w, held, excess):
+        x = []
+        for d in ss:
+            nn = d["grid"][choice[d["key"]]]["nulls"] if held else d["base_nulls"]
+            for j, a in enumerate(d["amps"]):
+                if w in nn[j] and (not excess or w in rep[(d["key"], a)]):
+                    x.append(nn[j][w][1] - (rep[(d["key"], a)][w][1][0] if excess else 0))
+        return np.median(x) if x else np.nan
+    out.append("\n### Held out across LF steps within each (HF, RT) cell: R null, median over captures, §25.6 -> chosen dp [excess over repeat]")
+    groups = [("all HF < 1", lambda d: True)] + [(f"HF {hf}", lambda d, hf=hf: d["hf"] == hf) for hf in sorted({d["hf"] for d in D})] + \
+             [(f"HF 0.2 RT {rt}", lambda d, rt=rt: d["hf"] == 0.2 and d["rt"] == rt) for rt in sorted({d["rt"] for d in D})]
+    for g, sel in groups:
+        ss = [d for d in D if sel(d)]
+        out.append(f"  {g:14s} " + " | ".join(f"{w}: {cell(ss, w, False, False):.1f} -> {cell(ss, w, True, False):.1f} "
+                                              f"[{cell(ss, w, False, True):+.1f} -> {cell(ss, w, True, True):+.1f}]" for w in ("50-150", "150-300", "300-600", "600-1000")))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "cellscore", "perloop", "report", "floorreport", "cellreport", "perloopreport"], required=True)
+    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "cellscore", "perloop", "hfcell", "report", "floorreport", "cellreport", "perloopreport", "hfcellreport"], required=True)
     ap.add_argument("--only", default=None)
     ap.add_argument("--keep-lfrt", action="store_true")
     ap.add_argument("--gamma-nyq", action="store_true", help="floor stages: gamma on the Nyquist end only, DC held at DC_MIN")
     a = ap.parse_args()
     global GAMMA_DC
     GAMMA_DC = not a.gamma_nyq
-    if a.stage == "perloopreport":
+    if a.stage == "hfcellreport":
+        out = report_hfcell()
+        open(os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_hfcell_report.log"), "w").write("\n".join(out) + "\n")
+        print("\n".join(out))
+    elif a.stage == "perloopreport":
         out = report_perloop()
         open(os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_perloop_report.log"), "w").write("\n".join(out) + "\n")
         print("\n".join(out))
