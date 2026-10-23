@@ -101,20 +101,65 @@ def load(key, full=False):
         g["caps"] = [dict(y=z[f"y{j}"].astype(np.float64), m=z[f"m{j}"].astype(np.float64), g=z[f"g{j}"].astype(np.float64),
                           amp=int(z[f"amp{j}"]), te=float(z[f"te{j}"])) for j in k]
     g["lab"] = z["lab"].tolist()
+    g["key"] = key
     return g
+
+
+DIFF_COLS = ("g20", "g72", "g230", "M20", "M72", "M230", "level")
+
+
+def diff_D(key, N):
+    """--basis diffuser: the relative change of the diffuser's response per unit change of each all-pass gain (d log AP / dg),
+    and for each stage's delay one sample longer (AP(M + 1) / AP(M) - 1); AP230 with this setting's two-tap damping; and
+    the loop paths' level re the cluster (a reference column: the same as --basis gain with L = R)."""
+    w = 2 * np.pi * np.fft.rfftfreq(N)
+    ap = json.load(open(os.path.join(q2.OUT, ls.lb.lf_.AP230)))
+    b = ap["steps"][ap["settings"][key]["step"]]
+    g0 = q2.FINAL_DIFF["g20"]
+    F = lambda M: ((1 - b) + b * np.exp(-1j * w)) if M >= 200 else 1.0
+    A = lambda M, g: (-g + np.exp(-1j * w * M) * F(M)) / (1 - g * np.exp(-1j * w * M) * F(M))
+    h = 1e-5
+    return [(A(M, g0 + h) - A(M, g0 - h)) / (2 * h) / A(M, g0) for M in (20, 72, 230)] + \
+        [A(M + 1, g0) / A(M, g0) - 1 for M in (20, 72, 230)] + [np.ones_like(w)]
+
+
+def x_base():
+    """The baseline's own excitation (the compact model's 5 signed taps per loop and channel), Joint layout, no cluster / F."""
+    v = q2.final_injection(compact=ls.lb.lf_.COMPACT)[0]
+    set_win()
+    return v[8 + 2 * q1.LFIR:]
+
+
+def fit_diffuser(fold):
+    """Least squares for the 6 diffuser numbers on the training settings' fit-band residual."""
+    x0 = x_base()
+    groups = [load(k) for k in keys_for(FOLDS[fold])]
+    off = 8 + 2 * q1.LFIR
+    tgt = q1.Joint(groups).target()
+    cols = []
+    for k in range(len(DIFF_COLS)):
+        Gk = [dict(g, R=[r * D for r in g["R"]]) for g in groups for D in [diff_D(g["key"], g["N"])[k]]]
+        cols.append(q1.Joint(Gk).forward(np.r_[np.zeros(off), x0]))
+        del Gk
+    A = np.array(cols)
+    th = np.linalg.solve(A @ A.T, A @ tgt)
+    res = tgt - th @ A
+    print(f"fold {fold}: {len(groups)} settings, {len(tgt)} samples; diffuser " + ", ".join(f"{n} {v:+.5f}" for n, v in zip(DIFF_COLS, th)) +
+          f"; training residual {10 * np.log10(np.sum(res ** 2) / np.sum(tgt ** 2)):+.2f} dB re the baseline's", flush=True)
+    np.save(os.path.join(OUT, f"theta_{tag(fold)}.npy"), th)
 
 
 SUBSET = {}                                                         # --subset lf=1.0,hf=1.0: restrict train and test
 
 
-def keys_for(rts):
-    """The prepared settings at those RT steps (within SUBSET)."""
+def keys_for(rts, subset=True):
+    """The prepared settings at those RT steps (within SUBSET unless subset=False)."""
     info = q2.q1_tables()[0]
     ap = json.load(open(os.path.join(q2.OUT, ls.lb.lf_.AP230)))
     b0 = lambda k: ap["steps"][ap["settings"][k]["step"]] < 0.01                     # AP230 without damping
     return sorted(k for k in info if info[k]["rt"] in rts and os.path.exists(os.path.join(OUT, "prep", k + ".npz"))
-                  and all(info[k][c] == v for c, v in SUBSET.items() if c not in ("b0", "rtmin"))
-                  and (not SUBSET.get("b0") or b0(k)) and info[k]["rt"] >= SUBSET.get("rtmin", 0))
+                  and (not subset or all(info[k][c] == v for c, v in SUBSET.items() if c not in ("b0", "rtmin"))
+                  and (not SUBSET.get("b0") or b0(k)) and info[k]["rt"] >= SUBSET.get("rtmin", 0)))
 
 
 def tag(fold):
@@ -123,7 +168,16 @@ def tag(fold):
         ("" if WIN is None else f"_win{WIN[0]}-{WIN[1]}")
 
 
-BASIS = "dense"                                                     # --basis dense | taps | kernelK | common
+def stag(fold):
+    """Score tag: the fit's tag, plus the projection band if any."""
+    return tag(fold) + ("" if PROJECT is None else f"_proj{PROJECT[0]}-{PROJECT[1]}") + ("_all" if TEST_ALL else "")
+
+
+PROJECT = None                                                      # --project lo,hi: score the correction band-limited to lo-hi Hz
+TEST_ALL = False                                                    # --test-all: score every setting at the test RT steps, outside SUBSET too
+
+
+BASIS = "dense"                                                     # --basis dense | taps | tapsall | gain | gainx | kernelK | ckernelK | common | diffuser
 FIT_BAND, SOS_FIT = BAND, SOSM                                      # --band lo,hi: the fitting band (prep's residual is 80-1500 Hz)
 
 
@@ -146,14 +200,27 @@ def basis_map(J):
                     M[off[(c, i)] + t, c * n + t] = 1.0
         return M.tocsr()
     taps = q2.tap_table()
-    K = int(BASIS[6:]) if BASIS.startswith("kernel") else 0
-    M = lil_matrix((o, len(taps) if BASIS == "taps" else 2 * K + 1))
+    if BASIS in ("tapsall", "gain", "gainx"):                       # each tap's correction in its own loop and/or the other three
+        ncol = dict(tapsall=len(taps), gain=2, gainx=4)[BASIS]
+        M = lil_matrix((o, ncol))
+        for n, (i, c, t, sg, j) in enumerate(taps):
+            for k in range(4):
+                if BASIS == "tapsall":
+                    M[off[(c, k)] + t, n] = sg
+                elif BASIS == "gainx":
+                    M[off[(c, k)] + t, 2 * c + (k != i)] = sg
+                elif k == i:
+                    M[off[(c, k)] + t, c] = sg
+        return M.tocsr()
+    K = int(BASIS.split("kernel")[1]) if "kernel" in BASIS else 0     # kernelK: one kernel at lags -K..K for every tap; ckernelK: one per channel
+    nc = 2 if BASIS.startswith("ckernel") else 1
+    M = lil_matrix((o, len(taps) if BASIS == "taps" else nc * (2 * K + 1)))
     for n, (i, c, t, sg, j) in enumerate(taps):
         if BASIS == "taps":
             M[off[(c, i)] + t, n] = sg
         else:
             for k in range(-K, K + 1):
-                M[off[(c, i)] + t + k, k + K] += sg
+                M[off[(c, i)] + t + k, (c if nc == 2 else 0) * (2 * K + 1) + k + K] += sg
     return M.tocsr()
 
 
@@ -169,6 +236,8 @@ def set_win():
 def fit(fold, iters):
     from scipy.sparse.linalg import LinearOperator, lsqr
     set_win()
+    if BASIS == "diffuser":
+        return fit_diffuser(fold)
     groups = [load(k) for k in keys_for(FOLDS[fold])]
     J = q1.Joint(groups)
     off = 8 + 2 * q1.LFIR
@@ -181,7 +250,7 @@ def fit(fold, iters):
     x = lsqr(op, tgt, iter_lim=iters, atol=1e-12, btol=1e-12)[0]
     res = tgt - fwd(x)
     print(f"fold {fold}: {len(groups)} settings, {len(tgt)} samples, {nx} unknowns; training residual "
-          f"{10 * np.log10(np.sum(res ** 2) / np.sum(tgt ** 2)):+.2f} dB re the baseline's (80-1500 Hz, weighted)", flush=True)
+          f"{10 * np.log10(np.sum(res ** 2) / np.sum(tgt ** 2)):+.2f} dB re the baseline's ({FIT_BAND[0]}-{FIT_BAND[1]} Hz, weighted)", flush=True)
     if M is not None:
         np.save(os.path.join(OUT, f"theta_{tag(fold)}.npy"), x)
         x = M @ x
@@ -190,18 +259,27 @@ def fit(fold, iters):
 
 def score(fold):
     set_win()
-    x = np.load(os.path.join(OUT, f"x_{tag(fold)}.npy"))
+    if BASIS == "diffuser":
+        th, x = np.load(os.path.join(OUT, f"theta_{tag(fold)}.npy")), x_base()
+    else:
+        x = np.load(os.path.join(OUT, f"x_{tag(fold)}.npy"))
     test = [r for r in sorted({rt for f_ in FOLDS.values() for rt in f_}) if r not in FOLDS[fold]]
-    os.makedirs(os.path.join(OUT, f"score_{tag(fold)}"), exist_ok=True)
-    for k in keys_for(test):
-        path = os.path.join(OUT, f"score_{tag(fold)}", k + ".json")
+    os.makedirs(os.path.join(OUT, f"score_{stag(fold)}"), exist_ok=True)
+    for k in keys_for(test, subset=not TEST_ALL):
+        path = os.path.join(OUT, f"score_{stag(fold)}", k + ".json")
         if os.path.exists(path):
             continue
         g = load(k, full=True)
         J = q1.Joint([dict(g, R=g["R_full"])])
         _, _, xs = J.split(np.r_[np.zeros(8 + 2 * q1.LFIR), x])
+        if PROJECT is not None:                                     # keep only the correction's PROJECT band (zero-phase, zero-padded)
+            sos = butter(4, PROJECT, btype="band", fs=FS, output="sos")
+            xs = [[sosfiltfilt(sos, np.r_[np.zeros(4000), v, np.zeros(4000)], padtype=None)[4000:4000 + len(v)] for v in row] for row in xs]
         F, X = J._spectra(np.zeros((2, q1.LFIR)), xs, g["N"])
-        add = np.fft.irfft(np.einsum("cik,ik->ck", X, np.array(g["R_full"])), g["N"], axis=1).T
+        R = np.array(g["R_full"])
+        if BASIS == "diffuser":                                     # the change of the baseline's own loop paths
+            R = R * sum(t * D for t, D in zip(th, diff_D(k, g["N"])))[None, :]
+        add = np.fft.irfft(np.einsum("cik,ik->ck", X, R), g["N"], axis=1).T
         rows = []
         caps = g["caps"]
         for j, c in enumerate(caps):
@@ -217,14 +295,14 @@ def score(fold):
                     if i1 - i0 >= int(0.05 * FS):
                         e = lambda u, v: float(10 * np.log10(np.sum((u - v) ** 2) / np.sum(u ** 2)))
                         res[f"{f}_{a}-{b}"] = [e(y[i0:i1], a0[i0:i1]), e(y[i0:i1], a1[i0:i1]), e(y[i0:i1], yb[i0:i1])]
-            bb = ls.nulls_broad(c["y"][:n], c["m"][:n], te), ls.nulls_broad(c["y"][:n], m1, te)
+            bb = ls.nulls_broad(c["y"][:n], c["m"][:n], te), ls.nulls_broad(c["y"][:n], m1, te), ls.nulls_broad(c["y"][:n], cb["y"][:n], te)
             rows.append(dict(oct=res, broad=bb))
         json.dump(dict(key=k, lab=g["lab"], rows=rows), open(path, "w"))
         print(k, flush=True)
 
 
 def report():
-    S = [json.load(open(p)) for f_ in FOLDS for p in glob.glob(os.path.join(OUT, f"score_{tag(f_)}", "*.json"))]
+    S = [json.load(open(p)) for f_ in FOLDS for p in glob.glob(os.path.join(OUT, f"score_{stag(f_)}", "*.json"))]
     out = [f"## Dense mid-band excitation correction, held out by RT step ({len(S)} test settings): R, median over captures; "
            "octave nulls baseline -> + correction [excess over repeat]"]
     for a, b in ls.W_OCT:
@@ -237,13 +315,75 @@ def report():
         v = np.array([[r["broad"][0][w][1], r["broad"][1][w][1]] for s in S for r in s["rows"] if w in r["broad"][0]])
         if len(v):
             out.append(f"  100 Hz-10 kHz: {np.median(v[:, 0]):.1f} -> {np.median(v[:, 1]):.1f}")
-    open(os.path.join(OUT, f"report{tag('')}.log"), "w").write("\n".join(out) + "\n")
+    if TEST_ALL:                                                    # 100 Hz-10 kHz by group: inside SUBSET's kind of setting or not
+        ap = json.load(open(os.path.join(q2.OUT, ls.lb.lf_.AP230)))
+        inside = lambda s: ap["steps"][ap["settings"][s["key"]]["step"]] < 0.01 and s["lab"][1] >= SUBSET.get("rtmin", 0)
+        out.append("\n### 100 Hz-10 kHz by group, R, median over captures: baseline -> + correction [excess over repeat]")
+        for nm, sel in (("all", lambda s: True), ("undamped, RT >= rtmin", inside), ("damped or RT < rtmin", lambda s: not inside(s))):
+            row = []
+            for a, b in ls.W_OCT:
+                w = f"{a}-{b}"
+                v = np.array([[r["broad"][k][w][1] for k in range(len(r["broad"]))] for s in S if sel(s) for r in s["rows"] if w in r["broad"][0]])
+                if len(v):
+                    ex = f" [{np.median(v[:, 0] - v[:, 2]):+.1f} -> {np.median(v[:, 1] - v[:, 2]):+.1f}]" if v.shape[1] > 2 else ""
+                    row.append(f"{w}: {np.median(v[:, 0]):.1f} -> {np.median(v[:, 1]):.1f}{ex}")
+            out.append(f"  {nm} ({sum(map(sel, S))}): " + "; ".join(row))
+    open(os.path.join(OUT, f"report{stag('')}.log"), "w").write("\n".join(out) + "\n")
+    print("\n".join(out))
+
+
+def decode(lo=200, hi=1500, H=30):
+    """The common kernel (--basis common) read off in the lo-hi band: consistency between folds and fit bands, L/R lag,
+    lag profile, and its shape around every read tap (projection on the band-limited impulse and its derivative)."""
+    sos = butter(4, (lo, hi), btype="band", fs=FS, output="sos")
+    bp = lambda v: sosfiltfilt(sos, np.r_[np.zeros(4000), v, np.zeros(4000)], padtype=None)[4000:4000 + len(v)]
+    cc = lambda u, v: float(u @ v / np.sqrt(u @ u * v @ v))
+    th = {f: np.load(os.path.join(OUT, f"theta_{tag(f)}.npy")) for f in FOLDS}
+    n = len(th["A"]) // 2
+    k = {f: [bp(th[f][c * n:(c + 1) * n]) for c in (0, 1)] for f in FOLDS}
+    out = [f"## Common kernel {tag('')}, read in {lo}-{hi} Hz (lags from {q1.S0})"]
+    for c, nm in ((0, "L"), (1, "R")):
+        raw = [th[f][c * n:(c + 1) * n] for f in FOLDS]
+        out.append(f"{nm}: fold A vs B {cc(k['A'][c], k['B'][c]):.3f}; "
+                   f"in-band / total energy {np.mean([(k[f][c] ** 2).sum() / (r ** 2).sum() for f, r in zip(FOLDS, raw)]):.2f}")
+        if BASIS == "common" and FIT_BAND != BAND:
+            t0 = tag("A").replace(f"_band{FIT_BAND[0]}-{FIT_BAND[1]}", "")
+            p0 = os.path.join(OUT, f"theta_{t0}.npy")
+            if os.path.exists(p0):
+                out.append(f"   vs the {BAND[0]}-{BAND[1]} Hz fit (fold A): {cc(k['A'][c], bp(np.load(p0)[c * n:(c + 1) * n])):.3f}")
+    for f in FOLDS:
+        a, b = k[f]
+        r = np.array([a[max(0, -s):n - max(0, s)] @ b[max(0, s):n - max(0, -s)] for s in range(-500, 501)]) / np.sqrt(a @ a * b @ b)
+        i = np.argsort(-np.abs(r))[:3]
+        out.append(f"fold {f}: R vs L cross-correlation, best lags " + ", ".join(f"{j - 500:+d} ({r[j]:+.2f})" for j in i) +
+                   f"; at +332 {r[832]:+.2f}")
+    imp = np.zeros(n); imp[n // 2] = 1
+    bi = bp(imp)[n // 2 - H:n // 2 + H + 1]
+    di = np.gradient(bi)
+    bi, di = bi / np.linalg.norm(bi), di / np.linalg.norm(di)
+    out.append(f"\nAround each read tap (+-{H} lags, sign removed, mean of folds): gain / delay projections x 1e5, unexplained fraction")
+    segs = []
+    for (i, c, t, sg, j) in sorted(q2.tap_table(), key=lambda z: (z[1], z[2])):
+        m = np.mean([sg * np.r_[np.zeros(H), k[f][c], np.zeros(H)][t:t + 2 * H + 1] for f in FOLDS], axis=0)
+        segs.append(m)
+        res = m - (m @ bi) * bi - (m @ di) * di
+        out.append(f"  loop {i} {'LR'[c]} lag {q1.S0 + t:5d} sign {sg:+d}: gain {1e5 * m @ bi:+6.2f}  delay {1e5 * m @ di:+6.2f}  rest {res @ res / (m @ m):.2f}")
+    m = np.mean(segs, axis=0)
+    out.append(f"mean over taps: gain {1e5 * m @ bi:+.2f}, delay {1e5 * m @ di:+.2f}, unexplained {1 - ((m @ bi) ** 2 + (m @ di) ** 2) / (m @ m):.3f}")
+    for c, nm in ((0, "L"), (1, "R")):
+        e = np.mean([k[f][c] ** 2 for f in FOLDS], axis=0)
+        near = np.zeros(n, bool)
+        for (i, cc_, t, sg, j) in q2.tap_table():
+            if cc_ == c:
+                near[max(0, t - 15):t + 16] = True
+        out.append(f"{nm}: energy within +-15 lags of a tap {e[near].sum() / e.sum():.2f} (those lags are {near.mean():.2f} of the window)")
+    open(os.path.join(OUT, f"decode{tag('')}.log"), "w").write("\n".join(out) + "\n")
     print("\n".join(out))
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["prep", "fit", "score", "report"], required=True)
+    ap.add_argument("--stage", choices=["prep", "fit", "score", "report", "decode"], required=True)
     ap.add_argument("--only", default=None)
     ap.add_argument("--fold", default="A", choices=sorted(FOLDS))
     ap.add_argument("--iters", type=int, default=200)
@@ -252,8 +392,12 @@ def main():
     ap.add_argument("--basis", default="dense")
     ap.add_argument("--band", default=None)
     ap.add_argument("--win", default=None)
+    ap.add_argument("--project", default=None)
+    ap.add_argument("--test-all", action="store_true")
     a = ap.parse_args()
-    global THROUGH_G, BASIS, FIT_BAND, SOS_FIT, WIN
+    global THROUGH_G, BASIS, FIT_BAND, SOS_FIT, WIN, PROJECT, TEST_ALL
+    TEST_ALL = a.test_all
+    PROJECT = tuple(int(x) for x in a.project.split(",")) if a.project else None
     WIN = tuple(int(x) for x in a.win.split(",")) if a.win else None
     THROUGH_G, BASIS = a.through_g, a.basis
     if a.band:
@@ -271,6 +415,8 @@ def main():
         fit(a.fold, a.iters)
     elif a.stage == "score":
         score(a.fold)
+    elif a.stage == "decode":
+        decode()
     else:
         report()
 

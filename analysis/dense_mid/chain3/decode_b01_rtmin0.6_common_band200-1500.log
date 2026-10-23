@@ -1,0 +1,52 @@
+## Common kernel _b01_rtmin0.6_common_band200-1500, read in 200-1500 Hz (lags from 230)
+L: fold A vs B 0.931; in-band / total energy 0.18
+   vs the 80-1500 Hz fit (fold A): 0.998
+R: fold A vs B 0.965; in-band / total energy 0.21
+   vs the 80-1500 Hz fit (fold A): 0.998
+fold A: R vs L cross-correlation, best lags +27 (+0.47), +26 (+0.46), +28 (+0.45); at +332 +0.32
+fold B: R vs L cross-correlation, best lags +27 (+0.46), +26 (+0.45), +28 (+0.44); at +332 +0.31
+
+Around each read tap (+-30 lags, sign removed, mean of folds): gain / delay projections x 1e5, unexplained fraction
+  loop 2 L lag   244 sign +1: gain  +3.88  delay  +0.95  rest 0.42
+  loop 0 L lag   276 sign -1: gain  +5.41  delay  +1.09  rest 0.19
+  loop 3 L lag   338 sign +1: gain  -0.06  delay  -0.22  rest 1.00
+  loop 1 L lag   624 sign -1: gain  +2.21  delay  -0.08  rest 0.69
+  loop 2 L lag   677 sign -1: gain  +6.41  delay  -1.48  rest 0.20
+  loop 1 L lag   768 sign -1: gain  +3.91  delay  +1.77  rest 0.29
+  loop 3 L lag   797 sign -1: gain  +1.19  delay  -1.14  rest 0.93
+  loop 1 L lag   826 sign -1: gain  +4.38  delay  +0.30  rest 0.25
+  loop 0 L lag   913 sign -1: gain  +5.31  delay  -0.66  rest 0.22
+  loop 0 L lag   971 sign +1: gain  +3.24  delay  -0.86  rest 0.32
+  loop 3 L lag   984 sign +1: gain  -0.89  delay  +0.12  rest 0.95
+  loop 2 L lag  1069 sign +1: gain  +5.00  delay  -0.33  rest 0.15
+  loop 1 L lag  1129 sign -1: gain  +4.68  delay  -1.12  rest 0.31
+  loop 0 L lag  1256 sign -1: gain  +4.74  delay  -0.14  rest 0.20
+  loop 3 L lag  1319 sign +1: gain  +3.66  delay  -0.58  rest 0.40
+  loop 2 L lag  1368 sign +1: gain  +3.39  delay  -0.47  rest 0.34
+  loop 1 L lag  1449 sign -1: gain  +4.61  delay  -0.23  rest 0.20
+  loop 0 L lag  1514 sign +1: gain  +3.30  delay  -3.00  rest 0.16
+  loop 2 L lag  1521 sign +1: gain  +2.97  delay  +3.08  rest 0.23
+  loop 3 L lag  1780 sign -1: gain  +5.24  delay  -0.94  rest 0.15
+  loop 2 R lag   576 sign +1: gain  +5.85  delay  -0.09  rest 0.44
+  loop 0 R lag   608 sign -1: gain  +2.83  delay  +1.09  rest 0.67
+  loop 1 R lag   650 sign -1: gain  +4.38  delay  -1.82  rest 0.46
+  loop 3 R lag   670 sign +1: gain  +4.45  delay  -0.21  rest 0.57
+  loop 2 R lag   703 sign -1: gain  +6.06  delay  -0.55  rest 0.21
+  loop 1 R lag   794 sign -1: gain  +4.04  delay  +0.59  rest 0.47
+  loop 3 R lag   823 sign -1: gain  +2.66  delay  -0.26  rest 0.66
+  loop 0 R lag   939 sign -1: gain  +7.48  delay  +0.08  rest 0.22
+  loop 2 R lag  1095 sign +1: gain  +3.94  delay  +1.50  rest 0.40
+  loop 1 R lag  1155 sign -1: gain  +6.92  delay  -2.95  rest 0.24
+  loop 1 R lag  1158 sign -1: gain  +7.15  delay  +2.58  rest 0.25
+  loop 0 R lag  1303 sign +1: gain  +2.00  delay  -0.03  rest 0.84
+  loop 3 R lag  1316 sign +1: gain  +2.57  delay  -1.34  rest 0.75
+  loop 3 R lag  1345 sign +1: gain  +4.24  delay  -0.41  rest 0.47
+  loop 0 R lag  1540 sign +1: gain  +3.35  delay  -0.76  rest 0.26
+  loop 0 R lag  1588 sign -1: gain  +4.16  delay  -0.75  rest 0.24
+  loop 2 R lag  1700 sign +1: gain  +3.04  delay  -1.88  rest 0.51
+  loop 1 R lag  1781 sign -1: gain  +4.95  delay  -1.96  rest 0.68
+  loop 3 R lag  1806 sign -1: gain  +7.13  delay  -0.35  rest 0.39
+  loop 2 R lag  1853 sign +1: gain  +7.08  delay  +0.16  rest 0.11
+mean over taps: gain +4.17, delay -0.28, unexplained 0.038
+L: energy within +-15 lags of a tap 0.46 (those lags are 0.19 of the window)
+R: energy within +-15 lags of a tap 0.46 (those lags are 0.18 of the window)
