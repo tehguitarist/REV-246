@@ -21,6 +21,7 @@ hfcell  HF < 1 on the §25.6 baseline: the HF pole shifted on a grid (100 Hz-10 
         it per (HF, RT) cell on the cell's other LF steps.
 bbcell / bbscore / bbreport  all settings on the §25.7 baseline: the broadband rate and the shelf's DC end per (LF, RT)
         cell, chosen on the cell's other HF steps.
+octaves / octreport  all settings on the §25.7 baseline: excess over repeat per octave band, window and control step.
 report  free: the fitted numbers and nulls by LF / RT; dc: the constant chosen leaving one RT step out (median of the
         per-setting best over the other RT steps), each RT step scored with its own constant, against the baseline and
         the repeat capture (lowband.py's score stage on chain3).
@@ -182,7 +183,7 @@ def run(stage, only, keep):
     sel = {"free": lambda g: True, "dc": lambda g: g["lf"] == LF_DC,
            "floor": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] == 0.3),
            "perloop": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] <= 1.0),
-           "hfcell": lambda g: g["hf"] < 1.0, "bbcell": lambda g: True}
+           "hfcell": lambda g: g["hf"] < 1.0, "bbcell": lambda g: True, "octaves": lambda g: True}
     sel["bbscore"] = sel["bbcell"]
     sel["floorscore"] = sel["cellscore"] = sel["floor"]
     keys = sorted(k for k in info if (only is None or k in only) and sel[stage](info[k]))
@@ -193,7 +194,7 @@ def run(stage, only, keep):
         if stage == "dc":
             dc(k, path, keep)
         else:
-            {"free": free, "floor": floor, "floorscore": floorscore, "cellscore": cellscore, "perloop": perloop, "hfcell": hfcell, "bbcell": bbcell, "bbscore": bbscore}[stage](k, path)
+            {"free": free, "floor": floor, "floorscore": floorscore, "cellscore": cellscore, "perloop": perloop, "hfcell": hfcell, "bbcell": bbcell, "bbscore": bbscore, "octaves": octaves}[stage](k, path)
         print(f"  {i + 1}/{len(keys)} {k}", flush=True)
 
 
@@ -616,16 +617,69 @@ def report_bb():
     return out
 
 
+# ---------------------------------------------------------------- where the §25.7 baseline's excess lives (model_s_results 25.9)
+OCT = [63, 125, 250, 500, 1000, 2000, 4000, 8000]
+SOS_OCT = {f: butter(3, (f / 2 ** 0.5, min(f * 2 ** 0.5, 11000)), btype="band", fs=FS, output="sos") for f in OCT}
+W_OCT = [(50, 150), (150, 300), (300, 600), (600, 1000)]
+
+
+def octaves(key, path):
+    """Per setting on the §25.7 baseline, per capture (R): null per octave band and window, the same against the next
+    AMPL capture (repeat), and the band's level re 1 kHz."""
+    d = bb_prep(key)
+    r = reverb(d, d["Gs0"])
+    caps, rows = d["caps"], []
+    for j, c in enumerate(caps):
+        cb = caps[(j + 1) % len(caps)]
+        n = min(len(c["y"]), len(cb["y"]))
+        mm = model(d, c, r)[:n] * c["g"][:n]
+        te, res = min(c["te"], cb["te"]), {}
+        for f, sos in SOS_OCT.items():
+            y, m_, yb = (sosfiltfilt(sos, x[:n], axis=0)[:, 1] for x in (c["y"], mm, cb["y"]))
+            for a, b in W_OCT:
+                i0, i1 = PRE + int(a / 1000 * FS), min(PRE + int(b / 1000 * FS), PRE + int(te * FS), n)
+                if i1 - i0 >= int(0.05 * FS):
+                    e = lambda u, v: float(10 * np.log10(np.sum((u - v) ** 2) / np.sum(u ** 2)))
+                    res[f"{f}_{a}-{b}"] = [e(y[i0:i1], m_[i0:i1]), e(y[i0:i1], yb[i0:i1]), float(10 * np.log10(np.sum(y[i0:i1] ** 2)))]
+        rows.append(res)
+    json.dump(dict(key=key, **d["lab"], rows=rows), open(path, "w"))
+
+
+def report_octaves():
+    D = [json.load(open(p)) for p in glob.glob(os.path.join(outdir("octaves"), "*.json"))]
+    out = [f"## Where the §25.7 baseline's excess lives ({len(D)} settings): R, per octave and window, median over captures: "
+           "excess over repeat [band level re 1 kHz]"]
+    groups = [("all", lambda d: True), ("flat", lambda d: d["lf"] == 1.0 and d["hf"] == 1.0)] + \
+             [(f"LF {x}", lambda d, x=x: d["lf"] == x) for x in (0.1, 0.4, 1.0, 2.0)] + [(f"HF {x}", lambda d, x=x: d["hf"] == x) for x in (0.2, 0.4, 0.6, 1.0)] + \
+             [("RT <= 1.0", lambda d: d["rt"] <= 1.0), ("RT >= 1.4", lambda d: d["rt"] >= 1.4)]
+    for a, b in W_OCT:
+        w = f"{a}-{b}"
+        out.append(f"\n### {w} ms\n| group | " + " | ".join(f"{f}" for f in OCT) + " |\n|---|" + "---|" * len(OCT))
+        for g, sel in groups:
+            cells = []
+            for f in OCT:
+                k = f"{f}_{w}"
+                v = np.array([r[k] for d in D if sel(d) for r in d["rows"] if k in r and f"1000_{w}" in r])
+                lv = np.array([r[k][2] - r[f"1000_{w}"][2] for d in D if sel(d) for r in d["rows"] if k in r and f"1000_{w}" in r])
+                cells.append(f"{np.median(v[:, 0] - v[:, 1]):+.1f} [{np.median(lv):+.0f}]" if len(v) else "-")
+            out.append(f"| {g} | " + " | ".join(cells) + " |")
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "cellscore", "perloop", "hfcell", "bbcell", "bbscore", "report", "floorreport", "cellreport", "perloopreport", "hfcellreport", "bbreport"], required=True)
+    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "cellscore", "perloop", "hfcell", "bbcell", "bbscore", "octaves", "report", "octreport", "floorreport", "cellreport", "perloopreport", "hfcellreport", "bbreport"], required=True)
     ap.add_argument("--only", default=None)
     ap.add_argument("--keep-lfrt", action="store_true")
     ap.add_argument("--gamma-nyq", action="store_true", help="floor stages: gamma on the Nyquist end only, DC held at DC_MIN")
     a = ap.parse_args()
     global GAMMA_DC
     GAMMA_DC = not a.gamma_nyq
-    if a.stage == "bbreport":
+    if a.stage == "octreport":
+        out = report_octaves()
+        open(os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_octaves_report.log"), "w").write("\n".join(out) + "\n")
+        print("\n".join(out))
+    elif a.stage == "bbreport":
         out = report_bb()
         open(os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_bb_report.log"), "w").write("\n".join(out) + "\n")
         print("\n".join(out))

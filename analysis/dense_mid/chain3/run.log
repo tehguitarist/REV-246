@@ -1,0 +1,7 @@
+[memguard] peak footprint 0.54 GB, 1672 s, exit 0
+fold A: 64 settings, 15188190 samples, 25116 unknowns; training residual -0.92 dB re the baseline's (80-1500 Hz, weighted)
+[memguard] peak footprint 1.67 GB, 82 s, exit 0
+fold B: 64 settings, 17972330 samples, 25116 unknowns; training residual -0.65 dB re the baseline's (80-1500 Hz, weighted)
+[memguard] peak footprint 1.94 GB, 98 s, exit 0
+[memguard] peak footprint 0.31 GB, 23 s, exit 0
+[memguard] peak footprint 0.31 GB, 22 s, exit 0

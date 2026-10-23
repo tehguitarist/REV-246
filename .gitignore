@@ -21,3 +21,6 @@ analysis/q2/cache_*
 analysis/q2/*_groups/
 analysis/loop_fir/*/
 analysis/lowband/*/
+analysis/dense_mid/*/prep/
+analysis/dense_mid/*/score_*/
+analysis/dense_mid/*/x_*.npy
