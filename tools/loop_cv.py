@@ -6,6 +6,10 @@ Results: docs/model_s_results.md §22.9.
     for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage run --rt $rt; done
     EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage report         # -> report.log
 
+--lf04dc (any stage): also LF 0.4's shelf DC ratio per fold (model_s_results §25: the median of the per-setting best
+of lowband_shelf.py's dc stage, lfrt kept, chain3, over the fold's training RT steps); outputs in analysis/loop_cv/lf04dc/,
+reported against the §22.9 folds above.
+
 The terms (G_capped / q2_injection final options) and how each fold fits them, from the other RT steps only:
   gamma   a constant extra broadband loss where the DC floor acts (LF 0.1): the floor grid (loop_fir floor stage), DC_MIN
           0.18 / beta 0.019, the gamma with the lowest mean cost re gamma = 0 over the LF 0.1 settings;
@@ -33,6 +37,18 @@ RTS = (0.3, 0.6, 0.8, 1.0, 1.4, 1.8, 2.2, 2.5)
 KNEE, LF04_END, BAND = 0.62, 1.8, (0.5, 0.62)
 OUT = os.path.join(ROOT, "analysis", "loop_cv")
 LFIR = lf_.OUT                                    # analysis/loop_fir/<kernel>
+BASE_OUT = OUT
+SHELF_DC = os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_dcK")   # lowband_shelf.py --stage dc --keep-lfrt
+
+
+def lf04_dc(tr):
+    """LF 0.4's DC ratio from the training RT steps tr: the median of the per-setting best (25-1000 Hz cost)."""
+    best = []
+    for path in glob.glob(os.path.join(SHELF_DC, "*.json")):
+        d = json.load(open(path))
+        if d["rt"] in tr:
+            best.append(d["grid"][int(np.argmin([g["cost"] for g in d["grid"]]))]["dc"])
+    return float(np.median(best))
 
 
 def law():
@@ -109,13 +125,13 @@ def constants_stage():
             best = min(c["rel"], key=lambda d: np.mean(c["rel"][d]))
             cs.append(best / (c["p"] - KNEE))
         cramp = float(np.median(cs)) if cs else 0.0
-        fold = dict(hold=hold, train_rt=tr, gamma=gamma,
+        fold = dict(hold=hold, train_rt=tr, gamma=gamma, **({"lfdc": {"0.4": lf04_dc(tr)}} if OUT != BASE_OUT else {}),
                     lfrt=dict(form="a + b RT", coefs={"0.4": [LF04_END * a04, -a04], "2.0": [float(a20), float(b20)]}, clip=["0.4"]),
                     hfdp={"0.2": dpb, "p_above": BAND[0], "p_below": BAND[1], "exclude_lf": [0.1]},
                     pramp=[cramp, KNEE], ramp_cells={f"{hf}_{rt}": c["p"] for (hf, rt), c in cells.items()})
         json.dump(fold, open(os.path.join(OUT, f"fold_{hold}.json"), "w"), indent=1)
         line = (f"{'all RT steps' if hold == 'all' else f'hold RT {hold}'}: gamma {gamma:+.2f}; LF 0.4 a {a04:+.5f}; LF 2.0 ({a20:+.5f}, {b20:+.5f}); HF 0.2 dp {dpb:+.4f} "
-                f"(n {len(band)}); ramp c {cramp:.3f} from {sorted(fold['ramp_cells'])}")
+                f"(n {len(band)}); ramp c {cramp:.3f} from {sorted(fold['ramp_cells'])}" + (f"; LF 0.4 dc {fold['lfdc']['0.4']:.5f}" if "lfdc" in fold else ""))
         print(line); log.append(line)
     open(os.path.join(OUT, "constants.log"), "w").write("\n".join(log) + "\n")
 
@@ -130,14 +146,20 @@ def run_stage(rt, workers):
            "--ap230", os.path.join(q2.OUT, lf_.AP230), "--gamma", str(fold["gamma"]),
            "--lfrt", os.path.join(OUT, f"fold_{rt}_lfrt.json"), "--hfdp", os.path.join(OUT, f"fold_{rt}_hfdp.json"),
            "--pramp", f"{fold['pramp'][0]},{fold['pramp'][1]}", "--only", keys, "--workers", str(workers)]
+    if "lfdc" in fold:
+        cmd += ["--lfdc", ",".join(f"{k}:{x}" for k, x in fold["lfdc"].items())]
     with open(os.path.join(OUT, f"fold_{rt}.log"), "w") as f:
         subprocess.run(cmd, check=True, stdout=f, stderr=subprocess.STDOUT)
-    src = sorted(glob.glob(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit_lfrt_gamma*_hfdp_pramp*_smoke.json")), key=os.path.getmtime)[-1]
+    src = sorted(glob.glob(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit_lfrt_gamma*_hfdp_pramp*" + ("_lfdc" if "lfdc" in fold else "") + "_smoke.json")),
+                 key=os.path.getmtime)[-1]
     os.replace(src, os.path.join(OUT, f"fold_{rt}_rows.json"))
 
 
 def report_stage():
-    a = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit.json")))["rows"]}
+    if OUT == BASE_OUT:                             # §21 -> the CV loop terms
+        a = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit.json")))["rows"]}
+    else:                                           # the §22.9 folds -> the same plus LF 0.4's dc
+        a = {(r["key"], r["amp"]): r for p in glob.glob(os.path.join(BASE_OUT, "fold_*_rows.json")) for r in json.load(open(p))["rows"]}
     c = {(r["key"], r["amp"]): r for p in glob.glob(os.path.join(OUT, "fold_*_rows.json")) for r in json.load(open(p))["rows"]}
     rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("nulls_free") + ".json")))}
     ws = ["0-50", "50-150", "150-300", "300-600", "600-1000", "1000-1500"]
@@ -151,7 +173,7 @@ def report_stage():
         return np.median(e) if e else np.nan
     ks = list(c)
     out = [f"## All loop terms, leave-one-RT-out ({len({k[0] for k in ks})} settings, {len(ks)} captures; every setting scored with constants "
-           f"fitted without its RT step); R null [excess over repeat]: §21 -> CV"]
+           f"fitted without its RT step); R null [excess over repeat]: " + ("§21 -> CV" if OUT == BASE_OUT else "§22.9 -> + LF 0.4 dc") + "; kernel " + str(q1.ms.KTAG)]
     out.append("| Settings | " + " | ".join(ws[1:5]) + " |\n|---|" + "---|" * 4)
     groups = [("All 128", lambda r: True), ("Flat", lambda r: r["lf"] == 1.0 and r["hf"] == 1.0), ("LF 0.1", lambda r: r["lf"] == 0.1),
               ("LF 0.4", lambda r: r["lf"] == 0.4), ("LF 2.0", lambda r: r["lf"] == 2.0), ("HF 0.2", lambda r: r["hf"] == 0.2),
@@ -176,7 +198,12 @@ def main():
     ap.add_argument("--stage", choices=["constants", "run", "report"], required=True)
     ap.add_argument("--rt", type=float, default=None)
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--lf04dc", action="store_true")
     a = ap.parse_args()
+    if a.lf04dc:
+        global OUT
+        OUT = os.path.join(BASE_OUT, "lf04dc")
+        os.makedirs(OUT, exist_ok=True)
     if a.stage == "constants":
         constants_stage()
     elif a.stage == "run":

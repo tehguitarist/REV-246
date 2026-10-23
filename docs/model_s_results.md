@@ -2127,6 +2127,31 @@ The law's LF 0.4 DC ratio replaced by one constant on a grid (0.405–0.430, ste
 
 ### 25.3 What this answers, and what's next
 
-- **The LF 0.4 shelf's DC constant is 0.414** (**S**: one constant, chosen held out by RT step, transfers to every RT ≥ 0.8; the law's 0.412 was off by 0.5 %, enough to leave LF 0.4 15–20 dB above the repeat null at 50–200 Hz). Not yet in the baseline code (`q1.fit_laws` still gives 0.4118); the clean way is an override of the law's LF 0.4 dc in `q2.final_G`'s callers, then re-run `loop_cv` so lfrt's constants are refitted on it.
+- **The LF 0.4 shelf's DC constant is 0.414** (**S**: one constant, chosen held out by RT step, transfers to every RT ≥ 0.8; the law's 0.412 was off by 0.5 %, enough to leave LF 0.4 15–20 dB above the repeat null at 50–200 Hz). In the baseline since §25.4.
 - **Left at LF 0.4:** +10…+17 dB over repeat below 200 Hz (the free fit reaches 3–5 dB further with its Nyquist term and per-RT ddc); RT 0.6 (in-sample best 0.423) and RT 0.3 (under the DC floor), which one constant does not fit.
 - **Next:** LF 0.1, where the DC error is about +0.3 dB per pass and follows the DC floor (DC_MIN 0.18, β, γ refitted on the low band, held out by RT); then LF 0.4 at RT ≤ 0.6 with the same floor terms; LF 2.0's small Nyquist term.
+
+### 25.4 The new S baseline: §22.9 plus LF 0.4's DC constant (`loop_cv.py --lf04dc`) **[S]**
+
+```
+EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --lf04dc --stage constants          # analysis/loop_cv/lf04dc/fold_<rt>.json, constants.log
+for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_KERNEL=chain2 .venv/bin/python tools/memguard.py --limit-gb 5 -- .venv/bin/python tools/loop_cv.py --lf04dc --stage run --rt $rt; done
+EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --lf04dc --stage report             # analysis/loop_cv/lf04dc/report.log
+```
+
+§22.9's eight folds unchanged (γ, lfrt, hfdp, pramp: the constants are identical, as the loop_fir fits they come from are), plus per fold the law's LF 0.4 DC ratio replaced by §25.2's choice from that fold's training RT steps (0.41375–0.41400; `q2_injection.py --stage final --lfdc 0.4:<dc>`). Every setting scored with the fold that held out its RT step, on chain2 so that the repeat references are §21.1's `nulls_free_chain2`. Constants: §22.9's 13 law + 7 loop numbers, one of the law numbers re-estimated, none added. 4 workers, 2.1–2.3 GB peak, 37–139 s per fold.
+
+All 128 settings, 512 captures, 100 Hz–10 kHz, R null, fade-compensated [excess over repeat], §22.9 → new:
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| All 128 | −49.8 [+5.3] → −49.9 [+5.3] | −46.1 [+9.0] → −46.3 [+8.8] | −41.1 [+7.0] → −41.5 [+6.9] | −36.3 [+2.0] → −36.4 [+1.8] |
+| LF 0.4 | −49.9 [+7.9] → −50.0 [+7.7] | −46.7 [+12.3] → **−47.9 [+11.4]** | −42.3 [+7.6] → **−43.2 [+7.3]** | −38.2 [+0.9] → −38.1 [+0.9] |
+| RT 0.8 | −49.3 [+7.4] → −49.3 [+7.3] | −43.5 [+11.2] → −44.2 [+10.2] | −38.2 [+6.9] → −39.1 [+6.9] | |
+| RT 1.0 | −50.3 [+6.8] → −50.3 [+6.8] | −46.6 [+9.0] → −46.8 [+9.0] | −41.4 [+7.3] → −42.3 [+6.7] | |
+
+- **LF 0.1 / 1.0 / 2.0 are unchanged to 0.00 dB** (as they must be); L / R all 128: 0–50 ms −50.3 / −50.1, 50–150 −49.4 / −49.9, 150–300 −45.7 / −46.3, 300–600 −41.2 / −41.5, 600–1000 −36.2 / −36.4 dB.
+- **Per setting (300–600 ms excess):** 17 better by > 0.5 dB, 4 worse by > 0.5 (all LF 0.4 at long RT with HF 0.2 / 0.6: 0.4_1.4_0.2 +0.9, 0.4_1.8_0.2 +0.7, 0.4_2.5_0.6 +0.7, 0.4_2.2_0.6 +0.6), 104 within ±0.5.
+- **In the scored band the gain is small** (LF 0.4 +0.9…+1.2 dB, all 128 +0.2…+0.4), because 100 Hz–10 kHz energy is dominated by 0.3–3 kHz. **Below 200 Hz it is §25.2's table**, the same per-fold constants: LF 0.4 at 100–200 Hz −40.2 / −35.7 → −49.3 / −47.1 dB (chain3), the other LF steps untouched.
+- **This is the S baseline from here on** (constants `analysis/loop_cv/lf04dc/fold_all.json`). Not yet re-scored on chain3 against refitted repeat references (`nulls_free` on chain3, NEXT_STEPS §2).
+
