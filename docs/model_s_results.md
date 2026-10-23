@@ -1949,3 +1949,96 @@ All 128, L / R: **0–50 ms −48.7 / −48.5 → −50.3 / −50.1**; 50–150 
 - **0–50 ms is at −50 dB on all settings**; 50–150 ms is −49.8 dB (R), 0.2 dB from the target.
 - **Where the excess is now** (300–600 ms, R): LF 0.1 +11.7, HF 0.2 +9.6, RT 1.4–1.8 +8…+9, the rest +5…+7. The loop-law work leaves: HF 0.2 / RT 0.6 (capped, b 0.5), the rest of HF 0.2 / RT 0.8, LF 0.1 at long RT (per setting, §22.4), LF 0.4 / RT 1.4 / HF 1.0.
 - **This is the S baseline from here on** (§17's model + §21's refit + these 7 numbers; constants `analysis/loop_cv/fold_all.json`). CLA is unchanged (LF 1.0 / HF 0.9: none of the terms act there).
+
+## 23. The low band, 25–200 Hz, of the S baseline (`tools/lowband.py`) **[S for the fixed transfer and its split by channel; H for its cause in R; S for the LF 0.4 decay error, open for its form]**
+
+```
+EMT_KERNEL=chain2 .venv/bin/python tools/lowband.py --stage score                  # analysis/lowband/chain2/<key>.json
+EMT_KERNEL=chain2 .venv/bin/python tools/lowband.py --stage report                 # analysis/lowband/chain2_base_report.log
+EMT_KERNEL=chain2 .venv/bin/python tools/lowband.py --stage transfer --only <keys> # capture / model T(f) over the reverb
+EMT_KERNEL=chain2 .venv/bin/python tools/lowband.py --stage tfit                   # chain2_tfix_{A,B}.json
+EMT_KERNEL=chain2 .venv/bin/python tools/lowband.py --stage score --variant tfix   # held out by RT fold; report --variant tfix
+EMT_KERNEL=chain2 ML_HK=analysis/chain_kernel/chain2.json .venv/bin/python tools/lowband.py --stage mltransfer|mlcheck   # S / M / L
+EMT_KERNEL=chain2 .venv/bin/python tools/lowband.py --stage slopes --only <keys>   # third-octave decay errors
+```
+
+Every null of §14–22 is 100 Hz–10 kHz. `ml_structure.md` §12.5 found S's recirculations 15–20 dB above the repeat-capture null at 25–100 Hz with ml_lines' law model. Here the §22.9 baseline itself is scored there: per capture exactly as `q2_injection --stage final` (refactored into `final_G` / `fit_capture`, which `final` still uses), each setting with the loop constants of the fold that held out its RT step, then nulls per window in 25–50 / 50–100 / 100–200 Hz and the 100 Hz–10 kHz control (3rd-order zero-phase band-passes). The control reproduces `analysis/loop_cv` to 0.1 dB. The repeat reference is the next AMPL capture, as in q2's `nulls`. **Before 150 ms it is not a reference in these bands:** the AMPL-dependent cluster rings into 50–150 ms through the narrow band-passes, so only windows from 150 ms on are read.
+
+> **Summary.** Below 200 Hz the S baseline is 11–21 dB above the repeat-capture null at 150–600 ms (R), even at 100–200 Hz, inside the scored band (+13…+16 dB). It has two parts. **(1) A fixed transfer error**, the same in every setting at LF 0.4–2.0 (±0.1°), ±0.2–0.6 dB and up to 2.5° at 20–150 Hz, different in L and R. Fitted on half the RT steps (LF 1.0 / 2.0, HF 1.0) and applied to the other half, it removes 10–20 dB of the 25–50 Hz excess on LF 1.0 / 2.0 (300–600 ms +21 → +3 dB) and 4–8 dB at 50–200 Hz. **In L it is the chain:** its impulse response peaks at lag 501, just past the chain kernel's last lag (500), and fitted on S alone it improves M's and L's first pass in the L channel by 2.5–5 dB at 50–200 Hz. **In R it is S-specific:** M and L gain nothing. **(2) A decay error at LF 0.4** (and LF 0.1): the model's loops lose 10–100 milli-dB per pass too much at 80–250 Hz, the same at every HF step, shrinking about as RT^−1.5. A shelf-pole shift explains 20–30 % of it.
+
+### 23.1 The baseline below 200 Hz
+
+All 128 settings, 512 captures, median strict null L / R [repeat L / R], excess R over repeat (`analysis/lowband/chain2_base_report.log`):
+
+| Band | 150–300 ms | 300–600 ms | 600–1000 ms |
+|---|---|---|---|
+| 25–50 Hz | −29.8 / −31.0 [−34.5 / −44.2], **+11.9** | −28.1 / −30.4 [−46.5 / −51.9], **+20.2** | −29.3 / −28.1 [−37.4 / −39.3], +9.5 |
+| 50–100 Hz | −36.1 / −40.7 [−60.5 / −58.1], **+20.6** | −33.5 / −37.4 [−56.8 / −52.7], **+10.7** | −33.2 / −33.8 [−43.7 / −42.8], +5.0 |
+| 100–200 Hz | −42.4 / −45.1 [−62.4 / −58.3], **+16.3** | −37.9 / −40.6 [−55.9 / −52.7], **+12.8** | −35.8 / −36.5 [−44.5 / −44.2], +3.5 |
+| 100 Hz–10 kHz (control) | −45.7 / −46.1, +9.0 | −40.9 / −41.2, +7.2 | −36.2 / −36.4, +2.4 |
+
+- **On LF 1.0 / 2.0 the null is constant in time** (e.g. 1.0_1.4_1.0 R: −32 dB at 25–50 Hz and −45 dB at 50–100 Hz from 150 ms to 1.5 s, the repeat at −52…−74), and the decay matches (capture − model slope −0.02…−0.34 dB/s, as the repeat's). So it is a fixed transfer, not a decay law. Strict against gain-free nulls: mostly level at 50–100 Hz (−37 → −47 dB, ≈ 0.1 dB), mostly shape at 25–50 Hz.
+- **On LF 0.1 / 0.4 the null degrades with time:** a decay error on top (§23.4).
+
+### 23.2 The fixed transfer (`transfer`, `tfit`, `--variant tfix`)
+
+T(f) = Σ Y M* / Σ |M|² over the reverb (150 ms to each capture's compensated end, all captures of a setting pooled, 0.5 Hz bins), HF 1.0 settings, capture / model, L ; R:
+
+| | 20 Hz | 25 | 30 | 35 | 40 | 50 | 60 | 70 | 100 | 120 | 150 | 200 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| dB, LF 1.0 | +0.58 ; +0.63 | +0.33 ; +0.38 | +0.06 ; +0.22 | −0.15 ; +0.09 | −0.22 ; −0.03 | −0.09 ; −0.10 | +0.08 ; −0.04 | +0.08 ; −0.05 | −0.07 ; −0.01 | +0.05 ; −0.01 | −0.04 ; +0.01 | −0.04 ; +0.02 |
+| deg, LF 1.0 | −2.0 ; +0.4 | −2.5 ; +0.6 | −2.2 ; −0.4 | −1.3 ; −1.2 | −0.7 ; −1.0 | +0.8 ; +0.2 | +0.7 ; +0.3 | −1.6 ; +1.0 | +0.3 ; −0.1 | 0.0 ; +0.2 | +0.3 ; 0.0 | 0.0 ; 0.0 |
+
+- **The same in every setting:** across RT at one LF step the phase spread is 0.01–0.1°; LF 2.0 matches LF 1.0 to 0.03 dB and LF 0.4 to 0.1 dB. Two folds (trained on RT 0.3 / 0.8 / 1.4 / 2.2, or 0.6 / 1.0 / 1.8 / 2.5; LF 1.0 / 2.0, HF 1.0; 7–8 settings each) agree to 0.01 dB and 0.1°. LF 0.1 adds a setting-dependent part (+0.3…+1.0 dB at 25–35 Hz, spread 1–6°): its decay error.
+- **Held out by RT step** (`--variant tfix`: the whole model, cluster and reverb, times the other fold's T, smoothed ±1.5 Hz, tapered to 1 at 300–400 Hz; about 130 complex values per channel), excess R over repeat, 150–300 / 300–600 / 600–1000 ms:
+
+  | | 25–50 Hz | 50–100 Hz | 100–200 Hz | 100 Hz–10 kHz |
+  |---|---|---|---|---|
+  | LF 1.0 | +16.3 / +21.3 / +18.7 → **−1.6 / +2.8 / +2.7** | +13.3 / +11.1 / +8.5 → +5.6 / +5.9 / +4.8 | +6.6 / +8.3 / +4.4 → +0.6 / +4.2 / +3.5 | unchanged |
+  | LF 2.0 | +21.2 / +24.3 / +23.0 → **+2.0 / +3.6 / +6.6** | +15.8 / +15.3 / +14.1 → +7.4 / +6.5 / +6.4 | +8.7 / +9.6 / +10.3 → +3.2 / +5.6 / +6.8 | ≤ 0.3 dB |
+  | LF 0.4 | +11.2 / +24.8 / +3.7 → +4.4 / +14.0 / +1.6 | +27.6 / +17.9 / +2.8 → +22.8 / +16.7 / +3.7 | ≤ 1.6 dB | unchanged |
+  | LF 0.1 | ≤ 2 dB | +3.6 → +12.2 at 300–600 (worse) | unchanged | unchanged |
+
+  All 128, R: 25–50 Hz −31.0 / −30.4 → **−44.2 / −42.4 dB** (150–300 / 300–600 ms; repeat −44.2 / −51.9). 0–50 ms: 25–50 Hz R −25.7 → −27.3, L −27.4 → −26.2; 50–100 Hz unchanged.
+- **Where it sits in time:** the impulse response of T − 1 (15–400 Hz) has **60 % of its energy in L at lags 300–700, peaking at lag 501**; in R, peaks at lags 0 and 478–481, 30 % at 300–700 and 30 % at −300…300. The chain kernel's FIR spans lags −25…500 (`ml_structure.md` §12.1), so L's error sits just past its end; 460 (comb460) does not fit.
+- **Cross-program, held out** (`mlcheck`: S's fold-A T, fitted on S's reverb only, applied to ml_lines' law model of S, M and L; every 4th group, AMPL ≥ 30; median change of the first-pass null, L / R, dB):
+
+  | | S | M | L |
+  |---|---|---|---|
+  | 25–50 Hz | −0.4 / −3.9 | −1.3 / −1.1 | −0.2 / −2.6 |
+  | 50–100 Hz | −1.9 / −8.7 | **−3.2** / +0.8 | **−3.2** / +0.2 |
+  | 100–200 Hz | −9.6 / −9.0 | **−2.5** / −0.1 | **−5.0** / −0.1 |
+  | cluster / gap window | +0.4…+1.2 | −0.9…+2.4 | −0.4…+0.4 |
+
+  **The L part carries over to M and L, so in L it is the chain** (**S**): L's cluster-only windows are the shortest (9 / 18 / 36 ms), so its FIR's long lags are the least identified, and the response it should have past lag 500 is missing. **The R part does not carry over:** it is in S's own model (**H**; R's routing via 26 / 332 is S's, ×2 / ×4 in M / L). M's and L's own first-pass transfers, measured the same way, are well determined (two halves of the groups agree to 0.02 dB / 0.4°) but their short windows put much of T − 1 at negative lags (edge effects), so they don't identify the chain on their own.
+- **Not used in the baseline yet.** T is a free low-band correction (~520 numbers) and a measurement-side one in L. The clean fix for L is a chain kernel with longer L lags (refit, cache rebuild); for R, the cause in S's model.
+
+### 23.3 What the fixed transfer is not
+
+- **Not the decay laws:** on LF 1.0 there is no shelf in the loops at all, and the error is constant from 150 ms to 2.5 s.
+- **Not comb460:** an echo at 460 would give a ripple of constant depth with period 57.3 Hz; T's depth grows towards low frequencies and its lag is 478–501.
+
+### 23.4 The decay error at LF 0.4 and LF 0.1 (`slopes`)
+
+The difference of decay rates, capture − model (dB/s, 10 log₁₀ E_capture / E_model over 39 ms frames from 50 ms), in third octaves 20–640 Hz, as a per-pass error (slope × P̄ / fs, P̄ = 1440; + = the model loses too much per pass). **Only AMPL 0 captures** (no cluster): with a cluster, the third-octave filters ring it into the early frames and even the repeat reference reads +5…+15 dB/s at 40–80 Hz on short-RT settings. Median over HF, milli-dB per pass:
+
+| | 80 Hz | 101 | 127 | 160 | 202 | 254 | 320 | 403 | 508 | 640 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| LF 0.4, RT 0.6 | +243 | +165 | +108 | +48 | +70 | +44 | +32 | +2 | −1 | −6 |
+| LF 0.4, RT 0.8 | +80 | +98 | +55 | +24 | +27 | +21 | +14 | +10 | +4 | +2 |
+| LF 0.4, RT 1.0 | +53 | +65 | +43 | +23 | +22 | +20 | +16 | +13 | +11 | +11 |
+| LF 0.4, RT 1.4 | +31 | +38 | +25 | +17 | +15 | +12 | +9 | +8 | +5 | +4 |
+| LF 0.4, RT 1.8 | +17 | +23 | +13 | +9 | +8 | +5 | +4 | +4 | +2 | +1 |
+| LF 0.4, RT 2.5 | +12 | +16 | +9 | +7 | +7 | +5 | +5 | +4 | +3 | +3 |
+| LF 0.1, RT 0.8 | +86 | −21 | +68 | +9 | +10 | −10 | −24 | −34 | −36 | −38 |
+| LF 0.1, RT 2.2 | +64 | +69 | +20 | +11 | +6 | +5 | +2 | +6 | +2 | +1 |
+| LF 1.0, RT 1.4 | +2 | +3 | 0 | −1 | 0 | 0 | +1 | +2 | +2 | +2 |
+
+- **LF 0.4:** the same at every HF step (spread 0.1–4 mdB), largest near 100 Hz, about half by 200 Hz and a quarter by 400 Hz, shrinking about as RT^−1.5 (RT 1.0 → 2.5: ÷4 at 101 Hz). 65 mdB per pass at RT 1.0 is 1.3 % of the shelf's depth at DC there (4.95 dB). One shift of the shelf pole per setting (best Δa +0.0005…+0.002) removes only 20–30 % of the rms, so the form is not a pole shift alone (open). It is why `lfrt`'s broadband LF 0.4 term (§22.2) can't remove LF 0.4's excess.
+- **LF 0.1:** too lossy at 80–130 Hz and not lossy enough at 320–640 Hz at short RT (under the DC floor), +2…+70 mdB at long RT. Consistent with §22.4's per-setting residual.
+- **LF 1.0 / 2.0:** within ±12 mdB above 63 Hz, mostly ±5; the larger values below 63 Hz in every LF step (+20…+40 mdB at 40–50 Hz, the same pattern at LF 1.0) are the fixed transfer seen through the band energy (they shrink with RT and are not a law).
+
+### 23.5 What this answers, and what's next
+
+- **The low band was hiding real errors:** below 200 Hz the S baseline is 11–21 dB above the repeat null; 100–200 Hz, inside the scored band, +13…+16 dB, invisible in the band-wide 100 Hz–10 kHz null (energy is dominated by 0.3–3 kHz).
+- **Next:** (1) refit the chain kernel with longer L lags, held out by setting, and rebuild the caches; (2) the R part of the fixed transfer in S's model (e.g. what S's R routing does below 200 Hz); (3) the LF shelf's form at LF 0.4 / 0.1 (a two-parameter change, or second order), fitted on the low band held out by RT, with the decay measured on AMPL 0 captures; (4) the AMPL-0 capture of 1.0_0.6_1.0 (`12_0_0_10_06_10_dc.wav`: half its partners' length, aligned with a 293-sample shift against 48, broadband −6…−26 dB in every band), which is in the §22.9 medians too.

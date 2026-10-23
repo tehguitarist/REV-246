@@ -43,6 +43,7 @@ Goal: recreate the EMT 246 digital reverb's S/M/L programs (Non-Lin as a bonus) 
 | `tools/ap230_form.py` | AP230's damping placement at b > 0 (`model_s_results.md` §21.2): the two-tap filter in the feed-forward / feedback paths, both free → `analysis/ap230_form/` |
 | `tools/loop_fir.py` | S's loops at strong settings (`model_s_results.md` §22–22.8), injection frozen: free per-loop corrections held out by capture (`fit`, `report`, `coefs`), RT interpolation held out by setting (`interp`), grids on cached setups for the DC floor (`floor`), the shelf (`shelf`) and the HF cap / pole offset (`hfcap`), the parts of a correction (`probe`), tilt shapes (`tilt`). One checkpoint per setting in `analysis/loop_fir/<kernel>/` (not committed) |
 | `tools/loop_cv.py` | All loop terms with every constant chosen leaving one RT step out (8 folds), each setting scored with its fold's constants: the **current S baseline** (`model_s_results.md` §22.9) → `analysis/loop_cv/` |
+| `tools/lowband.py` | The S baseline at 25–200 Hz (`model_s_results.md` §23): per-band nulls and repeat references, the capture / model transfer, a fixed-transfer variant held out by RT fold, the cross-program check on S / M / L, third-octave decay errors → `analysis/lowband/` |
 | `tools/q2_candidates.py` | Offline tests of the period-practice candidates on the frozen flat injection: in-band sparsity with controls (K1), the comb factor and tied tap model, a recursive-stage scan (K2/K5), tap-position structure (K3), a common distributor (K6), the first-pass FIR, the residual (K5), and per-tap checks across the 128 per-setting injections (K7, K4) → `analysis/q2/` |
 | `tools/make_sweep.py` | Stimulus for sweep-capturing a convolution plugin: log sweep (48 / 96 kHz, −6/−12/−18 dBFS, optional 15 s tail), its inverse filter, a single-sample impulse → `sweep_request/` (not committed) |
 | `tools/altiverb_compare.py` | Altiverb 246 IRs against Tomkin: sweep deconvolution and clipping check, cluster taps, octave-band T60, tap spectrum vs the CLA kernel, S reverb null (`library_notes.md` §6, unit facts §5c) → `analysis/altiverb/` |
@@ -75,6 +76,7 @@ Goal: recreate the EMT 246 digital reverb's S/M/L programs (Non-Lin as a bonus) 
 | `analysis/loop_fir/` | `loop_fir.py` output: logs and summaries (`fit_`, `report_`, `coefs_`, `interp_`, `floor_`, `hfcap_chain2.log`; `chain2_coefs.json`, `chain2_interp.json`, `chain2_floor*.json`, `chain2_hfcap.json`, `chain2_probe*.json`, `chain2_tilt.json`); the per-setting fits in `chain2/` are not committed |
 | `analysis/lf_rt/` | Held-out bench runs of the single loop terms (`model_s_results.md` §22.2–22.8): trained constants (`lfrt_train*.json`, `hfdp_train.json`, `split2_*.json`) and their scored settings |
 | `analysis/loop_cv/` | `loop_cv.py` output: per fold the constants (`fold_<rt>.json`, `fold_all.json` = the baseline's constants) and scored rows, `constants.log`, `report.log` |
+| `analysis/lowband/` | `lowband.py` output: per setting `chain2/`, `chain2_tfix/`, `chain2_transfer/`, `chain2_slopes/`; per group `chain2_hk_mltransfer/`, `chain2_hk_mlcheck/`; the fixed transfer per fold `chain2_tfix_{A,B}.json`; `chain2_{base,tfix}_report.log` |
 | `analysis/analog/` | Analogue chain vs the CLA and Tomkin kernels (`summary*.json`, `chain*.png`) |
 | `sources/` (local only, gitignored) | Third-party primary sources: data sheet, 252 brochure, catalogues, 245 service manual, **246S service manual (scans)**, EMT Courier, EMT 250 patent, Studio Magazin pages, magazine extracts, studiorepair internal photos. See `sources/README.md` |
 
@@ -100,5 +102,7 @@ python3 -m venv .venv && .venv/bin/pip install numpy scipy soundfile matplotlib 
 EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage constants                 # fold constants (needs loop_fir's fits and grids)
 for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage run --rt $rt; done
 EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage report                    # → analysis/loop_cv/report.log
+EMT_KERNEL=chain2 .venv/bin/python tools/lowband.py --stage score [--variant tfix]      # low band, one file per setting (tfix needs transfer + tfit)
+EMT_KERNEL=chain2 .venv/bin/python tools/lowband.py --stage report [--variant tfix]     # → analysis/lowband/chain2_<variant>_report.log
 .venv/bin/python -m pytest tests -q
 ```

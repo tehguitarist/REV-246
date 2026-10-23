@@ -20,3 +20,4 @@ analysis/chain_kernel/data_*.npz
 analysis/q2/cache_*
 analysis/q2/*_groups/
 analysis/loop_fir/*/
+analysis/lowband/*/

@@ -649,6 +649,14 @@ def branch_spectra(lab, law, alphas, b230, diff=None):
 
 def score_capture(G, v, amp, nm, fade2, eps, end_dev, ext=None):
     """Clock + gain before the fade, then cut and fade-compensated nulls (as _nulls_setting) for one capture."""
+    y, mdl, g, te = fit_capture(G, v, amp, nm, fade2, eps, end_dev, ext)
+    return dict(null_cut=q1.nulls(y, mdl, fade2, W_COMP, narrow=True), null_comp=q1.nulls(y, mdl * g, te, W_COMP, narrow=True), t_comp=te)
+
+
+def fit_capture(G, v, amp, nm, fade2, eps, end_dev, ext=None):
+    """One capture against the model G, v: clock + gain fitted before the fade (in q1's 20 Hz-11 kHz band). Returns the
+    re-gridded, gain-normalised capture y, the unfaded model, the fade ramp g (model x g is compensated) and the end of
+    the compensated window te (s after tap 0)."""
     if ext is not None:
         q1.EXT = ext                                       # excitation length P_i + EXT (worker processes start at q1's 300)
     yb = _band(nm)
@@ -662,8 +670,7 @@ def score_capture(G, v, amp, nm, fade2, eps, end_dev, ext=None):
         _, (e, sh, gain) = q1._clock_job((yb, mdl * g0, comp_end(yb, g0), eps, amp == 0))
     y = q1.apply_clock(yb, e, sh)[:n] / gain
     g = ramp_gain(n, [PRE + (x + sh - PRE) / (1 + e * 1e-6) for x in end_dev])
-    te = comp_end(y, g)
-    return dict(null_cut=q1.nulls(y, mdl, fade2, W_COMP, narrow=True), null_comp=q1.nulls(y, mdl * g, te, W_COMP, narrow=True), t_comp=te)
+    return y, mdl, g, comp_end(y, g)
 
 
 def _score_job(a):
@@ -1490,6 +1497,14 @@ def _final_setting(a_):
     key, lab, b230, law, v, ext, caps, ends, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp = a_
     q1.EXT = ext
     law["lf"] = {float(k): x for k, x in law["lf"].items()}
+    G = final_G(lab, b230, law, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp)
+    return [dict(key=key, **lab, amp=c["amp"], file=c["file"], **score_capture(G, v, c["amp"], c["file"], c["fade2"], c["eps"], ends[c["file"]], ext))
+            for c in caps]
+
+
+def final_G(lab, b230, law, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, Gmod=None):
+    """The final model's group spectra for one setting with the loop terms of final_stage (law["lf"] keyed by float).
+    Gmod: a function (lab, law, w, Gs) -> Gs applied to the loop responses last (a candidate change on top)."""
     w = 2 * np.pi * np.fft.rfftfreq(q1.grid_n(lab["rt"]))
     p_map = (lambda p: min(p + pramp[0] * max(0.0, p - pramp[1]), P_MAX)) if pramp else None   # --pramp c,p0 (model_s_results 22.8)
     Gs = G_capped(lab, law, w, beta=FINAL_BETA, gamma=gamma, hf_dp=hfdp, p_map=p_map)
@@ -1509,9 +1524,9 @@ def _final_setting(a_):
     if loopk:                                       # --loopb: the AP230 step's two-tap F(k b) in every loop as well
         bl = loopk * b230
         Gs = [Gi * ((1 - bl) + bl * np.exp(-1j * w)) for Gi in Gs]
-    G = make_G(lab, law, Gs, b230, FINAL_DIFF)
-    return [dict(key=key, **lab, amp=c["amp"], file=c["file"], **score_capture(G, v, c["amp"], c["file"], c["fade2"], c["eps"], ends[c["file"]], ext))
-            for c in caps]
+    if Gmod:
+        Gs = Gmod(lab, law, w, Gs)
+    return make_G(lab, law, Gs, b230, FINAL_DIFF)
 
 
 def final_stage(workers, only=None, compact=None, ap230=None, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None):
