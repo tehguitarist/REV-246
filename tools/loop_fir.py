@@ -20,6 +20,7 @@ nulls as the final stage):
 floor: the DC floor's constants (DC_MIN, beta) and a constant extra loss under the floor (gamma) on full windows, a grid
 on the LF 0.1 / 0.4 settings, chosen on TRAIN_RT, reported held out by setting -> <kernel>_floor.json, _floor_best.json.
 
+hfcap: HF 0.2 / 0.4 at RT <= 1.4, the HF pole's cap and an offset on a grid, chosen leaving one RT step out -> <kernel>_hfcap.json.
 probe: which part of a setting's own correction carries its gain (common, magnitude, phase, per-loop) -> <kernel>_probe.json.
 tilt: per LF step the training settings' median common magnitude shape (dB/s) -> <kernel>_tilt.json (q2 final --tilt).
 
@@ -290,6 +291,7 @@ FLOOR_GRID = dict(dc_min=[0.15, 0.18, 0.20, 0.22, 0.24, 0.26, 0.28],
 TRAIN_RT = (0.3, 0.8, 1.4, 2.2, 2.5)
 SHELF_GRID = dict(da=[-0.0006, -0.0003, -0.0001, 0.0, 0.0001, 0.0003, 0.0006, 0.001, 0.002], hi=[-0.02, -0.01, 0.0, 0.01])
 SHELF_GAMMA = -0.02
+HFCAP_GRID = dict(pmax=[0.84, 0.88, 0.92, 0.999], dp=[-0.02, -0.01, -0.005, 0.0, 0.005, 0.01, 0.02, 0.03])
 
 
 def G_shelf(lab, law, w, da, hi):
@@ -353,6 +355,13 @@ def _floor_setting(a, mode="floor"):
         variants = {"law": [1.0] * 4, "own": C, "common": [Cm] * 4, "magnitude": [np.abs(c) for c in C],
                     "phase": [np.exp(1j * np.angle(c)) for c in C], "per-loop only": [c / Cm for c in C]}
         return dict(key=key, **lab, grid=[dict(variant=k, cost=cost_of([Gi * ci for Gi, ci in zip(G_law, v)])) for k, v in variants.items()])
+    if mode == "hfcap":                              # the HF pole near and above the cap (model_s_results 22.8)
+        for pm in HFCAP_GRID["pmax"]:
+            for dp in HFCAP_GRID["dp"]:
+                Gs = q2.G_capped(lab, law, w, beta=q2.FINAL_BETA, p_map=lambda p, pm=pm, dp=dp: min(max(p + dp, 0.0), pm))
+                grid.append(dict(pmax=pm, dp=dp, cost=cost_of(Gs)))
+        grid.append(dict(pmax=None, dp=None, cost=cost_of(q2.G_capped(lab, law, w, beta=q2.FINAL_BETA))))
+        return dict(key=key, **lab, grid=grid)
     if mode == "shelf":
         for da in SHELF_GRID["da"]:
             for hs in SHELF_GRID["hi"]:
@@ -368,6 +377,42 @@ def _floor_setting(a, mode="floor"):
 
 def _shelf_setting(a):
     return _floor_setting(a, "shelf")
+
+
+def _hfcap_setting(a):
+    return _floor_setting(a, "hfcap")
+
+
+def hfcap_stage(workers, only=None):
+    """HF 0.2 / 0.4 at RT <= 1.4: a grid over the HF pole's cap and an offset, p = min(p_law + dp, pmax), on full windows;
+    per HF step the combination chosen leaving one RT step out, scored on that step (cost re the law)."""
+    info, fade, _, _, eps0 = q2.q1_tables()
+    ap = json.load(open(os.path.join(q2.OUT, AP230)))
+    law = q1.fit_laws(json.load(open(os.path.join(q2.Q1, "loops.json"))))
+    keys = [k for k, g in info.items() if g["hf"] in (0.2, 0.4) and g["rt"] <= 1.4 and (only is None or k in only)]
+    jobs = [(k, dict(lf=info[k]["lf"], rt=info[k]["rt"], hf=info[k]["hf"]), ap["steps"][ap["settings"][k]["step"]], json.loads(json.dumps(law)),
+             [dict(amp=a, file=nm, eps=eps0[nm], fade2=fade[nm]) for a, nm in q2.files_of(info[k])]) for k in keys]
+    with ProcessPoolExecutor(workers, max_tasks_per_child=4) as ex:
+        res = list(ex.map(_hfcap_setting, jobs))
+    json.dump(res, open(OUT + "_hfcap" + ("_smoke" if only else "") + ".json", "w"), indent=0)
+    combos = [(g["pmax"], g["dp"]) for g in res[0]["grid"] if g["pmax"] is not None]
+
+    def rel(s, c):
+        base = next(g["cost"] for g in s["grid"] if g["pmax"] is None)
+        return next(g["cost"] for g in s["grid"] if (g["pmax"], g["dp"]) == c) / base
+    for hf in (0.2, 0.4):
+        rts = sorted({s["rt"] for s in res if s["hf"] == hf})
+        print(f"HF {hf}: best per RT step on its own (in-sample) and leave-one-RT-out (chosen on the others, dB re the law):")
+        for rt in rts:
+            own = [s for s in res if s["hf"] == hf and s["rt"] == rt]
+            oth = [s for s in res if s["hf"] == hf and s["rt"] != rt]
+            t_own = [np.mean([rel(s, c) for s in own]) for c in combos]
+            t_oth = [np.mean([rel(s, c) for s in oth]) for c in combos]
+            c_own, c_cv = combos[int(np.argmin(t_own))], combos[int(np.argmin(t_oth))]
+            print(f"  RT {rt}: own best pmax {c_own[0]} dp {c_own[1]:+} -> {10 * np.log10(min(t_own)):+.2f} dB; "
+                  f"chosen on the other RT steps pmax {c_cv[0]} dp {c_cv[1]:+} -> {10 * np.log10(np.mean([rel(s, c_cv) for s in own])):+.2f} dB")
+        allc = [np.mean([rel(s, c) for s in res if s["hf"] == hf]) for c in combos]
+        print(f"  all RT steps: best pmax {combos[int(np.argmin(allc))][0]} dp {combos[int(np.argmin(allc))][1]:+} -> {10 * np.log10(min(allc)):+.2f} dB")
 
 
 def _probe_setting(a):
@@ -553,7 +598,7 @@ def interp_stage(workers, only=None):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", default="fit", choices=["fit", "report", "coefs", "interp", "floor", "shelf", "probe", "tilt"])
+    ap.add_argument("--stage", default="fit", choices=["fit", "report", "coefs", "interp", "floor", "shelf", "probe", "tilt", "hfcap"])
     ap.add_argument("--only", default=None)
     ap.add_argument("--workers", type=int, default=4)
     a = ap.parse_args()
@@ -563,6 +608,8 @@ def main():
         coefs_stage()
     elif a.stage == "tilt":
         tilt_stage()
+    elif a.stage == "hfcap":
+        hfcap_stage(a.workers, a.only.split(",") if a.only else None)
     elif a.stage == "probe":
         probe_stage(a.workers, a.only.split(","))
     elif a.stage == "shelf":

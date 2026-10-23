@@ -1874,3 +1874,38 @@ Nulls (R, all 48): 300–600 ms −41.8 (law) → −42.4 / −42.5 dB. At 300�
 - **The transferable terms hold on a second split** (300–600 ms +9.8 → +7.4; 600–1000 +4.5 → +1.9), with constants close to the first split's (γ −0.03 vs −0.02; the LF pairs within 0.0005).
 - **The gates hold on settings that did not choose them:** gated ≥ ungated on average, better late (600–1000 ms +1.9 vs +2.8), fewer losses (4 vs 7), and LF 0.4 at long RT less damaged (300–600 ms +9.2 vs +11.5; law +8.6).
 - **What is left points at the same two places, more narrowly:** the HF 0.2 shift helps at RT 1.4 (law pole ≈ 0.5–0.6) but costs at RT 2.2 (pole < 0.5, where the per-loop fits wanted only ≈ −0.0006, §22.5), so it belongs to a pole band ≈ 0.5–0.65; LF 0.4 still loses at RT 1.4 / HF 1.0 (+3.4 dB at 300–600 ms), where that setting's own correction never beat the law. Narrowing them again would mean tuning on this split's test settings; any further gate should be chosen by leave-one-RT-out cross-validation instead. The remaining gain there is about a dB.
+
+### 22.8 HF 0.2 at short RT: the HF pole runs ahead of the law near the cap (`loop_fir.py --stage hfcap`, `final --pramp`) **[S for the ramp, held out; open for the capped cell]**
+
+**Where the excess is** (R, 50–150 / 150–300 / 300–600 ms, median over LF; law poles per loop uncapped, AP230 step):
+
+| Cell | Law poles | Capped | b | Excess |
+|---|---|---|---|---|
+| HF 0.2, RT 0.3 | 0.98–0.99 | 4/4 | 0.50 | +0.1 / +2.4 / +8.1 |
+| HF 0.2, RT 0.6 | 0.86–0.91 | 4/4 | 0.50 | +22.2 / +28.9 / +12.2 |
+| HF 0.2, RT 0.8 | 0.77–0.83 | 0/4 | 0.33 | **+29.5 / +37.3 / +27.1** |
+| HF 0.2, RT 1.0 | 0.69–0.76 | 0/4 | 0.17 | **+24.1 / +30.9 / +26.1** |
+| HF 0.2, RT 1.4 | 0.57–0.63 | 0/4 | 0 | +10.9 / +15.6 / +14.2 |
+| HF 0.4, RT 0.3 | 0.77–0.83 | 0/4 | 0.50 | +0.4 / +6.3 / +8.1 |
+
+The worst cells sit just *below* the 0.84 cap, where the per-pass HF loss is most sensitive to the pole (an error of 0.01 at p ≈ 0.8 is about −0.5 dB per pass at the top of the band).
+
+**The cap and a constant offset (`hfcap` stage; `analysis/loop_fir/chain2_hfcap.json`, `hfcap_chain2.log`):** a grid over the cap P_MAX ∈ {0.84, 0.88, 0.92, none} and an offset Δp ∈ −0.02…+0.03 (p = min(p_law + Δp, P_MAX)) on the 40 HF 0.2 / 0.4 settings at RT ≤ 1.4, full windows.
+- **P_MAX = 0.84 stands on full windows:** the capped cells (HF 0.2 at RT 0.3 / 0.6) gain nothing from any other cap or offset.
+- **The cells just below the cap want a higher pole:** HF 0.2 / RT 0.8 best Δp +0.02 (−4.2 dB cost), RT 1.0 +0.01 (−3.2 dB), HF 0.4 / RT 0.3 +0.02 (−0.7 dB). **A constant offset does not transfer:** leave one RT step out, the choice is Δp = 0, because +0.01 costs RT 1.4 4.5 dB.
+
+**So the unit's pole departs from the law's as a function of the law's pole:** ≈ 0 below 0.5, ≈ −0.002 at 0.5–0.65 (§22.5), ≈ +0.01 at 0.69–0.76, ≈ +0.02 at 0.77–0.83, capped at 0.84 above. **A ramp:** p = min(p_law + c · max(0, p_law − p₀), 0.84), the HF pole mapping steepening at strong damping (the shape of an approximation in the control-side T → p mapping departing there, **H**). p₀ = 0.62, where §22.5's shifts turn positive; **c = 0.11 from the training cell HF 0.2 / RT 0.8 alone** (+0.02 at p ≈ 0.80). 2 numbers.
+
+**Held out by setting** (`analysis/lf_rt/pramp_test.{json,log}`; HF 0.2 / RT 1.0 and HF 0.4 / RT 0.3 are the only other cells in that pole range and did not set c), R null [excess], law → ramp:
+
+| Cell | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| **HF 0.2, RT 1.0 (held out)** | −36.6 [+24.1] → **−48.8 [+12.4]** | −25.0 [+30.9] → **−38.9 [+17.5]** | −20.1 [+26.1] → **−34.3 [+13.3]** | −15.2 [+8.2] → **−23.4 [+0.3]** |
+| … LF 0.1 / 0.4 / 1.0 / 2.0 at 300–600 ms | | | +26.0 → +17.0; +24.8 → +10.2; +26.1 → +11.6; +28.6 → +15.1 | |
+| **HF 0.4, RT 0.3 (held out)** | +0.4 → −0.5 | +6.3 → **+0.1** | +8.1 → **+1.2** | — |
+| HF 0.2, RT 0.8 (training) | +29.5 → +18.2 | +37.3 → +25.6 | +27.1 → +16.4 | +13.6 → +4.8 |
+| HF 0.2, RT 1.4 (check) | +10.9 → +11.2 | +15.6 → +15.8 | +14.2 → +14.4 | +7.9 → +8.2 |
+| HF 0.2, RT 0.6 (capped) | unchanged | | | |
+
+- **The worst held-out cell gains 8–14 dB in every window, at every LF step** (300–600 ms −20.1 → −34.3 dB), and HF 0.4 / RT 0.3, another HF step and RT in the same pole range, reaches the repeat-capture level. Below the knee nothing changes (RT 1.4 within 0.3 dB).
+- **Still open:** HF 0.2 / RT 0.6 (capped, b = 0.5; no pole change helps, +22 / +29 / +12 dB) and the rest of RT 0.8 (+16…+26 dB after the ramp; its own best pole there exceeds 0.84 for the longest loop, so the ramp and the cap may meet differently than a hard min). The ramp's c from one cell is coarse (the grid's step 0.01 in Δp); a finer fit belongs in a cross-validated pass with the other loop terms.
