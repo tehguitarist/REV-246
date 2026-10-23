@@ -2337,7 +2337,52 @@ All on §25.9's bench: the §25.7 model, chain3, clocks and fade per capture; tr
 | diffuser + level | 7 | all 128 | = tap level ±0.1 | | | |
 
 - **Reading:** the error's 1 kHz part is **a loop-path level relative to the cluster**, +0.15 … +0.2 % (0.013–0.017 dB), and the shape in frequency is the same in both folds. It belongs to each loop's own taps. It is no all-pass error and no cross-loop feed (**S** for size, sign and consistency). It gains 1.2–1.4 dB at 50–150 ms on all 128 settings and nothing later. At 150–300 ms on the damped settings it costs 0.3–0.4 dB of null (0.6–0.8 dB of excess), so it does not transfer cleanly to b > 0. **Not adopted:** the gain is early only; the baseline's numbers come from `loop_cv.py` on chain2; and the cause is open (**H**).
-  - Possible cause: the tap magnitude 0.3001 comes from the compact fit `COMPACT` (`q2.final_injection`, flat-trained, older IRs), while each capture's gain is fitted to the whole response, cluster included. A tap-magnitude refit on chain3 would absorb a frequency-flat part.
+  - Possible cause (ruled out in §25.11: the compact numbers in use were refitted on chain2 in §21, magnitude 0.2988, and on chain3 the ratio of tap magnitude to cluster gain is unchanged): the tap magnitude 0.3001 comes from the compact fit `COMPACT` (`q2.final_injection`, flat-trained, older IRs), while each capture's gain is fitted to the whole response, cluster included. A tap-magnitude refit on chain3 would absorb a frequency-flat part.
   - The 4 kHz dip and 8 kHz rise look like an output-side filter difference between the cluster and the loop paths. That is not modelled, and §21 found S's output kernel to be a unit tap on chain2.
 - **Not decoded:** the 250 Hz part. At 1 kHz the 2-number level matches the 25,116-number dense correction in every window (+3.2 / +6.1 / +5.1 against +2.8 / +5.9 / +5.4). At 250 Hz it does not: +11.8 / +12.1 / +8.3 against +8.5 / +10.7 / +7.3. That remainder is the half of the in-band kernel away from the taps, with no diffuser-lag structure. It is partly loop-specific: the common kernel keeps 250 Hz at 50–150 ms (+7.8) but not at 150–300 ms (+11.7 against the dense correction's +10.7).
 - **Next:** (1) refit the compact model's tap magnitude and cluster gain on chain3 (with a mild output-side filter of the loop paths relative to the cluster), then re-take the §25.7 baseline in `loop_cv.py`; (2) the 250 Hz, loop-specific part of the dense correction, per loop on the undamped settings with the level in place; (3) AP230's damping at b > 0, where none of these corrections transfers.
+
+### 25.11 The compact numbers refitted on chain3, and the §25.7 baseline re-taken on chain3 (`q2_injection.py --stage diffuser`, `--xadd`; `loop_cv.py --retake [--xadd]`) **[S: the refit and the re-take; H: why the read kernel transfers less here; baseline = the re-take]**
+
+```
+EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 4 -- .venv/bin/python tools/q2_injection.py --stage diffuser --gfix -0.70710678 \
+    --ap230 analysis/q2/ap230_g0.7071_chain2.json --workers 4          # -> diffuser_tied_fix-0.707107_ap230new_chain3.{npy,json}, diffuser_chain3.log
+for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 6 -- .venv/bin/python tools/loop_cv.py --retake [--xadd b01_rtmin0.6_ckernel2_band200-10000] --stage run --rt $rt; done
+EMT_KERNEL=chain3 .venv/bin/python tools/loop_cv.py --retake [--xadd ...] --stage report      # analysis/loop_cv/hfcells_chain3[_<xadd>]/report.log
+```
+
+§25.10 asked whether the loop-path level (+0.15…+0.2 % re the cluster at 250 Hz – 1 kHz) is a stale tap magnitude, and noted that the baseline (§25.7, chain2) and the §25.9–25.10 diagnostics (chain3) sat on different kernels. Both are settled here. The diffuser stage costs 2.7 GB and 95 s; each `loop_cv` fold 2.0–2.3 GB and 39–143 s (about 11 min for all 8).
+
+**1. The compact numbers on chain3 (9 numbers, 6 flat training settings, as §21).** The tap magnitude goes from 0.298840 to 0.298862 (+0.007 %), and the 8 cluster gains move by at most 0.02 % and stay equal within 0.1 %. Their ratio is 26.316 on chain2 and 26.315 on chain3. Held out (flat RT 0.8 / 1.8, 8 captures, R): −51.4 / −49.4 / −45.8 / −35.6 dB at 50–150 / 150–300 / 300–600 / 600–1000 ms, against −51.3 / −49.3 / −45.7 / −35.6 on chain2.
+- **The level is not a stale tap magnitude.** §25.10's "0.3001" was the old-IR value. The compact numbers in use have been the chain2 refit (0.2988) since §21, and on chain3 the compact fit, which sets tap magnitude and cluster gain directly, finds no change.
+- **The level is present on flat settings too.** dense_mid's `gain` basis at 200–1500 Hz, trained on the flat undamped settings only (3 / 4 per fold), gives +0.173 / +0.168 % (L, folds A / B) and +0.237 / +0.223 % (R): the all-group value or slightly more. So the compact fit and the dense_mid bench disagree on the same settings. They differ in what they see: the compact fit is broadband (20 Hz – 11 kHz) from 0 ms with the q1 clocks and gains, where the first pass through the taps (0–67 ms) pins the ratio. dense_mid fits only from 50 ms, in band, with each capture's clock and gain fixed from its prep. A level that exists only from 50 ms on, or only in band, is not a tap magnitude (**S**).
+
+**2. The §25.7 baseline re-taken on chain3.** The same 8 RT folds, constants (`fold_<rt>.json`) and cell tables (`cells.json`) as §25.7, unchanged and held out by setting as there. The compact numbers are the chain3 refit, with the chain3 IRs and clocks per capture. 100 Hz–10 kHz, R, §25.7 (chain2) → re-taken [excess over repeat]:
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| All 128 | −51.5 [+4.4] → **−51.6 [+4.3]** | −48.9 [+6.0] → **−48.9 [+5.9]** | −44.1 [+3.7] → **−44.0 [+3.6]** | −37.4 [+0.1] → **−37.3 [+0.1]** |
+| Flat | −50.4 [+0.6] → −50.5 [+0.6] | −49.1 [+3.2] → −49.2 [+3.0] | −45.3 [+0.6] → −45.4 [+0.5] | −37.4 [−1.5] → −37.4 [−1.5] |
+| LF 0.1 | −51.3 [+6.2] → −51.4 [+6.2] | −47.5 [+7.5] → −47.6 [+7.5] | −40.4 [+5.7] → −40.4 [+5.8] | −33.1 [+4.0] → −33.1 [+4.0] |
+| LF 2.0 | −51.5 [+3.8] → −51.4 [+3.8] | −50.1 [+4.9] → −49.9 [+5.0] | −46.1 [+4.2] → −45.9 [+4.3] | −42.2 [+0.5] → −42.1 [+0.6] |
+| HF 0.2 | −51.1 [+6.0] → −51.1 [+6.0] | −44.0 [+9.9] → −43.8 [+9.9] | −37.8 [+6.0] → −37.7 [+6.1] | −38.7 [+2.6] → −38.7 [+2.7] |
+
+- All 128, L / R: 0–50 ms −51.2 / −50.9 → −51.4 / −50.8; 50–150 −50.9 / −51.5 → **−51.6 / −51.6**; 150–300 −48.1 / −48.9 → −48.7 / −48.9; 300–600 −43.5 / −44.1 → −43.8 / −44.0; 600–1000 unchanged.
+- **R is unchanged to ±0.1 dB in every window, and L gains 0.3–0.7 dB at 50–600 ms, so L = R now from 0 to 1000 ms.** No setting moves by more than 0.5 dB at 300–600 ms (125 with that window; LF 2.0 loses 0.1–0.2 dB, the most).
+- **This is the S baseline now (§25.11):** it is on the kernel the diagnostics use, and with no new number it is as good or better. Parameters: as §25.7 (13 law numbers, 3 limit constants, the AP230 table, the §22.9 fold constants, the floor and HF-pole cell tables) and 9 compact numbers (effectively 2) refitted on chain3; per capture clock, shift and gain.
+- **References:** the excess still uses chain2's `nulls_free` references, since the free models are not refitted on chain3 (a long run). §21.1 found the references moved ±0.05 dB between the old IRs and chain2. chain3 changes the kernel mostly below 200 Hz, so at 100 Hz–10 kHz the excess figures should hold to about 0.1 dB (**H** until refitted). The nulls don't depend on them.
+
+**3. §25.10's loop-path read kernel on this bench (`--xadd`).** The ±2-lag read kernel per channel (10 numbers, dense_mid fold A or B, whichever left out the setting's RT step, so held out by RT on 2 folds) is added to the injection. Re-taken → + read kernel, R [excess]:
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| All 128 | −51.6 [+4.3] → −51.7 [+4.3] | −48.9 [+5.9] → −49.1 [+5.8] | −44.0 [+3.6] → −44.1 [+3.5] | −37.3 [+0.1] → −37.6 [+0.0] |
+| Flat | −50.5 [+0.6] → −50.8 [+1.1] | −49.2 [+3.0] → −49.4 [+2.7] | −45.4 [+0.5] → −45.4 [+0.4] | −37.4 [−1.5] → −37.2 [−1.6] |
+| RT ≥ 1.4 | −52.4 [+2.9] → −52.5 [+2.5] | −50.4 [+6.0] → −50.7 [+5.9] | −47.0 [+5.2] → −47.3 [+5.0] | −41.8 [+2.3] → −42.0 [+2.4] |
+
+- L / R, all 128: 0–50 ms −51.4 / −50.8 → −51.9 / −51.2; 50–150 −51.6 / −51.6 → −51.4 / −51.7; 150–300 −48.7 / −48.9 → −49.0 / −49.1.
+- **0.1–0.3 dB here, against 1.2 dB at 50–150 ms on the dense_mid bench**, and L loses 0.2 dB at 50–150 ms. Not adopted: 10 numbers for 0.1–0.3 dB.
+- Why the two benches differ (**H**): here each capture's clock, shift and gain are refitted against the model with the correction in place (`score_capture`), while dense_mid keeps them fixed from its prep. A loop-path level of 0.01–0.02 dB is within what a per-capture gain and clock refit trades off against the cluster. dense_mid's references (the next AMPL capture under its own clocks) also differ from `nulls_free`. So §25.10's 1 kHz "level" is real on a fixed-clock bench but worth almost nothing once the clocks are refitted, and it isn't the main excess.
+
+**Reading.** The compact numbers are kernel-independent, and the baseline is now on chain3 at the same held-out level (L better by 0.3–0.7 dB). The 50–600 ms excess (+4.3 / +5.9 / +3.6 dB, R) is not a tap level. **Next:** (1) the 250 Hz part of the dense correction, per loop on the undamped settings, scored on this bench (`loop_cv --retake --xadd`) as well as on dense_mid's; (2) AP230's damping at b > 0; (3) the `nulls_free` references on chain3 (a checkpointed long run) once the excess figures matter to 0.1 dB.
+

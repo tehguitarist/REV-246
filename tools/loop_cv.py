@@ -14,6 +14,12 @@ setting) -> cells.json; outputs in analysis/loop_cv/cells/, reported against the
 --lf04dc (any stage): also LF 0.4's shelf DC ratio per fold (model_s_results §25: the median of the per-setting best
 of lowband_shelf.py's dc stage, lfrt kept, chain3, over the fold's training RT steps); outputs in analysis/loop_cv/lf04dc/,
 reported against the §22.9 folds above.
+--retake (run / report; implies --hfcells): the §25.7 baseline re-taken on this kernel (model_s_results §25.11): the
+hfcells folds' constants and cells.json unchanged, the compact numbers refitted on this kernel (q2_injection diffuser
+stage, diffuser_tied_fix-0.707107_ap230new_<kernel>); outputs in analysis/loop_cv/hfcells_<kernel>[_<xadd>]/, reported
+against hfcells/. --xadd TAG: also dense_mid.py's correction x_<fold>_<TAG>.npy, the fold whose training RT steps
+exclude the setting's (so held out by RT step, 2 folds); --refs: the repeat-capture references (default nulls_free on
+this kernel, else chain2's).
 
 The terms (G_capped / q2_injection final options) and how each fold fits them, from the other RT steps only:
   gamma   a constant extra broadband loss where the DC floor acts (LF 0.1): the floor grid (loop_fir floor stage), DC_MIN
@@ -48,6 +54,8 @@ SHELF_FLOOR = os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_floorN")  
 SHELF_HF = os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_hfcell")      # lowband_shelf.py --stage hfcell
 CELLS = False
 HFCELLS = False
+RETAKE, XADD, REFS = False, None, None
+DENSE = os.path.join(ROOT, "analysis", "dense_mid")
 
 
 def hfcells_table():
@@ -184,7 +192,8 @@ def run_stage(rt, workers):
         json.dump(fold[k], open(os.path.join(OUT, f"fold_{rt}_{k}.json"), "w"), indent=1)
     info = json.load(open(os.path.join(q2.Q1, q1.DATA)))
     keys = ",".join(k for k, g in info.items() if g["rt"] == rt)
-    cmd = [sys.executable, os.path.join(HERE, "q2_injection.py"), "--stage", "final", "--compact", lf_.COMPACT,
+    compact = f"diffuser_tied_fix-0.707107_ap230new_{q1.ms.KTAG}" if RETAKE else lf_.COMPACT
+    cmd = [sys.executable, os.path.join(HERE, "q2_injection.py"), "--stage", "final", "--compact", compact,
            "--ap230", os.path.join(q2.OUT, lf_.AP230), "--gamma", str(fold["gamma"]),
            "--lfrt", os.path.join(OUT, f"fold_{rt}_lfrt.json"), "--hfdp", os.path.join(OUT, f"fold_{rt}_hfdp.json"),
            "--pramp", f"{fold['pramp'][0]},{fold['pramp'][1]}", "--only", keys, "--workers", str(workers)]
@@ -192,21 +201,30 @@ def run_stage(rt, workers):
         cmd += ["--lfdc", ",".join(f"{k}:{x}" for k, x in fold["lfdc"].items())]
     if CELLS:
         cmd += ["--floorcells", os.path.join(OUT, "cells.json")]
+    if XADD:                                        # dense_mid's 2 folds: A trains on RT 0.3 / 0.8 / 1.4 / 2.2
+        fd = "B" if rt in (0.3, 0.8, 1.4, 2.2) else "A"
+        cmd += ["--xadd", os.path.join(DENSE, q1.ms.KTAG, f"x_{fd}_{XADD}.npy")]
     with open(os.path.join(OUT, f"fold_{rt}.log"), "w") as f:
         subprocess.run(cmd, check=True, stdout=f, stderr=subprocess.STDOUT)
-    src = sorted(glob.glob(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit_lfrt_gamma*_hfdp_pramp*" + ("_lfdc" if "lfdc" in fold else "") + ("_cells" if CELLS else "") + "_smoke.json")),
+    src = sorted(glob.glob(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit_lfrt_gamma*_hfdp_pramp*" + ("_lfdc" if "lfdc" in fold else "") + ("_cells" if CELLS else "") + ("_xadd" if XADD else "") + "_smoke.json")),
                  key=os.path.getmtime)[-1]
     os.replace(src, os.path.join(OUT, f"fold_{rt}_rows.json"))
 
 
 def report_stage():
-    if OUT == BASE_OUT:                             # §21 -> the CV loop terms
+    if RETAKE:                                      # §25.7 (chain2) -> re-taken on this kernel; with XADD: the re-take -> + the correction
+        ref = os.path.join(BASE_OUT, "hfcells" + (f"_{q1.ms.KTAG}" if XADD else ""))
+        a = {(r["key"], r["amp"]): r for p in glob.glob(os.path.join(ref, "fold_*_rows.json")) for r in json.load(open(p))["rows"]}
+    elif OUT == BASE_OUT:                           # §21 -> the CV loop terms
         a = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit.json")))["rows"]}
     else:                                           # the §22.9 folds -> the same plus LF 0.4's dc (--cells: the lf04dc folds -> plus the floor cells)
         ref = os.path.join(BASE_OUT, "cells" if HFCELLS else "lf04dc") if CELLS else BASE_OUT
         a = {(r["key"], r["amp"]): r for p in glob.glob(os.path.join(ref, "fold_*_rows.json")) for r in json.load(open(p))["rows"]}
     c = {(r["key"], r["amp"]): r for p in glob.glob(os.path.join(OUT, "fold_*_rows.json")) for r in json.load(open(p))["rows"]}
-    rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("nulls_free") + ".json")))}
+    rp = REFS or os.path.join(q2.OUT, q1.ms.tagged("nulls_free") + ".json")
+    if not os.path.exists(rp):
+        rp = os.path.join(q2.OUT, "nulls_free_chain2.json")
+    rep = {(r["key"], r["amp"]): r for r in json.load(open(rp))}
     ws = ["0-50", "50-150", "150-300", "300-600", "600-1000", "1000-1500"]
 
     def med(ks, src, w, ch):
@@ -218,7 +236,7 @@ def report_stage():
         return np.median(e) if e else np.nan
     ks = list(c)
     out = [f"## All loop terms, leave-one-RT-out ({len({k[0] for k in ks})} settings, {len(ks)} captures; every setting scored with constants "
-           f"fitted without its RT step); R null [excess over repeat]: " + ("§21 -> CV" if OUT == BASE_OUT else "§25.6 -> + HF cells" if HFCELLS else "§25.4 -> + floor cells" if CELLS else "§22.9 -> + LF 0.4 dc") + "; kernel " + str(q1.ms.KTAG)]
+           f"fitted without its RT step); R null [excess over repeat]: " + ((f"re-taken on {q1.ms.KTAG} -> + {XADD}" if XADD else f"§25.7 -> re-taken on {q1.ms.KTAG}") if RETAKE else "§21 -> CV" if OUT == BASE_OUT else "§25.6 -> + HF cells" if HFCELLS else "§25.4 -> + floor cells" if CELLS else "§22.9 -> + LF 0.4 dc") + "; kernel " + str(q1.ms.KTAG) + "; refs " + os.path.basename(rp)]
     out.append("| Settings | " + " | ".join(ws[1:5]) + " |\n|---|" + "---|" * 4)
     groups = [("All 128", lambda r: True), ("Flat", lambda r: r["lf"] == 1.0 and r["hf"] == 1.0), ("LF 0.1", lambda r: r["lf"] == 0.1),
               ("LF 0.4", lambda r: r["lf"] == 0.4), ("LF 2.0", lambda r: r["lf"] == 2.0), ("HF 0.2", lambda r: r["hf"] == 0.2),
@@ -246,11 +264,21 @@ def main():
     ap.add_argument("--lf04dc", action="store_true")
     ap.add_argument("--cells", action="store_true")
     ap.add_argument("--hfcells", action="store_true", help="also the HF pole shift per (HF, RT) cell (implies --cells)")
+    ap.add_argument("--retake", action="store_true", help="the hfcells constants on this kernel's refitted compact numbers (implies --hfcells)")
+    ap.add_argument("--xadd", default=None, help="with --retake: dense_mid x tag (after the fold letter) added to the injection")
+    ap.add_argument("--refs", default=None, help="report: the repeat-capture reference file (default nulls_free on this kernel)")
     a = ap.parse_args()
-    if a.lf04dc or a.cells or a.hfcells:
-        global OUT, CELLS, HFCELLS
-        CELLS, HFCELLS = a.cells or a.hfcells, a.hfcells
-        OUT = os.path.join(BASE_OUT, "hfcells" if a.hfcells else "cells" if a.cells else "lf04dc")
+    global OUT, CELLS, HFCELLS, RETAKE, XADD, REFS
+    RETAKE, XADD, REFS = a.retake, a.xadd, a.refs
+    if a.lf04dc or a.cells or a.hfcells or a.retake:
+        CELLS, HFCELLS = a.cells or a.hfcells or a.retake, a.hfcells or a.retake
+        OUT = os.path.join(BASE_OUT, "hfcells" if a.hfcells or a.retake else "cells" if a.cells else "lf04dc")
+        if a.retake:
+            src, OUT = OUT, OUT + f"_{q1.ms.KTAG}" + (f"_{a.xadd}" if a.xadd else "")
+            os.makedirs(OUT, exist_ok=True)
+            for f in [f"fold_{rt}.json" for rt in RTS] + ["cells.json"]:      # the constants, unchanged
+                if not os.path.exists(os.path.join(OUT, f)):
+                    open(os.path.join(OUT, f), "w").write(open(os.path.join(src, f)).read())
         os.makedirs(OUT, exist_ok=True)
     if a.stage == "constants":
         constants_stage()

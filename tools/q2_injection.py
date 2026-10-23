@@ -1547,14 +1547,18 @@ def final_Gs(lab, law, w, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None
 
 
 def final_stage(workers, only=None, compact=None, ap230=None, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, lfdc=None,
-                floorcells=None):
+                floorcells=None, xadd=None):
     """compact / ap230: the 9 numbers and the AP230 step table to use (default: those fitted on the old IRs, as §17);
-    either given -> output suffix _refit. lfdc: {lf: dc} replacing the law's shelf DC ratio at those LF steps (§25)."""
+    either given -> output suffix _refit. lfdc: {lf: dc} replacing the law's shelf DC ratio at those LF steps (§25).
+    xadd: a .npy correction of the loop excitations (dense_mid.py's x_*, Joint layout after the cluster and first-pass FIR)
+    added to the compact injection (model_s_results 25.10-25.11)."""
     from concurrent.futures import ProcessPoolExecutor
     info, fade, _, _, eps0 = q1_tables()
     ap = json.load(open(ap230 or os.path.join(OUT, "ap230_g0.7071.json")))
     ends = json.load(open(os.path.join(OUT, "ramp.json")))
     v, law, a = final_injection(compact=compact)
+    if xadd:
+        v = v + np.r_[np.zeros(8 + 2 * q1.LFIR), np.load(xadd)]
     for lf_k, dc_v in (lfdc or {}).items():
         law["lf"][float(lf_k)]["dc"] = float(dc_v)
     cl = np.load(os.path.join(OUT, (compact or COMPACT) + ".npy"))[:8]
@@ -1582,8 +1586,11 @@ def final_stage(workers, only=None, compact=None, ap230=None, loopk=0.0, bbtilt=
     json.dump(dict(diff=FINAL_DIFF, beta=FINAL_BETA, p_max=P_MAX, dc_min=DC_MIN, tap_magnitude=a, cluster_gains=cl.tolist(), compact=compact or COMPACT,
                    ap230=ap230, ap230_steps=ap["steps"], rows=rows, cla=cla),
               open(os.path.join(OUT, q1.ms.tagged("final_s") + ("_chain" if os.environ.get("Q2_CHAIN") else "") + ("_refit" if compact or ap230 else "")
-                                + (f"_loopb{loopk:g}" if loopk else "") + (f"_bbtilt{bbtilt:g}" if bbtilt else "") + ("_lfrt" if lfrt else "") + (f"_gamma{gamma:g}" if gamma else "") + ("_tilt" if tilt else "") + ("_hfdp" if hfdp else "") + (f"_pramp{pramp[0]:g}_{pramp[1]:g}" if pramp else "") + ("_lfdc" if lfdc else "") + ("_cells" if floorcells else "") + ("_smoke" if only else "") + ".json"), "w"), indent=0)
-    rep_f = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(OUT, q1.ms.tagged("nulls_free") + ".json")))}
+                                + (f"_loopb{loopk:g}" if loopk else "") + (f"_bbtilt{bbtilt:g}" if bbtilt else "") + ("_lfrt" if lfrt else "") + (f"_gamma{gamma:g}" if gamma else "") + ("_tilt" if tilt else "") + ("_hfdp" if hfdp else "") + (f"_pramp{pramp[0]:g}_{pramp[1]:g}" if pramp else "") + ("_lfdc" if lfdc else "") + ("_cells" if floorcells else "") + ("_xadd" if xadd else "") + ("_smoke" if only else "") + ".json"), "w"), indent=0)
+    rp = os.path.join(OUT, q1.ms.tagged("nulls_free") + ".json")
+    if not os.path.exists(rp):                      # no free refit on this kernel yet: chain2's references
+        rp = os.path.join(OUT, "nulls_free_chain2.json")
+    rep_f = {(r["key"], r["amp"]): r for r in json.load(open(rp))}
     ws = ["0-50", "50-150", "150-300", "300-600", "600-1000", "1000-1500"]
 
     def med(rr, w, c):
@@ -1594,7 +1601,7 @@ def final_stage(workers, only=None, compact=None, ap230=None, loopk=0.0, bbtilt=
         e = [r["null_comp"][w][1] - rep_f[(r["key"], r["amp"])]["repeat_comp"][w][1] for r in rr
              if r["null_comp"].get(w) and rep_f.get((r["key"], r["amp"])) and rep_f[(r["key"], r["amp"])]["repeat_comp"].get(w)]
         return np.median(e) if e else np.nan
-    print(f"\n## Final S ({len(keys)} settings, {len(rows)} captures; tap magnitude {a:.4f}); 100 Hz-10 kHz, fade-compensated; null L / R [excess R, ref nulls_free]")
+    print(f"\n## Final S ({len(keys)} settings, {len(rows)} captures; tap magnitude {a:.4f}); 100 Hz-10 kHz, fade-compensated; null L / R [excess R, ref " + os.path.basename(rp) + "]")
     print("| window (ms) | all settings | flat (LF 1.0, HF 1.0) | RT >= 1.4 | RT <= 1.0 |\n|---|---|---|---|---|")
     groups = [lambda r: True, lambda r: r["lf"] == 1.0 and r["hf"] == 1.0, lambda r: r["rt"] >= 1.4, lambda r: r["rt"] <= 1.0]
     for w in ws:
@@ -1731,6 +1738,7 @@ def main():
     ap.add_argument("--lfrt", default=None, help="final: a JSON of per-LF-step (a, b): each loop's broadband decay rate x (1 + a + b RT)")
     ap.add_argument("--bbtilt", type=float, default=0.0, help="final: each loop's broadband loss x (1 + c (hi - 1)), hi the LF step's Nyquist RT ratio")
     ap.add_argument("--loopb", type=float, default=0.0, help="final: also put AP230's two-tap F(k b) into every loop (k; 0 = off)")
+    ap.add_argument("--xadd", default=None, help="final: a .npy loop-excitation correction (dense_mid.py x_*) added to the injection")
     ap.add_argument("--compact", default=None, help="final: the compact fit's run name in OUT (default COMPACT, fitted on the old IRs)")
     ap.add_argument("--analog", nargs="?", const=True, default=False,
                     help="cla: CLA's per-unit analogue correction: bare flag = 3 parameters (HP corners, S&H pole) fitted on 0-300 ms; "
@@ -1781,7 +1789,7 @@ def main():
     if a.stage == "final":
         final_stage(a.workers, only, a.compact, a.ap230, a.loopb, a.bbtilt, a.lfrt, a.gamma, a.tilt, a.hfdp,
                     [float(x) for x in a.pramp.split(",")] if a.pramp else None,
-                    dict(x.split(":") for x in a.lfdc.split(",")) if a.lfdc else None, a.floorcells)
+                    dict(x.split(":") for x in a.lfdc.split(",")) if a.lfdc else None, a.floorcells, a.xadd)
     if a.stage == "capped":
         capped_stage(a.workers, only, a.frozen, a.beta)
     if a.stage == "ap230":
