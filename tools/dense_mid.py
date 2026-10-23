@@ -89,11 +89,13 @@ def load(key, full=False):
     for j in k:
         w = z[f"w{j}"].astype(np.float64)
         e = int(np.nonzero(w)[0][-1]) + 1                               # no samples past the weighted window
-        files.append(dict(y=z[f"res{j}"][:e].astype(np.float64), w=w[:e], amp=0))
+        res = z[f"res{j}"] if FIT_BAND == BAND else sosfiltfilt(SOS_FIT, (z[f"y{j}"] - z[f"m{j}"]).astype(np.float64), axis=0)
+        files.append(dict(y=res[:e].astype(np.float64), w=w[:e], amp=0))
     R = list(z["R"].astype(np.complex128))
     if THROUGH_G:
         R = R + [r * Gi for r, Gi in zip(R, loop_G(key, int(z["N"])))]
-    g = dict(N=int(z["N"]), R=[r * z["Bm"] for r in R], PB=np.zeros(int(z["N"]) // 2 + 1), files=files)
+    Bm = z["Bm"] if FIT_BAND == BAND else np.abs(sosfreqz(SOS_FIT, worN=2 * np.pi * np.fft.rfftfreq(int(z["N"])))[1]) ** 2
+    g = dict(N=int(z["N"]), R=[r * Bm for r in R], PB=np.zeros(int(z["N"]) // 2 + 1), files=files)
     if full:
         g["R_full"] = R
         g["caps"] = [dict(y=z[f"y{j}"].astype(np.float64), m=z[f"m{j}"].astype(np.float64), g=z[f"g{j}"].astype(np.float64),
@@ -116,7 +118,34 @@ def keys_for(rts):
 
 
 def tag(fold):
-    return fold + ("_" + "_".join(f"{c}{v:g}" for c, v in sorted(SUBSET.items())) if SUBSET else "") + ("_G" if THROUGH_G else "")
+    return fold + ("_" + "_".join(f"{c}{v:g}" for c, v in sorted(SUBSET.items())) if SUBSET else "") + ("_G" if THROUGH_G else "") + \
+        ("" if BASIS == "dense" else "_" + BASIS) + ("" if FIT_BAND == BAND else f"_band{FIT_BAND[0]}-{FIT_BAND[1]}")
+
+
+BASIS = "dense"                                                     # --basis dense | taps | kernelK
+FIT_BAND, SOS_FIT = BAND, SOSM                                      # --band lo,hi: the fitting band (prep's residual is 80-1500 Hz)
+
+
+def basis_map(J):
+    """Sparse map from the basis coefficients to the dense excitation vector (None = dense: identity)."""
+    if BASIS == "dense":
+        return None
+    from scipy.sparse import lil_matrix
+    off, o = {}, 0
+    for c in (0, 1):
+        for i, L in enumerate(J.Lx):
+            off[(c, i)] = o
+            o += L
+    taps = q2.tap_table()
+    K = int(BASIS[6:]) if BASIS.startswith("kernel") else 0
+    M = lil_matrix((o, len(taps) if BASIS == "taps" else 2 * K + 1))
+    for n, (i, c, t, sg, j) in enumerate(taps):
+        if BASIS == "taps":
+            M[off[(c, i)] + t, n] = sg
+        else:
+            for k in range(-K, K + 1):
+                M[off[(c, i)] + t + k, k + K] += sg
+    return M.tocsr()
 
 
 def fit(fold, iters):
@@ -125,15 +154,19 @@ def fit(fold, iters):
     groups = [load(k) for k in keys_for(FOLDS[fold])]
     J = q1.Joint(groups)
     off = 8 + 2 * q1.LFIR
-    nx = J.size() - off
-    fwd = lambda x: J.forward(np.r_[np.zeros(off), x])
-    adj = lambda z: J.adjoint(z)[off:]
+    M = basis_map(J)
+    nx = (J.size() - off) if M is None else M.shape[1]
+    fwd = lambda x: J.forward(np.r_[np.zeros(off), x if M is None else M @ x])
+    adj = lambda z: J.adjoint(z)[off:] if M is None else M.T @ J.adjoint(z)[off:]
     tgt = J.target()
     op = LinearOperator((len(tgt), nx), matvec=fwd, rmatvec=adj, dtype=float)
     x = lsqr(op, tgt, iter_lim=iters, atol=1e-12, btol=1e-12)[0]
     res = tgt - fwd(x)
     print(f"fold {fold}: {len(groups)} settings, {len(tgt)} samples, {nx} unknowns; training residual "
           f"{10 * np.log10(np.sum(res ** 2) / np.sum(tgt ** 2)):+.2f} dB re the baseline's (80-1500 Hz, weighted)", flush=True)
+    if M is not None:
+        np.save(os.path.join(OUT, f"theta_{tag(fold)}.npy"), x)
+        x = M @ x
     np.save(os.path.join(OUT, f"x_{tag(fold)}.npy"), x)
 
 
@@ -198,9 +231,14 @@ def main():
     ap.add_argument("--iters", type=int, default=200)
     ap.add_argument("--subset", default="")
     ap.add_argument("--through-g", action="store_true")
+    ap.add_argument("--basis", default="dense")
+    ap.add_argument("--band", default=None)
     a = ap.parse_args()
-    global THROUGH_G
-    THROUGH_G = a.through_g
+    global THROUGH_G, BASIS, FIT_BAND, SOS_FIT
+    THROUGH_G, BASIS = a.through_g, a.basis
+    if a.band:
+        FIT_BAND = tuple(int(x) for x in a.band.split(","))
+        SOS_FIT = butter(3, FIT_BAND, btype="band", fs=FS, output="sos")
     SUBSET.update({c: float(v) for c, v in (x.split("=") for x in a.subset.split(",") if x)})
     os.makedirs(os.path.join(OUT, "prep"), exist_ok=True)
     if a.stage == "prep":
