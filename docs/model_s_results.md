@@ -2872,3 +2872,33 @@ EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/loop_cv.py --retake --t
   | RT ≥ 1.4 | −52.4 [+2.9] | −50.4 [+6.1] | −47.0 [+5.2] | −41.8 [+2.3] |
 
   Flat settings sit at the repeat-capture level at 50–150 and 300–600 ms (+0.5…+0.7 dB); by 600–1000 ms the whole library is at it (−0.1 dB), where the repeats themselves only agree to −40 dB. **What the excess says is left:** 150–300 ms in every group (+3…+9 dB), worst at HF 0.2 (+9.2), LF 0.4 (+8.1), RT 0.6 (+7.8) and RT 1.8 (+7.4); this is §25.12's common residual waveform and §25.14's strong-HF loop filter, not a reference artefact. Per setting the 300–600 ms excess changes by a median 0.0 dB from the chain2 references (11 settings better, 3 worse by > 0.5 dB).
+
+## 31. Where S's remaining excess lives: per-setting loop coefficients, not coupling (`tools/loop_read/coupling.py`, `lowband_shelf.py --stage takefit`) **[S: no coupling between S's loops (≤ 2·10⁻⁴); S: a per-setting refit of each loop's gain, DC and HF pole (12 numbers), held out by take, removes most of the 150–600 ms excess; the DC and HF-pole parts are real (take-to-take correlation 0.83 / 0.61), the broadband gain part is not]**
+
+```
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 EMT_CV_FOLDS=$PWD/analysis/loop_cv/cap0.8475_folds \
+    SHELF_CELLS=$PWD/analysis/loop_cv/hfcells_chain3_cap0.8475_hfrt/cells.json \
+    .venv/bin/python tools/loop_read/coupling.py --stage prep --workers 8                       # 7 min, 3.9 GB; then --stage fit
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 EMT_CV_FOLDS=... SHELF_CELLS=... SHELF_TAG=_s29 \
+    .venv/bin/python tools/lowband_shelf.py --stage takefit --workers 8                          # 7 min, 5 GB -> chain3_shelf_takefit_cap0.8475_s29/
+```
+
+`NEXT_STEPS.md` §0 item 6. On the §29 baseline and clean captures. Per octave against cross-take repeats (AMPL 0–30, 60–90) the excess is +8…+16 dB at 250 Hz – 1 kHz in every window and group, worst at 250 Hz (+11…+19), even on flat settings (+8.7 dB at 250 Hz, 50–150 ms), larger with stronger HF, lower LF and shorter RT; LF 0.1 at 150–600 ms +16…+17 dB at 500 Hz – 1 kHz (`model − cross-take` per octave, from the pulse check and `free_chain3`'s pair octaves).
+
+**1. Not the injection, not a short loop filter.** The free per-setting injection (~28 k numbers, §30) with the plain law reaches no further at 150–300 ms (−46.9 / −46.2 dB); §25.14's ±8-tap per-loop corrections, held out by capture, make flat settings worse there (−47.3 → −44.8 dB) and their common part is a few thousandths of a dB per pass.
+
+**2. No coupling between S's loops** (`coupling.py`): a coupling ε_ji (loop i's output into loop j's input) adds, to first order, b_ij = X_j R_j · G_i z^−Pᵢ / (1 − G_i z^−Pᵢ), loop j's read-out driven by loop i's recirculating signal. The 12 cross terms, one set for all settings chosen leaving one RT step out (fitted on 150–300 ms, 177 Hz – 4 kHz, L and R shared): R nulls −52.79 / −49.93 / −45.17 → −52.78 / −49.92 / −45.12 dB (50–150 / 150–300 / 300–600 ms), coefficients ≤ 2·10⁻⁴ (−74 dB). The 4 self terms (a per-pass gain correction per loop, common to all settings) gain +0.26 / +0.45 dB and lose 0.2 dB at 300–600: not adopted (as §25.8). S's loops are uncoupled to this level, unlike M / L's ±1/√2 blocks.
+
+**3. Per-setting coefficients, held out by take** (`takefit`): per setting, each loop's broadband gain (dB per pass), DC gain (a first-order section with the shelf's pole) and HF pole (12 numbers; 8 at HF 1.0) fitted on one take's clean captures (AMPL 0 + 90), scored on the other (30 + 60), and the reverse; R, median:
+
+| Settings | 50–150 | 150–300 | 300–600 |
+|---|---|---|---|
+| all 128: §29 → refit [cross-take repeat] | −51.5 → −52.1 [−57.5] | −49.0 → **−52.4** [−55.1] | −44.4 → **−48.4** [−49.7] |
+| flat | −51.0 → −52.9 [−50.3] | −49.4 → −51.9 [−50.8] | −45.5 → −47.7 [−47.4] |
+| HF 0.2 | −52.0 → −53.2 [−60.1] | −46.4 → −53.0 [−55.5] | −40.4 → −49.3 [−51.5] |
+| LF 0.1 | −51.1 → −51.4 [−59.1] | −47.6 → −51.9 [−55.3] | −40.3 → −47.8 [−49.1] |
+| RT ≥ 1.4 | −52.4 → −52.8 [−55.5] | −50.4 → −53.1 [−56.9] | −47.0 → −51.3 [−51.9] |
+
+The excess over cross-take repeats falls from +6.1 to +2.7 dB at 150–300 ms and from +5.3 to +1.3 dB at 300–600 ms; 50–150 ms barely moves (the first pass is not the loops). **Which parts are real** (take A against take B, 496 loop-settings): the DC corrections agree (correlation 0.83, rms 0.051 dB, A − B 0.032), the HF pole corrections partly (0.61, rms 1.1·10⁻³ — §25.19's per-loop spread), the broadband gain corrections do not (0.52, rms 0.027 dB per pass against A − B 0.033). Their medians by LF, RT, HF and loop are ±0.007 dB per pass with no trend, so no smooth law term falls out.
+
+**Reading.** What is left of S's excess at 150–600 ms is per-setting, per-loop coefficient detail in the shelf and the HF pole, at the 10⁻³ level: the unit's coefficient tables, not a missing structure. Compacting it is NEXT_STEPS item 7 (exact coefficients, fixed point, tables as curves); the per-setting refit is an upper bound (12 numbers per setting) and not adopted.
