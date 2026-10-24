@@ -25,7 +25,9 @@ shelf knee's cell) pull a mean of the other LF steps 2e-3 under the unit at LF 2
 ceiling, the HF cells and their slopes (the drop-back loops keep the baseline's pole), each RT step's curve fitted on the
 other RT steps (model_s_results 32.5). --all --by-lf: each LF step's curve fitted on the other LF steps instead (32.6):
 leaving an RT step out removes every point in a stretch of law poles only that RT step samples (0.64-0.75: HF 0.2 /
-RT 1.0), while the claim to test is that the curve is the same for every LF step.
+RT 1.0), while the claim to test is that the curve is the same for every LF step. --all --by-lf --lfrt-dp: also each
+(LF, RT) cell's common offset from the curve (mean over the loops of unit - curve), taken from the cell's other HF steps
+(held out by HF step), added to every curve loop (32.7).
 """
 import glob, json, os, sys
 
@@ -39,10 +41,11 @@ import q2_injection as q2  # noqa: E402
 
 ALL = "--all" in sys.argv
 BY_LF = "--by-lf" in sys.argv                             # with --all: hold out by LF step, not RT step (32.6)
+LFRT_DP = "--lfrt-dp" in sys.argv                         # with --all --by-lf: + the (LF, RT) cell's offset (32.7)
 GROUP = "lf" if BY_LF else "rt"
 SRC = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_lowrt")
-OUT = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_" + ("pallf" if BY_LF else "pall" if ALL else "pcell"))
-LOG = os.path.join(ROOT, "analysis", "lowband", "chain3_pole_cells" + ("_allf" if BY_LF else "_all" if ALL else ""))
+OUT = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_" + ("pallfd" if LFRT_DP else "pallf" if BY_LF else "pall" if ALL else "pcell"))
+LOG = os.path.join(ROOT, "analysis", "lowband", "chain3_pole_cells" + ("_allfd" if LFRT_DP else "_allf" if BY_LF else "_all" if ALL else ""))
 KNOTS = np.array(([0.0, 0.15, 0.25, 0.35, 0.45, 0.55] if ALL else []) + [0.62, 0.68, 0.74, 0.78, 0.81, 0.837])   # flat beyond the last
 FOLD = 0.856                                              # between the highest law pole on the curve (0.8515) and the lowest dropped (0.8602)
 LAM = 1e-6                                                # second-difference penalty on the knot values
@@ -122,7 +125,14 @@ def main():
             continue
         pl = np.array(by_key[key]["p_law"])
         c = np.array(curves[str(lab[GROUP])])
-        hp = [float((hat(x) @ c)[0]) if x < FOLD else pb for x, pb in zip(pl, by_key[key]["pb"])]   # dropped: the HF cell
+        dp = 0.0
+        if LFRT_DP:                                         # the (LF, RT) cell's offset from its other HF steps (32.7)
+            o = [np.mean([p["u"] - float((hat(p["pl"]) @ np.array(curves[str(p["lf"])]))[0]) for p in g4])
+                 for g4 in ([p for p in pts if p["key"] == k2] for k2 in {p["key"] for p in pts if p["lf"] == lab["lf"]
+                                                                       and p["rt"] == lab["rt"] and p["hf"] != lab["hf"]})
+                 if len(g4) == 4 and all(p["pl"] < FOLD for p in g4)]
+            dp = float(np.mean(o)) if o else 0.0
+        hp = [float((hat(x) @ c)[0]) + dp if x < FOLD else pb for x, pb in zip(pl, by_key[key]["pb"])]   # dropped: the HF cell
         cells.setdefault(key, {})["hf_poles"] = [round(x, 6) for x in hp]
         unit = by_key[key]["unit"]
         uu = np.mean(list(unit.values()), 0) if unit else None
