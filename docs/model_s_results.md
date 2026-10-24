@@ -2652,3 +2652,24 @@ EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/loop_read/hfloop_read.p
 **3. No staircase, no coefficient grid.** Precision-weighted scans of the remainder for a periodic component: against p_law (periods 0.001–0.05) best 0.00117, amplitude 0.62·10⁻³, permutation p = 0.31 (null 95 % 0.86·10⁻³); against the per-pass target loss (0.02–2 dB) best 0.113 dB, 0.64·10⁻³, p = 0.29. The absolute poles on grids 2⁻⁶…2⁻¹²: precision-weighted (n_eff 75) all p ≥ 0.17; unweighted (n 331) all p ≥ 0.15. With a precision of ~1.4·10⁻⁴ a 2⁻⁸…2⁻¹¹ grid (3.9·10⁻³ … 0.49·10⁻³) would have shown. **The HF pole is not stored on a coarse power-of-two grid, and it is not a regular staircase of p_law or of the requested loss (S).** (A grid finer than 2⁻¹², e.g. a 16-bit coefficient, is below this resolution.)
 
 **Reading.** The coefficient-domain law of §25.17 (law → ramp → ceiling 0.8475) is the smooth part; around it the unit's poles deviate by about 1.4·10⁻³ in a way that is neither a staircase nor a coarse grid, half per setting (and dependent on LF within an (HF, RT) cell) and half per loop. **Open (H):** the LF-dependent common part — the law's per-LF factor k, or an HF section that interacts with the LF shelf — and the loop-specific part (it may also absorb other per-loop errors, since only the pole was free). **Next:** test an LF-dependent pole term (k per LF refitted on the per-loop poles, held out by RT) on `loop_cv --retake`; the per-loop part against the loop lengths.
+
+### 25.20 The pole curve as M / L's default; an LF-dependent HF factor does not explain the per-setting deviations (`ml_lines.POLE_MAP`; `tools/loop_read/lfk.py`) **[S: M / L's strong-HF drift gone with the curve as default; S: the law's per-LF factor k is already optimal (refit within ±0.001); the LF dependence inside an (HF, RT) cell is something else (H); S baseline unchanged]**
+
+```
+.venv/bin/python tools/loop_read/steps_ml.py M|L <keys>         # ML_POLE_CURVE=1 for the new default (the loop_read M / L tools pin the old law)
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/loop_read/lfk.py   # analysis/lowband/chain3_lfk.{log,json}
+```
+
+**1. M / L.** `ml_lines.line_coefs` now maps each line's HF pole through S's all-RT pole curve (§25.17: law, ramp above ~0.62, ceiling 0.8475) whenever the default limit applies; `ML_POLE_CURVE=0` restores the capped law (min(p, 0.84)), and the §25.16–25.17 M / L tools pin it so their comparisons stay reproducible. Nothing is fitted on M / L. With the curve, the lag tracks at the strong-HF settings that drifted (M 1.2_0.8_0.2, 2.0_1.2_0.1, 0.1_1.8_0.2; L 1.2_2.6_0.1, 2.0_3.6_0.1) stay within about ±0.1–0.3 samples to 600 ms (−9…+18 ppm, single captures; M / L's time-variance scatter), as the high-HF controls do (M 1.2_0.8_0.9: −1…−3 ppm). M / L's stored law-stage clocks and gains were fitted on the capped law; a law-stage refit with the curve is not done (small: §25.17.4's residuals moved by 0.3–0.7 dB).
+
+**2. An LF-dependent HF factor (`lfk.py`).** §25.19 found the per-setting part of the pole deviations varying with LF inside an (HF, RT) cell. The law's HF target T = 10^(−3 P / (fs RT) · k_LF · (1/hf − 1)) has one factor k per LF step (0.9157 / 0.9349 / 0.9670 / 0.9869). Refitted on the 331 well-determined per-loop poles (§25.19) leaving each RT step out, with §25.18's ramp and ceiling on top: every fold returns k within ±0.001 of the law's, and the held-out pole error does not improve (rms ×10⁻³, precision-weighted):
+
+| Candidate | All | HF 0.2 | HF 0.4 | HF 0.6 |
+|---|---|---|---|---|
+| §25.18 baseline (law + ramp + ceiling + HF table) | **1.08** | 1.47 | 0.78 | 0.86 |
+| law k + ramp + ceiling, no table | 2.19 | 2.88 | 1.66 | 1.81 |
+| k per LF refitted (4 numbers) + ramp + ceiling, no table | 2.33 | 3.09 | 1.75 | 1.91 |
+
+**The law's per-LF factor is already optimal; the LF dependence inside a cell is not a scale of the HF target (S).** Not scored on `loop_cv`: without the table both are twice the baseline's pole error, the quantity that drives the nulls. The table stays.
+
+**Reading of §25.14–25.20 (the strong-HF line).** What stands: (1) AP230's damping is not the b > 0 problem; the HF loop filter at strong HF / short RT is. (2) The HF pole follows one coefficient-domain curve in S, M and L — the law, a ramp above ~0.62, a ceiling ≈ 0.8475 — and M / L now use it. (3) Around it S's poles deviate by ~1.4·10⁻³ rms (half per setting, LF-dependent inside a cell; half per loop), not a staircase, not a coarse grid, not the per-LF k; S keeps its 24-value HF table (H for its structure). (4) 16 S captures at short RT / strong HF carry a lag step (data issue, §25.16). (5) Each program's shortest RT folds back below the ceiling (H).

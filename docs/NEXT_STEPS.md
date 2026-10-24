@@ -6,6 +6,34 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 
 ---
 
+## 0. Start here (hand-over, 24 October 2026)
+
+**Baselines.**
+- **S = `model_s_results.md` §25.18:** `EMT_KERNEL=chain3 EMT_PMAX=0.8475` and `tools/loop_cv.py --retake` (fold set `analysis/loop_cv/hfcells_chain3_cap0.8475/`). All 128 settings held out by setting: −51.6 / −48.9 / −44.0 / −37.3 dB (R, 50–150 / 150–300 / 300–600 / 600–1000 ms), L the same; excess over repeat +4.4 / +6.0 / +3.7 / 0.0 dB (chain2 `nulls_free` references — not yet refitted on chain3).
+- **M / L = `ml_structure.md` §8–13 plus the HF pole curve (§25.17, §25.20)**, now the default in `ml_lines.line_coefs` (`ML_POLE_CURVE=0` for the old capped law).
+
+**What this round established (`model_s_results.md` §25.10–25.20).**
+- The mid-band "loop-path level" (§25.10–25.13) was dense_mid's fixed per-capture gain, not the unit. The baseline's 50–300 ms residual is one waveform common to every setting (§25.12), not decoded into a compact term.
+- "AP230 at b > 0" is the HF loop filter at strong HF / short RT, not the damping (§25.14). The HF pole is one curve of the law's pole in all three programs: the law, a ramp above ~0.62, a ceiling ≈ 0.8475 (§25.17–25.18). S keeps its 24-value HF table: its poles deviate from the curve by ~1.4·10⁻³ rms (half per setting and LF-dependent within a cell, half per loop), which is not a staircase, not a coarse coefficient grid and not the per-LF k (§25.19–25.20).
+- 16 S captures (9 settings at RT 0.3 / 0.6, HF 0.2 / 0.4, mostly AMPL 30 / 60) carry a +1.2…+1.8-sample lag step after ~110 ms (§25.16): a data issue that biases those settings' excess (the repeat pairing 30 → 60 compares one take with itself).
+
+**Working rules learned this round** (in addition to §2).
+- Score every candidate on the baseline bench (`loop_cv.py --retake [--xadd | --pcurve]`, with `EMT_PMAX=0.8475`). Diagnostic benches that keep per-capture gains fixed (dense_mid; use `--regain` there) overstate any correction with a broadband part.
+- Fit filter forms only where the data constrain them (at HF 0.2, 177 Hz – 2.8 kHz; above ~4 kHz almost nothing survives a pass, and fits there are noise).
+- S's AMPL captures are two takes (0 + 90, 30 + 60): fitting each take separately gives an empirical precision (§25.19); formula standard errors are optimistic.
+- Heavy runs: one process, `--workers 8`, memguard cap ~9 GB (`loop_cv`, `lowband_shelf` pool stages, `loop_fir`); an 8-fold `loop_cv` takes ~8 min, `lowband_shelf --stage hfcell / hfloop` ~5 min.
+
+**Next, in order.**
+1. **Pulse check (§5 item 6a)** — a natural point now: stage G metrics (per-octave EDC / T30, modes, echo density, L/R coherence, fine structure, M / L decorrelation) on S (§25.18), M and L (with the pole curve) against Tomkin (held out), the CLA IR and the Altiverb presets; first rerun of §18 since the §17 model.
+2. **The 9 stepped S settings:** rescore and refit on step-free captures (the excess there is biased); find whether the step is the unit (take-to-take at strong settings) or the capture chain.
+3. **The shortest-RT regime:** every program's shortest RT folds its HF pole below the ceiling (S 0.3, M 0.6, L 2.2), the same regime as the stepped captures.
+4. **`nulls_free` on chain3** (the excess references; a long, checkpointed run).
+5. **The 50–150 ms excess at HF 0.2 / 0.4, short RT** (not in the loops, §25.14), and the residual common waveform (§25.12).
+6. **Exact coefficients / fixed point (Q9 / Q10):** what is left of the HF table (per-setting LF dependence, per-loop part); AP230's feedforward / feedback gap (4.8–5.1·10⁻⁴ ≈ 2⁻¹¹, H).
+7. M / L: a law-stage refit with the pole curve; θ's shape and depth.
+
+---
+
 ## 1. Where we are
 
 - **Program S, current baseline = §25.18 (`model_s_results.md`, `EMT_KERNEL=chain3 EMT_PMAX=0.8475 loop_cv.py --retake`, fold set `analysis/loop_cv/hfcells_chain3_cap0.8475/`): §25.11 with the HF ceiling at 0.8475 (from S / M / L, §25.17), the ramp and HF cells refitted around it; held out the same as §25.11 to 0.1 dB. Before that, §25.11 (`EMT_KERNEL=chain3 loop_cv.py --retake`): §25.7 on chain3 with the compact numbers refitted there, constants unchanged. All 128 held out −51.6 / −48.9 / −44.0 / −37.3 dB (R), L −51.6 / −48.7 / −43.8 / −37.3, excess +4.3 / +5.9 / +3.6 / +0.1 dB (chain2 references). Before that: §25.7 (`loop_cv.py --hfcells`, chain2): §22.9 plus LF 0.4's shelf DC ratio 0.414 (§25.4), the DC floor per (LF, RT) cell with γ on the Nyquist end (§25.6) and the HF pole shift per (HF, RT) cell (§25.7), the tables chosen held out by setting. All 128 held out −51.5 / −48.9 / −44.1 / −37.4 dB (R, 50–150 / 150–300 / 300–600 / 600–1000 ms), excess +4.4 / +6.0 / +3.7 / +0.1 dB; HF 0.2 −51.1 / −44.0 / −37.8; LF 0.1 −51.3 / −47.5 / −40.4.** The §22.9 description below still holds otherwise. **The remaining 1 kHz excess at 50–150 ms (§25.10)** is a loop-path level relative to the cluster, +0.15…+0.2 % at 250 Hz – 1 kHz, falling to about 0 at 4 kHz. It is not diffuser structure, and 250 Hz is still undecoded. Not a tap magnitude (§25.11), and worth only 0.1–0.3 dB once clocks are refitted. 250 Hz (§25.12): the residual is one fixed loop-input waveform in every setting (200–250 Hz a narrow loop-path transfer error, AP230 slightly non-all-pass; 250–340 Hz open); dense_mid's gains don't survive the baseline bench because it leaves 0–50 ms free. §25.13: the compact candidates gain 0.1–0.3 dB on the baseline bench; the level was dense_mid's fixed per-capture gain. Mid-band line closed. §25.14–25.16: the b > 0 excess is the strong-HF loop filter at short RT; the plain capped law fails by 10–28 dB; the apparent per-pass advance is a lag step in 16 S captures (data issue); M / L show the HF pole off per cell at strong HF / short RT. §25.17: the HF pole curve (law, ramp, ceiling ≈ 0.8475) holds across S / M / L and fixes M / L's strong-HF drift; S keeps its table. Next: the pole map into `ml_lines`, S's cap refit, the shortest-RT regime, step-free scoring of the 9 S settings, then `nulls_free` on chain3, then exact coefficients / fixed point.

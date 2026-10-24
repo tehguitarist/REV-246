@@ -7,6 +7,7 @@ import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import numpy as np
+os.environ.setdefault("ML_POLE_CURVE", "0")         # these compare against the capped law (§25.16-25.17)
 import ml_lines as ml
 import warp as W
 prog, keys = sys.argv[1], sys.argv[2].split(",")

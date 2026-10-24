@@ -57,6 +57,19 @@ OUT = os.path.join(ROOT, "analysis", "ml_lines")
 FS, K0 = cc.FS, cc.K0
 LAW = json.load(open(os.path.join(ROOT, "analysis", "q1", "laws.json")))
 P_MAX, DC_MIN, BETA = 0.84, 0.18, 0.019                    # S's coefficient limits (model_s_results §16.15-16.16)
+
+
+def _pole_curve():
+    """The HF pole as one curve of the law's pole (model_s_results §25.17, S's all-RT fit: law, ramp above ~0.62, ceiling
+    ~0.8475), the default for M / L's lines since §25.20; ML_POLE_CURVE=0 restores the capped law (min(p, P_MAX))."""
+    if os.environ.get("ML_POLE_CURVE") == "0":
+        return None
+    pc = json.load(open(os.path.join(ROOT, "analysis", "lowband", "chain3_polecurve.json")))
+    kn, th = np.array(pc["knots"]), np.array(pc["all"])
+    return lambda p: min(p + float(np.interp(p, kn, th[:len(kn)])), float(th[len(kn)]))
+
+
+POLE_MAP = _pole_curve()
 F_ML = np.array([[0, 1, 0, 1], [1, 0, -1, 0], [0, 1, 0, -1], [-1, 0, -1, 0]]) / np.sqrt(2)   # rows: lines; columns: loops
 OCT = [125, 250, 500, 1000, 2000, 4000, 8000]
 OCT_SOS = {f: butter(3, [f / np.sqrt(2), min(f * np.sqrt(2), 10500)], btype="band", fs=FS, output="sos") for f in OCT}
@@ -114,7 +127,9 @@ def line_coefs(P, rt, lf, hf, caps=True, v=None, p_max=P_MAX, dc_min=DC_MIN, bet
         else:
             T = 10 ** (kk / rt_hi * (1 / v[2] - 1)) if v[2] < 1.0 else 1.0
         p = onepole_for(T, LAW["f_ref"]) if T < 1.0 else 0.0
-        out.append((g, r0, min(p, p_max) if caps and p_max is not None else p))
+        if caps and p_max is not None and p > 0.0:
+            p = POLE_MAP(p) if POLE_MAP and p_max == P_MAX else min(p, p_max)   # §25.20: the pole curve unless another limit is asked
+        out.append((g, r0, p))
     return out
 
 
