@@ -72,11 +72,11 @@ juce::ValueTree PresetManager::stateFor(const juce::String& name) const
 void PresetManager::apply(const juce::ValueTree& state)
 {
     // Parameter by parameter, so the host sees ordinary automation-style changes and the power button, link and
-    // capture EQ (preferences, not settings) are left alone.
+    // transformer (preferences, not settings) are left alone.
     for (auto child : state)
     {
         const auto pid = child.getProperty("id").toString();
-        if (pid == params::id::power || pid == params::id::link || pid == params::id::captureEq)
+        if (pid == params::id::power || pid == params::id::link || pid == params::id::transformer)
             continue;
         if (auto* p = apvts.getParameter(pid))
         {
@@ -145,7 +145,7 @@ bool PresetManager::isModified() const
     for (auto child : saved)
     {
         const auto pid = child.getProperty("id").toString();
-        if (pid == params::id::power || pid == params::id::link || pid == params::id::captureEq)
+        if (pid == params::id::power || pid == params::id::link || pid == params::id::transformer)
             continue;
         if (auto* p = apvts.getParameter(pid))
             if (std::abs(p->convertFrom0to1(p->getValue()) - (float)child.getProperty("value")) > 1e-4f)

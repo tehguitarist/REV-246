@@ -66,6 +66,7 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
                   *p.apvts.getParameter(P::id::outputGain), bubble, [](float v) { return P::gainText(v); }),
       presetBar(p.presets, *this),
       linkButton({0.0f, rv::design::barTop + 35.0f, 220.0f, 80.0f}, "LINK", rv::ui::BarButton::Kind::toggle), // x: see below
+      transformerButton({0.0f, rv::design::barTop + 35.0f, 440.0f, 80.0f}, "TRANSFORMER", rv::ui::BarButton::Kind::toggle),
       helpButton({0.0f, rv::design::barTop + 35.0f, 90.0f, 80.0f}),
       // The product name in the middle of the bar; the plugin's version (JUCE's, from the CMake project) at the right.
       titleLabel({1597.0f, rv::design::barTop + 35.0f, 300.0f, 80.0f}, "REV-246", 42.0f, rv::design::gold),
@@ -75,7 +76,8 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
     setLookAndFeel(&lookAndFeel);
 
     // The right end of the bar, laid out from the version number's width (fonts differ by platform): the version sits
-    // barEdgePad from the panel's right edge, the "?" the same distance to its left, and LINK just left of the "?".
+    // barEdgePad from the panel's right edge, the "?" the same distance to its left, LINK just left of the "?" and
+    // TRANSFORMER left of LINK.
     {
         const auto versionText = juce::String("v") + JucePlugin_VersionString;
         const auto textW = rv::ui::textWidth(rv::ui::labelFont(30.0f), versionText) + 2.0f;
@@ -84,7 +86,9 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
         versionLabel.setDesignBounds({right - textW, y, textW, 80.0f});
         const auto helpRight = right - textW - rv::design::barEdgePad;
         helpButton.setDesignBounds({helpRight - 90.0f, y, 90.0f, 80.0f});
-        linkButton.setDesignBounds({helpRight - 90.0f - 12.0f - 220.0f, y, 220.0f, 80.0f});
+        const auto linkX = helpRight - 90.0f - 12.0f - 220.0f;
+        linkButton.setDesignBounds({linkX, y, 220.0f, 80.0f});
+        transformerButton.setDesignBounds({linkX - 12.0f - 440.0f, y, 440.0f, 80.0f});
     }
 
     // Programme buttons and lamps.
@@ -156,6 +160,15 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
         pr.setValueNotifyingHost(on ? 1.0f : 0.0f);
         pr.endChangeGesture();
     };
+    transformerButton.setTooltip("Transformer: the unit with its optional input and output transformers (service manual). "
+                                 "Adds the low-end colour of the commercial captures (about +3 dB at 40-60 Hz) and a guessed "
+                                 "transformer distortion, mostly 3rd harmonic at low frequencies and high levels. Off: the stock unit.");
+    transformerButton.onToggle = [this](bool on) {
+        auto& pr = param(P::id::transformer);
+        pr.beginChangeGesture();
+        pr.setValueNotifyingHost(on ? 1.0f : 0.0f);
+        pr.endChangeGesture();
+    };
 
     panKnob.helpText = "Pan: where the dry signal sits in the stereo field. Double-click to centre; Shift for fine.";
     mixFader.helpText = "Mix: dry to reverb, 0 to 100 %.";
@@ -180,7 +193,7 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
     for (auto& l : leds) designComponents.push_back(l.get());
     for (auto* c : std::initializer_list<rv::ui::DesignComponent*>{&powerButton, &programDisplay, &lowpassDisplay, &reflectionsDisplay,
                                                                   &decayDisplay, &levelMeter, &panKnob, &mixFader, &inputFader,
-                                                                  &outputFader, &linkButton, &helpButton, &titleLabel, &versionLabel})
+                                                                  &outputFader, &linkButton, &transformerButton, &helpButton, &titleLabel, &versionLabel})
         designComponents.push_back(c);
     presetBar.addTo(designComponents);
     for (auto* c : designComponents)
@@ -188,7 +201,7 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
             addAndMakeVisible(*c);
     addChildComponent(bubble);
 
-    for (const auto* id : {P::id::program, P::id::mix, P::id::pan, P::id::inputGain, P::id::outputGain, P::id::power, P::id::link})
+    for (const auto* id : {P::id::program, P::id::mix, P::id::pan, P::id::inputGain, P::id::outputGain, P::id::power, P::id::link, P::id::transformer})
         proc.apvts.addParameterListener(id, this);
     for (int i = 0; i < joyCount; ++i)
         proc.apvts.addParameterListener(P::joyId((Joy)i), this);
@@ -215,7 +228,7 @@ Rev246Editor::~Rev246Editor()
 {
     stopTimer();
     proc.presets.onChange = nullptr;
-    for (const auto* id : {P::id::program, P::id::mix, P::id::pan, P::id::inputGain, P::id::outputGain, P::id::power, P::id::link})
+    for (const auto* id : {P::id::program, P::id::mix, P::id::pan, P::id::inputGain, P::id::outputGain, P::id::power, P::id::link, P::id::transformer})
         proc.apvts.removeParameterListener(id, this);
     for (int i = 0; i < joyCount; ++i)
         proc.apvts.removeParameterListener(P::joyId((Joy)i), this);
@@ -276,6 +289,7 @@ void Rev246Editor::refreshAll()
     programDisplay.setText(0, P::programName(prog));
     powerButton.setOn(param(P::id::power).getValue() >= 0.5f);
     linkButton.setOn(param(P::id::link).getValue() >= 0.5f);
+    transformerButton.setOn(param(P::id::transformer).getValue() >= 0.5f);
 
     std::array<P::JoyValue, joyCount> values;
     for (int i = 0; i < joyCount; ++i)

@@ -103,7 +103,7 @@ if (RV_BUILD_TESTS)
         tests/ParameterTests.cpp
         tests/StateTests.cpp
         tests/ProcessorTests.cpp
-        tests/CaptureEqTests.cpp
+        tests/TransformerTests.cpp
         tests/EditorTests.cpp
     )
     target_include_directories(REV246Tests PRIVATE src tests)

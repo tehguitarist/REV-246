@@ -216,7 +216,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
             AudioParameterFloatAttributes().withStringFromValueFunction([](float v, int) { return gainText(v); })));
     layout.add(std::make_unique<AudioParameterBool>(pid(id::power), "Power", true));
     layout.add(std::make_unique<AudioParameterBool>(pid(id::link), "Link input/output", false));
-    layout.add(std::make_unique<AudioParameterBool>(pid(id::captureEq), "Commercial capture EQ", false));
+    layout.add(std::make_unique<AudioParameterBool>(pid(id::transformer), "Transformer", false));
     return layout;
 }
 } // namespace rv::params

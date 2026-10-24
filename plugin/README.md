@@ -21,7 +21,7 @@ bundles sit beside it. Add `-DRV_BUILD_TESTS=ON` and run `ctest --test-dir plugi
 |---|---|
 | `src/PluginProcessor.*` | Parameters, mono-in / stereo-out path, power (bypass), pan, mix, gains, input level for the meter |
 | `src/dsp/ReverbEngine.h` | The model's interface (placeholder body) |
-| `src/dsp/CaptureEq.h` | Optional "commercial capture" low-band stage on the wet output (see below) |
+| `src/dsp/Transformer.h`, `CaptureEq.h` | The optional TRANSFORMER stage: low-band EQ and guessed transformer distortion (see below) |
 | `src/params/` | Parameter IDs (permanent), the joystick step tables (placeholders), the fader scales |
 | `src/presets/` | Preset manager: factory presets (one per programme) and user presets as `.r246preset` XML |
 | `src/PluginEditor.*`, `src/ui/` | The panel; `ui/Layout.h` is generated, `ui/Design.h` holds measured constants |
@@ -31,11 +31,19 @@ bundles sit beside it. Add `-DRV_BUILD_TESTS=ON` and run `ctest --test-dir plugi
 | `../.github/workflows/plugin-*.yml` | CI and release: manual-trigger only for now |
 | `docs/DEVELOPMENT.md` | Rules: cross-platform, assets, CI, parameters |
 
-## Commercial capture EQ (optional, off by default)
+## TRANSFORMER (optional, off by default)
 
-The bool parameter `captureEq` ("Commercial capture EQ") adds the low-band colour that CLA's and the Altiverb's IRs
-share but Tomkin's library and the documented unit do not (`../docs/model_s_results.md` §27): about +3 dB at
-40–60 Hz, −0.7 dB at 160 Hz and ripple up to 400 Hz, minimum phase. It runs on both wet channels after the engine;
-the dry path is untouched. Off (the default) the output is exactly what it is without the stage, faithful to Tomkin
-and the schematic. It is a preference like LINK, so presets neither store nor change it. It has no panel control yet;
-hosts show it with the other parameters.
+The service manual offers the unit with optional balanced input and output transformers ("harmonic distortion
+... increased slightly", pp. 37 and 46). The TRANSFORMER button in the bottom bar (bool parameter `transformer`)
+models such a unit on the wet path:
+
+- **Low-band EQ (measured, S):** the colour that CLA's and the Altiverb's IRs share but Tomkin's library and the stock
+  unit do not (`../docs/model_s_results.md` §27): about +3 dB at 40–60 Hz, −0.6 dB at 160 Hz, ripple up to 400 Hz,
+  minimum phase, on both outputs. The transformer option is the best-supported explanation for it (H).
+- **Transformer distortion (guessed, H):** a flux model of an input transformer (mono, before the reverb) and an output
+  transformer per channel. Odd harmonics, mostly 3rd, growing with level and falling steeply with frequency: at
+  0 dBFS (= +12 dBu, the unit's maximum) 0.35 % at 20 Hz, 0.08 % at 40 Hz, 0.01 % at 100 Hz, 0.0001 % at 1 kHz;
+  calibrated against Jensen and Lundahl line-transformer datasheets, not measured on a 246 (IRs can't show it).
+
+Off (the default) the output is exactly the stock unit's, faithful to Tomkin and the schematic. It is a preference
+like LINK, so presets neither store nor change it.

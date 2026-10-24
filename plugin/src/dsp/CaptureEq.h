@@ -10,12 +10,13 @@ namespace rv::dsp
 {
 // The optional "commercial capture" low-band stage (docs/model_s_results.md §27): CLA's and the Altiverb's IRs share
 // a minimum-phase transfer below ~400 Hz (+3 dB at 40-60 Hz, -0.7 dB at 160 Hz, ripple to 400 Hz) that is in neither
-// Tomkin's library nor the documented unit. Off by default; on, it puts that colour on the wet output.
+// Tomkin's library nor the stock unit; most likely the manual's transformer option (EMT246_unit_facts.md §2b). Part
+// of the TRANSFORMER stage (Transformer.h), off by default.
 //
 // The 10 numbers are the "CLA" entry of analysis/unit_transfer/bq.json, fitted at the device rate: a first-order
 // high-pass, an RBJ low shelf and two RBJ peaking sections, the formulas of tools/unit_transfer.py (hp1_sos,
 // lowshelf_sos, peak_sos). The sections are designed at the host rate from the same parameters; that matches
-// bq_resp within 0.001 dB at 50 Hz-2 kHz from 22.05 to 192 kHz (tests/CaptureEqTests.cpp). Below ~50 Hz the fit
+// bq_resp within 0.001 dB at 50 Hz-2 kHz from 22.05 to 192 kHz (tests/TransformerTests.cpp). Below ~50 Hz the fit
 // is not defined by the data. Double precision: the corners sit at 40-280 Hz, far below the host rate.
 class CaptureEq
 {

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "dsp/CaptureEq.h"
 #include "dsp/ReverbEngine.h"
+#include "dsp/Transformer.h"
 #include "params/Parameters.h"
 #include "presets/PresetManager.h"
 
@@ -55,12 +55,12 @@ class Rev246Processor : public juce::AudioProcessor
 
   private:
     rv::dsp::ReverbEngine engine;
-    rv::dsp::CaptureEq captureEq;
-    juce::LinearSmoothedValue<float> inGain, outGain, mixAmount, panLeft, panRight, wetOn, captureOn;
+    rv::dsp::Transformer transformer;
+    juce::LinearSmoothedValue<float> inGain, outGain, mixAmount, panLeft, panRight, wetOn, transformerOn;
     juce::AudioBuffer<float> scratch;
     std::atomic<float> inputPeak{0.0f};
 
-    std::atomic<float>*pProgram, *pMix, *pPan, *pIn, *pOut, *pPower, *pCaptureEq;
+    std::atomic<float>*pProgram, *pMix, *pPan, *pIn, *pOut, *pPower, *pTransformer;
     std::array<std::atomic<float>*, rv::params::numJoys> pJoy;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Rev246Processor)

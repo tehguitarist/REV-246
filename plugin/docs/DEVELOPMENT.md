@@ -36,12 +36,18 @@
 ## Parameters
 - IDs in `src/params/Parameters.h` are permanent. The joystick step tables are placeholders (H) until the unit's exact
   step tables are known; only step counts and ranges are from the data sheet (`../docs/EMT246_unit_facts.md`).
-- `captureEq` (default off) switches on `src/dsp/CaptureEq.h`, the 10-number cascade of the "CLA" entry in
-  `../analysis/unit_transfer/bq.json`: a first-order high-pass, an RBJ low shelf and two RBJ peaking sections, with
-  the formulas of `../tools/unit_transfer.py` (`hp1_sos`, `lowshelf_sos`, `peak_sos`). It was fitted at the device
-  rate; the plugin designs the same sections at the host rate from the same parameters, which matches `bq_resp`
-  within 0.001 dB at 50 Hz–2 kHz from 22.05 to 192 kHz (no prewarping needed; the fit is undefined below ~50 Hz).
-  `tests/CaptureEqTests.cpp` checks the coefficients and the processed impulse response against `bq_resp` values;
-  if `bq.json` is refitted, update `CaptureEq::cla` and the test's reference table together. The stage always runs
-  (warm state, a 20 ms crossfade when toggled); off, its weight is exactly 0 and the wet signal is unchanged.
-  Presets skip it, like `power` and `link`.
+- `transformer` (default off, the TRANSFORMER button) switches on `src/dsp/Transformer.h`: an input transformer core
+  on the mono input, then per output the low-band EQ (`src/dsp/CaptureEq.h`) and an output transformer core. Presets
+  skip it, like `power` and `link`. The stage always runs (warm state, a 20 ms crossfade when toggled); off, its
+  weight is exactly 0 and the signal is unchanged.
+- The EQ is the 10-number cascade of the "CLA" entry in `../analysis/unit_transfer/bq.json`: a first-order
+  high-pass, an RBJ low shelf and two RBJ peaking sections, with the formulas of `../tools/unit_transfer.py`
+  (`hp1_sos`, `lowshelf_sos`, `peak_sos`). It was fitted at the device rate; the plugin designs the same sections at
+  the host rate from the same parameters, which matches `bq_resp` within 0.001 dB at 50 Hz–2 kHz from 22.05 to
+  192 kHz (no prewarping needed; the fit is undefined below ~50 Hz). If `bq.json` is refitted, update
+  `CaptureEq::cla` and the reference table in `tests/TransformerTests.cpp` together.
+- The transformer cores are a guess (H): flux = a leaky integral of the signal (5 Hz corner, normalised at 40 Hz),
+  distortion voltage = a·φ|φ| + b·φ³ subtracted from the signal (the nonlinear magnetising current across the source
+  resistance). a and b are set for 0.08 % THD at 40 Hz and 0 dBFS (= +12 dBu), three quarters from the a term; the
+  input core runs at half the drive. The datasheet points it was checked against are in `Transformer.h`. The flux
+  term is low-pass by construction, so no oversampling is needed. `tests/TransformerTests.cpp` holds the calibration.
