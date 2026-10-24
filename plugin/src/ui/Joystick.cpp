@@ -2,6 +2,8 @@
 
 #include "ui/Design.h"
 
+#include <cmath>
+
 namespace rv::ui
 {
 Joystick::Joystick(ScaledImages& i, layout::Slot slot) : DesignComponent(slot.bounds()), images(i)
@@ -120,6 +122,19 @@ void Funnel::paint(juce::Graphics& g)
         };
         lg.reduceClipRegion(wedge(top, bottom)); // nothing leaves the wedge
 
+        // The glow also lights the wedge itself: a red tint, strongest around the lit segment and falling away from it.
+        {
+            const auto centre = (((bottom - segH * ((float)segment + 0.5f)) - top) / (bottom - top)); // 0..1 down the wedge
+            auto tint = [&](double at) { return design::funnelAmbient * std::exp(-std::pow((at - centre) / design::funnelAmbientReach, 2.0)); };
+            const auto topL = toLocal(juce::Point<float>(0.0f, top)).y, bottomL = toLocal(juce::Point<float>(0.0f, bottom)).y;
+            juce::ColourGradient ambient(juce::Colour(0xffff2410).withAlpha((float)tint(0.0) * alpha), 0.0f, topL,
+                                         juce::Colour(0xffff2410).withAlpha((float)tint(1.0) * alpha), 0.0f, bottomL, false);
+            for (int i = 1; i < 20; ++i)
+                ambient.addColour(i / 20.0, juce::Colour(0xffff2410).withAlpha((float)tint(i / 20.0) * alpha));
+            lg.setGradientFill(ambient);
+            lg.fillPath(wedge(top, bottom));
+        }
+
         // The lit segment (counted from the bottom): a brighter middle fading to the red at its edges, in a soft glow.
         const auto yBottom = bottom - segH * (float)segment, yTop = yBottom - segH;
         const auto lit = wedge(yTop + design::funnelGap * 0.5f, yBottom - design::funnelGap * 0.5f);
@@ -127,8 +142,8 @@ void Funnel::paint(juce::Graphics& g)
         juce::ColourGradient fill(juce::Colour(0xffff2e18).withAlpha(alpha), 0.0f, topL,
                                   juce::Colour(0xffff2e18).withAlpha(alpha), 0.0f, bottomL, false);
         fill.addColour(0.5, juce::Colour(0xffff5a30).withAlpha(alpha));
-        drawWithGlow(lg, getLocalBounds(), scale, juce::Colour(0xffff1a08).withAlpha(0.5f * alpha),
-                     16.0f * getScale() * 2.5f, [&](juce::Graphics& cg) {
+        drawWithGlow(lg, getLocalBounds(), scale, juce::Colour(0xffff1a08).withAlpha(0.6f * alpha),
+                     17.0f * getScale() * 2.5f, [&](juce::Graphics& cg) {
                          cg.setGradientFill(fill);
                          cg.fillPath(lit);
                      });

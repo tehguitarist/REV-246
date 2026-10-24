@@ -58,6 +58,10 @@ inline constexpr int funnelSegments = 10;
 inline constexpr float funnelTopY = 526.0f, funnelBottomY = 1029.0f;
 inline constexpr float funnelLineThickness = 3.5f;   // the faint dividing lines
 inline constexpr float funnelLineAlpha = 0.45f;
+// The wedge itself is tinted red around the lit segment, as if lit by it: peak alpha, and how far it reaches (as a
+// fraction of the wedge's height).
+inline constexpr float funnelAmbient = 0.30f;
+inline constexpr float funnelAmbientReach = 0.24f;
 inline constexpr float funnelGap = 3.0f;             // dark gap kept each side of a lit segment's lines
 inline constexpr float funnelInset = 3.0f; // keeps the band inside the gold edge
 struct FunnelPoint
