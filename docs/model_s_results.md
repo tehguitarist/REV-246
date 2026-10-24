@@ -3201,3 +3201,15 @@ Offline (`_pallf`'s `cells.json`, one value per cell, per-loop response per pass
 
 **Reading.** The shelf's per-loop detail behaves like values computed or tabulated per panel step (**H**), not like a smooth function of RT and LF. Unlike the HF pole, it cannot be carried to uncaptured steps with this library. **For the plugin:** at the library's sampled (LF, RT) steps apply the cells; elsewhere use the law with §32.6's pole curve, the DC floor and LF 0.4's DC ratio. The cells are 0.02–0.03 dB per pass rms, so leaving them out is worth 0.6–1.8 dB of null at 150–1000 ms (§32.2–32.3) and is far below audibility. A real capture at an unsampled LF or RT step would be needed to say more, and none exists.
 
+### 32.9 What is left for the loop coefficients on §32.6: 1.5 dB for 1,536 numbers (`lowband_shelf.py --stage takefit`, `SHELF_TAG=_pallf`) **[S: the per-setting refit's lead over the compact baseline has halved since §32.1; S: what remains is mostly HF 0.2 pole detail per setting]**
+
+```
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 EMT_CV_FOLDS=$PWD/analysis/loop_cv/cap0.8475_folds \
+    SHELF_CELLS=$PWD/analysis/loop_cv/hfcells_chain3_cap0.8475_pallf/cells.json SHELF_TAG=_pallf \
+    .venv/bin/python tools/memguard.py --limit-gb 8 -- .venv/bin/python tools/lowband_shelf.py --stage takefit --workers 8   # 7 min
+```
+
+§31's per-setting refit (each loop's broadband gain, DC section and HF pole, 12 numbers per setting, fitted on one take and scored on the other) rerun on §32.6. All settings, R, median, baseline → refit held out by take: 50–150 ms −52.2 → −52.3, **150–300 ms −51.2 → −52.7, 300–600 ms −46.7 → −48.6 dB** (RT ≤ 0.8: −48.8 → −50.2 and −41.1 → −41.9; RT ≥ 1.0: −52.0 → −53.4 and −48.5 → −51.1). On §32.1 the same refit was 3.0 / 3.5 dB ahead at 150–300 / 300–600 ms (§32.2); it is now 1.5 / 1.9 dB ahead. That is for 1,536 numbers against the compact baseline's few hundred, and the takefit bench keeps capture gains fixed, which flatters free per-setting terms (§0's bench rule). The largest per-setting leads at 150–300 ms are HF 0.2 settings: 1.0_0.8_0.2 −43.7 → −52.4, 0.1_2.5_0.2 −47.3 → −55.4, 1.0_1.0_0.2 −46.5 → −53.9, 0.1_0.8_0.2 −45.3 → −51.8, 0.4_0.8_0.2 −44.9 → −50.7 dB. That is the pole side at the strongest HF, at the 10⁻³ level per setting (§32.7: as a per-(LF, RT) offset it doesn't transfer). Then LF 0.4 / RT 0.6 / HF 1.0 −44.5 → −48.9 dB (the knee).
+
+**Reading.** S's loop coefficients are now a compact law (the length-scaled Jot law, the shelf with its DC floor and LF 0.4 constant, one HF pole curve with a drop-back, per-(LF, RT) shelf cells at the sampled steps), held out by setting. The remaining lead of a free per-setting refit is ≈ 1.5–2 dB, concentrated in single HF 0.2 settings. With the 50–150 ms floor (§32.7) and the repeat-level late windows, this is close to what the library can show for S without per-setting tables.
+
