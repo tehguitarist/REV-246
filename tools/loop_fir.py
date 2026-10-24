@@ -50,18 +50,23 @@ import q2_injection as q2  # noqa: E402
 
 q1 = q2.q1
 FS, PRE = q2.FS, q2.PRE
-KC = 4
+KC = int(os.environ.get("LOOP_FIR_KC", 4))          # --kc (via the environment, so the pool's workers see it)
 COMPACT = "diffuser_tied_fix-0.707107_ap230new_chain2"
 AP230 = "ap230_g0.7071_chain2.json"
 OUT = os.path.join(ROOT, "analysis", "loop_fir", q1.ms.KTAG or "library")
 FREQS = [63, 125, 250, 500, 1000, 2000, 4000, 6600, 8000, 10000, 11500]
 
 
+CURRENT = os.environ.get("LOOP_FIR_CURRENT") == "1"   # --current: the correction on top of the current S baseline's loops (model_s_results 25.14)
+if CURRENT or KC != 4:
+    OUT = OUT + ("_current" if CURRENT else "") + (f"_kc{KC}" if KC != 4 else "")
+
+
 def _fit_setting(a):
     key, lab, b230, law, caps, ends, v0 = a
     q1.EXT = 1700
     law["lf"] = {float(k): x for k, x in law["lf"].items()}
-    v, _, _ = q2.final_injection(compact=COMPACT)
+    v, _, _ = q2.final_injection(compact=f"diffuser_tied_fix-0.707107_ap230new_{q1.ms.KTAG}" if CURRENT else COMPACT)
     G0 = q2.branch_spectra(lab, law, [0.0], b230, q2.FINAL_DIFF)
     N = G0["N"]
     w = 2 * np.pi * np.fft.rfftfreq(N)
@@ -71,7 +76,11 @@ def _fit_setting(a):
     F, X = J._spectra(f, xs, N)
     Cl = J.cluster(cl)
     PB = G0["PB"]
-    G_law = q2.G_capped(lab, law, w, beta=q2.FINAL_BETA)
+    if CURRENT:                                     # §25.11: fold constants held out by RT step, LF 0.4 dc, floor and HF cells
+        import dense_mid as dm
+        G_law = dm.loop_G(key, N)
+    else:
+        G_law = q2.G_capped(lab, law, w, beta=q2.FINAL_BETA)
 
     def reverb(Gs):
         R = np.array([PB / (1 - Gi * Zi) for Gi, Zi in zip(Gs, Z)])
@@ -105,7 +114,10 @@ def _fit_setting(a):
     def five(u):
         p = vv.copy(); p[idx] = u
         return q1.G_loops(p, w)
-    f5 = least_squares(lambda u: err_r(reverb(five(u))), vv[idx], bounds=(lo[idx], hi[idx]), x_scale=xsc, diff_step=1e-6, max_nfev=100)
+    if CURRENT:                                     # no 5-number refit: only the correction on the baseline
+        f5 = type("r", (), dict(x=vv[idx], cost=0.5 * float(np.sum(err_r(r_law) ** 2)), nfev=0))
+    else:
+        f5 = least_squares(lambda u: err_r(reverb(five(u))), vv[idx], bounds=(lo[idx], hi[idx]), x_scale=xsc, diff_step=1e-6, max_nfev=100)
     p5 = vv.copy(); p5[idx] = f5.x
 
     # fir: G_i C_i with C_i a (2 KC + 1)-tap FIR, exact Jacobian
@@ -135,7 +147,7 @@ def _fit_setting(a):
     out = dict(key=key, **lab, b230=b230, five=p5[:5].tolist(), fir=ff.x.reshape(4, nt).tolist(), lags=lags.tolist(),
                cost=dict(law=float(np.sum(err_r(r_law) ** 2)), five=float(2 * f5.cost), fir=float(2 * ff.cost)),
                nfev=dict(five=int(f5.nfev), fir=int(ff.nfev)), rows=[])
-    for name, Gs in (("law", G_law), ("five", five(f5.x)), ("fir", [Gi * Ci for Gi, Ci in zip(G_law, Cs(ff.x))])):
+    for name, Gs in ((("law", G_law),) + ((("five", five(f5.x)),) if not CURRENT else ()) + (("fir", [Gi * Ci for Gi, Ci in zip(G_law, Cs(ff.x))]),)):
         G = q2.make_G(lab, law, Gs, b230, q2.FINAL_DIFF)
         for c in caps:
             out["rows"].append(dict(key=key, **lab, amp=c["amp"], loops=name, held_out=c["amp"] not in (30, 90),
@@ -176,7 +188,7 @@ def corr_shape(c, lags, f):
 
 def report_stage():
     res = [json.load(open(p)) for p in sorted(glob.glob(os.path.join(OUT, "*.json")))]
-    rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("nulls_free") + ".json")))}
+    rep = {(r["key"], r["amp"]): r for r in json.load(open(next(p_ for p_ in (os.path.join(q2.OUT, q1.ms.tagged("nulls_free") + ".json"), os.path.join(q2.OUT, "nulls_free_chain2.json")) if os.path.exists(p_))))}
     ws = ["50-150", "150-300", "300-600", "600-1000"]
     rows = [r for s in res for r in s["rows"] if r["held_out"]]
 
@@ -577,7 +589,7 @@ def interp_stage(workers, only=None):
     with ProcessPoolExecutor(workers, max_tasks_per_child=4) as ex:
         rows = [r for rr in ex.map(_interp_setting, jobs) for r in rr]
     json.dump(rows, open(OUT + "_interp" + ("_smoke" if only else "") + ".json", "w"), indent=0)
-    rep = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("nulls_free") + ".json")))}
+    rep = {(r["key"], r["amp"]): r for r in json.load(open(next(p_ for p_ in (os.path.join(q2.OUT, q1.ms.tagged("nulls_free") + ".json"), os.path.join(q2.OUT, "nulls_free_chain2.json")) if os.path.exists(p_))))}
     own = {(r["key"], r["amp"], r["loops"]): r for k in {r["key"] for r in rows} for r in fit[k]["rows"]}
     ws = ["50-150", "150-300", "300-600", "600-1000"]
 
@@ -601,7 +613,12 @@ def main():
     ap.add_argument("--stage", default="fit", choices=["fit", "report", "coefs", "interp", "floor", "shelf", "probe", "tilt", "hfcap"])
     ap.add_argument("--only", default=None)
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--current", action="store_true", help="fit: the correction on top of the current S baseline (model_s_results 25.14)")
+    ap.add_argument("--kc", type=int, default=4, help="fit: the correction's half-length in lags")
     a = ap.parse_args()
+    if (a.current, a.kc) != (CURRENT, KC):          # re-run with the environment set, so the pool's workers see it
+        os.environ.update(LOOP_FIR_CURRENT="1" if a.current else "0", LOOP_FIR_KC=str(a.kc))
+        os.execv(sys.executable, [sys.executable] + sys.argv)
     if a.stage == "fit":
         fit_stage(a.workers, a.only.split(",") if a.only else None)
     if a.stage == "coefs":
