@@ -2912,3 +2912,62 @@ EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 EMT_CV_FOLDS=... SHELF_CELLS
 The excess over cross-take repeats falls from +6.1 to +2.7 dB at 150–300 ms and from +5.3 to +1.3 dB at 300–600 ms; 50–150 ms barely moves (the first pass is not the loops). **Which parts are real** (take A against take B, 496 loop-settings): the DC corrections agree (correlation 0.83, rms 0.051 dB, A − B 0.032), the HF pole corrections partly (0.61, rms 1.1·10⁻³ — §25.19's per-loop spread), the broadband gain corrections do not (0.52, rms 0.027 dB per pass against A − B 0.033). Their medians by LF, RT, HF and loop are ±0.007 dB per pass with no trend, so no smooth law term falls out.
 
 **Reading.** What is left of S's excess at 150–600 ms is per-setting, per-loop coefficient detail in the shelf and the HF pole, at the 10⁻³ level: the unit's coefficient tables, not a missing structure. Compacting it is NEXT_STEPS item 7 (exact coefficients, fixed point, tables as curves); the per-setting refit is an upper bound (12 numbers per setting) and not adopted.
+
+## 32. What the per-setting refits are made of: a DC floor read per loop, and corrections that separate into LF and HF parts at RT ≥ 1.0 (`tools/loop_read/takefit_read.py`; `lowband_shelf.py --stage dcxfer | addxfer`; `tools/loop_read/dcxfer_report.py`) **[S: §31's per-pass corrections are real at every frequency (take-to-take correlation 0.86–0.99); S: each loop's DC end is a function of (LF, RT, loop) alone; S: under the DC floor the per-pass DC gain is 0.1845 in every loop and RT step ≤ 1.0, but 0.175 at LF 0.1 / RT 1.4; S: at RT ≥ 1.0 the corrections are an LF part + an HF part per (RT, loop), at RT ≤ 0.8 they are not; H: the firmware computes the shelf from (LF, RT) and the pole from (HF, RT) per loop; nothing adopted]**
+
+```
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 EMT_CV_FOLDS=$PWD/analysis/loop_cv/cap0.8475_folds \
+    SHELF_CELLS=$PWD/analysis/loop_cv/hfcells_chain3_cap0.8475_hfrt/cells.json \
+    .venv/bin/python tools/loop_read/takefit_read.py                                           # seconds -> analysis/lowband/chain3_takefit_read.{log,json}
+EMT_KERNEL=chain3 ... SHELF_TAG=_s29 .venv/bin/python tools/memguard.py --limit-gb 8 -- \
+    .venv/bin/python tools/lowband_shelf.py --stage dcxfer --workers 8                         # 7 min, 4.2 GB -> chain3_shelf_dcxfer_cap0.8475_s29/
+EMT_KERNEL=chain3 ... SHELF_TAG=_s29 .venv/bin/python tools/memguard.py --limit-gb 8 -- \
+    .venv/bin/python tools/lowband_shelf.py --stage addxfer --workers 8                        # 7 min, 4.2 GB -> chain3_shelf_addxfer_cap0.8475_s29/
+.venv/bin/python tools/loop_read/dcxfer_report.py                                              # analysis/lowband/chain3_dcxfer_report.log
+```
+
+`NEXT_STEPS.md` §0 item 1 (exact coefficients), first step: what §31's per-setting refits (`takefit`, 12 numbers per setting and take) contain, and how much of them carries over to settings they were not fitted on. Environment as §31 (the §29 baseline, clean captures). Every score is held out by take (fitted on AMPL 0 + 90, scored on 30 + 60 and the reverse) **and** by setting.
+
+**1. The corrections are real at every frequency.** Expressed as each loop's per-pass magnitude change (gain, DC section and pole shift together), take A against take B over 496 loop-settings: correlation 0.99 / 0.96 / 0.94 / 0.98 / 0.90 / 0.87 / 0.86 at 125 / 250 / 500 Hz / 1 / 2 / 4 / 8 kHz, rms 0.02–0.045 dB per pass. §31's "the broadband gain part is not real" (correlation 0.52) was the gain trading with the pole inside one fit; the response they make together is reproducible.
+
+**2. What carries over to other settings** (take B's per-pass change predicted from take A's at the *other* settings of a cell; explained variance at 125 Hz … 8 kHz):
+
+| Predictor | 125 | 250 | 500 | 1 k | 2 k | 4 k | 8 k |
+|---|---|---|---|---|---|---|---|
+| same (LF, RT) | 0.71 | 0.66 | 0.32 | 0.12 | 0.06 | 0.04 | 0.03 |
+| same (LF, RT, loop) | **0.90** | **0.84** | 0.33 | −0.02 | −0.09 | −0.10 | −0.10 |
+| same (HF, RT, loop) | −0.46 | −0.44 | −0.34 | −0.28 | −0.24 | −0.22 | −0.20 |
+| LF effect + HF effect per (RT, loop), RT 0.3 / 0.6 / 0.8 at 1 kHz | | | | −0.49 / 0.01 / −0.13 | | | |
+| the same, RT 1.0 / 1.4 / 1.8 / 2.2 / 2.5 at 1 kHz | | | | **0.80 / 0.10 / 0.91 / 0.92 / 0.94** | | | |
+
+Each loop's **DC end** (gain + DC section) is a function of (LF, RT, loop) alone: take-to-take correlation 1.00, and the same cell's other HF steps predict 90 % of it. Above 500 Hz nothing carries over within a cell, but **at RT ≥ 1.0 the corrections are an LF part plus an HF part per (RT step, loop)**: 74–94 % predicted at 1–4 kHz (RT 1.4's are too small to resolve there, 0.004 dB per pass). At RT 0.3–0.8 they are not additive; the worst cases are HF 0.2 and LF 2.0, where the pole ceiling, the ramp and AP230's damping step act.
+
+**3. The DC floor, read per loop** (unit = baseline + correction, mean of the takes; the law's DC ratios 0.1317 / 0.414):
+
+| Requested per-pass DC gain (law) | Unit | Where |
+|---|---|---|
+| 0.0000 … 0.073 | **0.1845 ± 0.0002**, every loop | LF 0.1, RT 0.3 – 1.0 (16 loop-cells) |
+| 0.035 … 0.062 | 0.1834 … 0.1840 | LF 0.4, RT 0.3 |
+| 0.105 / 0.126 / 0.139 / 0.153 | **0.1757 / 0.1737 / 0.1741 / 0.1753** | LF 0.1, RT 1.4, loops 4 / 3 / 2 / 1 |
+| 0.173 / 0.199 / 0.216 / 0.232 | 0.1896 / 0.2053 / 0.2215 / 0.2379 | LF 0.1, RT 1.8, loops 4 / 3 / 2 / 1 |
+| 0.188 / 0.214 / 0.231 / 0.248 | 0.1916 / 0.2161 / 0.2327 / 0.2491 | LF 0.4, RT 0.6, loops 4 / 3 / 2 / 1 |
+| 0.238 … 0.350 | law + 0.0005 … 0.002 | LF 0.1, RT 2.2 / 2.5 |
+
+Deep under the floor the DC gain per pass is one value, 0.1845, in all four loops and at every RT step to 1.0: per pass, not per second. At LF 0.1 / RT 1.4, where every loop's request is below the floor, all four sit at **0.175**, i.e. *more* loss than the deep floor, so the floor is not one clip of the DC gain: its value depends on the RT step (this is why §25.6's floor constants transfer across HF but not across RT). Approaching the floor (LF 0.1 / RT 1.8, LF 0.4 / RT 0.6) the unit gives a little less loss than the law, more the closer a loop is (+0.006 at 0.23 → +0.016 at 0.17): a soft knee per loop, which is what the per-loop DC corrections of §31 are. Above it (RT 2.2 / 2.5) the unit is the law to +0.0005…0.002. No smooth function of the requested DC gain alone fits RT 1.4 and RT ≤ 1.0 together (the unit's DC gain falls below the deep floor and comes back); a per-RT-step floor value with a soft knee does (**H** for its form).
+
+**4. On the bench** (median over held-out captures, R; the same captures in every column; [ ] the cross-take repeat level of §31 on these captures):
+
+| Settings | §29 baseline | DC table (LF, RT, loop) | LF + HF per (RT, loop) | **combined** | per-setting refit (§31) |
+|---|---|---|---|---|---|
+| all 128, 50–150 ms [−57.5] | −51.5 | −51.5 | −51.6 | **−51.8** | −52.1 |
+| all 128, 150–300 [−55.1] | −49.0 | −49.5 | −50.2 | **−50.6** | −52.4 |
+| all 128, 300–600 [−49.7] | −44.4 | −44.6 | −46.2 | **−46.4** | −48.4 |
+| RT ≤ 1.0, 150–300 / 300–600 | −46.9 / −40.1 | −47.4 / −40.4 | −44.7 / −37.0 | −48.3 / −41.7 | −51.3 / −44.1 |
+| RT ≥ 1.4, 150–300 / 300–600 | −50.4 / −47.0 | −50.7 / −47.2 | −51.9 / −48.7 | −51.9 / −48.7 | −53.1 / −51.3 |
+| LF 0.1, 150–300 / 300–600 | −47.6 / −40.3 | −48.0 / −41.0 | −48.6 / −45.2 | −49.6 / −45.4 | −51.9 / −47.8 |
+
+"Combined" is the additive table at RT ≥ 1.0 and the DC table at RT ≤ 0.8 (the split of 2.). L is the same to 0.2–0.4 dB (all 128: −51.8 / −50.4 / −46.0). Per setting (R): 77 better and 4 worse by more than 0.5 dB at 150–300 ms, 72 / 11 at 300–600 (worst 2.0_1.4_0.2 +1.7, 2.0_1.8_1.0 +1.6 dB). **Excess over cross-take repeats, all 128: +6.0 / +6.1 / +5.3 → +5.7 / +4.5 / +3.3 dB** (the per-setting refit +5.4 / +2.7 / +1.3). Parameters: about 450 numbers (DC table 48 at RT ≤ 0.8; at RT ≥ 1.0 per (RT, loop) 7 + 7 + 6 effects for gain, DC and pole), against 1,536 for the per-setting refit. The split at RT 1.0 was read from 2., which was itself held out, but it was chosen after looking at the RT steps, so treat the combined figure as an upper bound for a rule with the split fixed in advance.
+
+**5. Inside the additive table** (RT ≥ 1.0; `takefit_read.py` §4): the LF 0.4 / 1.0 / 2.0 effects are small (≤ 0.01 dB per pass) and close to length-scaled; the large ones are **HF 0.2 and LF 0.1, and both run monotonically across the loops**: HF 0.2 at 4 kHz +0.035 / +0.027 / −0.011 / −0.082 dB per pass (loops 1–4) at RT 1.0, −0.012 … +0.016 at RT 1.8 – 2.2; LF 0.1 at 1 kHz +0.010 … −0.009 at RT 2.2, +0.015 … +0.001 at RT 2.5. At the strongest settings the unit's coefficients spread across the four loops more (or less) than exact length scaling gives, by an amount that changes with the RT step.
+
+**Reading.** Most of what §31's per-setting refit gains is reproducible coefficient detail that does follow the panel's structure: the shelf side by (LF, RT, loop), the pole side by (HF, RT, loop), at least at RT ≥ 1.0. That is the signature of coefficients computed per loop from (LF, RT) and from (HF, RT) separately (**H**: the Z80 or DSP A computing them, not a table per setting). It recovers about half of the refit's gain held out (+6.1 / +5.3 → +4.5 / +3.3 dB excess) but as a 450-number table it is not a compact model and gives nothing between the library's steps, so it is **not adopted**. Next: compact it. (a) The DC floor as a per-RT-step value plus one soft-knee form per loop; (b) the HF 0.2 / LF 0.1 effects as a loop-length slope (2 numbers per effect instead of 4), and whether that slope is the pole curve of §25.17 evaluated in another variable (e.g. the per-pass target loss rather than p_law, which would spread the loops differently); (c) RT ≤ 0.8, where nothing separates.

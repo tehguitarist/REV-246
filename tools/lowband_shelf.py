@@ -188,13 +188,13 @@ def run(stage, only, keep):
     sel = {"free": lambda g: True, "dc": lambda g: g["lf"] == LF_DC,
            "floor": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] == 0.3),
            "perloop": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] <= 1.0),
-           "hfcell": lambda g: g["hf"] < 1.0, "bbcell": lambda g: True, "octaves": lambda g: True, "hfbb": lambda g: g["hf"] < 1.0, "hfloop": lambda g: g["hf"] < 1.0, "takefit": lambda g: True}
+           "hfcell": lambda g: g["hf"] < 1.0, "bbcell": lambda g: True, "octaves": lambda g: True, "hfbb": lambda g: g["hf"] < 1.0, "hfloop": lambda g: g["hf"] < 1.0, "takefit": lambda g: True, "dcxfer": lambda g: True, "addxfer": lambda g: True}
     sel["bbscore"] = sel["bbcell"]
     sel["floorscore"] = sel["cellscore"] = sel["floor"]
     keys = sorted(k for k in info if (only is None or k in only) and sel[stage](info[k]))
     keys = [k for k in keys if not os.path.exists(os.path.join(od, k + ".json"))]
     print(f"{stage}: {len(keys)} settings to do", flush=True)
-    if WORKERS > 1 and stage in ("hfbb", "hfcell", "hfloop", "takefit"):                            # one process, a pool of workers (~0.6 GB each)
+    if WORKERS > 1 and stage in ("hfbb", "hfcell", "hfloop", "takefit", "dcxfer", "addxfer"):                            # one process, a pool of workers (~0.6 GB each)
         from concurrent.futures import ProcessPoolExecutor, as_completed
         with ProcessPoolExecutor(WORKERS, max_tasks_per_child=4) as ex:
             for i, fu in enumerate(as_completed([ex.submit(_run_one, (stage, k, os.path.join(od, k + ".json"), keep)) for k in keys])):
@@ -205,7 +205,7 @@ def run(stage, only, keep):
         if stage == "dc":
             dc(k, path, keep)
         else:
-            {"free": free, "floor": floor, "floorscore": floorscore, "cellscore": cellscore, "perloop": perloop, "hfcell": hfcell, "bbcell": bbcell, "bbscore": bbscore, "octaves": octaves, "hfbb": hfbb, "hfloop": hfloop, "takefit": takefit}[stage](k, path)
+            {"free": free, "floor": floor, "floorscore": floorscore, "cellscore": cellscore, "perloop": perloop, "hfcell": hfcell, "bbcell": bbcell, "bbscore": bbscore, "octaves": octaves, "hfbb": hfbb, "hfloop": hfloop, "takefit": takefit, "dcxfer": dcxfer, "addxfer": addxfer}[stage](k, path)
         print(f"  {i + 1}/{len(keys)} {k}", flush=True)
 
 
@@ -643,11 +643,8 @@ def hfloop(key, path):
     json.dump(out, open(path, "w"))
 
 
-def takefit(key, path):
-    """Per setting on the current baseline (EMT_CV_FOLDS, SHELF_CELLS, EMT_PMAX, EMT_HFRT_MIN as the §29 baseline): each loop's
-    broadband gain (dB per pass), DC gain (dB, a first-order section with the shelf's pole) and HF pole (one-pole replaced),
-    12 numbers, fitted on one take's clean captures (AMPL 0 + 90 or 30 + 60, tools/defects.py) on the 100 Hz - 10 kHz residual
-    from 50 ms, scored on the other take: how much of the excess per-setting coefficients can explain (model_s_results 31)."""
+def takefit_base(key):
+    """The current baseline's loop responses for takefit / addxfer: G, its HF 1.0 form G1, each loop's HF pole pb."""
     t, lfdc, kw = base_kw(key, HF_CELLS_JSON)
     d = prep(key, lambda rt: dict(t), lfdc)
     args = dict(lfrt=t["lfrt"], gamma=t["gamma"], hfdp=t["hfdp"], pramp=t["pramp"], b230=d["b230"], **kw)
@@ -655,18 +652,31 @@ def takefit(key, path):
     hf1 = d["lab"]["hf"] >= 1.0
     G1 = G if hf1 else q2.final_Gs(dict(d["lab"], hf=1.0), d["law"], d["w"], **args)
     pb = np.zeros(4) if hf1 else np.array([(1 - h) / (1 + h) for h in [float(np.real(g[-1] / g1[-1])) for g, g1 in zip(G, G1)]])
+    return d, G, G1, pb, hf1
+
+
+def takefit_Gs(G1, pb, hf1, z1, w, a, u):
+    """Each loop: broadband gain u[i] dB, a DC section u[4 + i] dB (the shelf's pole), the HF pole pb + u[8 + i]."""
+    out = []
+    for i in range(4):
+        gi = G1[i] * 10 ** (u[i] / 20) * m.shelf(w, 10 ** (u[4 + i] / 20), 1.0, a)
+        if not hf1:
+            p_ = pb[i] + u[8 + i]
+            gi = gi * (1 - p_) / (1 - p_ * z1)
+        out.append(gi)
+    return out
+
+
+def takefit(key, path):
+    """Per setting on the current baseline (EMT_CV_FOLDS, SHELF_CELLS, EMT_PMAX, EMT_HFRT_MIN as the §29 baseline): each loop's
+    broadband gain (dB per pass), DC gain (dB, a first-order section with the shelf's pole) and HF pole (one-pole replaced),
+    12 numbers, fitted on one take's clean captures (AMPL 0 + 90 or 30 + 60, tools/defects.py) on the 100 Hz - 10 kHz residual
+    from 50 ms, scored on the other take: how much of the excess per-setting coefficients can explain (model_s_results 31)."""
+    d, G, G1, pb, hf1 = takefit_base(key)
     z1 = np.exp(-1j * d["w"])
     a = d["law"]["a"]
 
-    def Gs_of(u):
-        out = []
-        for i in range(4):
-            gi = G1[i] * 10 ** (u[i] / 20) * m.shelf(d["w"], 10 ** (u[4 + i] / 20), 1.0, a)
-            if not hf1:
-                p_ = pb[i] + u[8 + i]
-                gi = gi * (1 - p_) / (1 - p_ * z1)
-            out.append(gi)
-        return out
+    Gs_of = lambda u: takefit_Gs(G1, pb, hf1, z1, d["w"], a, u)
     d["Gs0"] = G
     r0 = reverb(d, G)
     from defects import DEFECTS
@@ -685,9 +695,85 @@ def takefit(key, path):
     json.dump(out, open(path, "w"))
 
 
+TAKEFIT_DIR = os.environ.get("SHELF_TAKEFIT") or os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_takefit_cap0.8475_s29")
+
+
+def dcxfer(key, path):
+    """Per setting on the current baseline (as takefit): each loop's DC end (takefit's broadband gain + DC section, dB per
+    pass) taken from the takefit fits of the same (LF, RT) cell's other HF steps, fitted on one take and scored on the other:
+    a per-(LF, RT, loop) DC table, held out by HF step and by take ("loop"); its loop mean ("cell"). model_s_results 32."""
+    t, lfdc, kw = base_kw(key, HF_CELLS_JSON)
+    d = prep(key, lambda rt: dict(t), lfdc)
+    G = q2.final_Gs(d["lab"], d["law"], d["w"], lfrt=t["lfrt"], gamma=t["gamma"], hfdp=t["hfdp"], pramp=t["pramp"], b230=d["b230"], **kw)
+    a = d["law"]["a"]
+    lab = d["lab"]
+    cell = [json.load(open(p)) for p in glob.glob(os.path.join(TAKEFIT_DIR, "*.json"))]
+    cell = [c for c in cell if c["lf"] == lab["lf"] and c["rt"] == lab["rt"] and c["hf"] != lab["hf"]]
+    d["Gs0"] = G
+    r0 = reverb(d, G)
+    from defects import DEFECTS
+    caps = [c for c in d["caps"] if (key, c["amp"]) not in DEFECTS]
+    takes = {"A": [c for c in caps if c["amp"] in (0, 90)], "B": [c for c in caps if c["amp"] in (30, 60)]}
+    out = dict(key=key, **lab, base={c["amp"]: nulls_broad(c["y"], model(d, c, r0) * c["g"], c["te"]) for c in caps}, x={}, held={})
+    for tr, te in (("A", "B"), ("B", "A")):
+        src = [np.array(c["fit"][tr][:8]) for c in cell if tr in c["fit"]]
+        if not takes[te] or not src:
+            continue
+        x = np.mean([s[:4] + s[4:8] for s in src], 0)
+        out["x"][tr] = x.tolist()
+        for form, xx in (("loop", x), ("cell", np.full(4, x.mean()))):
+            r = reverb(d, [Gi * m.shelf(d["w"], 10 ** (xi / 20), 1.0, a) for Gi, xi in zip(G, xx)])
+            out["held"].setdefault(form, {}).update({c["amp"]: nulls_broad(c["y"], model(d, c, r) * c["g"], c["te"]) for c in takes[te]})
+    json.dump(out, open(path, "w"))
+
+
+def additive_u(lab, fits, take):
+    """takefit's 12 numbers for setting lab predicted from the other settings of its RT step as LF effect + HF effect, per
+    number (least squares on the one-hot design; the HF-pole numbers from the HF < 1 settings only). None if lab's LF or HF
+    step has no other setting there."""
+    blk = [c for c in fits if c["rt"] == lab["rt"] and (c["lf"], c["hf"]) != (lab["lf"], lab["hf"]) and take in c["fit"]]
+    if not any(c["lf"] == lab["lf"] for c in blk) or not any(c["hf"] == lab["hf"] for c in blk):
+        return None
+    lfs, hfs = sorted({c["lf"] for c in blk}), sorted({c["hf"] for c in blk})
+    onehot = lambda lf, hf: np.r_[[lf == x for x in lfs], [hf == x for x in hfs]].astype(float)
+    x0 = onehot(lab["lf"], lab["hf"])
+    u = np.zeros(12)
+    for cols, rows in ((slice(0, 8), blk), (slice(8, 12), [c for c in blk if c["hf"] < 1.0])):
+        if lab["hf"] >= 1.0 and cols.start == 8:
+            continue
+        X = np.array([onehot(c["lf"], c["hf"]) for c in rows])
+        Y = np.array([np.r_[c["fit"][take], np.zeros(12 - len(c["fit"][take]))][cols] for c in rows])
+        u[cols] = x0 @ np.linalg.lstsq(X, Y, rcond=None)[0]
+    return u
+
+
+def addxfer(key, path):
+    """Per setting on the current baseline (as takefit): takefit's 12 per-loop numbers predicted as an LF effect + an HF effect
+    per (RT step, loop) from the other settings of the RT step (additive_u), fitted on one take, scored on the other: held
+    out by setting and by take. model_s_results 32."""
+    d, G, G1, pb, hf1 = takefit_base(key)
+    z1 = np.exp(-1j * d["w"])
+    a = d["law"]["a"]
+    fits = [json.load(open(p)) for p in glob.glob(os.path.join(TAKEFIT_DIR, "*.json"))]
+    d["Gs0"] = G
+    r0 = reverb(d, G)
+    from defects import DEFECTS
+    caps = [c for c in d["caps"] if (key, c["amp"]) not in DEFECTS]
+    takes = {"A": [c for c in caps if c["amp"] in (0, 90)], "B": [c for c in caps if c["amp"] in (30, 60)]}
+    out = dict(key=key, **d["lab"], base={c["amp"]: nulls_broad(c["y"], model(d, c, r0) * c["g"], c["te"]) for c in caps}, u={}, held={})
+    for tr, te in (("A", "B"), ("B", "A")):
+        u = additive_u(d["lab"], fits, tr)
+        if not takes[te] or u is None:
+            continue
+        out["u"][tr] = u.tolist()
+        r = reverb(d, takefit_Gs(G1, pb, hf1, z1, d["w"], a, u))
+        out["held"].update({c["amp"]: nulls_broad(c["y"], model(d, c, r) * c["g"], c["te"]) for c in takes[te]})
+    json.dump(out, open(path, "w"))
+
+
 def _run_one(a):
     stage, k, path, keep = a
-    {"hfbb": hfbb, "hfcell": hfcell, "hfloop": hfloop, "takefit": takefit}[stage](k, path)
+    {"hfbb": hfbb, "hfcell": hfcell, "hfloop": hfloop, "takefit": takefit, "dcxfer": dcxfer, "addxfer": addxfer}[stage](k, path)
     return k
 
 
@@ -796,7 +882,7 @@ def report_octaves():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "cellscore", "perloop", "hfcell", "bbcell", "bbscore", "octaves", "report", "octreport", "floorreport", "cellreport", "perloopreport", "hfcellreport", "bbreport", "hfbb", "hfloop", "takefit"], required=True)
+    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "cellscore", "perloop", "hfcell", "bbcell", "bbscore", "octaves", "report", "octreport", "floorreport", "cellreport", "perloopreport", "hfcellreport", "bbreport", "hfbb", "hfloop", "takefit", "dcxfer", "addxfer"], required=True)
     ap.add_argument("--workers", type=int, default=1, help="hfbb: a pool of workers in this one process")
     ap.add_argument("--only", default=None)
     ap.add_argument("--keep-lfrt", action="store_true")
