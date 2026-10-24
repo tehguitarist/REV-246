@@ -2386,3 +2386,58 @@ EMT_KERNEL=chain3 .venv/bin/python tools/loop_cv.py --retake [--xadd ...] --stag
 
 **Reading.** The compact numbers are kernel-independent, and the baseline is now on chain3 at the same held-out level (L better by 0.3–0.7 dB). The 50–600 ms excess (+4.3 / +5.9 / +3.6 dB, R) is not a tap level. **Next:** (1) the 250 Hz part of the dense correction, per loop on the undamped settings, scored on this bench (`loop_cv --retake --xadd`) as well as on dense_mid's; (2) AP230's damping at b > 0; (3) the `nulls_free` references on chain3 (a checkpointed long run) once the excess figures matter to 0.1 dB.
 
+
+### 25.12 The 250 Hz part: per loop, as a fixed waveform, and on the baseline bench (`dense_mid.py --base`, `--basis lkernelK | diffuser2`, `--stage decodeloops`; `tools/resid_common/`; `loop_cv.py --retake --xadd`) **[S: the residual is one waveform in every setting and 200–250 Hz is a transfer error; S: the dense correction does not survive the baseline bench; H: AP230's feedforward / feedback gap; 250–340 Hz open; baseline unchanged]**
+
+```
+EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 6 -- .venv/bin/python tools/dense_mid.py --subset b0=1,rtmin=0.6 --band 200,1500 \
+    --basis dense|ckernel150|lkernel150 --base gain_band200-1500 --stage fit|score --fold A|B [--project 200,1500]
+EMT_KERNEL=chain3 .venv/bin/python tools/dense_mid.py --subset b0=1,rtmin=0.6 --band 200,1500 --basis dense --base gain_band200-1500 --stage decodeloops
+EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 6 -- .venv/bin/python tools/dense_mid.py --subset b0=1,rtmin=0.6 --band 200,10000 --basis diffuser2 --stage fit|score --fold A|B [--test-all]
+EMT_KERNEL=chain3 .venv/bin/python tools/resid_common/out250.py <keys> | fixed.py [lo,hi] | echo.py | outfir.py <K> <t0 ms> | coherence.py <a,b ms> | modes.py <key>
+for rt in ...; do EMT_KERNEL=chain3 ... tools/loop_cv.py --retake --xadd b01_rtmin0.6_band200-1500_on-gain_band200-1500_proj200-1500 --stage run --rt $rt; done
+```
+
+Logs: `analysis/dense_mid/chain3/report*_on-gain_band200-1500*.log`, `decodeloops*.log`, `resid/*.log`; `analysis/loop_cv/hfcells_chain3_*_on-gain*/report.log`. `--base TAG` holds a fitted correction (here §25.10's 2-number level) fixed underneath: the new basis is fitted on what it leaves, the saved `x_` is the sum, and `--project` band-limits only the increment. Fits take 1.3–3.1 GB and 13–85 s.
+
+**1. The dense per-loop correction on top of the level** (25,116 numbers, fit 200–1500 Hz, projected 200–1500 Hz, 88 undamped settings held out by RT fold, R, excess at 50–150 / 150–300 / 300–600 ms): 250 Hz +13.7 / +12.7 / +9.0 → **+7.1 / +9.9 / +7.1** (the level alone +11.8 / +12.1 / +8.3; the dense correction without the level +8.5 / +10.7 / +7.3), 1 kHz +2.6 / +5.9 / +5.4. 4 kHz +6.5 at 50–150 ms is the level's known cost.
+
+**2. Per loop the correction is not identifiable, but its output is.** Read in 177–354 Hz (`decodeloops`), each loop's increment agrees between folds only −0.13…+0.28. It is anti-correlated with the mean of the other loops (−0.30…−0.53), its energy is spread evenly over lag (5 % within ±15 lags of a tap, the expected share), and its ratio to the loop's own excitation varies by a factor of 2–5 between folds. Before the first recirculation only the sum over the loops reaches the output, so the per-loop waveforms trade off against each other. Their output does not (`out250.py`, 250 Hz octave, R). Fold A's and fold B's corrections agree 0.97–0.98 at 50–150 ms and 0.89–0.98 at 150–600 ms on flat and long-RT settings (0.51–0.86 at LF 0.1 / RT 2.2), and they correlate 0.77–0.87 with the capture's residual at 50–150 ms.
+
+**3. Not a read-path filter.** A kernel of ±150 lags around every read tap (fit 200–1500 Hz, on the level) gives 250 Hz at 50–150 ms +11.1 dB per channel (602 numbers) and +9.3 dB per loop and channel (2,408), against +7.1 for the dense correction. At 1 kHz both match the dense correction (+2.0…+2.1).
+
+**4. The baseline's residual is the same waveform in every setting** (`fixed.py`; R, each capture against the mean residual of the other undamped settings, median):
+
+| Window (ms) | 250 Hz octave: undamped / damped | repeat capture | 1 kHz octave: undamped / damped | repeat capture |
+|---|---|---|---|---|
+| 30–50 | +0.93 / +0.93 | +0.89 | +0.98 / +0.99 | +0.96 |
+| 50–75 | +0.99 / +0.99 | +0.99 | +0.99 / +0.98 | +0.98 |
+| 75–100 | +0.96 / +0.90 | +0.99 | +0.96 / +0.67 | +0.98 |
+| 100–125 | +0.98 / +0.88 | +0.99 | +0.95 / +0.48 | +0.98 |
+| 150–200 | +0.83 / +0.45 | +0.98 | +0.86 / +0.20 | +0.97 |
+
+- From 30 to about 100 ms the residual is as alike across settings as two captures of one setting. Its amplitude on the common waveform is 0.9–1.1 at RT 1.0–2.5 and at every LF and HF step: **a fixed first-pass error.** RT 0.6 / 0.8 and AP230 step b 0.5 are 1.2–2.3 (open).
+- Later the amplitude follows the loop gain at that frequency. At 250 Hz and 150–300 ms it is 0.16–0.18 at LF 0.1 and 1.6–2.0 at LF 2.0, and it falls at short RT. It passes through the loops, and on the damped settings it decorrelates first at 1 kHz (from 75 ms): it passes AP230's damping too. So it is an error of the loops' *input* (diffuser side), which is why an excitation correction transfers.
+- Broadband (100 Hz–10 kHz, `echo.py`) the common residual is −52…−55 dB re the model from 0 to 150 ms. It correlates +0.39…+0.46 with the model at zero lag and −0.38…−0.44 with its derivative, and its spectrum re the model peaks at 250 Hz (−49 / −50 dB) and 8 kHz (−51 dB) with a dip at 2–4 kHz.
+
+**5. An output-side FIR, held out by RT fold** (`outfir.py`: residual ≈ h ∗ model per channel, least squares on every setting of one fold, damped included; scored on the other fold, R, excess):
+- ±30 lags from 0 ms (122 numbers): folds agree 0.996. |1 + H| − 1 is +0.04…+0.08 % at 125–500 Hz, +0.12…+0.14 % at 1 kHz, −0.05…−0.11 % at 4 kHz and +0.05…+0.08 % at 8 kHz: §25.10's level shape. 1 kHz at 50–150 ms +9.1 → +6.1; the cluster's 4 kHz −49.9 → −52.8 dB at 0–50 ms; 250 Hz only +13.4 → +12.8.
+- ±300 lags from 50 ms (1,202 numbers; folds agree 0.96, band-limited 0.94–0.98): all 128 at 50–150 ms −51.3 → **−53.8 dB** (excess +4.7 → +2.6; undamped +4.0 → +1.5; damped +8.7 → +7.1), 1 kHz +9.1 → +4.0, 250 Hz +13.4 → +10.3, 150–300 ms +5.7 → +5.1. **But it costs the cluster window** (0–50 ms 250 Hz −49.8 → −48.2, 1 kHz −55.3 → −52.3 dB): it is a loop-path transfer error the cluster does not share. Band-limited to 100 Hz–9 kHz, 43–47 % of h's energy is within ±5 lags (the level: +0.1…+0.25 % from 150 Hz to 2 kHz, ~0 by 2.5 kHz), and **the strongest echoes are a symmetric pair at ±230 lags** (L −231 / +228, R −230 / +230), AP230's delay. Nothing stands out at ±20 or ±72.
+
+**6. AP230 not quite all-pass (`--basis diffuser2`).** With the feedforward and feedback gains of each all-pass apart (d log A / d g_ff and d g_fb, 6 numbers) plus the level, fitted at 200 Hz–10 kHz on the undamped settings: AP230 feedforward +0.000234 / +0.000234 (folds A / B), feedback −0.000248 / −0.000254. That is a gap of about 4.8·10⁻⁴ between the two coefficients (0.07 % of 0.7071), the same in both folds. AP20 and AP72 are ≤ 6·10⁻⁵, and the level is +0.091 / +0.099 %. Held out on all 128 at 50–150 ms −51.4 → −52.5 dB (the level alone −52.3), 250 Hz +13.4 → +12.6, 1 kHz +9.1 → +7.1; nothing later. **Consistent but small (H: a coefficient quantised differently in AP230's two multiplies).** §25.10's diffuser test moved both gains together, which keeps the stage all-pass, so it could not see this.
+
+**7. 200–250 Hz is a transfer error; 250–340 Hz is not** (`coherence.py`, undamped RT ≥ 1.0, 228 captures, R):
+
+| Band | Coherence with the model, 50–125 / 125–300 ms | With the mean residual (fixed waveform) | E / M (dB), 50–125 ms |
+|---|---|---|---|
+| 200–250 Hz | **0.79 / 0.83** | 0.79 / 0.61 | −47.3 |
+| 250–300 Hz | 0.22 / 0.17 | 0.23 / 0.15 | **−44.6** |
+| 300–350 Hz | 0.45 / 0.13 | 0.50 / 0.18 | −51.4 |
+| 1000–1400 Hz | 0.64 / 0.50 | 0.63 / 0.36 | −50.8 |
+
+- At 200–250 Hz the residual follows each setting's own model, including its decay, better than a fixed waveform does. That is a narrow transfer error, finer than the ±300-lag FIR resolves.
+- At 250–340 Hz the residual-to-model ratio has peaks at the same frequencies in every setting: 243, 248, 275, 297, 312 and 335 Hz, up to −27…−17 dB (`modes.py`). They sit 1–5 Hz *between* the loop modes (f = n · FS / P_i; G_i's phase is ~0 here), where the model's spectrum has its troughs. On a lone mode the ratio is lower (−54…−56 dB, against −51…−52 dB off-mode). So these are troughs of M, not resonances of E: the residual there has no mode structure and doesn't follow the loops' combs. Bins where two loops' modes lie within 0.5–1 Hz are 3–8 dB higher in 3 of 4 settings, but on only 14–21 bins (H at most).
+
+**8. On the baseline bench the dense correction fails** (`loop_cv --retake --xadd`, the dense correction on the level, projected, fold-matched; R, re-taken → corrected): all 128 at 50–150 ms −51.6 → −51.9 dB, 150–300 −48.9 → −48.9, 300–600 −44.0 → −43.7, **0–50 ms L / R −51.4 / −50.8 → −47.4 / −47.3**, and RT ≤ 1.0 loses 0.8 dB at 150–300 ms. 10 settings are worse by more than 0.5 dB at 300–600 ms and 4 better. **Why (S):** dense_mid weights nothing before 50 ms, but the excitation starts at lag 230 (9 ms). The fit is free to put content into the 0–50 ms window, and on the baseline bench each capture's clock and gain are refitted against a model with that content. dense_mid's 250 Hz gains (and §25.10's 1.2 dB) therefore overstate what survives the baseline. A correction to adopt must be fitted with 0–50 ms weighted.
+
+**Reading.** The 250 Hz octave's excess has two parts. (a) 200–250 Hz is a narrow transfer error of the loop paths, and the 1 kHz part is the broad loop-path level. Both are one waveform in every setting, enter the loops on the input side and recirculate. Part of them is AP230 not being exactly all-pass. (b) 250–340 Hz is a residual without the loops' mode structure, largest relative to the model in its inter-mode troughs; its cause is open. No correction is adopted: the only bench that counts (`loop_cv --retake`) shows ≤ 0.3 dB. **Next:** (1) give dense_mid's fits a 0–50 ms weight (`T_FROM` 0, AMPL 0 excluded there) and refit the compact candidates (level filter, AP230 feedforward / feedback, a narrow 200–250 Hz loop-path term) so they survive the clock refit, then score them on `loop_cv --retake --xadd`; (2) the 250–340 Hz part: whether it is additive (noise-like, capture-chain) or a structure with other delays, from its level relative to the repeat null per bin; (3) AP230 at b > 0.

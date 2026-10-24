@@ -1,0 +1,14 @@
+## model_s_results §25.12 fit lines (dense_mid.py --stage fit, EMT_KERNEL=chain3, --subset b0=1,rtmin=0.6)
+--band 200,1500 --basis dense --base gain_band200-1500
+fold A: 40 settings, 12346272 samples, 25116 unknowns; training residual -1.89 dB re the baseline's (200-1500 Hz, weighted)   [1.31 GB, 67 s]
+fold B: 48 settings, 15480364 samples, 25116 unknowns; training residual -0.66 dB re the baseline's (200-1500 Hz, weighted)   [1.58 GB, 84 s]
+--band 200,1500 --basis ckernel150 --base gain_band200-1500
+fold A: 40 settings, 12346272 samples, 602 unknowns; training residual -0.35 dB re the baseline's (200-1500 Hz, weighted)   [1.37 GB, 63 s]
+fold B: 48 settings, 15480364 samples, 602 unknowns; training residual -0.14 dB re the baseline's (200-1500 Hz, weighted)   [1.63 GB, 85 s]
+--band 200,1500 --basis lkernel150 --base gain_band200-1500
+fold A: 40 settings, 12346272 samples, 2408 unknowns; training residual -0.64 dB re the baseline's (200-1500 Hz, weighted)   [1.39 GB, 64 s]
+fold B: 48 settings, 15480364 samples, 2408 unknowns; training residual -0.23 dB re the baseline's (200-1500 Hz, weighted)   [1.61 GB, 85 s]
+--band 200,10000 --basis diffuser2
+fold A: 40 settings, 12346272 samples; diffuser ff20 -0.000021, ff72 +0.000010, ff230 +0.000234, fb20 +0.000052, fb72 +0.000031, fb230 -0.000248, level +0.000906; training residual -0.42 dB re the baseline's   [2.42 GB, 13 s]
+fold B: 48 settings, 15480364 samples; diffuser ff20 -0.000016, ff72 +0.000014, ff230 +0.000234, fb20 +0.000059, fb72 +0.000030, fb230 -0.000254, level +0.000990; training residual -0.24 dB re the baseline's   [3.08 GB, 17 s]
+--subset lf=1,hf=1,b0=1,rtmin=0.6 --band 200,1500 --basis gain (flat only, §25.11): L / R +0.173 / +0.237 % (A), +0.168 / +0.223 % (B)

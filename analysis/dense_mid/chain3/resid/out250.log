@@ -1,0 +1,24 @@
+1.0_1.0_1.0 [1.0, 1.0, 1.0]
+   50-150: A~B +0.98, common A~B +0.50, specific A~B +0.36, common share 1.72; vs residual: A +0.78 B +0.76, common +0.41, specific +0.21
+   150-300: A~B +0.91, common A~B +0.60, specific A~B +0.68, common share 1.66; vs residual: A +0.19 B +0.25, common +0.30, specific -0.10
+   300-600: A~B +0.89, common A~B +0.52, specific A~B +0.58, common share 2.07; vs residual: A +0.21 B +0.22, common +0.15, specific +0.00
+1.0_1.8_1.0 [1.0, 1.8, 1.0]
+   50-150: A~B +0.98, common A~B +0.52, specific A~B +0.43, common share 1.87; vs residual: A +0.77 B +0.75, common +0.36, specific +0.21
+   150-300: A~B +0.98, common A~B +0.63, specific A~B +0.71, common share 2.40; vs residual: A +0.39 B +0.43, common +0.28, specific -0.01
+   300-600: A~B +0.97, common A~B +0.57, specific A~B +0.62, common share 3.03; vs residual: A +0.51 B +0.54, common +0.14, specific +0.16
+1.0_2.5_1.0 [1.0, 2.5, 1.0]
+   50-150: A~B +0.98, common A~B +0.53, specific A~B +0.45, common share 1.93; vs residual: A +0.77 B +0.75, common +0.35, specific +0.22
+   150-300: A~B +0.98, common A~B +0.64, specific A~B +0.72, common share 2.68; vs residual: A +0.43 B +0.48, common +0.31, specific -0.02
+   300-600: A~B +0.97, common A~B +0.58, specific A~B +0.64, common share 3.15; vs residual: A +0.65 B +0.66, common +0.31, specific +0.06
+0.4_1.8_0.6 [0.4, 1.8, 0.6]
+   50-150: A~B +0.97, common A~B +0.52, specific A~B +0.36, common share 1.79; vs residual: A +0.84 B +0.85, common +0.44, specific +0.23
+   150-300: A~B +0.86, common A~B +0.58, specific A~B +0.67, common share 1.38; vs residual: A +0.67 B +0.70, common +0.13, specific +0.35
+   300-600: A~B +0.81, common A~B +0.52, specific A~B +0.51, common share 2.11; vs residual: A +0.54 B +0.52, common -0.08, specific +0.38
+2.0_1.0_0.4 [2.0, 1.0, 0.4]
+   50-150: A~B +0.98, common A~B +0.50, specific A~B +0.40, common share 1.73; vs residual: A +0.79 B +0.76, common +0.40, specific +0.21
+   150-300: A~B +0.96, common A~B +0.63, specific A~B +0.69, common share 2.09; vs residual: A +0.58 B +0.61, common +0.29, specific +0.11
+   300-600: A~B +0.95, common A~B +0.56, specific A~B +0.65, common share 2.13; vs residual: A +0.55 B +0.65, common +0.21, specific +0.18
+0.1_2.2_1.0 [0.1, 2.2, 1.0]
+   50-150: A~B +0.86, common A~B +0.54, specific A~B +0.21, common share 1.53; vs residual: A +0.87 B +0.88, common +0.57, specific +0.16
+   150-300: A~B +0.61, common A~B +0.35, specific A~B +0.53, common share 0.37; vs residual: A +0.64 B +0.59, common +0.07, specific +0.50
+   300-600: A~B +0.51, common A~B +0.45, specific A~B +0.33, common share 0.45; vs residual: A +0.39 B +0.18, common -0.11, specific +0.30
