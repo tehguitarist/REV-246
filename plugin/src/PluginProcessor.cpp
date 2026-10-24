@@ -20,6 +20,7 @@ Rev246Processor::Rev246Processor()
     pIn = apvts.getRawParameterValue(id::inputGain);
     pOut = apvts.getRawParameterValue(id::outputGain);
     pPower = apvts.getRawParameterValue(id::power);
+    pTransformer = apvts.getRawParameterValue(id::transformer);
     for (int i = 0; i < rv::params::numJoys; ++i)
         pJoy[(size_t)i] = apvts.getRawParameterValue(rv::params::joyId((rv::params::Joy)i));
 }
@@ -35,13 +36,15 @@ bool Rev246Processor::isBusesLayoutSupported(const BusesLayout& layouts) const
 void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     engine.prepare(sampleRate, samplesPerBlock);
-    for (auto* s : {&inGain, &outGain, &mixAmount, &panLeft, &panRight, &wetOn})
+    transformer.prepare(sampleRate);
+    for (auto* s : {&inGain, &outGain, &mixAmount, &panLeft, &panRight, &wetOn, &transformerOn})
         s->reset(sampleRate, rampSeconds);
     inGain.setCurrentAndTargetValue(rv::params::gainLinear(*pIn));
     outGain.setCurrentAndTargetValue(rv::params::gainLinear(*pOut));
     mixAmount.setCurrentAndTargetValue(*pMix);
     wetOn.setCurrentAndTargetValue(*pPower >= 0.5f ? 1.0f : 0.0f);
-    scratch.setSize(3, samplesPerBlock, false, false, true);
+    transformerOn.setCurrentAndTargetValue(*pTransformer >= 0.5f ? 1.0f : 0.0f);
+    scratch.setSize(4, samplesPerBlock, false, false, true);
     setLatencySamples(0);
 }
 
@@ -52,7 +55,7 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     const auto n = buffer.getNumSamples();
     const auto inChannels = getTotalNumInputChannels();
     if (n > scratch.getNumSamples())
-        scratch.setSize(3, n, false, false, true); // only if a host exceeds its promised block size
+        scratch.setSize(4, n, false, false, true); // only if a host exceeds its promised block size
 
     // Settings from the panel, converted to values for the engine.
     rv::dsp::Settings s;
@@ -71,6 +74,7 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     outGain.setTargetValue(gainLinear(*pOut));
     mixAmount.setTargetValue(*pMix);
     wetOn.setTargetValue(*pPower >= 0.5f ? 1.0f : 0.0f);
+    transformerOn.setTargetValue(*pTransformer >= 0.5f ? 1.0f : 0.0f);
     // The pan places the dry signal; constant power with unity at the centre.
     const auto angle = (juce::jlimit(-1.0f, 1.0f, pPan->load()) + 1.0f) * juce::MathConstants<float>::pi * 0.25f;
     panLeft.setTargetValue(std::cos(angle) * juce::MathConstants<float>::sqrt2);
@@ -79,20 +83,34 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     auto* mono = scratch.getWritePointer(0);
     auto* wetL = scratch.getWritePointer(1);
     auto* wetR = scratch.getWritePointer(2);
+    auto* xfWeight = scratch.getWritePointer(3);
     const auto* inL = buffer.getReadPointer(0);
     const auto* inR = buffer.getReadPointer(inChannels > 1 ? 1 : 0);
 
-    // The unit has one mono input: sum, apply INPUT, and read the level there.
+    // The unit has one mono input: sum, apply INPUT, and read the level there. Then the optional input transformer.
+    // The transformer stage always runs so its state is warm when switched on; off, its crossfade weight is exactly 0
+    // and the signal passes unchanged.
     float peak = 0.0f;
     for (int i = 0; i < n; ++i)
     {
         mono[i] = 0.5f * (inL[i] + inR[i]) * inGain.getNextValue();
         peak = std::max(peak, std::abs(mono[i]));
+        xfWeight[i] = transformerOn.getNextValue();
+        mono[i] += xfWeight[i] * (transformer.processInput(mono[i]) - mono[i]);
     }
     float prior = inputPeak.load(std::memory_order_relaxed);
     while (peak > prior && !inputPeak.compare_exchange_weak(prior, peak)) {}
 
     engine.process(mono, wetL, wetR, n);
+
+    // The transformer stage's outputs: the captures' low band and the output transformers.
+    for (int i = 0; i < n; ++i)
+    {
+        const auto w = xfWeight[i];
+        const auto xl = transformer.processOutput(0, wetL[i]), xr = transformer.processOutput(1, wetR[i]);
+        wetL[i] += w * (xl - wetL[i]);
+        wetR[i] += w * (xr - wetR[i]);
+    }
 
     auto* outL = buffer.getWritePointer(0);
     auto* outR = buffer.getWritePointer(1);

@@ -61,6 +61,7 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     rv::ui::Fader mixFader, inputFader, outputFader;
     rv::ui::PresetBar presetBar;
     rv::ui::BarButton linkButton;
+    rv::ui::BarButton transformerButton;
     rv::ui::HelpButton helpButton;
     rv::ui::BarLabel titleLabel, versionLabel;
 
