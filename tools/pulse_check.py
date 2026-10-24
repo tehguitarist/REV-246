@@ -161,9 +161,11 @@ EDR_BANDS = EDR_BANDS[EDR_BANDS <= 10000]
 EARLY = 0.08                                                    # s after tap 0: early / late split (C80's)
 
 
-def edr_times(x, i0, i1, nfft=2048, hop=512):
+def edr_times(x, i0, i1, nfft=4096, hop=512):
     """Decay time (s per 60 dB, EDC -5 to -25 dB) per 1/24-octave band from a short-time spectrum of x[i0:i1] (an energy
-    decay relief at fine frequency resolution); None where the band's range is too short."""
+    decay relief at fine frequency resolution); None where the band's range is too short. nfft 4096 (6.4 Hz): fine enough
+    to separate neighbouring modes of different loops; with 2048 (12.9 Hz) two modes ~7 Hz apart share a bin and their
+    beating makes the -5/-25 dB fit flip by 20-30 % for a 0.1 dB envelope difference (model_s_results 33.1)."""
     seg = x[i0:i1]
     if len(seg) < nfft + 8 * hop:
         return None
@@ -182,6 +184,23 @@ def edr_times(x, i0, i1, nfft=2048, hop=512):
         k = (d <= -5) & (d >= -25)
         k[max(0, len(d) - int(0.15 * FS / hop)):] = False
         out.append(float(-60 / np.polyfit(np.nonzero(k)[0] * hop / FS, d[k], 1)[0]) if k.sum() >= 4 else None)
+    return out
+
+
+def nb_env_dev(a, b, i0, i1, top=30.0):
+    """Narrow-band ringing check (model_s_results 33.1): per 1/24-octave band (EDR_BANDS, 4th-order band-pass, at least
+    +-1.6 Hz), the largest |level difference| (dB) between the 10 ms energy envelopes of a and b while b is within `top` dB
+    of its peak after i0. Unlike a fitted decay time it does not flip when two loops' modes beat inside one band."""
+    w = int(0.01 * FS)
+    if i1 - i0 < 4 * w:
+        return None
+    out = []
+    for fc in EDR_BANDS:
+        bw = fc * (2 ** (1 / 48) - 2 ** (-1 / 48)) / 2 + 1.6
+        sos = butter(4, [fc - bw, min(fc + bw, 0.45 * FS)], btype="band", fs=FS, output="sos")
+        ea, eb = (np.convolve(sosfiltfilt(sos, x[:i1]) ** 2, np.ones(w) / w, "same")[i0:i1] for x in (a, b))
+        k = eb > eb.max() * 10 ** (-top / 10)
+        out.append(float(np.max(np.abs(10 * np.log10((ea[k] + 1e-30) / (eb[k] + 1e-30))))) if k.sum() > w else None)
     return out
 
 
@@ -262,6 +281,7 @@ def compare(A, B, i1, k0=PRE, t0=T0, fwin=FS_WIN):
         r["fine_sd"] = {f"{lo}-{hi}": [float(np.std(FA[(f >= lo) & (f < hi), 1])), float(np.std(FB[(f >= lo) & (f < hi), 1]))]
                         for lo, hi in FS_BANDS}                 # G6: tail coloration (Gaussian tail ~5.6 dB)
     r["rv"] = dict(a=rv_metrics(A, i1, k0), b=rv_metrics(B, i1, k0))   # G6
+    r["nbenv"] = nb_env_dev(A["bb"][:, 1].astype(np.float64), B["bb"][:, 1].astype(np.float64), k0 + int(0.05 * FS), i1)
     return r
 
 
@@ -635,6 +655,10 @@ def summarise(m):
                 v = [t[i] / np.nanmedian(t[max(0, i - 4):i + 5]) for i in range(len(t)) if np.isfinite(t[i])]
                 return float(np.nanmax(v)) if v else np.nan
             s["rv_ring"], s["rvv_ring"] = ring(ta) - ring(tb), ring(tb)
+    if m.get("nbenv"):
+        q = np.array([np.nan if x is None else x for x in m["nbenv"]])
+        if np.isfinite(q).sum() > 20:
+            s["rv_nb_p90"], s["rv_nb_max"] = float(np.nanpercentile(q, 90)), float(np.nanmax(q))
     if "fine_sd" in m:
         for w, (x, y) in m["fine_sd"].items():
             s[f"rv_fsd_{w}"], s[f"rvv_fsd_{w}"] = x - y, y
@@ -663,6 +687,8 @@ def g6_lines(rows, reps, indent="- "):
            indent + f"EDR, decay per 1/24 octave 100 Hz-10 kHz, |ratio - 1| %: 90th percentile over bands {cell('rv_edr_p90', fmt='{:.1f}', sc=100)}, "
                     f"worst band {cell('rv_edr_max', fmt='{:.1f}', sc=100)}; ringiest band's decay / its 1/3-octave median, model - capture "
                     f"{cell('rv_ring', f=lambda x: x, fmt='{:+.3f}')} (capture {md(rows, 'rvv_ring'):.3f})",
+           indent + f"narrow-band envelope (1/24 octave, first 30 dB of decay), largest |level difference| dB: 90th percentile over bands "
+                    f"{cell('rv_nb_p90', fmt='{:.2f}')}, worst band {cell('rv_nb_max', fmt='{:.2f}')}",
            indent + "tail coloration, fine-structure sd dB, model - capture (capture value): " + " ".join(f"{lo}-{hi}: {cell(f'rv_fsd_{lo}-{hi}', f=lambda x: x, fmt='{:+.2f}')} ({md(rows, f'rvv_fsd_{lo}-{hi}'):.2f})" for lo, hi in FS_BANDS),
            indent + f"mixing time (NED >= 0.9), model / capture - 1 %: {cell('rv_mix_ms', fmt='{:.1f}', sc=100)} (capture {md(rows, 'rvv_mix_ms'):.0f} ms)",
            indent + f"IACC |diff| early {cell('rv_iacc_e', fmt='{:.3f}')} (capture {md(rows, 'rvv_iacc_e'):.3f}), late {cell('rv_iacc_l', fmt='{:.3f}')} (capture {md(rows, 'rvv_iacc_l'):.3f}); "

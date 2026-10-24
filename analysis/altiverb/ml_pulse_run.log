@@ -41,7 +41,8 @@ L LONG RT 10.0s: b 0.00, clock +42.8 ppm, end 5.00 s | cluster_gap -39.6 first_p
   - tonal balance, third-octave level |diff| dB, early 0-80 ms: 100: 0.20 [12.36] 159: 0.71 [4.86] 252: 0.24 [3.12] 400: 0.10 [11.36] 635: 0.00 [7.88] 1008: 0.05 [5.39] 1600: 0.02 [7.69] 2540: 0.01 [6.79] 4032: 0.01 [6.85] 6400: 0.01 [6.73]
   - tonal balance, late 80 ms on: 100: 0.44 [0.17] 159: 0.30 [0.19] 252: 0.39 [0.09] 400: 0.10 [0.06] 635: 0.07 [0.06] 1008: 0.06 [0.05] 1600: 0.12 [0.05] 2540: 0.07 [0.02] 4032: 0.11 [0.02] 6400: 0.07 [0.02]
   - tonal balance signed dB (model - capture), early / late: 100: -0.20 / -0.44 200: +0.55 / +0.40 400: +0.10 / +0.10 800: -0.05 / -0.11 1600: -0.02 / -0.12 3200: +0.00 / -0.10 6400: -0.01 / -0.07
-  - EDR, decay per 1/24 octave 100 Hz-10 kHz, |ratio - 1| %: 90th percentile over bands 6.1 [7.7], worst band 19.2 [22.0]; ringiest band's decay / its 1/3-octave median, model - capture -0.005 [+0.000] (capture 1.120)
+  - EDR, decay per 1/24 octave 100 Hz-10 kHz, |ratio - 1| %: 90th percentile over bands 7.6 [9.8], worst band 21.2 [33.5]; ringiest band's decay / its 1/3-octave median, model - capture +0.003 [+0.003] (capture 1.160)
+  - narrow-band envelope (1/24 octave, first 30 dB of decay), largest |level difference| dB: 90th percentile over bands 13.17 [14.87], worst band 22.61 [24.33]
   - tail coloration, fine-structure sd dB, model - capture (capture value): 100-1000: -0.01 [+0.00] (4.95) 1000-4000: -0.01 [+0.00] (5.11) 4000-10000: -0.01 [+0.00] (5.15)
   - mixing time (NED >= 0.9), model / capture - 1 %: 2.7 [2.7] (capture 185 ms)
   - IACC |diff| early 0.001 [0.079] (capture 0.047), late 0.000 [0.001] (capture 0.056); late per octave: 500: 0.006 [0.002] 1000: 0.008 [0.007] 2000: 0.001 [0.003] 4000: 0.000 [0.001]
@@ -55,7 +56,8 @@ L LONG RT 10.0s: b 0.00, clock +42.8 ppm, end 5.00 s | cluster_gap -39.6 first_p
   - tonal balance, third-octave level |diff| dB, early 0-80 ms: 100: 1.29 [12.36] 159: 0.53 [4.86] 252: 0.05 [3.12] 400: 0.09 [11.36] 635: 0.02 [7.88] 1008: 0.02 [5.39] 1600: 0.00 [7.69] 2540: 0.02 [6.79] 4032: 0.01 [6.85] 6400: 0.00 [6.73]
   - tonal balance, late 80 ms on: 100: 0.09 [0.17] 159: 0.13 [0.19] 252: 0.06 [0.09] 400: 0.03 [0.06] 635: 0.04 [0.06] 1008: 0.03 [0.05] 1600: 0.04 [0.05] 2540: 0.03 [0.02] 4032: 0.02 [0.02] 6400: 0.01 [0.02]
   - tonal balance signed dB (model - capture), early / late: 100: +1.29 / +0.04 200: -0.06 / +0.02 400: -0.09 / +0.00 800: -0.01 / -0.01 1600: -0.00 / -0.00 3200: +0.02 / +0.02 6400: -0.00 / -0.00
-  - EDR, decay per 1/24 octave 100 Hz-10 kHz, |ratio - 1| %: 90th percentile over bands 6.9 [7.7], worst band 18.1 [22.0]; ringiest band's decay / its 1/3-octave median, model - capture -0.000 [+0.000] (capture 1.194)
+  - EDR, decay per 1/24 octave 100 Hz-10 kHz, |ratio - 1| %: 90th percentile over bands 8.8 [9.8], worst band 28.4 [33.5]; ringiest band's decay / its 1/3-octave median, model - capture -0.013 [+0.003] (capture 1.388)
+  - narrow-band envelope (1/24 octave, first 30 dB of decay), largest |level difference| dB: 90th percentile over bands 10.18 [14.87], worst band 18.90 [24.33]
   - tail coloration, fine-structure sd dB, model - capture (capture value): 100-1000: +0.01 [+0.00] (4.96) 1000-4000: -0.01 [+0.00] (5.08) 4000-10000: -0.00 [+0.00] (5.12)
   - mixing time (NED >= 0.9), model / capture - 1 %: 2.7 [2.7] (capture 185 ms)
   - IACC |diff| early 0.000 [0.079] (capture 0.044), late 0.001 [0.001] (capture 0.064); late per octave: 500: 0.002 [0.002] 1000: 0.007 [0.007] 2000: 0.002 [0.003] 4000: 0.001 [0.001]
@@ -82,7 +84,8 @@ L LONG RT 10.0s: b 0.00, clock +42.8 ppm, end 5.00 s | cluster_gap -39.6 first_p
   - tonal balance, third-octave level |diff| dB, early 0-80 ms: 100: 0.22 [23.19] 159: 0.71 [31.99] 252: 0.20 [25.99] 400: 0.13 [36.81] 635: 0.01 [43.71] 1008: 0.03 [49.51] 1600: 0.01 [63.64] 2540: 0.00 [76.91] 4032: 0.00 [81.46] 6400: 0.00 [81.14]
   - tonal balance, late 80 ms on: 100: 0.51 [0.12] 159: 0.63 [0.07] 252: 0.31 [0.05] 400: 0.09 [0.16] 635: 0.06 [0.04] 1008: 0.06 [0.06] 1600: 0.08 [0.03] 2540: 0.08 [0.03] 4032: 0.08 [0.03] 6400: 0.05 [0.03]
   - tonal balance signed dB (model - capture), early / late: 100: -0.22 / -0.51 200: +0.54 / +0.42 400: +0.13 / +0.02 800: -0.04 / -0.12 1600: -0.01 / -0.08 3200: +0.01 / -0.10 6400: +0.00 / -0.05
-  - EDR, decay per 1/24 octave 100 Hz-10 kHz, |ratio - 1| %: 90th percentile over bands 4.0 [5.4], worst band 7.1 [11.2]; ringiest band's decay / its 1/3-octave median, model - capture +0.001 [+0.001] (capture 1.121)
+  - EDR, decay per 1/24 octave 100 Hz-10 kHz, |ratio - 1| %: 90th percentile over bands 5.0 [6.8], worst band 11.8 [16.4]; ringiest band's decay / its 1/3-octave median, model - capture +0.008 [+0.004] (capture 1.135)
+  - narrow-band envelope (1/24 octave, first 30 dB of decay), largest |level difference| dB: 90th percentile over bands 18.15 [79.33], worst band 28.57 [87.08]
   - tail coloration, fine-structure sd dB, model - capture (capture value): 100-1000: +0.00 [+0.00] (5.32) 1000-4000: +0.00 [-0.00] (5.21) 4000-10000: +0.00 [+0.00] (5.12)
   - mixing time (NED >= 0.9), model / capture - 1 %: 0.8 [1.4] (capture 600 ms)
   - IACC |diff| early 0.000 [0.010] (capture 0.050), late 0.001 [0.001] (capture 0.042); late per octave: 500: 0.004 [0.008] 1000: 0.002 [0.002] 2000: 0.004 [0.003] 4000: 0.001 [0.001]
@@ -96,9 +99,10 @@ L LONG RT 10.0s: b 0.00, clock +42.8 ppm, end 5.00 s | cluster_gap -39.6 first_p
   - tonal balance, third-octave level |diff| dB, early 0-80 ms: 100: 0.65 [23.19] 159: 0.16 [31.99] 252: 0.04 [25.99] 400: 0.15 [36.81] 635: 0.04 [43.71] 1008: 0.02 [49.51] 1600: 0.01 [63.64] 2540: 0.02 [76.91] 4032: 0.01 [81.46] 6400: 0.01 [81.14]
   - tonal balance, late 80 ms on: 100: 0.09 [0.12] 159: 0.04 [0.07] 252: 0.05 [0.05] 400: 0.13 [0.16] 635: 0.03 [0.04] 1008: 0.05 [0.06] 1600: 0.02 [0.03] 2540: 0.03 [0.03] 4032: 0.02 [0.03] 6400: 0.02 [0.03]
   - tonal balance signed dB (model - capture), early / late: 100: +0.65 / +0.02 200: +0.10 / +0.02 400: -0.15 / +0.01 800: -0.01 / +0.02 1600: -0.01 / +0.01 3200: +0.02 / +0.03 6400: -0.01 / -0.01
-  - EDR, decay per 1/24 octave 100 Hz-10 kHz, |ratio - 1| %: 90th percentile over bands 4.5 [5.4], worst band 8.8 [11.2]; ringiest band's decay / its 1/3-octave median, model - capture -0.011 [+0.001] (capture 1.156)
+  - EDR, decay per 1/24 octave 100 Hz-10 kHz, |ratio - 1| %: 90th percentile over bands 5.5 [6.8], worst band 12.8 [16.4]; ringiest band's decay / its 1/3-octave median, model - capture -0.010 [+0.004] (capture 1.204)
+  - narrow-band envelope (1/24 octave, first 30 dB of decay), largest |level difference| dB: 90th percentile over bands 23.31 [79.33], worst band 34.46 [87.08]
   - tail coloration, fine-structure sd dB, model - capture (capture value): 100-1000: -0.00 [+0.00] (5.32) 1000-4000: +0.00 [-0.00] (5.22) 4000-10000: -0.00 [+0.00] (5.12)
   - mixing time (NED >= 0.9), model / capture - 1 %: 0.8 [1.4] (capture 615 ms)
   - IACC |diff| early 0.001 [0.010] (capture 0.051), late 0.000 [0.001] (capture 0.048); late per octave: 500: 0.007 [0.008] 1000: 0.002 [0.002] 2000: 0.003 [0.003] 4000: 0.001 [0.001]
   - L/R level |diff| dB early 0.00 [47.39], late 0.01 [0.01]
-[memguard] peak footprint 0.43 GB, 111 s, exit 0
+[memguard] peak footprint 0.39 GB, 143 s, exit 0

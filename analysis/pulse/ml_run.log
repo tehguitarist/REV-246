@@ -1,21 +1,21 @@
 340 groups to run
+M 0.1_0.6_0.7: 3 captures, recirc1 model 
 M 0.1_0.6_0.1: 3 captures, recirc1 model 
 M 0.1_0.6_0.4: 3 captures, recirc1 model 
-M 0.1_0.8_0.1: 3 captures, recirc1 model 
 M 0.1_0.6_0.2: 3 captures, recirc1 model 
 M 0.1_0.8_0.2: 3 captures, recirc1 model 
-M 0.1_0.6_0.7: 3 captures, recirc1 model 
+M 0.1_0.8_0.1: 3 captures, recirc1 model 
 M 0.1_0.8_0.4: 3 captures, recirc1 model -24.9
 M 0.1_0.6_0.9: 3 captures, recirc1 model -22.6 -25.7 -26.2
-M 0.1_1.2_0.1: 3 captures, recirc1 model -26.1 -29.1
 M 0.1_1.2_0.2: 3 captures, recirc1 model -26.3 -29.6
+M 0.1_1.2_0.1: 3 captures, recirc1 model -26.1 -29.1
 M 0.1_0.8_0.7: 3 captures, recirc1 model -22.1 -23.8 -22.4
 M 0.1_1.2_0.4: 3 captures, recirc1 model -21.5 -21.6 -22.1
-M 0.1_1.8_0.1: 3 captures, recirc1 model -25.2 -25.7 -25.7
 M 0.1_0.8_0.9: 3 captures, recirc1 model -21.5 -21.5 -21.2
+M 0.1_1.8_0.1: 3 captures, recirc1 model -25.2 -25.7 -25.7
 M 0.1_1.2_0.7: 3 captures, recirc1 model -20.8 -20.8 -20.7
-M 0.1_1.2_0.9: 3 captures, recirc1 model -20.1 -20.3 -20.2
 M 0.1_1.8_0.2: 3 captures, recirc1 model -23.2 -23.1 -23.2
+M 0.1_1.2_0.9: 3 captures, recirc1 model -20.1 -20.3 -20.2
 M 0.1_2.6_0.1: 3 captures, recirc1 model -25.6 -25.8 -25.3
 M 0.1_1.8_0.4: 3 captures, recirc1 model -20.4 -20.7 -20.8
 M 0.1_1.8_0.7: 3 captures, recirc1 model -19.7 -19.6 -19.7
@@ -24,319 +24,319 @@ M 0.1_1.8_0.9: 3 captures, recirc1 model -19.1 -19.5 -19.3
 M 0.1_3.0_0.1: 3 captures, recirc1 model -25.2 -24.9 -25.1
 M 0.1_2.6_0.4: 3 captures, recirc1 model -19.8 -19.6 -19.7
 M 0.1_2.6_0.7: 3 captures, recirc1 model -19.2 -19.1 -19.2
-M 0.1_2.6_0.9: 3 captures, recirc1 model -19.0 -19.1 -18.5
-M 0.1_3.0_0.2: 3 captures, recirc1 model -20.7 -20.8 -20.8
 M 0.1_4.0_0.1: 2 captures, recirc1 model -22.8 -22.7
+M 0.1_3.0_0.2: 3 captures, recirc1 model -20.7 -20.8 -20.8
+M 0.1_2.6_0.9: 3 captures, recirc1 model -19.0 -19.1 -18.5
 M 0.1_3.0_0.4: 3 captures, recirc1 model -19.4 -19.3 -19.4
-M 0.1_3.0_0.7: 3 captures, recirc1 model -18.9 -19.1 -18.8
 M 0.1_3.0_0.9: 3 captures, recirc1 model -19.0 -18.8 -18.7
+M 0.1_3.0_0.7: 3 captures, recirc1 model -18.9 -19.1 -18.8
 M 0.1_4.0_0.2: 3 captures, recirc1 model -19.9 -20.0 -19.8
-M 0.1_4.0_0.4: 3 captures, recirc1 model -18.8 -18.7 -18.9
 M 0.1_5.0_0.1: 3 captures, recirc1 model -21.3 -20.9 -21.3
-M 0.1_4.0_0.7: 3 captures, recirc1 model -18.5 -18.5 -18.8
+M 0.1_4.0_0.4: 3 captures, recirc1 model -18.8 -18.7 -18.9
 M 0.7_0.6_0.1: 3 captures, recirc1 model 
 M 0.7_0.6_0.2: 3 captures, recirc1 model 
-M 0.1_4.0_0.9: 3 captures, recirc1 model -18.5 -18.3 -18.6
+M 0.1_4.0_0.7: 3 captures, recirc1 model -18.5 -18.5 -18.8
 M 0.1_5.0_0.2: 3 captures, recirc1 model -19.4 -19.3 -19.4
 M 0.7_0.6_0.4: 3 captures, recirc1 model 
+M 0.1_4.0_0.9: 3 captures, recirc1 model -18.5 -18.3 -18.6
 M 0.7_0.6_0.7: 3 captures, recirc1 model -27.3 -27.0
 M 0.7_0.8_0.1: 3 captures, recirc1 model 
 M 0.7_0.8_0.2: 3 captures, recirc1 model -32.2
-M 0.7_0.6_0.9: 3 captures, recirc1 model -23.4 -23.5 -23.8
-M 0.1_5.0_0.4: 3 captures, recirc1 model -18.7 -18.8 -18.7
 M 0.7_0.8_0.4: 3 captures, recirc1 model -26.0 -25.7
-M 0.1_5.0_0.7: 3 captures, recirc1 model -18.8 -18.5 -18.5
-M 0.7_0.8_0.7: 3 captures, recirc1 model -22.7 -22.3 -22.2
+M 0.7_0.6_0.9: 3 captures, recirc1 model -23.4 -23.5 -23.8
 M 0.7_1.2_0.1: 3 captures, recirc1 model -25.9 -26.3
 M 0.7_1.2_0.2: 3 captures, recirc1 model -26.1 -29.4
-M 0.1_5.0_0.9: 3 captures, recirc1 model -18.5 -18.3 -18.5
+M 0.7_0.8_0.7: 3 captures, recirc1 model -22.7 -22.3 -22.2
 M 0.7_0.8_0.9: 3 captures, recirc1 model -22.1 -22.0 -22.2
+M 0.1_5.0_0.4: 3 captures, recirc1 model -18.7 -18.8 -18.7
 M 0.7_1.2_0.4: 3 captures, recirc1 model -22.2 -21.9 -22.1
-M 0.7_1.8_0.2: 3 captures, recirc1 model -23.1 -23.2 -23.4
+M 0.1_5.0_0.7: 3 captures, recirc1 model -18.8 -18.5 -18.5
+M 0.1_5.0_0.9: 3 captures, recirc1 model -18.5 -18.3 -18.5
 M 0.7_1.8_0.1: 3 captures, recirc1 model -25.4 -25.3 -24.8
+M 0.7_1.8_0.2: 3 captures, recirc1 model -23.1 -23.2 -23.4
 M 0.7_1.2_0.7: 3 captures, recirc1 model -21.0 -20.8 -20.9
 M 0.7_1.2_0.9: 3 captures, recirc1 model -20.4 -20.2 -20.6
 M 0.7_1.8_0.4: 3 captures, recirc1 model -20.8 -20.7 -20.5
 M 0.7_1.8_0.7: 3 captures, recirc1 model -19.5 -19.9 -19.6
-M 0.7_1.8_0.9: 3 captures, recirc1 model -19.3 -19.6 -19.3
 M 0.7_2.6_0.1: 3 captures, recirc1 model -25.1 -24.7 -24.9
+M 0.7_1.8_0.9: 3 captures, recirc1 model -19.3 -19.6 -19.3
 M 0.7_2.6_0.2: 3 captures, recirc1 model -21.6 -21.2 -21.3
 M 0.7_2.6_0.4: 3 captures, recirc1 model -19.9 -20.3 -19.8
-M 0.7_2.6_0.7: 3 captures, recirc1 model -19.0 -19.2 -18.8
 M 0.7_3.0_0.1: 3 captures, recirc1 model -24.6 -25.2 -25.2
+M 0.7_2.6_0.7: 3 captures, recirc1 model -19.0 -19.2 -18.8
 M 0.7_2.6_0.9: 3 captures, recirc1 model -18.7 -18.8 -19.0
 M 0.7_3.0_0.2: 3 captures, recirc1 model -21.0 -20.7 -20.7
 M 0.7_3.0_0.4: 3 captures, recirc1 model -11.3 -19.2 -19.6
-M 0.7_3.0_0.7: 3 captures, recirc1 model -19.0 -18.9 -18.7
 M 0.7_4.0_0.1: 3 captures, recirc1 model -22.5 -22.6 -22.3
+M 0.7_3.0_0.7: 3 captures, recirc1 model -19.0 -18.9 -18.7
 M 0.7_3.0_0.9: 3 captures, recirc1 model -18.7 -18.9 -18.5
 M 0.7_4.0_0.2: 3 captures, recirc1 model -20.0 -20.0 -20.3
 M 0.7_4.0_0.4: 3 captures, recirc1 model -19.1 -19.3 -18.8
-M 0.7_4.0_0.7: 3 captures, recirc1 model -18.6 -18.9 -18.6
-M 0.7_5.0_0.1: 3 captures, recirc1 model -21.7 -21.1 -21.3
 M 1.2_0.6_0.1: 3 captures, recirc1 model 
-M 0.7_4.0_0.9: 3 captures, recirc1 model -18.6 -18.6 -18.8
+M 0.7_5.0_0.1: 3 captures, recirc1 model -21.7 -21.1 -21.3
+M 0.7_4.0_0.7: 3 captures, recirc1 model -18.6 -18.9 -18.6
 M 1.2_0.6_0.2: 3 captures, recirc1 model -31.8
 M 1.2_0.6_0.4: 3 captures, recirc1 model -32.8
-M 0.7_5.0_0.2: 3 captures, recirc1 model -19.3 -19.5 -19.7
+M 0.7_4.0_0.9: 3 captures, recirc1 model -18.6 -18.6 -18.8
 M 1.2_0.6_0.7: 3 captures, recirc1 model -24.5 -26.0 -26.1
-M 0.7_5.0_0.4: 3 captures, recirc1 model -18.7 -18.6 -18.8
-M 1.2_0.6_0.9: 3 captures, recirc1 model -23.8 -23.8 -23.5
 M 1.2_0.8_0.1: 3 captures, recirc1 model -29.4
+M 1.2_0.6_0.9: 3 captures, recirc1 model -23.8 -23.8 -23.5
+M 0.7_5.0_0.2: 3 captures, recirc1 model -19.3 -19.5 -19.7
 M 1.2_0.8_0.2: 3 captures, recirc1 model -29.1 -30.3
+M 0.7_5.0_0.4: 3 captures, recirc1 model -18.7 -18.6 -18.8
 M 1.2_0.8_0.4: 3 captures, recirc1 model -25.1 -25.2 -26.2
-M 0.7_5.0_0.7: 3 captures, recirc1 model -18.5 -18.7 -18.7
 M 1.2_0.8_0.7: 3 captures, recirc1 model -22.5 -22.6 -22.9
 M 1.2_0.8_0.9: 3 captures, recirc1 model -22.4 -22.4 -22.2
-M 0.7_5.0_0.9: 3 captures, recirc1 model -18.3 -18.6 -18.5
-M 1.2_1.2_0.4: 3 captures, recirc1 model -21.7 -22.2 -21.8
+M 0.7_5.0_0.7: 3 captures, recirc1 model -18.5 -18.7 -18.7
 M 1.2_1.2_0.1: 3 captures, recirc1 model -25.8 -25.3 -25.9
+M 1.2_1.2_0.4: 3 captures, recirc1 model -21.7 -22.2 -21.8
 M 1.2_1.2_0.2: 3 captures, recirc1 model -25.8 -26.0 -25.6
 M 1.2_1.2_0.7: 3 captures, recirc1 model -20.9 -20.7 -21.1
+M 0.7_5.0_0.9: 3 captures, recirc1 model -18.3 -18.6 -18.5
 M 1.2_1.2_0.9: 3 captures, recirc1 model -20.8 -20.2 -20.5
 M 1.2_1.8_0.1: 3 captures, recirc1 model -25.4 -24.7 -25.3
 M 1.2_1.8_0.2: 3 captures, recirc1 model -22.9 -23.0 -23.2
 M 1.2_1.8_0.4: 3 captures, recirc1 model -20.8 -10.7 -20.6
-M 1.2_1.8_0.9: 3 captures, recirc1 model -19.4 -19.1 -19.5
 M 1.2_1.8_0.7: 3 captures, recirc1 model -19.8 -20.0 -20.1
 M 1.2_2.6_0.1: 3 captures, recirc1 model -24.6 -24.9 -24.5
+M 1.2_1.8_0.9: 3 captures, recirc1 model -19.4 -19.1 -19.5
 M 1.2_2.6_0.2: 3 captures, recirc1 model -21.0 -21.4 -21.5
-M 1.2_2.6_0.4: 3 captures, recirc1 model -19.8 -19.6 -19.7
 M 1.2_3.0_0.1: 3 captures, recirc1 model -24.8 -24.1 -25.0
+M 1.2_2.6_0.4: 3 captures, recirc1 model -19.8 -19.6 -19.7
 M 1.2_2.6_0.7: 3 captures, recirc1 model -19.3 -19.2 -19.3
 M 1.2_2.6_0.9: 3 captures, recirc1 model -18.9 -19.2 -18.9
 M 1.2_3.0_0.2: 3 captures, recirc1 model -20.7 -20.8 -21.1
 M 1.2_3.0_0.4: 3 captures, recirc1 model -19.6 -19.2 -19.5
-M 1.2_3.0_0.7: 3 captures, recirc1 model -18.7 -18.9 -19.0
 M 1.2_4.0_0.1: 3 captures, recirc1 model -23.0 -22.8 -22.9
+M 1.2_3.0_0.7: 3 captures, recirc1 model -18.7 -18.9 -19.0
 M 1.2_3.0_0.9: 3 captures, recirc1 model -19.0 -18.9 -18.7
 M 1.2_4.0_0.2: 3 captures, recirc1 model -20.2 -20.0 -20.0
-M 1.2_4.0_0.4: 3 captures, recirc1 model -19.6 -19.0 -18.9
-M 1.2_4.0_0.7: 3 captures, recirc1 model -18.9 -18.9 -18.6
 M 1.2_5.0_0.1: 3 captures, recirc1 model -21.2 -21.3 -21.1
+M 1.2_4.0_0.7: 3 captures, recirc1 model -18.9 -18.9 -18.6
+M 1.2_4.0_0.4: 3 captures, recirc1 model -19.6 -19.0 -18.9
 M 2.0_0.6_0.1: 3 captures, recirc1 model -30.4 -29.1 -28.3
+M 2.0_0.6_0.4: 3 captures, recirc1 model -30.0 -30.4 -29.3
 M 2.0_0.6_0.2: 3 captures, recirc1 model -29.4 -29.7 -29.8
 M 1.2_4.0_0.9: 3 captures, recirc1 model -18.6 -18.6 -18.4
-M 2.0_0.6_0.4: 3 captures, recirc1 model -30.0 -30.4 -29.3
 M 2.0_0.6_0.7: 3 captures, recirc1 model -24.8 -13.1 -24.3
-M 1.2_5.0_0.2: 3 captures, recirc1 model -19.6 -19.3 -19.8
-M 2.0_0.6_0.9: 3 captures, recirc1 model -23.4 -23.8 -23.5
 M 2.0_0.8_0.1: 3 captures, recirc1 model -26.5 -26.7 -26.4
+M 2.0_0.6_0.9: 3 captures, recirc1 model -23.4 -23.8 -23.5
+M 1.2_5.0_0.2: 3 captures, recirc1 model -19.6 -19.3 -19.8
 M 2.0_0.8_0.2: 3 captures, recirc1 model -26.6 -27.2 -26.5
-M 1.2_5.0_0.7: 3 captures, recirc1 model -18.4 -18.6 -18.7
-M 1.2_5.0_0.4: 3 captures, recirc1 model -18.7 -18.7 -18.9
 M 2.0_0.8_0.4: 3 captures, recirc1 model -25.3 -13.3 -24.7
+M 1.2_5.0_0.4: 3 captures, recirc1 model -18.7 -18.7 -18.9
 M 2.0_0.8_0.7: 3 captures, recirc1 model -22.2 -22.3 -22.6
-M 1.2_5.0_0.9: 3 captures, recirc1 model -18.5 -18.5 -18.4
 M 2.0_0.8_0.9: 3 captures, recirc1 model -22.1 -22.2 -22.0
+M 1.2_5.0_0.7: 3 captures, recirc1 model -18.4 -18.6 -18.7
 M 2.0_1.2_0.1: 3 captures, recirc1 model -25.1 -24.8 -24.9
-M 2.0_1.2_0.4: 3 captures, recirc1 model -21.9 -13.1 -21.9
 M 2.0_1.2_0.2: 3 captures, recirc1 model -25.4 -25.1 -25.4
+M 1.2_5.0_0.9: 3 captures, recirc1 model -18.5 -18.5 -18.4
+M 2.0_1.2_0.4: 3 captures, recirc1 model -21.9 -13.1 -21.9
 M 2.0_1.2_0.7: 3 captures, recirc1 model -21.0 -21.3 -21.1
 M 2.0_1.2_0.9: 3 captures, recirc1 model -20.3 -20.3 -20.2
 M 2.0_1.8_0.1: 3 captures, recirc1 model -24.0 -24.6 -23.8
 M 2.0_1.8_0.2: 3 captures, recirc1 model -23.3 -23.3 -23.1
-M 2.0_1.8_0.4: 3 captures, recirc1 model -20.7 -20.8 -21.0
 M 2.0_1.8_0.7: 3 captures, recirc1 model -20.0 -19.6 -20.0
-M 2.0_1.8_0.9: 3 captures, recirc1 model -19.4 -19.5 -19.3
 M 2.0_2.6_0.1: 3 captures, recirc1 model -24.1 -25.0 -24.2
+M 2.0_1.8_0.4: 3 captures, recirc1 model -20.7 -20.8 -21.0
+M 2.0_1.8_0.9: 3 captures, recirc1 model -19.4 -19.5 -19.3
 M 2.0_2.6_0.2: 3 captures, recirc1 model -21.3 -21.8 -21.6
+M 2.0_3.0_0.1: 3 captures, recirc1 model -24.6 -24.1 -25.0
 M 2.0_2.6_0.4: 3 captures, recirc1 model -19.7 -19.9 -19.7
 M 2.0_2.6_0.7: 3 captures, recirc1 model -19.4 -18.9 -19.0
-M 2.0_3.0_0.1: 3 captures, recirc1 model -24.6 -24.1 -25.0
-M 2.0_2.6_0.9: 3 captures, recirc1 model -18.9 -19.1 -18.9
 M 2.0_3.0_0.2: 3 captures, recirc1 model -20.6 -20.7 -20.8
+M 2.0_2.6_0.9: 3 captures, recirc1 model -18.9 -19.1 -18.9
+M 2.0_4.0_0.1: 3 captures, recirc1 model -22.7 -22.6 -23.1
 M 2.0_3.0_0.4: 3 captures, recirc1 model -19.3 -19.5 -19.7
 M 2.0_3.0_0.7: 3 captures, recirc1 model -18.8 -18.8 -19.2
-M 2.0_3.0_0.9: 3 captures, recirc1 model -18.8 -18.9 -19.1
-M 2.0_4.0_0.1: 3 captures, recirc1 model -22.7 -22.6 -23.1
 M 2.0_4.0_0.2: 3 captures, recirc1 model -20.3 -19.9 -20.1
-M 2.0_4.0_0.4: 3 captures, recirc1 model -19.5 -19.2 -19.2
+M 2.0_3.0_0.9: 3 captures, recirc1 model -18.8 -18.9 -19.1
 M 2.0_5.0_0.1: 3 captures, recirc1 model -21.3 -21.3 -21.6
-M 2.0_4.0_0.7: 3 captures, recirc1 model -18.7 -18.7 -18.7
-M 2.0_4.0_0.9: 3 captures, recirc1 model -18.6 -18.5 -18.7
+M 2.0_4.0_0.4: 3 captures, recirc1 model -19.5 -19.2 -19.2
 M 2.0_5.0_0.2: 3 captures, recirc1 model -19.5 -19.3 -19.9
 L 0.1_10.0_0.1: 2 captures, recirc1 model -20.9 -20.5
-M 2.0_5.0_0.4: 3 captures, recirc1 model -19.0 -19.1 -19.0
+M 2.0_4.0_0.7: 3 captures, recirc1 model -18.7 -18.7 -18.7
+M 2.0_4.0_0.9: 3 captures, recirc1 model -18.6 -18.5 -18.7
 L 0.1_10.0_0.3: 2 captures, recirc1 model -18.6 -18.6
-M 2.0_5.0_0.7: 3 captures, recirc1 model -18.7 -18.5 -18.5
+M 2.0_5.0_0.4: 3 captures, recirc1 model -19.0 -19.1 -19.0
 L 0.1_10.0_0.5: 2 captures, recirc1 model -18.4 -18.4
-M 2.0_5.0_0.9: 3 captures, recirc1 model -18.3 -18.6 -18.6
-L 0.1_15.0_0.1: 2 captures, recirc1 model -19.5 -19.2
 L 0.1_10.0_0.8: 2 captures, recirc1 model -18.2 -18.1
+L 0.1_15.0_0.1: 2 captures, recirc1 model -19.5 -19.2
+M 2.0_5.0_0.9: 3 captures, recirc1 model -18.3 -18.6 -18.6
+M 2.0_5.0_0.7: 3 captures, recirc1 model -18.7 -18.5 -18.5
 L 0.1_10.0_1.0: 2 captures, recirc1 model -18.1 -17.9
 L 0.1_2.2_0.1: 2 captures, recirc1 model -21.1 -21.5
-L 0.1_2.2_0.3: 2 captures, recirc1 model -21.3 -21.7
 L 0.1_2.2_0.5: 2 captures, recirc1 model -20.7 -20.5
-L 0.1_15.0_0.3: 2 captures, recirc1 model -18.1 -18.3
+L 0.1_2.2_0.3: 2 captures, recirc1 model -21.3 -21.7
 L 0.1_2.2_0.8: 2 captures, recirc1 model -19.8 -19.7
-L 0.1_15.0_0.5: 2 captures, recirc1 model -18.0 -18.2
-L 0.1_2.2_1.0: 2 captures, recirc1 model -19.8 -19.9
 L 0.1_2.6_0.1: 2 captures, recirc1 model -24.7 -25.2
+L 0.1_15.0_0.3: 2 captures, recirc1 model -18.1 -18.3
 L 0.1_2.6_0.3: 2 captures, recirc1 model -21.7 -21.9
-L 0.1_15.0_0.8: 2 captures, recirc1 model -18.0 -18.1
+L 0.1_2.2_1.0: 2 captures, recirc1 model -19.8 -19.9
 L 0.1_2.6_0.5: 2 captures, recirc1 model -20.0 -20.1
+L 0.1_15.0_0.5: 2 captures, recirc1 model -18.0 -18.2
 L 0.1_2.6_0.8: 2 captures, recirc1 model -19.7 -19.6
 L 0.1_2.6_1.0: 2 captures, recirc1 model -19.5 -19.4
-L 0.1_15.0_1.0: 2 captures, recirc1 model -17.9 -17.9
+L 0.1_15.0_0.8: 2 captures, recirc1 model -18.0 -18.1
 L 0.1_3.6_0.1: 2 captures, recirc1 model -24.3 -24.1
-L 0.1_20.0_0.1: 2 captures, recirc1 model -18.9 -19.0
+L 0.1_15.0_1.0: 2 captures, recirc1 model -17.9 -17.9
 L 0.1_3.6_0.3: 2 captures, recirc1 model -20.4 -20.0
+L 0.1_20.0_0.1: 2 captures, recirc1 model -18.9 -19.0
 L 0.1_3.6_0.5: 2 captures, recirc1 model -19.6 -19.6
 L 0.1_3.6_0.8: 2 captures, recirc1 model -19.2 -19.0
 L 0.1_4.5_0.1: 2 captures, recirc1 model -24.0 -24.0
-L 0.1_20.0_0.3: 2 captures, recirc1 model -18.4 -18.4
-L 0.1_20.0_0.5: 2 captures, recirc1 model -18.3 -18.2
 L 0.1_3.6_1.0: 2 captures, recirc1 model -19.0 -18.9
 L 0.1_4.5_0.3: 2 captures, recirc1 model -20.2 -20.0
+L 0.1_20.0_0.3: 2 captures, recirc1 model -18.4 -18.4
+L 0.1_20.0_0.5: 2 captures, recirc1 model -18.3 -18.2
+L 0.1_4.5_0.5: 2 captures, recirc1 model -19.3 -19.4
 L 0.1_20.0_0.8: 2 captures, recirc1 model -18.0 -18.1
 L 0.1_6.0_0.1: 2 captures, recirc1 model -24.5 -24.3
-L 0.1_4.5_0.5: 2 captures, recirc1 model -19.3 -19.4
 L 0.1_4.5_0.8: 2 captures, recirc1 model -19.0 -18.7
+L 0.1_20.0_1.0: 2 captures, recirc1 model -18.2 -18.1
 L 0.1_6.0_0.3: 2 captures, recirc1 model -19.4 -19.6
 L 0.1_4.5_1.0: 2 captures, recirc1 model -18.6 -18.7
-L 0.1_20.0_1.0: 2 captures, recirc1 model -18.2 -18.1
 L 0.1_6.0_0.5: 2 captures, recirc1 model -18.7 -18.8
 L 0.1_8.0_0.1: 2 captures, recirc1 model -21.7 -21.9
 L 0.1_6.0_0.8: 2 captures, recirc1 model -18.7 -18.4
-L 0.1_6.0_1.0: 2 captures, recirc1 model -18.0 -18.5
 L 0.1_8.0_0.3: 2 captures, recirc1 model -18.9 -18.7
+L 0.1_6.0_1.0: 2 captures, recirc1 model -18.0 -18.5
+L 0.8_10.0_0.1: 2 captures, recirc1 model -20.3 -20.6
 L 0.1_8.0_0.5: 2 captures, recirc1 model -18.4 -18.5
 L 0.1_8.0_0.8: 2 captures, recirc1 model -18.4 -18.4
-L 0.8_10.0_0.1: 2 captures, recirc1 model -20.3 -20.6
 L 0.1_8.0_1.0: 2 captures, recirc1 model -18.2 -18.5
 L 0.8_10.0_0.3: 2 captures, recirc1 model -18.7 -18.7
 L 0.8_10.0_0.5: 2 captures, recirc1 model -18.2 -18.5
 L 0.8_10.0_0.8: 2 captures, recirc1 model -18.1 -18.2
 L 0.8_15.0_0.1: 2 captures, recirc1 model -19.4 -19.3
-L 0.8_10.0_1.0: 2 captures, recirc1 model -18.2 -17.9
 L 0.8_2.2_0.1: 2 captures, recirc1 model -21.4 -21.9
+L 0.8_10.0_1.0: 2 captures, recirc1 model -18.2 -17.9
 L 0.8_2.2_0.3: 2 captures, recirc1 model -21.9 -21.5
 L 0.8_2.2_0.5: 2 captures, recirc1 model -20.8 -20.5
 L 0.8_15.0_0.3: 2 captures, recirc1 model -18.6 -18.5
-L 0.8_15.0_0.5: 2 captures, recirc1 model -18.1 -18.2
 L 0.8_2.2_0.8: 2 captures, recirc1 model -20.0 -20.1
 L 0.8_2.6_0.1: 2 captures, recirc1 model -24.5 -25.1
-L 0.8_15.0_0.8: 2 captures, recirc1 model -18.4 -18.1
 L 0.8_2.2_1.0: 2 captures, recirc1 model -19.9 -20.1
 L 0.8_2.6_0.3: 2 captures, recirc1 model -21.7 -21.9
+L 0.8_15.0_0.5: 2 captures, recirc1 model -18.1 -18.2
 L 0.8_2.6_0.5: 2 captures, recirc1 model -20.5 -20.1
 L 0.8_2.6_0.8: 2 captures, recirc1 model -19.7 -20.2
+L 0.8_15.0_0.8: 2 captures, recirc1 model -18.4 -18.1
 L 0.8_2.6_1.0: 2 captures, recirc1 model -19.3 -20.0
-L 0.8_15.0_1.0: 2 captures, recirc1 model -17.9 -18.0
 L 0.8_3.6_0.1: 2 captures, recirc1 model -24.1 -23.5
+L 0.8_15.0_1.0: 2 captures, recirc1 model -17.9 -18.0
 L 0.8_3.6_0.3: 2 captures, recirc1 model -20.4 -20.3
 L 0.8_3.6_0.5: 2 captures, recirc1 model -19.7 -19.8
 L 0.8_3.6_0.8: 2 captures, recirc1 model -19.2 -19.3
-L 0.8_4.5_0.1: 2 captures, recirc1 model -23.4 -23.4
 L 0.8_3.6_1.0: 2 captures, recirc1 model -19.0 -19.1
 L 0.8_20.0_0.1: 2 captures, recirc1 model -18.8 -18.7
-L 0.8_20.0_0.5: 2 captures, recirc1 model -17.8 -18.3
+L 0.8_4.5_0.1: 2 captures, recirc1 model -23.4 -23.4
 L 0.8_4.5_0.3: 2 captures, recirc1 model -20.3 -20.2
-L 0.8_20.0_0.3: 2 captures, recirc1 model -18.2 -18.2
 L 0.8_4.5_0.5: 2 captures, recirc1 model -19.2 -19.4
-L 0.8_20.0_0.8: 2 captures, recirc1 model -18.0 -18.3
-L 0.8_4.5_0.8: 2 captures, recirc1 model -18.8 -18.9
-L 0.8_4.5_1.0: 2 captures, recirc1 model -18.8 -18.8
 L 0.8_6.0_0.1: 2 captures, recirc1 model -23.7 -23.5
-L 0.8_20.0_1.0: 2 captures, recirc1 model -18.0 -17.9
+L 0.8_4.5_0.8: 2 captures, recirc1 model -18.8 -18.9
+L 0.8_20.0_0.5: 2 captures, recirc1 model -17.8 -18.3
+L 0.8_20.0_0.3: 2 captures, recirc1 model -18.2 -18.2
+L 0.8_4.5_1.0: 2 captures, recirc1 model -18.8 -18.8
+L 0.8_20.0_0.8: 2 captures, recirc1 model -18.0 -18.3
 L 0.8_6.0_0.3: 2 captures, recirc1 model -19.5 -19.5
 L 0.8_6.0_0.5: 2 captures, recirc1 model -19.0 -18.9
 L 0.8_8.0_0.1: 2 captures, recirc1 model -22.1 -22.0
 L 0.8_6.0_0.8: 2 captures, recirc1 model -18.5 -18.7
 L 0.8_6.0_1.0: 2 captures, recirc1 model -18.5 -18.6
 L 0.8_8.0_0.3: 2 captures, recirc1 model -19.0 -18.7
+L 0.8_20.0_1.0: 2 captures, recirc1 model -18.0 -17.9
 L 0.8_8.0_0.5: 2 captures, recirc1 model -18.6 -18.6
-L 0.8_8.0_0.8: 2 captures, recirc1 model -18.5 -18.3
 L 1.2_10.0_0.1: 2 captures, recirc1 model -20.3 -20.4
+L 0.8_8.0_0.8: 2 captures, recirc1 model -18.5 -18.3
 L 0.8_8.0_1.0: 2 captures, recirc1 model -18.3 -18.3
 L 1.2_10.0_0.3: 2 captures, recirc1 model -18.7 -18.7
+L 1.2_15.0_0.1: 2 captures, recirc1 model -19.2 -19.5
 L 1.2_10.0_0.5: 2 captures, recirc1 model -18.5 -18.4
 L 1.2_10.0_0.8: 2 captures, recirc1 model -18.4 -18.2
 L 1.2_10.0_1.0: 2 captures, recirc1 model -18.1 -18.4
-L 1.2_15.0_0.1: 2 captures, recirc1 model -19.2 -19.5
 L 1.2_2.2_0.1: 2 captures, recirc1 model -21.6 -21.7
 L 1.2_2.2_0.3: 2 captures, recirc1 model -21.6 -21.4
 L 1.2_2.2_0.5: 2 captures, recirc1 model -20.8 -21.1
+L 1.2_15.0_0.5: 2 captures, recirc1 model -18.2
 L 1.2_2.2_0.8: 2 captures, recirc1 model -20.0 -20.1
-L 1.2_15.0_0.3: 2 captures, recirc1 model -18.8 -18.6
 L 1.2_2.2_1.0: 2 captures, recirc1 model -20.3 -20.1
 L 1.2_2.6_0.1: 2 captures, recirc1 model -24.4 -24.4
-L 1.2_15.0_0.8: 2 captures, recirc1 model -18.1 -17.9
+L 1.2_15.0_0.3: 2 captures, recirc1 model -18.8 -18.6
 L 1.2_2.6_0.3: 2 captures, recirc1 model -21.6 -21.7
 L 1.2_2.6_0.5: 2 captures, recirc1 model -20.0 -20.5
-L 1.2_15.0_0.5: 2 captures, recirc1 model -18.2
-L 1.2_2.6_0.8: 2 captures, recirc1 model -20.0 -19.9
 L 1.2_2.6_1.0: 2 captures, recirc1 model -19.6 -19.7
-L 1.2_15.0_1.0: 2 captures, recirc1 model -18.2 -18.1
+L 1.2_2.6_0.8: 2 captures, recirc1 model -20.0 -19.9
+L 1.2_15.0_0.8: 2 captures, recirc1 model -18.1 -17.9
 L 1.2_3.6_0.1: 2 captures, recirc1 model -23.5 -23.4
 L 1.2_3.6_0.3: 2 captures, recirc1 model -20.4 -20.2
+L 1.2_15.0_1.0: 2 captures, recirc1 model -18.2 -18.1
 L 1.2_3.6_0.5: 2 captures, recirc1 model -20.0 -19.8
 L 1.2_3.6_0.8: 2 captures, recirc1 model -19.4 -19.1
 L 1.2_3.6_1.0: 2 captures, recirc1 model -19.0 -19.1
-L 1.2_4.5_0.1: 2 captures, recirc1 model -23.4 -23.2
 L 1.2_20.0_0.1: 2 captures, recirc1 model -18.9 -19.1
+L 1.2_4.5_0.1: 2 captures, recirc1 model -23.4 -23.2
 L 1.2_4.5_0.3: 2 captures, recirc1 model -20.2 -20.2
 L 1.2_4.5_0.5: 2 captures, recirc1 model -19.4 -19.4
 L 1.2_4.5_0.8: 2 captures, recirc1 model -18.8 -18.8
 L 1.2_20.0_0.8: 2 captures, recirc1 model -18.3 -17.9
 L 1.2_4.5_1.0: 2 captures, recirc1 model -19.0 -18.6
 L 1.2_6.0_0.1: 2 captures, recirc1 model -23.5 -23.9
-L 1.2_20.0_0.3: 2 captures, recirc1 model -18.2 -18.0
 L 1.2_20.0_0.5: 2 captures, recirc1 model -18.0 -18.0
-L 1.2_20.0_1.0: 2 captures, recirc1 model -18.3 -18.0
+L 1.2_20.0_0.3: 2 captures, recirc1 model -18.2 -18.0
 L 1.2_6.0_0.3: 2 captures, recirc1 model -19.4 -19.4
-L 1.2_6.0_0.5: 2 captures, recirc1 model -18.8 -18.9
+L 1.2_20.0_1.0: 2 captures, recirc1 model -18.3 -18.0
 L 1.2_8.0_0.1: 2 captures, recirc1 model -22.1 -21.9
+L 1.2_6.0_0.5: 2 captures, recirc1 model -18.8 -18.9
 L 1.2_6.0_0.8: 2 captures, recirc1 model -18.6 -18.7
 L 1.2_6.0_1.0: 2 captures, recirc1 model -18.4 -18.3
 L 1.2_8.0_0.3: 2 captures, recirc1 model -19.1 -19.0
-L 1.2_8.0_0.5: 2 captures, recirc1 model -18.4 -18.5
 L 1.2_8.0_0.8: 2 captures, recirc1 model -18.3 -18.3
-L 1.2_8.0_1.0: 2 captures, recirc1 model -18.5 -18.3
 L 2.0_10.0_0.1: 2 captures, recirc1 model -20.3 -20.5
-L 2.0_10.0_0.5: 2 captures, recirc1 model -18.3 -18.5
+L 1.2_8.0_0.5: 2 captures, recirc1 model -18.4 -18.5
+L 1.2_8.0_1.0: 2 captures, recirc1 model -18.5 -18.3
 L 2.0_10.0_0.3: 2 captures, recirc1 model -18.6 -18.4
+L 2.0_10.0_0.5: 2 captures, recirc1 model -18.3 -18.5
 L 2.0_10.0_0.8: 2 captures, recirc1 model -18.3 -18.3
 L 2.0_2.2_0.1: 2 captures, recirc1 model -21.3 -21.4
-L 2.0_2.2_0.3: 2 captures, recirc1 model -21.2 -21.6
 L 2.0_15.0_0.1: 2 captures, recirc1 model -19.5 -19.5
+L 2.0_2.2_0.3: 2 captures, recirc1 model -21.2 -21.6
 L 2.0_2.2_0.5: 2 captures, recirc1 model -20.8 -20.9
+L 2.0_2.6_0.1: 2 captures, recirc1 model -23.8 -23.9
 L 2.0_2.2_0.8: 2 captures, recirc1 model -19.9 -20.2
-L 2.0_10.0_1.0: 2 captures, recirc1 model -18.1 -17.9
 L 2.0_2.2_1.0: 2 captures, recirc1 model -20.1 -20.0
+L 2.0_2.6_0.3: 2 captures, recirc1 model -21.6 -21.6
+L 2.0_15.0_0.8: 2 captures, recirc1 model -18.1 -18.0
+L 2.0_2.6_0.8: 2 captures, recirc1 model -19.8 -20.0
+L 2.0_2.6_0.5: 2 captures, recirc1 model -20.0 -20.2
+L 2.0_10.0_1.0: 2 captures, recirc1 model -18.1 -17.9
 L 2.0_15.0_0.3: 2 captures, recirc1 model -18.4 -18.5
 L 2.0_15.0_0.5: 2 captures, recirc1 model -18.2 -18.3
-L 2.0_2.6_0.1: 2 captures, recirc1 model -23.8 -23.9
-L 2.0_15.0_0.8: 2 captures, recirc1 model -18.1 -18.0
-L 2.0_2.6_0.3: 2 captures, recirc1 model -21.6 -21.6
-L 2.0_2.6_0.5: 2 captures, recirc1 model -20.0 -20.2
-L 2.0_2.6_0.8: 2 captures, recirc1 model -19.8 -20.0
-L 2.0_2.6_1.0: 2 captures, recirc1 model -19.8 -19.7
 L 2.0_15.0_1.0: 2 captures, recirc1 model -18.0 -17.8
+L 2.0_2.6_1.0: 2 captures, recirc1 model -19.8 -19.7
 L 2.0_3.6_0.1: 2 captures, recirc1 model -23.1 -23.1
 L 2.0_3.6_0.3: 2 captures, recirc1 model -20.2 -20.4
 L 2.0_3.6_0.5: 2 captures, recirc1 model -19.9 -19.9
 L 2.0_3.6_0.8: 2 captures, recirc1 model -19.1 -19.1
+L 2.0_4.5_0.1: 2 captures, recirc1 model -22.7 -22.8
 L 2.0_3.6_1.0: 2 captures, recirc1 model -19.1 -19.1
 L 2.0_20.0_0.1: 2 captures, recirc1 model -18.9 -18.8
-L 2.0_4.5_0.1: 2 captures, recirc1 model -22.7 -22.8
 L 2.0_4.5_0.3: 2 captures, recirc1 model -20.4 -20.3
-L 2.0_4.5_0.5: 2 captures, recirc1 model -19.4 -19.7
 L 2.0_4.5_0.8: 2 captures, recirc1 model -18.8 -18.8
+L 2.0_4.5_0.5: 2 captures, recirc1 model -19.4 -19.7
 L 2.0_4.5_1.0: 2 captures, recirc1 model -18.8 -18.7
-L 2.0_20.0_0.3: 2 captures, recirc1 model -18.3 -18.2
 L 2.0_6.0_0.1: 2 captures, recirc1 model -23.4 -23.5
 L 2.0_6.0_0.3: 2 captures, recirc1 model -19.4 -19.3
 L 2.0_6.0_0.5: 2 captures, recirc1 model -18.8 -18.8
-L 2.0_20.0_0.5: 2 captures, recirc1 model -18.0 -17.9
 L 2.0_6.0_0.8: 2 captures, recirc1 model -18.6 -18.7
-L 2.0_20.0_0.8: 2 captures, recirc1 model -18.0 -18.0
+L 2.0_20.0_0.3: 2 captures, recirc1 model -18.3 -18.2
 L 2.0_6.0_1.0: 2 captures, recirc1 model -18.5 -18.5
 L 2.0_8.0_0.1: 2 captures, recirc1 model -21.8 -22.1
-L 2.0_20.0_1.0: 2 captures, recirc1 model -17.9 -18.1
 L 2.0_8.0_0.3: 2 captures, recirc1 model -19.0 -19.0
 L 2.0_8.0_0.5: 2 captures, recirc1 model -18.8 -18.6
 L 2.0_8.0_0.8: 2 captures, recirc1 model -18.5 -18.3
+L 2.0_20.0_0.5: 2 captures, recirc1 model -18.0 -17.9
+L 2.0_20.0_0.8: 2 captures, recirc1 model -18.0 -18.0
+L 2.0_20.0_1.0: 2 captures, recirc1 model -17.9 -18.1
 L 2.0_8.0_1.0: 2 captures, recirc1 model -18.4 -18.1
-[memguard] peak footprint 6.69 GB, 232 s, exit 0
+[memguard] peak footprint 7.41 GB, 520 s, exit 0
