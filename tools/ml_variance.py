@@ -312,6 +312,9 @@ def sine_test(p):
 
 # ---------------------------------------------------------------- sim stage
 THETA_A, THETA_FM = 0.155, 0.83                             # rad (rms 0.11), Hz: from the rot stage (ml_structure §9.4)
+if os.environ.get("ML_THETA_RMS"):                          # another depth (rms, rad); outputs in sim_<rms> (ml_structure §9.7)
+    THETA_A = float(os.environ["ML_THETA_RMS"]) * np.sqrt(2)
+SIM_DIR = "sim" + (f"_{os.environ['ML_THETA_RMS']}" if os.environ.get("ML_THETA_RMS") else "")
 SWEEP_L, SWEEP_F = 3.4, (10.0, 13000.0)                     # s, Hz: f_m x SWEEP_L ~ 2.85 (lag x f of the ghosts, §9.4)
 N_SIM = 6
 SIM_KEYS = {"M": ["1.2_5.0_0.9", "2.0_0.8_0.9", "0.7_3.0_0.2", "0.1_1.8_0.4"], "L": ["1.2_20.0_1.0", "1.2_4.5_0.8", "2.0_2.6_0.5", "0.1_10.0_0.3"]}
@@ -454,8 +457,8 @@ def _sim_job(a):
 
 
 def sim_stage(progs, workers):
-    os.makedirs(os.path.join(OUT, "sim"), exist_ok=True)
-    jobs = [(p, k, os.path.join(OUT, "sim", f"{p}_{k}.json"), 1000 * i + 1) for p in progs for i, k in enumerate(SIM_KEYS[p])]
+    os.makedirs(os.path.join(OUT, SIM_DIR), exist_ok=True)
+    jobs = [(p, k, os.path.join(OUT, SIM_DIR, f"{p}_{k}.json"), 1000 * i + 1) for p in progs for i, k in enumerate(SIM_KEYS[p])]
     jobs = [j for j in jobs if not os.path.exists(j[2])]
     with ProcessPoolExecutor(workers, max_tasks_per_child=1) as ex:
         for f in as_completed([ex.submit(_sim_job, j) for j in jobs]):
@@ -465,7 +468,7 @@ def sim_stage(progs, workers):
     for p in progs:
         P = np.mean(cc.LINES[p]) / FS
         for k in SIM_KEYS[p]:
-            row = json.load(open(os.path.join(OUT, "sim", f"{p}_{k}.json")))
+            row = json.load(open(os.path.join(OUT, SIM_DIR, f"{p}_{k}.json")))
             print(f"- {p} {k}:")
             for src in ("tomkin", "sim"):
                 cells = []

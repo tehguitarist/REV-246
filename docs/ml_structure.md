@@ -558,7 +558,25 @@ Tomkin: its AMPL pairs (M 3, L 1 per setting); model: 15 pairs of 6 renders; ran
 - **Q3b, which part varies: answered.** One common rotation angle of the two coupling blocks; nothing else in the lines, taps or read-out varies at a level this test sees (the leftover after the rotation kernel is −30…−34 dB in recirc1, near the kernel method's floor on simulations, −35…−37 dB).
 - **Per pass or per second: per second** (the same 0.83 Hz in M and L), periodic with a random phase per capture (**H**: a sine; a triangle or other smooth periodic shape is not excluded).
 - **Budget:** 8 coefficient multiplies per sample as before (the two blocks), with (cos θ, sin θ) rewritten by the control side at a rate well above 0.83 Hz; a table or recursive oscillator suffices.
-- **Next:** the shape and exact depth of θ (ghost phase versus frequency within one capture; more renders per setting against the library-wide null distribution), the non-periodic remainder (the shallow deep tail), and whether θ's rate or depth depends on the program or a control (§9.4 shows none at this precision). For the plugin: the read-out form with F(θ(t)), θ = a sin(2π f_m t + φ₀), a ≈ 0.155–0.2 rad, f_m ≈ 0.83 Hz.
+- **Next:** the shape of θ (ghost phase versus frequency within one capture); depth done in §9.7 (0.15 rad rms); the non-periodic remainder (the shallow deep tail), and whether θ's rate or depth depends on the program or a control (§9.4 shows none at this precision). For the plugin: the read-out form with F(θ(t)), θ = a sin(2π f_m t + φ₀), a ≈ 0.155–0.2 rad, f_m ≈ 0.83 Hz.
+
+### 9.7 θ's depth: 0.15 rad rms by two methods (25 October 2026) **[S: Tomkin's AMPL pairs match sine-θ renders at 0.15 rad rms, and the kernel estimator's reading on renders matches the library's at a true 0.146; H: the sine shape]**
+
+```
+ML_THETA_RMS=<rms> EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 8 -- .venv/bin/python tools/ml_variance.py --stage sim --prog ML --workers 8
+                                     # 22 s, 6.8 GB -> analysis/ml_variance/sim_<rms>/, sim_<rms>.log (same seeds, so the same phases, as sim/ at 0.110)
+```
+
+§9.5 left the depth at 0.11–0.14 rad rms. The pair nulls were read as favouring 0.11–0.12, the calibrated kernel norm as about 0.14. The sim stage now renders the same 8 groups and 6 phases per group at 0.13, 0.15 and 0.17 rad rms beside §9.5's 0.110. Each Tomkin AMPL pair is compared with its group's median render-pair null over recirculations 1–2 and 0.15–0.3 s (48 pair-windows: M 36, L 12; later windows are past the small-θ regime). Median gap (Tomkin − renders), with bootstrap 16–84 %, and the kernel estimator's reading on the renders:
+
+| θ rms (rad) | gap, dB | M | L | kernel reading |
+|---|---|---|---|---|
+| 0.110 (§9.5) | +2.88 [+2.40, +3.09] | +2.88 | +1.15 | 0.082 |
+| 0.130 | +1.39 [+0.94, +1.62] | +1.39 | −0.31 | 0.098 |
+| **0.150** | **+0.16 [−0.28, +0.38]** | +0.16 | −1.54 | **0.113** |
+| 0.170 | −0.91 [−1.35, −0.70] | −0.91 | −2.60 | 0.129 |
+
+The gap moves by −1.49 / −1.23 / −1.07 dB per step, the 20 log₁₀ of the depth ratios (1.45 / 1.24 / 1.09), so the renders are in the small-θ regime and the scaling is exact. Tomkin's pairs match at **0.15 rad rms (0.14–0.16)**. The kernel estimator reads 0.75 × the true depth on renders, and the library's own reading (§9.4: 0.110 M, 0.109 L) corresponds to a true **0.146**. The two methods agree. L's four pairs alone point lower (≈ 0.125), but that is 4 pairs, one per group; L's kernel reading says 0.145 like M's. **Depth: θ = a sin(2π · 0.83 t + φ), a ≈ 0.21 rad (0.15 rms, ±12°), the same in M and L (H for a program difference: none shown).** The `sim` default stays at §9.5's 0.155 amplitude for its stored output; `ML_THETA_RMS` sets another. §9.5's "pair nulls favour 0.11–0.12" was read by eye per setting; pooled, they don't. Unchanged: the shape (sine, H), the sweep (unknown, only f_m × SWEEP_L is set), Tomkin's pairs inside the renders' range. Note: these renders use the M / L pole map of §8.7, §9.5's the older one; the static model is common to both renders of a pair, so the pair nulls don't depend on it.
 
 ## 10. The first-pass gap was the deconvolution kernel, not the algorithm (October 2026)
 
