@@ -3213,3 +3213,31 @@ EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 EMT_CV_FOLDS=$PWD/analysis/l
 
 **Reading.** S's loop coefficients are now a compact law (the length-scaled Jot law, the shelf with its DC floor and LF 0.4 constant, one HF pole curve with a drop-back, per-(LF, RT) shelf cells at the sampled steps), held out by setting. The remaining lead of a free per-setting refit is ≈ 1.5–2 dB, concentrated in single HF 0.2 settings. With the 50–150 ms floor (§32.7) and the repeat-level late windows, this is close to what the library can show for S without per-setting tables.
 
+## 33. Reverb-specific metrics (G6) and fine-resolution decay (`pulse_check.py`, G6, October 2026) **[S: S matches the library in every energy-ratio, tonal, density, coloration and stereo metric far below audibility; S: the fine-resolution decay finds narrow-band decay errors in a few LF 0.1 settings that octave metrics hide; S: the other units differ from the model in the low band only, as the known unit transfer predicts]**
+
+```
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 9 -- .venv/bin/python tools/pulse_check.py --stage s --workers 8   # 7.3 min, 4.6 GB
+... --stage ml --workers 8 (3.9 min, 6.7 GB); --stage units; --stage units --chain; --stage report
+```
+
+The pulse check (§26) measured decay (octave, third octave, EDT, EDC, late), echo density to 300 ms, L/R coherence and spectral fine structure, plus the nulls. G6 adds the measures a reverb is usually judged by, per IR (model and capture alike, same window and fade compensation), compared as model − capture against the cross-take capture pairs:
+- energy ratios per octave: C50, C80, D50, centre time Ts;
+- tonal balance: third-octave level of the early (0–80 ms) and late (80 ms on) parts;
+- an energy decay relief at fine resolution: decay time per 1/24 octave, 100 Hz – 10 kHz, from a short-time spectrum (2048 / 512), reported as the 90th percentile and worst band of |ratio − 1|, and the "ringiest" band (decay over its ⅓-octave neighbourhood's median) for metallic modes;
+- tail coloration: the sd of the log-magnitude fine structure, 50–300 ms (a well-mixed tail ≈ 5.6 dB);
+- echo density over 1 s and the mixing time (the 50 ms-smoothed normalised echo density first reaching 0.9);
+- stereo: IACC (±1 ms) and L/R level difference, early and late, broadband and per octave 500 Hz – 4 kHz.
+
+The library's capture pairs differ in AMPL, which sets the cluster's level, so their spread is no reference for the early metrics (C50 / C80 / D50 / Ts, early level, early IACC: pairs 1–3 dB, 10–14 ms, 0.1 apart). Those are judged against just-noticeable differences instead (C80 ≈ 1 dB, Ts ≈ 10 ms, D50 ≈ 0.05, IACC ≈ 0.075, level ≈ 0.5–1 dB). Early metrics are skipped where the capture has no early sound (more than 40 dB under its late part; M / L at AMPL 0).
+
+**S, all 128 settings, model − capture [cross-take pairs], R, median:** C50 / C80 0.01 dB per octave, D50 ≤ 0.001, Ts 0.0–0.1 ms; early third-octave level ≤ 0.03 dB, late ≤ 0.02 dB [≤ 0.01]; tail coloration 0.00 dB (capture 5.8–6.5 dB); mixing time 0 % (150 ms); IACC 0.000 early and late (capture 0.29 / 0.49); L/R level 0.00 dB. All 100–1000 × below the JNDs, and the late metrics at the pair level. The same in every RT, LF and HF group.
+
+**Fine-resolution decay (EDR):** median |ratio − 1| per 1/24-octave band 0.1 % [pairs 0.02–0.03 %], 95th percentile 0.6–1.0 % [0.1 %], every octave region alike. So at this resolution the model is not at the capture-repeat level, while octave decays (0.1 % [0.0 %]) hide it. Bands off by more than 5 % in every clean capture of a setting, same sign: 33 bands in 21 of 128 settings (> 10 %: 18 bands in 10). The large ones are per (LF, RT), in every HF step:
+- **LF 0.1 / RT 1.4, 244 Hz: model +21…+28 %** (HF 0.2 / 0.4 / 0.6 / 1.0);
+- **LF 0.1 / RT 2.5, 163–173 Hz: +17 %**, and 122–133 Hz −6 % at HF 0.2;
+- LF 0.4 / RT 0.8 / HF 0.2, 653 Hz −17 %; LF 2.0 / RT 0.8 565 Hz −7 %, 1795 Hz −6 %; 0.1_1.0_0.2 4149 Hz +11 %.
+
+Each feature is about one STFT bin wide (13 Hz), narrower than one loop's mode spacing (17–20 Hz), so it is not a per-loop broadband coefficient. The unit loses more there than the model, narrowly, near the LF shelf's transition at LF 0.1, the strongest shelf and the DC floor regime. The "200–250 Hz narrow loop-path transfer error" of §25.12 is the same family (**H**: the unit's LF section is not a plain first-order shelf near its transition, or a per-loop low-band detail at the floor). The audible effect: in those settings one narrow low-mid band rings 20–28 % longer in the model than in the unit, in a region where LF 0.1 has removed most of the energy.
+
+**Other units (S model, nothing refitted):** CLA and the five Altiverb S presets agree with the model in C80 (0.02–0.27 dB), Ts, tail coloration (≤ 0.02 dB), IACC (≤ 0.003), mixing time (0–2 %; CLA reads +150 %, but the Altiverb at the same setting matches the model at 270 ms while CLA's capture reaches full density at 110 ms: CLA's capture, not the model), fine-resolution decay 90th percentile 0.3–1.6 %. They differ in late level at 100–160 Hz by 0.4–0.7 dB and 0.2 dB at 400 Hz [Tomkin pairs ≤ 0.08], which is §27's low-band unit transfer (`bq.json`, not applied in this check).
+

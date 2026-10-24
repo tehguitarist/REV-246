@@ -155,6 +155,94 @@ def fine(X, f):
     return L - np.stack([np.convolve(L[:, c], ker, "same") for c in (0, 1)], 1)
 
 
+# ---------- G6: reverb-specific metrics of one IR (model or capture), compared afterwards ----------
+EDR_BANDS = 100 * 2 ** (np.arange(0, 24 * np.log2(100) + 1) / 24)   # 1/24-octave centres, 100 Hz - 10 kHz
+EDR_BANDS = EDR_BANDS[EDR_BANDS <= 10000]
+EARLY = 0.08                                                    # s after tap 0: early / late split (C80's)
+
+
+def edr_times(x, i0, i1, nfft=2048, hop=512):
+    """Decay time (s per 60 dB, EDC -5 to -25 dB) per 1/24-octave band from a short-time spectrum of x[i0:i1] (an energy
+    decay relief at fine frequency resolution); None where the band's range is too short."""
+    seg = x[i0:i1]
+    if len(seg) < nfft + 8 * hop:
+        return None
+    win = np.hanning(nfft)
+    fr = np.lib.stride_tricks.sliding_window_view(seg, nfft)[::hop] * win
+    P = np.abs(np.fft.rfft(fr, axis=1)) ** 2
+    f = np.fft.rfftfreq(nfft, 1 / FS)
+    out = []
+    for fc in EDR_BANDS:
+        m = (f >= fc * 2 ** (-1 / 48)) & (f < fc * 2 ** (1 / 48))
+        if not m.any():
+            m = np.abs(f - fc) == np.min(np.abs(f - fc))
+        e = P[:, m].sum(1)
+        c = np.cumsum(e[::-1])[::-1]
+        d = 10 * np.log10(c / c[0] + 1e-30)
+        k = (d <= -5) & (d >= -25)
+        k[max(0, len(d) - int(0.15 * FS / hop)):] = False
+        out.append(float(-60 / np.polyfit(np.nonzero(k)[0] * hop / FS, d[k], 1)[0]) if k.sum() >= 4 else None)
+    return out
+
+
+def ned_curve(s, i1, k0, span=1.0, win=0.02):
+    """Normalised echo density from tap 0 over up to `span` s (20 ms Hann, 5 ms hop)."""
+    w = int(win * FS); hw = np.hanning(w); hw /= hw.sum()
+    out = []
+    for i in range(k0, min(i1, k0 + int(span * FS)) - w, w // 4):
+        seg = s[i:i + w]
+        sd = np.sqrt(np.sum(hw * seg ** 2))
+        out.append(float(np.sum(hw * (np.abs(seg) > sd)) / 0.3173))
+    return np.array(out)
+
+
+def iacc(xl, xr, lag=int(0.001 * FS)):
+    """Largest normalised L/R cross-correlation within +-1 ms."""
+    n = np.sqrt(np.sum(xl ** 2) * np.sum(xr ** 2)) + 1e-30
+    c = np.correlate(xl, xr, "full")
+    mid = len(xr) - 1
+    return float(np.max(np.abs(c[mid - lag:mid + lag + 1])) / n)
+
+
+def rv_metrics(X, i1, k0):
+    """G6 per IR (prepared dict, R unless stated): C50 / C80 (dB), D50, centre time Ts (ms) per octave from tap 0;
+    third-octave level (dB) early (0-80 ms) and late (80 ms - i1); EDR decay times per 1/24 octave from 50 ms;
+    echo density over 1 s and the mixing time (first time the 50 ms-smoothed NED reaches 0.9, ms); L/R: IACC and level
+    difference (dB) early and late, broadband and per octave 500 Hz - 4 kHz."""
+    r = {}
+    ne, nl = int(0.05 * FS), int(EARLY * FS)
+    for f in OCT:
+        e = X[("o", f)][k0:i1, 1].astype(np.float64) ** 2
+        if len(e) <= nl:
+            continue
+        t = np.arange(len(e)) / FS
+        E = e.sum() + 1e-30
+        r[f"c50_{f}"] = float(10 * np.log10(e[:ne].sum() / (e[ne:].sum() + 1e-30)))
+        r[f"c80_{f}"] = float(10 * np.log10(e[:nl].sum() / (e[nl:].sum() + 1e-30)))
+        r[f"d50_{f}"] = float(e[:ne].sum() / E)
+        r[f"ts_{f}"] = float(1000 * np.sum(t * e) / E)
+    for f in THIRD:
+        e = X[("t", f)][k0:i1, 1].astype(np.float64) ** 2
+        if len(e) > nl:
+            r[f"lev_e_{f}"] = float(10 * np.log10(e[:nl].sum() + 1e-30))
+            r[f"lev_l_{f}"] = float(10 * np.log10(e[nl:].sum() + 1e-30))
+    bb = X["bb"].astype(np.float64)
+    r["edr"] = edr_times(bb[:, 1], k0 + int(0.05 * FS), i1)
+    nc = ned_curve(bb[:, 1], i1, k0)
+    r["ned1"] = nc[::4].round(3).tolist()
+    sm = np.convolve(nc, np.ones(10) / 10, "valid") if len(nc) >= 10 else nc
+    hit = np.nonzero(sm >= 0.9)[0]
+    r["mix_ms"] = float((hit[0] + 5) * 5.0) if len(hit) else None
+    for tag, a, b in (("e", k0, k0 + nl), ("l", k0 + nl, min(i1, k0 + int(0.5 * FS)))):
+        if b - a > int(0.02 * FS):
+            r[f"iacc_{tag}"] = iacc(bb[a:b, 0], bb[a:b, 1])
+            r[f"lr_{tag}"] = float(10 * np.log10((np.sum(bb[a:b, 0] ** 2) + 1e-30) / (np.sum(bb[a:b, 1] ** 2) + 1e-30)))
+            for f in (500, 1000, 2000, 4000):
+                o = X[("o", f)][a:b].astype(np.float64)
+                r[f"iacc_{tag}_{f}"] = iacc(o[:, 0], o[:, 1])
+    return r
+
+
 def compare(A, B, i1, k0=PRE, t0=T0, fwin=FS_WIN):
     """All G2-G5 metrics of IR A against IR B (prepared dicts) up to device index i1; tap 0 at k0, EDCs from t0,
     coherence and fine structure over fwin (s after tap 0)."""
@@ -171,6 +259,9 @@ def compare(A, B, i1, k0=PRE, t0=T0, fwin=FS_WIN):
         FA, FB = fine(XA, f), fine(XB, f)
         r["fine"] = {f"{lo}-{hi}": [float(np.corrcoef(FA[(f >= lo) & (f < hi), c], FB[(f >= lo) & (f < hi), c])[0, 1]) for c in (0, 1)]
                      for lo, hi in FS_BANDS}
+        r["fine_sd"] = {f"{lo}-{hi}": [float(np.std(FA[(f >= lo) & (f < hi), 1])), float(np.std(FB[(f >= lo) & (f < hi), 1]))]
+                        for lo, hi in FS_BANDS}                 # G6: tail coloration (Gaussian tail ~5.6 dB)
+    r["rv"] = dict(a=rv_metrics(A, i1, k0), b=rv_metrics(B, i1, k0))   # G6
     return r
 
 
@@ -323,6 +414,7 @@ def units_report(chain=False):
         out.append(f"  - NED {s['ned']:.3f}; fine R " + " ".join(f"{lo}-{hi}: {s.get(f'fine_{lo}-{hi}', np.nan):.3f}" for lo, hi in FS_BANDS)
                    + "; coherence model-unit " + " ".join(f"{f}: {s[f'coh_{f}']:+.2f}" for f in THIRD[::3] if f"coh_{f}" in s))
         out.append("  - octave nulls R (50-150/150-300/300-600): " + "; ".join(f"{f}: " + "/".join("--" if x is None else f"{x:.1f}" for x in r["null_oct"][str(f)]) for f in OCT))
+        out += g6_lines([s], rp, indent="  - G6 ")
     out.append("- **unit vs unit (Altiverb RT 1.0 vs CLA) and Tomkin repeat:** octave decay %: " + " ".join(f"{f}: {pr(f'oct_t{f}')[0]} {{{pr(f'oct_t{f}')[1]}}}" for f in OCT))
     out.append("  - octave late decay %: " + " ".join(f"{f}: {pr(f'oct_late{f}')[0]} {{{pr(f'oct_late{f}')[1]}}}" for f in OCT))
     out.append(f"  - NED {uu['ned']:.3f}; fine R " + " ".join(f"{lo}-{hi}: {pr(f'fine_{lo}-{hi}', 1, '{:.3f}')[0]} {{{pr(f'fine_{lo}-{hi}', 1, '{:.3f}')[1]}}}" for lo, hi in FS_BANDS)
@@ -422,6 +514,8 @@ def ml_report():
         out.append("- largest EDC difference to -30 dB (dB), R: " + " ".join(f"{f}: {med(rows, f'oct_dev{f}'):.2f} [{med(reps, f'oct_dev{f}'):.2f}]" for f in OCT))
         out.append("- third-octave decay signed %, R: " + " ".join(f"{f}: {100 * med(rows, f'third_t{f}'):+.1f} [{100 * med(reps, f'third_t{f}'):+.1f}]" for f in THIRD))
         out.append(f"- echo density |diff|: {med(rows, 'ned'):.3f} [{med(reps, 'ned'):.3f}]")
+        out.append("- G6, reverb-specific (static model vs capture [capture pair]):")
+        out += g6_lines(rows, reps, indent="  - ")
         out.append("- L/R coherence model - capture [capture - capture] (capture value): " + " ".join(f"{f}: {med(rows, f'coh_{f}'):+.3f} [{med(reps, f'coh_{f}'):+.3f}] ({med(rows, f'cohv_{f}'):.2f})" for f in THIRD[::2]))
         out.append("- fine structure R (L): " + "; ".join(f"{lo}-{hi}: {med(rows, f'fine_{lo}-{hi}'):.3f} ({med(rows, f'fine_{lo}-{hi}_L'):.3f}) [{med(reps, f'fine_{lo}-{hi}'):.3f}]" for lo, hi in FS_BANDS))
         ws = ["first_pass", "recirc1", "recirc2", "recirc3"] + [f"{a}-{b}" for a, b in ML_TW]
@@ -519,12 +613,62 @@ def summarise(m):
             for w, x in m["fine"].items():
                 s[f"fine_{w}{tag}"] = x[c]
     s["ned"] = m["ned"]["dev"]
+    if "rv" in m:                                   # G6: differences A - B (model - capture), ratios for times
+        a, b = m["rv"]["a"], m["rv"]["b"]
+        le = [b[k] for k in b if k.startswith("lev_e_")]
+        ll = [b[k] for k in b if k.startswith("lev_l_")]
+        empty = bool(le and ll) and np.mean(le) < np.mean(ll) - 40   # no early sound (L at AMPL 0: no cluster before the
+        early = ("c50_", "c80_", "d50_", "ts_", "lev_e_", "iacc_e", "lr_e")   # 86 ms onset): early ratios are meaningless
+        for k in a:
+            if k in ("edr", "ned1") or k not in b or a[k] is None or b[k] is None or (empty and k.startswith(early)):
+                continue
+            s[f"rv_{k}"] = (a[k] / b[k] - 1) if k == "mix_ms" else a[k] - b[k]
+            s[f"rvv_{k}"] = b[k]
+        if a.get("edr") and b.get("edr"):
+            ta, tb = np.array([np.nan if x is None else x for x in a["edr"]]), np.array([np.nan if x is None else x for x in b["edr"]])
+            q = np.abs(ta / tb - 1)
+            q = q[np.isfinite(q)]
+            if len(q) > 20:
+                s["rv_edr_p90"], s["rv_edr_max"] = float(np.percentile(q, 90)), float(np.max(q))
+
+            def ring(t):                            # the ringiest band: its decay time over its 1/3-octave neighbourhood's median
+                v = [t[i] / np.nanmedian(t[max(0, i - 4):i + 5]) for i in range(len(t)) if np.isfinite(t[i])]
+                return float(np.nanmax(v)) if v else np.nan
+            s["rv_ring"], s["rvv_ring"] = ring(ta) - ring(tb), ring(tb)
+    if "fine_sd" in m:
+        for w, (x, y) in m["fine_sd"].items():
+            s[f"rv_fsd_{w}"], s[f"rvv_fsd_{w}"] = x - y, y
     if "coh" in m:
         for f in THIRD:
             a, b = m["coh"]["a"][str(f)], m["coh"]["b"][str(f)]
             s[f"coh_{f}"] = a - b
             s[f"cohv_{f}"] = b
     return s
+
+
+def g6_lines(rows, reps, indent="- "):
+    """G6 summary lines: median model - capture [capture - capture] (lists of summarise dicts)."""
+    def md(rr, k, f=lambda x: x):
+        x = [f(r[k]) for r in rr if r.get(k) is not None and np.isfinite(r[k])]
+        return np.median(x) if x else np.nan
+    cell = lambda k, f=abs, fmt="{:.2f}", sc=1: f"{fmt.format(sc * md(rows, k, f))} [{fmt.format(sc * md(reps, k, f))}]"
+    out = [indent + "C50 |diff| dB per octave: " + " ".join(f"{f}: {cell(f'rv_c50_{f}')}" for f in OCT),
+           indent + "C80 |diff| dB per octave: " + " ".join(f"{f}: {cell(f'rv_c80_{f}')}" for f in OCT),
+           indent + "C80 signed dB (capture value): " + " ".join(f"{f}: {md(rows, f'rv_c80_{f}'):+.2f} ({md(rows, f'rvv_c80_{f}'):.1f})" for f in OCT),
+           indent + "D50 |diff| per octave: " + " ".join(f"{f}: {cell(f'rv_d50_{f}', fmt='{:.3f}')}" for f in OCT),
+           indent + "centre time Ts |diff| ms per octave (capture value): " + " ".join(f"{f}: {cell(f'rv_ts_{f}', fmt='{:.1f}')} ({md(rows, f'rvv_ts_{f}'):.0f})" for f in OCT),
+           indent + "tonal balance, third-octave level |diff| dB, early 0-80 ms: " + " ".join(f"{f}: {cell(f'rv_lev_e_{f}', fmt='{:.2f}')}" for f in THIRD[::2]),
+           indent + "tonal balance, late 80 ms on: " + " ".join(f"{f}: {cell(f'rv_lev_l_{f}', fmt='{:.2f}')}" for f in THIRD[::2]),
+           indent + "tonal balance signed dB (model - capture), early / late: " + " ".join(f"{f}: {md(rows, f'rv_lev_e_{f}'):+.2f} / {md(rows, f'rv_lev_l_{f}'):+.2f}" for f in THIRD[::3]),
+           indent + f"EDR, decay per 1/24 octave 100 Hz-10 kHz, |ratio - 1| %: 90th percentile over bands {cell('rv_edr_p90', fmt='{:.1f}', sc=100)}, "
+                    f"worst band {cell('rv_edr_max', fmt='{:.1f}', sc=100)}; ringiest band's decay / its 1/3-octave median, model - capture "
+                    f"{cell('rv_ring', f=lambda x: x, fmt='{:+.3f}')} (capture {md(rows, 'rvv_ring'):.3f})",
+           indent + "tail coloration, fine-structure sd dB, model - capture (capture value): " + " ".join(f"{lo}-{hi}: {cell(f'rv_fsd_{lo}-{hi}', f=lambda x: x, fmt='{:+.2f}')} ({md(rows, f'rvv_fsd_{lo}-{hi}'):.2f})" for lo, hi in FS_BANDS),
+           indent + f"mixing time (NED >= 0.9), model / capture - 1 %: {cell('rv_mix_ms', fmt='{:.1f}', sc=100)} (capture {md(rows, 'rvv_mix_ms'):.0f} ms)",
+           indent + f"IACC |diff| early {cell('rv_iacc_e', fmt='{:.3f}')} (capture {md(rows, 'rvv_iacc_e'):.3f}), late {cell('rv_iacc_l', fmt='{:.3f}')} (capture {md(rows, 'rvv_iacc_l'):.3f}); "
+                    "late per octave: " + " ".join(f"{f}: {cell(f'rv_iacc_l_{f}', fmt='{:.3f}')}" for f in (500, 1000, 2000, 4000)),
+           indent + f"L/R level |diff| dB early {cell('rv_lr_e')}, late {cell('rv_lr_l')}"]
+    return out
 
 
 def report_stage():
@@ -579,6 +723,10 @@ def report_stage():
     for g, fn in groups:
         out.append(f"- {g}: " + "; ".join(f"{w}: {med(sel(rows, fn), f'fine_{w}'):.3f} ({med(sel(rows, fn), f'fine_{w}_L'):.3f}) [{med(sel(reps, fn), f'fine_{w}'):.3f}] {{{med(sel(intk, fn), f'fine_{w}'):.3f}}}"
                                           for w in (f"{lo}-{hi}" for lo, hi in FS_BANDS)))
+    out.append("\n### G6: reverb-specific metrics, R unless stated, median model - capture [cross-take capture - capture]")
+    for g, fn in groups:
+        out.append(f"- {g}:")
+        out += g6_lines([x[1] for x in sel(rows, fn)], [x[1] for x in sel(reps, fn)], indent="  - ")
     out.append("\n### G1: nulls 100 Hz-10 kHz, R, median model [cross-take repeat] {in-take}")
     for g, fn in groups:
         cells = []
