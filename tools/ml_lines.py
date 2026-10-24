@@ -72,6 +72,8 @@ def _pole_curve():
 POLE_MAP = _pole_curve()
 HFRT_MIN = 0.0 if os.environ.get("ML_HFRT") == "0" else 0.12   # the HF control's floor, RT x HF >= 0.12 s in S's time,
                                                             # x 2 / x 4 in M / L (model_s_results 29); ML_HFRT=0: off
+L22_HF = 0.0 if os.environ.get("ML_L22") == "0" else 0.40     # L at RT 2.2: HF acts as max(HF, 0.40), not 0.48 / RT = 0.218
+                                                            # (poles 0.55-0.61 instead of the 0.8475 ceiling); ML_L22=0: off
 F_ML = np.array([[0, 1, 0, 1], [1, 0, -1, 0], [0, 1, 0, -1], [-1, 0, -1, 0]]) / np.sqrt(2)   # rows: lines; columns: loops
 OCT = [125, 250, 500, 1000, 2000, 4000, 8000]
 OCT_SOS = {f: butter(3, [f / np.sqrt(2), min(f * np.sqrt(2), 10500)], btype="band", fs=FS, output="sos") for f in OCT}
@@ -113,6 +115,8 @@ def line_coefs(P, rt, lf, hf, caps=True, v=None, p_max=P_MAX, dc_min=DC_MIN, bet
     L = lf_law(lf)
     if caps and HFRT_MIN and v is None:                     # the HF control saturates (model_s_results 29), in program time
         hf = max(hf, HFRT_MIN * round(min(P) / 1321) / rt)
+        if L22_HF and round(min(P) / 1321) == 4 and abs(rt - 2.2) < 1e-6:     # L's shortest RT step: the floor is 0.40 (ml_structure 8.6)
+            hf = max(hf, L22_HF)
     if v is None:
         rt_hi, rt_dc, k = L["hi"] * rt, L["dc"] * rt, L["k"]
     else:

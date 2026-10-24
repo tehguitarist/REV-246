@@ -44,15 +44,15 @@
   HF 0.7   0.996  0.997  0.998  0.998  0.997  0.997  0.997
   HF 0.9   0.997  0.996  0.998  0.998  0.997  0.997  0.992
 
-## L: line law fitted per setting to the band decay (180 groups; median rms rate error 0.69 %)
+## L: line law fitted per setting to the band decay (180 groups; median rms rate error 0.66 %)
 - per LF step, settings with HF at its top step: Nyquist-end RT / label (S law: L['hi']), DC RT / Nyquist-end RT (S law: dc / hi); median [IQR] over RT; RT where no limit is active in the law
   LF 0.1: hi 1.320 [1.290–1.353] (S 1.278); dc/hi 0.098 [0.095–0.102] (S 0.103); 4 of 9 settings uncapped
   LF 0.8: hi 1.021 [1.019–1.022] (S 1.022); dc/hi 0.782 [0.770–0.782] (S 0.788); 9 of 9 settings uncapped
   LF 1.2: hi 0.986 [0.986–0.987] (S 0.989); dc/hi 1.188 [1.158–1.196] (S 1.205); 9 of 9 settings uncapped
   LF 2.0: hi 0.958 [0.957–0.959] (S 0.958); dc/hi 1.994 [1.981–2.006] (S 2.032); 9 of 9 settings uncapped
 - per-pass DC gain (min over lines) fitted vs law-with-limits, settings where the law's DC limit is active:
-  0.1_2.2_0.1: fitted 0.133 (law 0.180); RT fit / law per octave 1.00 1.05 1.11 1.15 1.13 1.10 1.08
-  0.1_2.2_0.3: fitted 0.141 (law 0.180); RT fit / law per octave 0.99 1.01 1.04 1.08 1.10 1.09 1.07
+  0.1_2.2_0.1: fitted 0.153 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.98 0.99 0.99
+  0.1_2.2_0.3: fitted 0.152 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.99 0.99 0.99
   0.1_2.2_0.5: fitted 0.152 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.98 0.99 0.99
   0.1_2.2_0.8: fitted 0.152 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.98 0.98 0.98
   0.1_2.2_1.0: fitted 0.150 (law 0.180); RT fit / law per octave 1.00 0.99 0.98 0.98 0.98 0.98 0.98
@@ -77,14 +77,14 @@
   0.1_6.0_0.8: fitted 0.145 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.98 0.97 0.97 0.98
   0.1_6.0_1.0: fitted 0.142 (law 0.180); RT fit / law per octave 0.99 0.99 0.98 0.98 0.98 0.97 0.97
 - HF pole (max over lines) fitted vs law-with-limits, per HF step (median over settings) and where the law's pole is capped:
-  HF 0.1: fitted 0.873 (law 0.848); capped in the law: 20 settings, fitted max pole there 0.878
+  HF 0.1: fitted 0.812 (law 0.818); capped in the law: 16 settings, fitted max pole there 0.878
   HF 0.3: fitted 0.427 (law 0.427); capped in the law: 0 settings, fitted max pole there nan
   HF 0.5: fitted 0.224 (law 0.224); capped in the law: 0 settings, fitted max pole there nan
   HF 0.8: fitted 0.065 (law 0.064); capped in the law: 0 settings, fitted max pole there nan
   HF 1.0: fitted 0.000 (law 0.000); capped in the law: 0 settings, fitted max pole there nan
 - RT fit / law per octave (median over all groups), by HF step:
-  HF 0.1   0.987  0.991  0.996  0.998  1.000  1.001  1.001
-  HF 0.3   0.990  0.991  0.993  0.996  0.998  0.998  0.998
+  HF 0.1   0.986  0.990  0.993  0.997  0.999  1.000  1.000
+  HF 0.3   0.990  0.991  0.992  0.995  0.997  0.997  0.998
   HF 0.5   0.991  0.992  0.992  0.996  0.997  0.998  0.998
   HF 0.8   0.990  0.991  0.993  0.997  0.997  0.998  0.997
   HF 1.0   0.989  0.991  0.994  0.997  0.998  0.998  0.997
