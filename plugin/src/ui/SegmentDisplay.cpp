@@ -203,6 +203,13 @@ int SegmentDisplay::fieldAt(int x) const
 
 void SegmentDisplay::mouseDown(const juce::MouseEvent& e)
 {
+    if (e.mods.isCommandDown() || e.mods.isAltDown())
+    {
+        const auto i = fieldAt(e.x);
+        if (i >= 0 && fields[(size_t)i].onReset)
+            fields[(size_t)i].onReset();
+        return;
+    }
     dragLastY = e.y;
     dragRemainder = 0;
     const auto i = fieldAt(e.x);

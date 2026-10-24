@@ -80,10 +80,14 @@ inline const juce::Colour segmentLit{0xffff8a3a};
 inline const juce::Colour segmentGlow{0xffff0a00};
 inline constexpr float segmentGhostAlpha = 0.2f;
 
-// The LEVEL LEDs, top (OVL) to bottom (-12). Thresholds in dBFS of the input after the INPUT fader: the scale reads
-// 0 at -18 dBFS (H: the unit's alignment level isn't known) and OVL is a full-scale peak.
+// The LEVEL LEDs, top (OVL) to bottom (-12). Thresholds in dB relative to the meter's 0 VU reference, of the input
+// after the INPUT fader, read on a VU ballistic (not peak). OVL is +6 VU or a full-scale peak, whichever comes first.
+// What 0 VU reads in dBFS is the meter calibration, selectable in the bottom bar (default -18 dBFS: 0 = 1 kHz at
+// 0.775 V, H).
 inline constexpr int numLevelLeds = 7;
-inline constexpr float levelRefDbFs = -18.0f;
-inline constexpr float levelStepsDb[numLevelLeds] = {0.0f, 3.0f, 0.0f, -3.0f, -6.0f, -9.0f, -12.0f}; // OVL: special
+inline constexpr float levelStepsDb[numLevelLeds] = {6.0f, 3.0f, 0.0f, -3.0f, -6.0f, -9.0f, -12.0f}; // OVL: +6
+inline constexpr int numMeterCal = 6;
+inline constexpr float meterCalDbFs[numMeterCal] = {-24.0f, -20.0f, -18.0f, -16.0f, -14.0f, -12.0f};
+inline constexpr int defaultMeterCal = 2; // -18 dBFS
 inline const juce::Colour levelRed{0xffff3a28}, levelYellow{0xffffc21f}, levelGreen{0xff39e04a};
 } // namespace rv::design

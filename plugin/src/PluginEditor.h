@@ -44,6 +44,9 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     rv::params::Program program() const;
     void setUpJoy(int index);
     void moveLinked(rv::ui::Fader& from, rv::ui::Fader& to, float oldPos, float newPos);
+    void setJoy(Joy j, float fraction); // 0..1 → the nearest step
+    void resetJoy(Joy j);               // the default step
+    juce::String calLabel() const;
 
     Rev246Processor& proc;
     PanelLookAndFeel lookAndFeel;
@@ -62,8 +65,10 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     rv::ui::PresetBar presetBar;
     rv::ui::BarButton linkButton;
     rv::ui::BarButton transformerButton;
+    rv::ui::BarButton calButton;
     rv::ui::HelpButton helpButton;
     rv::ui::BarLabel titleLabel, versionLabel;
+    int meterCalIndex = rv::design::defaultMeterCal;
 
     // Tips show only while the "?" is on, except the "?"'s own.
     static constexpr int tipDelayMs = 300;

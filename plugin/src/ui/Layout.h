@@ -44,13 +44,13 @@ inline constexpr Slot programDisplay     { 490.0f, 235.5f, 434.0f, 151.0f };
 inline constexpr Slot lowpassDisplay     { 897.5f, 235.5f, 285.0f, 151.0f };
 inline constexpr Slot reflectionsDisplay { 1317.5f, 235.5f, 461.0f, 151.0f };
 inline constexpr Slot decayDisplay       { 2002.0f, 235.5f, 828.0f, 151.0f };
-inline constexpr Slot levelOvl           { 149.5f, 491.0f, 52.0f, 75.0f };
-inline constexpr Slot levelP3            { 149.5f, 596.2f, 52.0f, 75.0f };
-inline constexpr Slot level0             { 149.5f, 701.4f, 52.0f, 75.0f };
-inline constexpr Slot levelM3            { 149.5f, 806.6f, 52.0f, 75.0f };
-inline constexpr Slot levelM6            { 149.5f, 911.8f, 52.0f, 75.0f };
-inline constexpr Slot levelM9            { 149.5f, 1017.0f, 52.0f, 75.0f };
-inline constexpr Slot levelM12           { 149.5f, 1122.2f, 52.0f, 75.0f };
+inline constexpr Slot levelOvl           { 149.5f, 525.0f, 52.0f, 75.0f };
+inline constexpr Slot levelP3            { 149.5f, 630.2f, 52.0f, 75.0f };
+inline constexpr Slot level0             { 149.5f, 735.4f, 52.0f, 75.0f };
+inline constexpr Slot levelM3            { 149.5f, 840.6f, 52.0f, 75.0f };
+inline constexpr Slot levelM6            { 149.5f, 945.8f, 52.0f, 75.0f };
+inline constexpr Slot levelM9            { 149.5f, 1051.0f, 52.0f, 75.0f };
+inline constexpr Slot levelM12           { 149.5f, 1156.2f, 52.0f, 75.0f };
 
 // Every embedded image, by its file name in ui/ (and assets/images/).
 enum class Image

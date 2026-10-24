@@ -15,6 +15,7 @@ class Joystick : public DesignComponent, private juce::Timer
 
     Joystick(ScaledImages&, layout::Slot);
     std::function<void(int direction, int hold)> onStep; // direction +1 up / -1 down; hold = repeats so far
+    std::function<void()> onReset;                       // Cmd/Alt-click: back to the default step
 
     void paint(juce::Graphics&) override;
     void mouseDown(const juce::MouseEvent&) override;
@@ -31,17 +32,27 @@ class Joystick : public DesignComponent, private juce::Timer
 };
 
 // The wedge above a lever: a bar of segments (faint dividing lines always visible) with the one nearest the value lit.
+// Click or drag on it to set the value at the pointer, wheel to step, Cmd/Alt-click for the default.
 class Funnel : public DesignComponent
 {
   public:
     explicit Funnel(int column);
     void setFraction(float f); // 0 = minimum (narrow end) .. 1 = maximum
     int litSegment() const { return segment; }
+    std::function<void(float fraction)> onUserSet; // click or drag to a position (0..1)
+    std::function<void(int direction)> onUserStep; // wheel notch
+    std::function<void()> onUserReset;             // Cmd/Alt-click: back to the default step
     void paint(juce::Graphics&) override;
+    void mouseDown(const juce::MouseEvent&) override;
+    void mouseDrag(const juce::MouseEvent&) override;
+    void mouseUp(const juce::MouseEvent&) override;
+    void mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails&) override;
 
   private:
+    float fractionAt(const juce::MouseEvent&) const;
     CachedLayer layer;
     int column;
     int segment = 4; // 0 = the bottom segment
+    bool dragging = false;
 };
 } // namespace rv::ui

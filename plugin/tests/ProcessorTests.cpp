@@ -41,24 +41,46 @@ TEST_CASE("power off passes the input through")
     }
 }
 
-TEST_CASE("the level meter sees the input after the INPUT fader")
+TEST_CASE("the VU meter reads the input after the INPUT fader")
+{
+    Rev246Processor p;
+    p.prepareToPlay(48000.0, 256);
+    juce::MidiBuffer midi;
+
+    auto run = [&](float level, float seconds) {
+        for (int blocks = 0; blocks < (int)(seconds * 48000.0f / 256.0f); ++blocks)
+        {
+            juce::AudioBuffer<float> b(2, 256);
+            for (int ch = 0; ch < 2; ++ch)
+                for (int i = 0; i < 256; ++i)
+                    b.setSample(ch, i, level);
+            p.processBlock(b, midi);
+        }
+    };
+
+    run(0.5f, 0.6f); // let the VU ballistic settle
+    CHECK(p.getInputVu() > 0.45f);
+    CHECK(p.getInputVu() < 0.55f);
+
+    setParam(p, rv::params::id::inputGain, rv::params::gainPositionFromDb(-12.0f));
+    run(0.5f, 0.6f);
+    const auto scaled = p.getInputVu();
+    CHECK(scaled > 0.10f);
+    CHECK(scaled < 0.15f); // -12 dB ≈ 0.126 of the 0.5 mono sum
+}
+
+TEST_CASE("the clip flag catches a full-scale input")
 {
     Rev246Processor p;
     p.prepareToPlay(48000.0, 256);
     juce::MidiBuffer midi;
     juce::AudioBuffer<float> b(2, 256);
-    b.clear();
-    b.setSample(0, 100, 0.5f);
-    b.setSample(1, 100, 0.5f);
-    for (int i = 0; i < 4; ++i)
-    {
-        auto copy = b;
-        p.processBlock(copy, midi);
-    }
-    const auto peak = p.takeInputPeak();
-    CHECK(peak > 0.4f);
-    CHECK(peak < 0.6f); // 0 dB INPUT: the mono sum of two 0.5s, within the smoothing's tolerance
-    CHECK(p.takeInputPeak() == 0.0f);
+    for (int ch = 0; ch < 2; ++ch)
+        for (int i = 0; i < 256; ++i)
+            b.setSample(ch, i, 1.0f);
+    p.processBlock(b, midi);
+    CHECK(p.takeInputClip());
+    CHECK_FALSE(p.takeInputClip()); // reset after the read
 }
 
 TEST_CASE("the pan keeps the centre at unity")

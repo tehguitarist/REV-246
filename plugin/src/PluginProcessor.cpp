@@ -2,9 +2,12 @@
 
 #include "PluginEditor.h"
 
+#include <cmath>
+
 namespace
 {
 constexpr double rampSeconds = 0.02;
+constexpr float vuRiseSeconds = 0.3f; // VU: 99% of a step in ~300 ms
 }
 
 Rev246Processor::Rev246Processor()
@@ -45,6 +48,11 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
     wetOn.setCurrentAndTargetValue(*pPower >= 0.5f ? 1.0f : 0.0f);
     transformerOn.setCurrentAndTargetValue(*pTransformer >= 0.5f ? 1.0f : 0.0f);
     scratch.setSize(4, samplesPerBlock, false, false, true);
+    // VU meter: a first-order RMS integrator. The classic VU reaches 99% in ~300 ms, so tau = 300 ms / ln 100.
+    vuTauSamples = (vuRiseSeconds / std::log(100.0f)) * sampleRate;
+    vu = 0.0f;
+    inputVu.store(0.0f);
+    inputClip.store(false);
     setLatencySamples(0);
 }
 
@@ -90,16 +98,21 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     // The unit has one mono input: sum, apply INPUT, and read the level there. Then the optional input transformer.
     // The transformer stage always runs so its state is warm when switched on; off, its crossfade weight is exactly 0
     // and the signal passes unchanged.
-    float peak = 0.0f;
+    float peak = 0.0f, sumSq = 0.0f;
     for (int i = 0; i < n; ++i)
     {
         mono[i] = 0.5f * (inL[i] + inR[i]) * inGain.getNextValue();
         peak = std::max(peak, std::abs(mono[i]));
+        sumSq += mono[i] * mono[i];
         xfWeight[i] = transformerOn.getNextValue();
         mono[i] += xfWeight[i] * (transformer.processInput(mono[i]) - mono[i]);
     }
-    float prior = inputPeak.load(std::memory_order_relaxed);
-    while (peak > prior && !inputPeak.compare_exchange_weak(prior, peak)) {}
+    const auto rms = std::sqrt(sumSq / (float)n);
+    const auto a = 1.0f - std::exp(-(float)n / (float)vuTauSamples);
+    vu = a * rms + (1.0f - a) * vu;
+    inputVu.store(vu, std::memory_order_relaxed);
+    if (peak >= 0.999f)
+        inputClip.store(true, std::memory_order_relaxed);
 
     engine.process(mono, wetL, wetR, n);
 

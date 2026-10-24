@@ -50,10 +50,10 @@ program display,,490.0,235.5,434,151,display box
 lowpass display,,897.5,235.5,285,151,display box
 reflections display,,1317.5,235.5,461,151,display box
 decay display,,2002.0,235.5,828,151,display box
-level ovl,,149.5,491.0,52,75,display box
-level p3,,149.5,596.2,52,75,display box
-level 0,,149.5,701.4,52,75,display box
-level m3,,149.5,806.6,52,75,display box
-level m6,,149.5,911.8,52,75,display box
-level m9,,149.5,1017.0,52,75,display box
-level m12,,149.5,1122.2,52,75,display box
+level ovl,,149.5,525.0,52,75,display box
+level p3,,149.5,630.2,52,75,display box
+level 0,,149.5,735.4,52,75,display box
+level m3,,149.5,840.6,52,75,display box
+level m6,,149.5,945.8,52,75,display box
+level m9,,149.5,1051.0,52,75,display box
+level m12,,149.5,1156.2,52,75,display box

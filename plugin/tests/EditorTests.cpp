@@ -44,7 +44,7 @@ TEST_CASE("snapshot")
         for (int i = 0; i < rv::params::numJoys; ++i)
             p.apvts.getParameter(rv::params::joyId((rv::params::Joy)i))->setValueNotifyingHost(extreme == "max" ? 1.0f : 0.0f);
     std::unique_ptr<juce::AudioProcessorEditor> base(p.createEditor());
-    dynamic_cast<Rev246Editor&>(*base).getLevelMeter().setPeakLinear(0.7f); // lights some of the LEVEL LEDs
+    dynamic_cast<Rev246Editor&>(*base).getLevelMeter().setLevel(0.3f, true, -18.0f); // lights the LEVEL LEDs incl. OVL
     base->setSize(1747, 764);
     auto img = base->createComponentSnapshot(base->getLocalBounds(), true, 1.0f);
     juce::File(path).deleteFile();

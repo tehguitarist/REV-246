@@ -17,6 +17,7 @@ class Rev246Processor : public juce::AudioProcessor
         static inline const juce::Identifier node{"UI"};
         static inline const juce::Identifier width{"width"};
         static inline const juce::Identifier tooltipsOn{"tooltipsOn"};
+        static inline const juce::Identifier meterCal{"meterCal"}; // index into design::meterCalDbFs
     };
     static constexpr int defaultEditorWidth = 1398; // 40% of the 3495-wide design space
 
@@ -48,8 +49,10 @@ class Rev246Processor : public juce::AudioProcessor
     juce::AudioProcessorValueTreeState apvts;
     rv::PresetManager presets{apvts};
 
-    // The panel's LEVEL meter: the highest input sample (after the INPUT fader) since the last call, linear.
-    float takeInputPeak() { return inputPeak.exchange(0.0f); }
+    // The panel's LEVEL meter, read by the editor's timer: the input (after the INPUT fader) on a VU ballistic,
+    // linear, and whether a full-scale sample occurred since the last read.
+    float getInputVu() const { return inputVu.load(std::memory_order_relaxed); }
+    bool takeInputClip() { return inputClip.exchange(false, std::memory_order_relaxed); }
 
     juce::ValueTree uiState() { return apvts.state.getOrCreateChildWithName(UiProps::node, nullptr); }
 
@@ -58,7 +61,10 @@ class Rev246Processor : public juce::AudioProcessor
     rv::dsp::Transformer transformer;
     juce::LinearSmoothedValue<float> inGain, outGain, mixAmount, panLeft, panRight, wetOn, transformerOn;
     juce::AudioBuffer<float> scratch;
-    std::atomic<float> inputPeak{0.0f};
+    std::atomic<float> inputVu{0.0f};
+    std::atomic<bool> inputClip{false};
+    float vu = 0.0f;         // the VU integrator's state (linear RMS), audio thread only
+    double vuTauSamples = 0.0; // VU time constant in samples (tau * sample rate), set in prepareToPlay
 
     std::atomic<float>*pProgram, *pMix, *pPan, *pIn, *pOut, *pPower, *pTransformer;
     std::array<std::atomic<float>*, rv::params::numJoys> pJoy;

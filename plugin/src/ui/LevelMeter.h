@@ -4,13 +4,13 @@
 
 namespace rv::ui
 {
-// The seven LEVEL boxes (OVL, +3, 0, -3, -6, -9, -12): each lights its colour with a glow while the input peak is at
-// or above its threshold. Repaints only when the number of lit boxes changes.
+// The seven LEVEL boxes (OVL, +3, 0, -3, -6, -9, -12): each lights its colour with a glow while the input VU level is
+// at or above its threshold, and OVL on a full-scale peak. Repaints only when the number of lit boxes changes.
 class LevelMeter : public DesignComponent
 {
   public:
     LevelMeter();
-    void setPeakLinear(float peak);
+    void setLevel(float vuLinear, bool clip, float refDbFs);
     int litCount() const { return lit; }
     juce::String getTooltip() override;
     void paint(juce::Graphics&) override;

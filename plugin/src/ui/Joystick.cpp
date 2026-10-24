@@ -19,6 +19,12 @@ void Joystick::paint(juce::Graphics& g)
 
 void Joystick::mouseDown(const juce::MouseEvent& e)
 {
+    if (e.mods.isCommandDown() || e.mods.isAltDown())
+    {
+        if (onReset)
+            onReset();
+        return;
+    }
     pushed = e.y < getHeight() / 2 ? 1 : -1;
     repeats = 0;
     repaint();
@@ -76,7 +82,46 @@ Funnel::Funnel(int col)
       column(col)
 {
     setOpaque(false);
-    setInterceptsMouseClicks(false, false);
+    setMouseCursor(juce::MouseCursor::UpDownResizeCursor);
+}
+
+float Funnel::fractionAt(const juce::MouseEvent& e) const
+{
+    const auto yDesign = ((float)e.y + (float)getY()) / getScale();
+    return juce::jlimit(0.0f, 1.0f, (design::funnelBottomY - yDesign) / (design::funnelBottomY - design::funnelTopY));
+}
+
+void Funnel::mouseDown(const juce::MouseEvent& e)
+{
+    if (e.mods.isCommandDown() || e.mods.isAltDown())
+    {
+        if (onUserReset)
+            onUserReset();
+        return;
+    }
+    dragging = true;
+    if (onUserSet)
+        onUserSet(fractionAt(e));
+}
+
+void Funnel::mouseDrag(const juce::MouseEvent& e)
+{
+    if (!dragging)
+        return;
+    if (onUserSet)
+        onUserSet(fractionAt(e));
+}
+
+void Funnel::mouseUp(const juce::MouseEvent&)
+{
+    dragging = false;
+}
+
+void Funnel::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& w)
+{
+    const auto delta = w.isReversed ? -w.deltaY : w.deltaY;
+    if (delta != 0.0f && onUserStep)
+        onUserStep(delta > 0.0f ? 1 : -1);
 }
 
 void Funnel::setFraction(float f)

@@ -15,6 +15,7 @@ class SegmentDisplay : public DesignComponent
         int first = 0, count = 3;
         bool leftAlign = false;
         std::function<void(int steps)> onNudge; // may be empty (the program display)
+        std::function<void()> onReset;          // may be empty; Cmd/Alt-click resets to the default
         juce::String text;
     };
 
@@ -22,6 +23,7 @@ class SegmentDisplay : public DesignComponent
 
     void setText(size_t field, const juce::String&);
     void setNudge(size_t field, std::function<void(int steps)> f) { fields[field].onNudge = std::move(f); }
+    void setReset(size_t field, std::function<void()> f) { fields[field].onReset = std::move(f); }
     void setFieldTooltip(size_t field, const juce::String&);
 
     void paint(juce::Graphics&) override;

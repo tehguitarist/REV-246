@@ -67,6 +67,7 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
       presetBar(p.presets, *this),
       linkButton({0.0f, rv::design::barTop + 35.0f, 220.0f, 80.0f}, "LINK", rv::ui::BarButton::Kind::toggle), // x: see below
       transformerButton({0.0f, rv::design::barTop + 35.0f, 440.0f, 80.0f}, "TRANSFORMER", rv::ui::BarButton::Kind::toggle),
+      calButton({0.0f, rv::design::barTop + 35.0f, 220.0f, 80.0f}, "CAL -18", rv::ui::BarButton::Kind::momentary),
       helpButton({0.0f, rv::design::barTop + 35.0f, 90.0f, 80.0f}),
       // The product name in the middle of the bar; the plugin's version (JUCE's, from the CMake project) at the right.
       titleLabel({1597.0f, rv::design::barTop + 35.0f, 300.0f, 80.0f}, "REV-246", 42.0f, rv::design::gold),
@@ -89,6 +90,7 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
         const auto linkX = helpRight - 90.0f - 12.0f - 220.0f;
         linkButton.setDesignBounds({linkX, y, 220.0f, 80.0f});
         transformerButton.setDesignBounds({linkX - 12.0f - 440.0f, y, 440.0f, 80.0f});
+        calButton.setDesignBounds({linkX - 12.0f - 440.0f - 12.0f - 220.0f, y, 220.0f, 80.0f});
     }
 
     // Programme buttons and lamps.
@@ -138,6 +140,12 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
     decayDisplay.setNudge(0, nudger(Joy::lf));
     decayDisplay.setNudge(1, nudger(Joy::rt));
     decayDisplay.setNudge(2, nudger(Joy::hf));
+    lowpassDisplay.setReset(0, [this] { resetJoy(Joy::lowpass); });
+    reflectionsDisplay.setReset(0, [this] { resetJoy(Joy::delay); });
+    reflectionsDisplay.setReset(1, [this] { resetJoy(Joy::ampl); });
+    decayDisplay.setReset(0, [this] { resetJoy(Joy::lf); });
+    decayDisplay.setReset(1, [this] { resetJoy(Joy::rt); });
+    decayDisplay.setReset(2, [this] { resetJoy(Joy::hf); });
     programDisplay.setNudge(0, [this](int steps) {
         auto& pr = param(P::id::program);
         const auto now = juce::roundToInt(pr.convertFrom0to1(pr.getValue()));
@@ -170,6 +178,17 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
         pr.endChangeGesture();
     };
 
+    meterCalIndex = juce::jlimit(0, rv::design::numMeterCal - 1,
+                                 (int)proc.uiState().getProperty(Rev246Processor::UiProps::meterCal, rv::design::defaultMeterCal));
+    calButton.setTooltip("Meter calibration: what 0 VU reads, in dBFS. Click to cycle. -18 dBFS is the default "
+                         "(the unit's 0 VU is 1 kHz at 0.775 V).");
+    calButton.setLabel(calLabel());
+    calButton.onClick = [this] {
+        meterCalIndex = (meterCalIndex + 1) % rv::design::numMeterCal;
+        proc.uiState().setProperty(Rev246Processor::UiProps::meterCal, meterCalIndex, nullptr);
+        calButton.setLabel(calLabel());
+    };
+
     panKnob.helpText = "Pan: where the dry signal sits in the stereo field. Double-click to centre; Shift for fine.";
     mixFader.helpText = "Mix: dry to reverb, 0 to 100 %.";
     inputFader.helpText = "Input level, +12 dB to -infinity. Double-click for 0 dB; Shift for fine.";
@@ -193,7 +212,8 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
     for (auto& l : leds) designComponents.push_back(l.get());
     for (auto* c : std::initializer_list<rv::ui::DesignComponent*>{&powerButton, &programDisplay, &lowpassDisplay, &reflectionsDisplay,
                                                                   &decayDisplay, &levelMeter, &panKnob, &mixFader, &inputFader,
-                                                                  &outputFader, &linkButton, &transformerButton, &helpButton, &titleLabel, &versionLabel})
+                                                                  &outputFader, &linkButton, &transformerButton, &calButton, &helpButton,
+                                                                  &titleLabel, &versionLabel})
         designComponents.push_back(c);
     presetBar.addTo(designComponents);
     for (auto* c : designComponents)
@@ -239,9 +259,16 @@ void Rev246Editor::setUpJoy(int i)
 {
     auto stick = std::make_unique<rv::ui::Joystick>(images, joySlots[i]);
     stick->onStep = [this, i](int dir, int hold) { stepJoy((Joy)i, dir, hold); };
+    stick->onReset = [this, i] { resetJoy((Joy)i); };
     stick->setTooltip(joyHelp(P::Program::s, (Joy)i));
     joysticks.push_back(std::move(stick));
-    funnels.push_back(std::make_unique<rv::ui::Funnel>(i));
+
+    auto funnel = std::make_unique<rv::ui::Funnel>(i);
+    funnel->onUserSet = [this, i](float f) { setJoy((Joy)i, f); };
+    funnel->onUserStep = [this, i](int dir) { stepJoy((Joy)i, dir, 0); };
+    funnel->onUserReset = [this, i] { resetJoy((Joy)i); };
+    funnel->setTooltip(joyHelp(P::Program::s, (Joy)i));
+    funnels.push_back(std::move(funnel));
 }
 
 void Rev246Editor::stepJoy(Joy j, int direction, int hold)
@@ -254,6 +281,29 @@ void Rev246Editor::stepJoy(Joy j, int direction, int hold)
         return;
     pr.beginChangeGesture();
     pr.setValueNotifyingHost(pr.convertTo0to1((float)next));
+    pr.endChangeGesture();
+}
+
+void Rev246Editor::setJoy(Joy j, float fraction)
+{
+    auto& pr = param(P::joyId(j));
+    const auto step = juce::jlimit(0, P::joyMaxStep(j),
+                                   juce::roundToInt(juce::jlimit(0.0f, 1.0f, fraction) * (float)P::joyMaxStep(j)));
+    if (step == juce::roundToInt(pr.convertFrom0to1(pr.getValue())))
+        return;
+    pr.beginChangeGesture();
+    pr.setValueNotifyingHost(pr.convertTo0to1((float)step));
+    pr.endChangeGesture();
+}
+
+void Rev246Editor::resetJoy(Joy j)
+{
+    auto& pr = param(P::joyId(j));
+    const auto step = P::joyDefaultStep(j);
+    if (step == juce::roundToInt(pr.convertFrom0to1(pr.getValue())))
+        return;
+    pr.beginChangeGesture();
+    pr.setValueNotifyingHost(pr.convertTo0to1((float)step));
     pr.endChangeGesture();
 }
 
@@ -271,9 +321,14 @@ void Rev246Editor::moveLinked(rv::ui::Fader& from, rv::ui::Fader& to, float oldP
     to.setPosition(target, true);
 }
 
+juce::String Rev246Editor::calLabel() const
+{
+    return "CAL " + juce::String(rv::design::meterCalDbFs[meterCalIndex], 0);
+}
+
 void Rev246Editor::timerCallback()
 {
-    levelMeter.setPeakLinear(proc.takeInputPeak());
+    levelMeter.setLevel(proc.getInputVu(), proc.takeInputClip(), rv::design::meterCalDbFs[meterCalIndex]);
     if (needsRefresh.exchange(false))
         refreshAll();
 }
@@ -301,6 +356,7 @@ void Rev246Editor::refreshAll()
         funnels[(size_t)i]->setDimmed(!values[(size_t)i].used);
         joysticks[(size_t)i]->setDimmed(!values[(size_t)i].used);
         joysticks[(size_t)i]->setTooltip(joyHelp(prog, (Joy)i));
+        funnels[(size_t)i]->setTooltip(joyHelp(prog, (Joy)i));
     }
     lowpassDisplay.setText(0, values[0].text);
     reflectionsDisplay.setText(0, values[1].text);

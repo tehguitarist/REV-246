@@ -25,15 +25,16 @@ LevelMeter::LevelMeter() : DesignComponent(unionBounds())
     setInterceptsMouseClicks(false, false);
 }
 
-void LevelMeter::setPeakLinear(float peak)
+void LevelMeter::setLevel(float vuLinear, bool clip, float refDbFs)
 {
-    // Thresholds on the scale, in dB relative to levelRefDbFs; the lowest LED is -12.
-    const auto db = juce::Decibels::gainToDecibels(peak, -120.0f) - design::levelRefDbFs;
+    // Thresholds on the scale, in dB relative to the meter's 0 VU reference; the lowest LED is -12.
+    const auto db = juce::Decibels::gainToDecibels(vuLinear, -120.0f) - refDbFs;
     int count = 0;
     for (int i = design::numLevelLeds - 1; i >= 1; --i) // from -12 up to +3
         if (db >= design::levelStepsDb[i])
             count = design::numLevelLeds - i;
-    const bool ovl = peak >= 0.999f;
+    // OVL: +6 VU, or a full-scale peak, whichever comes first.
+    const bool ovl = db >= design::levelStepsDb[0] || clip;
     if (count != lit || ovl != over)
     {
         lit = count;
@@ -45,7 +46,8 @@ void LevelMeter::setPeakLinear(float peak)
 
 juce::String LevelMeter::getTooltip()
 {
-    return "Input level in dB, after the INPUT fader. OVL lights on a full-scale peak.";
+    return "Input level in VU, after the INPUT fader (the 0 VU reference is set in the bottom bar). OVL lights at +6 VU "
+           "or on a full-scale peak.";
 }
 
 void LevelMeter::paint(juce::Graphics& g)
