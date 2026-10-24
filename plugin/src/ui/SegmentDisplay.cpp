@@ -35,7 +35,7 @@ juce::Path vSegment(float xc, float y0, float y1, float t)
 
 std::array<juce::Path, 7> segmentPaths(float w, float h)
 {
-    const auto t = w * 0.21f, gap = t * 0.55f, half = t * 0.5f;
+    const auto t = w * 0.165f, gap = t * 0.6f, half = t * 0.5f;
     const auto mid = h * 0.5f;
     return {hSegment(half + gap * 0.2f, w - half - gap * 0.2f, half, t),            // a
             vSegment(w - half, half + gap, mid - gap * 0.55f, t),                   // b
@@ -140,7 +140,7 @@ void SegmentDisplay::paint(juce::Graphics& g)
         const auto paths = segmentPaths(w, h);
         const auto shear = std::tan(juce::degreesToRadians(design::displaySlantDegrees));
         const auto dots = std::vector<Digit>(layoutDigits());
-        const auto pointR = w * 0.105f;
+        const auto pointR = w * 0.09f;
         const auto alpha = contentAlpha();
 
         auto place = [&](int i) {
@@ -161,18 +161,34 @@ void SegmentDisplay::paint(juce::Graphics& g)
             lg.fillEllipse(pointAt(i).x - pointR, pointAt(i).y - pointR, 2 * pointR, 2 * pointR);
         }
 
-        drawWithGlow(lg, getLocalBounds(), scale, design::segmentGlow.withAlpha(0.75f * alpha), 14.0f * s * 2.5f,
-                     [&](juce::Graphics& cg) {
-                         cg.setColour(design::segmentLit.withAlpha(alpha));
-                         for (int i = 0; i < digits; ++i)
-                         {
-                             for (int sIdx = 0; sIdx < 7; ++sIdx)
-                                 if (dots[(size_t)i].segments & (1u << sIdx))
-                                     cg.fillPath(paths[(size_t)sIdx], place(i));
-                             if (dots[(size_t)i].point)
-                                 cg.fillEllipse(pointAt(i).x - pointR, pointAt(i).y - pointR, 2 * pointR, 2 * pointR);
-                         }
-                     });
+        // A bright core with a thick glow that tapers off: three halos, wide and faint to tight and strong, around
+        // segments that have a hot line along their middle.
+        auto lit = [&](juce::Graphics& cg) {
+            for (int i = 0; i < digits; ++i)
+            {
+                for (int sIdx = 0; sIdx < 7; ++sIdx)
+                    if (dots[(size_t)i].segments & (1u << sIdx))
+                    {
+                        cg.setColour(design::segmentLit.withAlpha(alpha));
+                        cg.fillPath(paths[(size_t)sIdx], place(i));
+                        cg.setColour(design::segmentCore.withAlpha(0.75f * alpha));
+                        cg.strokePath(paths[(size_t)sIdx], juce::PathStrokeType(w * 0.045f), place(i));
+                    }
+                if (dots[(size_t)i].point)
+                {
+                    cg.setColour(design::segmentLit.withAlpha(alpha));
+                    cg.fillEllipse(pointAt(i).x - pointR, pointAt(i).y - pointR, 2 * pointR, 2 * pointR);
+                    cg.setColour(design::segmentCore.withAlpha(0.75f * alpha));
+                    cg.fillEllipse(pointAt(i).x - pointR * 0.45f, pointAt(i).y - pointR * 0.45f, pointR * 0.9f, pointR * 0.9f);
+                }
+            }
+        };
+        const auto k = s * 2.5f;
+        drawWithGlow(lg, getLocalBounds(), scale, design::segmentGlow.withAlpha(0.6f * alpha), 64.0f * k, [&](juce::Graphics& g1) {
+            drawWithGlow(g1, getLocalBounds(), scale, design::segmentGlow.withAlpha(0.85f * alpha), 30.0f * k, [&](juce::Graphics& g2) {
+                drawWithGlow(g2, getLocalBounds(), scale, design::segmentGlow.withAlpha(0.95f * alpha), 8.0f * k, lit);
+            });
+        });
     });
 }
 

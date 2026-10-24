@@ -118,6 +118,7 @@ void drawWithGlow(juce::Graphics& g, juce::Rectangle<int> localBounds, float sca
     juce::Graphics::ScopedSaveState save(g);
     g.addTransform(juce::AffineTransform::scale(1.0f / scale));
     juce::DropShadow(glowColour, juce::jmax(1, juce::roundToInt(radius * scale)), {}).drawForImage(g, layer);
+    g.setOpacity(1.0f); // drawForImage leaves the glow colour's alpha, which images are drawn with
     g.drawImageAt(layer, 0, 0);
 }
 } // namespace rv::ui

@@ -62,7 +62,8 @@ inline constexpr float displayInsetX = 26.0f, displayInsetY = 24.0f;
 inline constexpr float displaySlantDegrees = 4.0f;
 inline const juce::Colour segmentLit{0xffff2a1a};
 inline const juce::Colour segmentGlow{0xffff1500};
-inline constexpr float segmentGhostAlpha = 0.2f;
+inline const juce::Colour segmentCore{0xffffb59a}; // the hot centre of a lit segment
+inline constexpr float segmentGhostAlpha = 0.3f;
 
 // The LEVEL LEDs, top (OVL) to bottom (-12). Thresholds in dBFS of the input after the INPUT fader: the scale reads
 // 0 at -18 dBFS (H: the unit's alignment level isn't known) and OVL is a full-scale peak.
