@@ -2971,3 +2971,37 @@ Deep under the floor the DC gain per pass is one value, 0.1845, in all four loop
 **5. Inside the additive table** (RT ≥ 1.0; `takefit_read.py` §4): the LF 0.4 / 1.0 / 2.0 effects are small (≤ 0.01 dB per pass) and close to length-scaled; the large ones are **HF 0.2 and LF 0.1, and both run monotonically across the loops**: HF 0.2 at 4 kHz +0.035 / +0.027 / −0.011 / −0.082 dB per pass (loops 1–4) at RT 1.0, −0.012 … +0.016 at RT 1.8 – 2.2; LF 0.1 at 1 kHz +0.010 … −0.009 at RT 2.2, +0.015 … +0.001 at RT 2.5. At the strongest settings the unit's coefficients spread across the four loops more (or less) than exact length scaling gives, by an amount that changes with the RT step.
 
 **Reading.** Most of what §31's per-setting refit gains is reproducible coefficient detail that does follow the panel's structure: the shelf side by (LF, RT, loop), the pole side by (HF, RT, loop), at least at RT ≥ 1.0. That is the signature of coefficients computed per loop from (LF, RT) and from (HF, RT) separately (**H**: the Z80 or DSP A computing them, not a table per setting). It recovers about half of the refit's gain held out (+6.1 / +5.3 → +4.5 / +3.3 dB excess) but as a 450-number table it is not a compact model and gives nothing between the library's steps, so it is **not adopted**. Next: compact it. (a) The DC floor as a per-RT-step value plus one soft-knee form per loop; (b) the HF 0.2 / LF 0.1 effects as a loop-length slope (2 numbers per effect instead of 4), and whether that slope is the pole curve of §25.17 evaluated in another variable (e.g. the per-pass target loss rather than p_law, which would spread the loops differently); (c) RT ≤ 0.8, where nothing separates.
+
+### 32.1 The HF pole's slope across the loops, per (HF, RT) cell: 20 numbers (`lowband_shelf.py --stage slopexfer`; `tools/loop_read/slope_cells.py`, `foldcmp.py`; `loop_cv.py --retake --tag slope`) **[S: relative to the baseline, the per-loop poles' deviations are a common part, a slope across the loops and a rest at precision; S: the slope is a per-(HF, RT) cell quantity that transfers across LF steps; S: on the baseline bench it takes HF 0.2 from −44.2 / −40.1 to −48.3 / −43.7 dB]**
+
+```
+EMT_KERNEL=chain3 ... SHELF_TAG=_s29 .venv/bin/python tools/memguard.py --limit-gb 8 -- \
+    .venv/bin/python tools/lowband_shelf.py --stage slopexfer --workers 8                      # 5 min, 4.3 GB -> chain3_shelf_slopexfer_cap0.8475_s29/
+.venv/bin/python tools/loop_read/slope_cells.py                                                # -> analysis/loop_cv/hfcells_chain3_cap0.8475_slope/ (folds + cells.json with hf_slope)
+for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 9 -- \
+    .venv/bin/python tools/loop_cv.py --retake --tag slope --stage run --rt $rt --workers 8; done                # 40-140 s per fold, 4.3 GB
+.venv/bin/python tools/loop_read/foldcmp.py                                                    # §29 folds -> slope folds, clean captures
+```
+
+§32.5 found the strong-HF effects running monotonically across the loops; §25.19 found half of the per-loop pole deviations loop-specific. On the §25.19 per-loop poles (`hfloop`, 80 settings with four poles determined to < 3·10⁻⁴ and below the ceiling, precision 0.10·10⁻³ rms):
+
+**1. Length scaling.** Of the one-number rules for the four poles of a setting, the law's exact one (the per-pass loss at f_ref ∝ Pᵢ) is best (residual 1.28·10⁻³ rms; (1 − p) = (1 − p̄)^(Pᵢ/P̄) 1.77, p ∝ Pᵢ 9.7, p = p̄^(Pᵢ/P̄) 39); a free slope across the loops (2 numbers) leaves 0.45·10⁻³. Against the baseline's own poles (law, ramp, ceiling, HF cells), per setting, p − p_base splits into **a common part 0.73·10⁻³ rms, a slope in (Pᵢ − P̄) / P̄ 0.59·10⁻³ and a rest 0.30·10⁻³** (3× the precision). The common part does not transfer across LF inside an (HF, RT) cell (explained −0.36: §25.19's LF dependence); **the slope does (70 % explained by the cell's other LF steps)**.
+
+**2. The rule.** Each (HF, RT) cell gets one slope s, each loop's pole + s (Pᵢ − P̄) / P̄ on top of the cell's hf_dp (`G_capped`'s `hf_dp["slope"]`, `cells.json`'s `hf_slope`; read by q2, `pulse_check.setting_G` and `lowband_shelf.base_kw`). s is the mean slope of the cell's other LF steps (held out by LF step). No slope where it has no meaning: cells with a baseline pole within 0.005 of the 0.8475 ceiling (HF 0.2 / RT 0.6 and 0.8, HF 0.4 / RT 0.3: the ceiling clips every loop alike) and HF 0.2 / RT 0.3 (§29 models it as HF 0.4; its hfloop poles were read against the old base). 20 cells, 80 settings. The slopes (×10⁻³): HF 0.2 +18 (RT 1.0), +6 (1.4), −9 / −7 / −7 (1.8 / 2.2 / 2.5); HF 0.4 −10 / −7 (RT 0.8 / 1.0), +1 (1.4–1.8), +4…+5 (2.2–2.5); HF 0.6 −19 (RT 0.3), +3…+5 (RT 0.8–2.5). Smooth in RT only in parts; a table, like the HF cells (**H** for its cause: how the firmware spreads one pole over four loop lengths near the ramp).
+
+**3. On the takefit bench** (held out by LF step and by take, HF < 1, R): 150–300 / 300–600 ms −48.8 / −44.0 → −49.3 / −44.8 dB; HF 0.2 −44.3 / −40.1 → −48.3 / −43.6; 29 settings better, 8 worse by > 0.5 dB at 150–300 ms (`dcxfer_report.py`).
+
+**4. On the baseline bench** (`loop_cv --retake --tag slope`: the §29 folds and cells plus hf_slope, clock and gain refitted per capture, 128 settings, 495 clean captures), R null [excess over the chain3 repeat references]:
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| All 128 | −51.7 [+4.8] → −51.8 [+4.8] | −49.0 [+6.6] → **−49.4 [+6.1]** | −44.2 [+3.6] → **−44.7 [+3.0]** | −37.4 [−0.1] → −37.6 [−0.4] |
+| HF 0.2 | −51.7 [+6.9] → −52.7 [+6.0] | −44.2 [+9.2] → **−48.3 [+7.6]** | −40.1 [+5.5] → **−43.7 [+3.7]** | −38.8 [+2.0] → −39.1 [+0.3] |
+| HF 0.4 | −51.7 [+6.0] → −51.8 [+5.9] | −49.1 [+7.4] → −49.4 [+6.7] | −44.7 [+3.7] → −45.2 [+3.4] | −38.3 [−0.2] → −38.3 [−0.3] |
+| HF 0.6 | −51.7 [+4.6] → −51.7 [+4.6] | −49.6 [+6.5] → −49.6 [+6.2] | −44.3 [+2.7] → −44.6 [+2.4] | −37.0 [−0.4] → −37.4 [−0.4] |
+| RT ≤ 1.0 | −51.2 [+7.1] → −51.3 [+6.7] | −46.5 [+6.8] → −47.6 [+6.3] | −39.6 [+2.2] → −41.2 [+1.7] | −29.6 [−1.5] → −30.4 [−1.6] |
+| RT ≥ 1.4 | −52.4 [+2.9] → −52.4 [+2.9] | −50.4 [+6.1] → −50.5 [+5.7] | −47.0 [+5.2] → −47.1 [+4.7] | −41.8 [+2.3] → −42.4 [+2.1] |
+
+L the same (all 128 −51.6 / −48.9 / −43.9 → −51.9 / −49.3 / −44.4). Flat and HF 1.0 settings unchanged (no slope). Per setting (R): 29 better and 8 worse by more than 0.5 dB at 150–300 ms, 29 / 7 at 300–600; best 1.0_1.0_0.2 −7.5 / −7.0, 0.4_1.0_0.2 −7.2 / −5.9, 2.0_1.0_0.2 −6.4 / −6.5; worst 0.1_2.2_0.2 +1.7 / +2.4, 1.0_2.2_0.6 +1.6 / +2.1 dB (the LF dependence inside a cell, as §28's HF cells). All eight folds were checked to carry the slope (every setting with one changed, every other one identical to the §29 folds), since the working tree was briefly reverted by another session's `git pull --autostash` while the folds ran.
+
+**5. Gate and adoption.** `PULSE_CV=…/hfcells_chain3_cap0.8475_slope EMT_HFRT_MIN=0.12 pulse_check.py --stage gate --tag slope`: **PASS** (S median R null 50–150 / 150–300 / 300–600 ms −51.29 / −49.40 / −45.23 dB against −51.31 / −49.23 / −44.93; every S octave decay and EDC metric, CLA, the Altiverb, M and L unchanged; 4.8 GB, 2 min). **Adopted: the S baseline is now `analysis/loop_cv/hfcells_chain3_cap0.8475_slope/`** (`pulse_check`'s default); the pulse check's 80 settings with a slope rerun (`--stage s --only <keys>`), the other 48 are unchanged. 20 numbers on top of §29.

@@ -188,13 +188,13 @@ def run(stage, only, keep):
     sel = {"free": lambda g: True, "dc": lambda g: g["lf"] == LF_DC,
            "floor": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] == 0.3),
            "perloop": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] <= 1.0),
-           "hfcell": lambda g: g["hf"] < 1.0, "bbcell": lambda g: True, "octaves": lambda g: True, "hfbb": lambda g: g["hf"] < 1.0, "hfloop": lambda g: g["hf"] < 1.0, "takefit": lambda g: True, "dcxfer": lambda g: True, "addxfer": lambda g: True}
+           "hfcell": lambda g: g["hf"] < 1.0, "bbcell": lambda g: True, "octaves": lambda g: True, "hfbb": lambda g: g["hf"] < 1.0, "hfloop": lambda g: g["hf"] < 1.0, "takefit": lambda g: True, "dcxfer": lambda g: True, "addxfer": lambda g: True, "slopexfer": lambda g: g["hf"] < 1.0}
     sel["bbscore"] = sel["bbcell"]
     sel["floorscore"] = sel["cellscore"] = sel["floor"]
     keys = sorted(k for k in info if (only is None or k in only) and sel[stage](info[k]))
     keys = [k for k in keys if not os.path.exists(os.path.join(od, k + ".json"))]
     print(f"{stage}: {len(keys)} settings to do", flush=True)
-    if WORKERS > 1 and stage in ("hfbb", "hfcell", "hfloop", "takefit", "dcxfer", "addxfer"):                            # one process, a pool of workers (~0.6 GB each)
+    if WORKERS > 1 and stage in ("hfbb", "hfcell", "hfloop", "takefit", "dcxfer", "addxfer", "slopexfer"):                            # one process, a pool of workers (~0.6 GB each)
         from concurrent.futures import ProcessPoolExecutor, as_completed
         with ProcessPoolExecutor(WORKERS, max_tasks_per_child=4) as ex:
             for i, fu in enumerate(as_completed([ex.submit(_run_one, (stage, k, os.path.join(od, k + ".json"), keep)) for k in keys])):
@@ -205,7 +205,7 @@ def run(stage, only, keep):
         if stage == "dc":
             dc(k, path, keep)
         else:
-            {"free": free, "floor": floor, "floorscore": floorscore, "cellscore": cellscore, "perloop": perloop, "hfcell": hfcell, "bbcell": bbcell, "bbscore": bbscore, "octaves": octaves, "hfbb": hfbb, "hfloop": hfloop, "takefit": takefit, "dcxfer": dcxfer, "addxfer": addxfer}[stage](k, path)
+            {"free": free, "floor": floor, "floorscore": floorscore, "cellscore": cellscore, "perloop": perloop, "hfcell": hfcell, "bbcell": bbcell, "bbscore": bbscore, "octaves": octaves, "hfbb": hfbb, "hfloop": hfloop, "takefit": takefit, "dcxfer": dcxfer, "addxfer": addxfer, "slopexfer": slopexfer}[stage](k, path)
         print(f"  {i + 1}/{len(keys)} {k}", flush=True)
 
 
@@ -472,7 +472,7 @@ def base_kw(key, table=CELLS_JSON):
         t["gamma"] = fc["gamma"]
         kw = dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
     if "hf_dp" in fc:
-        t["hfdp"] = {str(q2.q1_tables()[0][key]["hf"]): fc["hf_dp"], "p_above": 0.0, "p_below": 1.0, "exclude_lf": []}
+        t["hfdp"] = {str(q2.q1_tables()[0][key]["hf"]): fc["hf_dp"], "p_above": 0.0, "p_below": 1.0, "exclude_lf": [], "slope": fc.get("hf_slope", 0.0)}
     return t, lfdc, kw
 
 
@@ -771,9 +771,40 @@ def addxfer(key, path):
     json.dump(out, open(path, "w"))
 
 
+HFLOOP_DIR = os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_hfloop_cap0.8475")
+
+
+def slopexfer(key, path):
+    """Per setting (HF < 1) on the current baseline (as takefit): each loop's HF pole + s (P_i - Pbar) / Pbar, s the mean slope
+    across the loops of (per-loop pole - baseline pole) over the same (HF, RT) cell's other LF steps (lowband_shelf --stage
+    hfloop's take fits), from one take, scored on the other: a 24-number slope table, held out by LF step and by take.
+    model_s_results 32."""
+    d, G, G1, pb, hf1 = takefit_base(key)
+    z1 = np.exp(-1j * d["w"])
+    a, lab = d["law"]["a"], d["lab"]
+    x = (np.array(q1.P) - PBAR) / PBAR
+    cell = [json.load(open(p)) for p in glob.glob(os.path.join(HFLOOP_DIR, "*.json"))]
+    cell = [c for c in cell if c["hf"] == lab["hf"] and c["rt"] == lab["rt"] and c["lf"] != lab["lf"]]
+    d["Gs0"] = G
+    r0 = reverb(d, G)
+    from defects import DEFECTS
+    caps = [c for c in d["caps"] if (key, c["amp"]) not in DEFECTS]
+    takes = {"A": [c for c in caps if c["amp"] in (0, 90)], "B": [c for c in caps if c["amp"] in (30, 60)]}
+    src = {"A": "take_0_90", "B": "take_30_60"}
+    out = dict(key=key, **lab, base={c["amp"]: nulls_broad(c["y"], model(d, c, r0) * c["g"], c["te"]) for c in caps}, s={}, held={})
+    for tr, te in (("A", "B"), ("B", "A")):
+        if not takes[te] or not cell:
+            continue
+        s = float(np.mean([np.polyfit(x, np.array(c[src[tr]]["p"]) - np.array(c["p_base"]), 1)[0] for c in cell]))
+        out["s"][tr] = s
+        r = reverb(d, takefit_Gs(G1, pb, hf1, z1, d["w"], a, np.r_[np.zeros(8), s * x]))
+        out["held"].update({c["amp"]: nulls_broad(c["y"], model(d, c, r) * c["g"], c["te"]) for c in takes[te]})
+    json.dump(out, open(path, "w"))
+
+
 def _run_one(a):
     stage, k, path, keep = a
-    {"hfbb": hfbb, "hfcell": hfcell, "hfloop": hfloop, "takefit": takefit, "dcxfer": dcxfer, "addxfer": addxfer}[stage](k, path)
+    {"hfbb": hfbb, "hfcell": hfcell, "hfloop": hfloop, "takefit": takefit, "dcxfer": dcxfer, "addxfer": addxfer, "slopexfer": slopexfer}[stage](k, path)
     return k
 
 
@@ -882,7 +913,7 @@ def report_octaves():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "cellscore", "perloop", "hfcell", "bbcell", "bbscore", "octaves", "report", "octreport", "floorreport", "cellreport", "perloopreport", "hfcellreport", "bbreport", "hfbb", "hfloop", "takefit", "dcxfer", "addxfer"], required=True)
+    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "cellscore", "perloop", "hfcell", "bbcell", "bbscore", "octaves", "report", "octreport", "floorreport", "cellreport", "perloopreport", "hfcellreport", "bbreport", "hfbb", "hfloop", "takefit", "dcxfer", "addxfer", "slopexfer"], required=True)
     ap.add_argument("--workers", type=int, default=1, help="hfbb: a pool of workers in this one process")
     ap.add_argument("--only", default=None)
     ap.add_argument("--keep-lfrt", action="store_true")

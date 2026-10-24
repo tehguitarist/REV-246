@@ -78,3 +78,35 @@ for w in ("150-300", "300-600"):
     dl.sort()
     print(f"R {w}: better > 0.5: {sum(x < -0.5 for x, _ in dl)}, worse > 0.5: {sum(x > 0.5 for x, _ in dl)} of {len(dl)}; "
           f"worst {', '.join(f'{k} {x:+.1f}' for x, k in dl[-5:])}")
+
+# the HF-pole slope across the loops per (HF, RT) cell (slopexfer), held out by LF step and by take
+SX = os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_slopexfer_cap0.8475_s29")
+SL = {json.load(open(p))["key"]: json.load(open(p)) for p in glob.glob(os.path.join(SX, "*.json"))}
+# No slope where it has no meaning: cells with a baseline pole within 0.005 of the 0.8475 ceiling (the ceiling clips every
+# loop alike), and HF 0.2 / RT 0.3, whose hfloop poles were read against the pre-§29 base (§29 models it as HF 0.4).
+HL = [json.load(open(p)) for p in glob.glob(os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_hfloop_cap0.8475", "*.json"))]
+NOSLOPE = {(h["hf"], h["rt"]) for h in HL if max(h["p_base"]) > 0.8475 - 0.005 or h["hf"] * h["rt"] < 0.12 - 1e-9}
+for d in SL.values():
+    if (d["hf"], d["rt"]) in NOSLOPE:
+        d["held"] = {a: d["base"][a] for a in d["held"]}
+if SL:
+    print(f"\npole slope table (no slope in the cells at the ceiling and HF 0.2 / RT 0.3: {sorted(NOSLOPE)}; per (HF, RT) cell from its other LF steps), HF < 1: base -> slope; R / L median")
+    for g, f in [("HF < 1", lambda d: True), ("HF 0.2", lambda d: d["hf"] == 0.2), ("HF 0.4", lambda d: d["hf"] == 0.4),
+                 ("HF 0.6", lambda d: d["hf"] == 0.6), ("RT <= 1.0", lambda d: d["rt"] <= 1.0), ("RT >= 1.4", lambda d: d["rt"] >= 1.4)]:
+        sel = [d for d in SL.values() if f(d)]
+        for ch, name in ((1, "R"), (0, "L")):
+            cells = []
+            for w in WIN:
+                vb = [d["base"][a][w][ch] for d in sel for a in d["held"] if w in d["held"][a]]
+                vs = [d["held"][a][w][ch] for d in sel for a in d["held"] if w in d["held"][a]]
+                cells.append(f"{w}: {np.median(vb):.1f} -> {np.median(vs):.1f}")
+            print(f"  {g:10s} {name} " + "   ".join(cells) + f"  [{len(vb)}]")
+    for w in ("150-300", "300-600"):
+        dl = sorted((np.mean([d["held"][a][w][1] - d["base"][a][w][1] for a in d["held"] if w in d["held"][a]]), d["key"])
+                    for d in SL.values() if any(w in d["held"][a] for a in d["held"]))
+        print(f"R {w}: better > 0.5: {sum(x < -0.5 for x, _ in dl)}, worse > 0.5: {sum(x > 0.5 for x, _ in dl)} of {len(dl)}; "
+              f"best {', '.join(f'{k} {x:+.1f}' for x, k in dl[:4])}; worst {', '.join(f'{k} {x:+.1f}' for x, k in dl[-4:])}")
+    print("slopes s (take A) per cell (x 1e-3):")
+    for hf in (0.2, 0.4, 0.6):
+        print(f"  HF {hf}: " + "  ".join(f"RT {rt}: {1e3 * np.mean([d['s']['A'] for d in SL.values() if d['hf'] == hf and d['rt'] == rt and 'A' in d['s']]):+.1f}"
+                                         for rt in sorted({d["rt"] for d in SL.values() if d["hf"] == hf})))
