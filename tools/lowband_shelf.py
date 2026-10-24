@@ -451,6 +451,9 @@ def report_perloop():
 # ---------------------------------------------------------------- the HF pole per (HF, RT) cell (model_s_results 25.7)
 CELLS_JSON = os.path.join(ROOT, "analysis", "loop_cv", "cells", "cells.json")   # the §25.6 floor table
 HF_DP = np.round(np.arange(-0.012, 0.01201, 0.0005), 4)                          # absolute HF pole shift on every loop
+if os.environ.get("SHELF_HFDP"):                                                   # 29: another grid, "lo,hi,step"
+    _lo, _hi, _st = (float(x) for x in os.environ["SHELF_HFDP"].split(","))
+    HF_DP = np.round(np.arange(_lo, _hi + _st / 2, _st), 4)
 
 
 HF_CELLS_JSON = os.path.join(ROOT, "analysis", "loop_cv", "hfcells", "cells.json")   # the §25.7 floor and HF tables
@@ -600,6 +603,12 @@ def hfbb(key, path):
 
 
 CAP_CELLS = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475", "cells.json")   # the §25.18 floor and HF cells
+LOOP_B = float(os.environ.get("SHELF_LOOPB", "0.03"))      # hfloop: bound on each loop's pole shift (29: wider at RT 0.3)
+CLEAN = bool(os.environ.get("SHELF_CLEAN"))                 # hfloop: fit only the clean captures (29)
+CLEAN_OUT = {("0.1_0.3_0.2", 0), ("1.0_0.6_0.6", 0), ("1.0_0.6_1.0", 0), ("0.4_1.0_0.4", 0),       # bad AMPL-0 (library_notes 2)
+             ("0.1_0.3_0.2", 60), ("0.1_0.3_0.4", 60), ("0.4_0.3_0.2", 60), ("0.4_0.3_0.4", 30), ("0.4_0.3_0.4", 60),
+             ("1.0_0.3_0.2", 30), ("1.0_0.3_0.2", 60), ("1.0_0.3_0.4", 30), ("1.0_0.3_0.4", 60), ("1.0_0.6_0.2", 30),
+             ("1.0_0.6_0.2", 60), ("2.0_0.3_0.2", 30), ("2.0_0.6_0.2", 30)}                       # slipped (model_s_results 28)
 
 
 def hfloop(key, path):
@@ -620,11 +629,14 @@ def hfloop(key, path):
     d["Gs0"] = G
     r0 = reverb(d, G)
     out = dict(key=key, **d["lab"], b230=d["b230"], p_base=pb.tolist(), amps=[c["amp"] for c in d["caps"]])
-    for name, caps in (("all", d["caps"]), ("take_0_90", [c for c in d["caps"] if c["amp"] in (0, 90)]),
-                       ("take_30_60", [c for c in d["caps"] if c["amp"] in (30, 60)])):
+    sets = [("all", d["caps"]), ("take_0_90", [c for c in d["caps"] if c["amp"] in (0, 90)]),
+            ("take_30_60", [c for c in d["caps"] if c["amp"] in (30, 60)])]
+    if CLEAN:                                       # 29: without the slipped files (28) and the bad AMPL-0 captures
+        sets = [("clean", [c for c in d["caps"] if (key, c["amp"]) not in CLEAN_OUT])]
+    for name, caps in sets:
         res = lambda u: residual(d, Gs_of(u), caps, t0=0.05, sos=SOSB, norm="normB")
         base = float(np.sum(residual(d, None, caps, t0=0.05, sos=SOSB, norm="normB", r=r0) ** 2))
-        f = least_squares(res, np.zeros(4), bounds=(-0.03, 0.03), x_scale=1e-3, diff_step=1e-4, max_nfev=40)
+        f = least_squares(res, np.zeros(4), bounds=(-LOOP_B, LOOP_B), x_scale=1e-3, diff_step=1e-4, max_nfev=40)
         J = f.jac
         try:
             se = np.sqrt(np.diag(np.linalg.inv(J.T @ J)) * 2 * f.cost / max(len(f.fun) - 4, 1))

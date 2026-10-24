@@ -8,7 +8,7 @@ models against every dataset, on the metrics the nulls can hide. Results: docs/m
     EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/pulse_check.py --stage gate --tag <name>   # ~3 min sanity gate
 
   s       Program S, Tomkin 96 kHz library, all 128 settings held out: each setting rendered with the constants of the
-          loop_cv fold that left its RT step out (the §25.18 baseline, analysis/loop_cv/hfcells_chain3_cap0.8475: fold
+          loop_cv fold that left its RT step out (the §29 baseline, analysis/loop_cv/hfcells_chain3_cap0.8475_hfrt with EMT_HFRT_MIN=0.12: fold
           constants + cells.json), per capture clock, shift and gain as q2_injection.fit_capture (3 numbers). The capture is
           fade-compensated (/ ramp, up to comp_end). One JSON per setting in analysis/pulse/s/ (resumable).
   units   Program S on other units, nothing refitted: the CLA IR (LF 1.0, RT 1.0, HF 0.9, AMPL 80) and the five Altiverb
@@ -29,7 +29,7 @@ models against every dataset, on the metrics the nulls can hide. Results: docs/m
           and the Altiverb RT 1.6 preset, 8 M / L groups (ml_variance's SIM_KEYS), each scored as above, then PASS / FAIL
           against the full run on the same keys (nulls not worse by more than 0.5 dB; the largest decay error not more
           than 0.5 % worse, and its 90th percentile within +-3 %; EDC: the largest not 0.1 dB worse, the 90th percentile
-          within 0.5 dB; the worst S captures are bad AMPL-0 captures and RT 0.3 / HF 0.2, model_s_results §26) -> analysis/pulse/gate_<tag>/gate.log. The model is whatever
+          within 0.5 dB; the S decay and EDC tails leave out the bad AMPL-0 and slipped captures, DEFECTS, model_s_results §26, §28-29) -> analysis/pulse/gate_<tag>/gate.log. The model is whatever
           setting_G builds: PULSE_CV=<loop_cv fold folder> and EMT_PMAX select it; a new model term must be wired into
           setting_G (S) or ml_lines (M / L) before the gate can see it.
   report  Medians per group, model against capture beside capture against capture -> analysis/pulse/report.log.
@@ -51,6 +51,8 @@ import argparse, glob, json, os, sys
 
 for _v in ("OMP_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
     os.environ.setdefault(_v, "1")
+if not os.environ.get("PULSE_CV"):                 # the baseline's RT x HF floor (model_s_results 29), read by q2 at import
+    os.environ.setdefault("EMT_HFRT_MIN", "0.12")
 import numpy as np
 from scipy.signal import butter, sosfiltfilt
 
@@ -62,7 +64,7 @@ import loop_fir as lf_  # noqa: E402
 q2 = lf_.q2
 q1 = q2.q1
 FS, PRE = q1.FS, q1.PRE
-CV = os.environ.get("PULSE_CV") or os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_stepfree")   # model_s_results 28
+CV = os.environ.get("PULSE_CV") or os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_hfrt")   # model_s_results 29
 REF = os.path.join(ROOT, "analysis", "pulse")                   # the full run: the gate's reference
 OUT = REF
 COMPACT = f"diffuser_tied_fix-0.707107_ap230new_{q1.ms.KTAG}"
@@ -438,6 +440,10 @@ GATE_S = [f"{lf}_{rt}_{hf}" for i, rt in enumerate((0.3, 0.6, 0.8, 1.0, 1.4, 1.8
           for lf, hf in [GATE_LH[(2 * i) % 8], GATE_LH[(2 * i + 1) % 8]]]
 GATE_ML = {"M": ["1.2_5.0_0.9", "2.0_0.8_0.9", "0.7_3.0_0.2", "0.1_1.8_0.4"], "L": ["1.2_20.0_1.0", "1.2_4.5_0.8", "2.0_2.6_0.5", "0.1_10.0_0.3"]}
 GATE_UNITS = ["1.6"]                                            # + CLA
+DEFECTS = {("0.1_0.3_0.2", 0), ("1.0_0.6_0.6", 0), ("1.0_0.6_1.0", 0), ("0.4_1.0_0.4", 0),       # bad AMPL-0 (library_notes 2)
+           ("0.1_0.3_0.2", 60), ("0.1_0.3_0.4", 60), ("0.4_0.3_0.2", 60), ("0.4_0.3_0.4", 30), ("0.4_0.3_0.4", 60),
+           ("1.0_0.3_0.2", 30), ("1.0_0.3_0.2", 60), ("1.0_0.3_0.4", 30), ("1.0_0.3_0.4", 60), ("1.0_0.6_0.2", 30),
+           ("1.0_0.6_0.2", 60), ("2.0_0.3_0.2", 30), ("2.0_0.6_0.2", 30)}                       # slipped files (model_s_results 28)
 
 
 def gate_stage(workers, tag):
@@ -464,12 +470,13 @@ def gate_stage(workers, tag):
         v = [r["null"][w][1] for k in GATE_S for r in S(OUT, k)["rows"] if r["null"].get(w)]
         rf = [r["null"][w][1] for k in GATE_S for r in S(REF, k)["rows"] if r["null"].get(w)]
         check(f"S median R null {w} ms (dB)", np.median(v), np.median(rf), 0.5)
+    clean = lambda root, k: [r for r in S(root, k)["rows"] if (k, r["amp"]) not in DEFECTS]   # tails without data defects (29)
     for f in OCT:
-        v = [abs(summarise(r["m"])[f"oct_t{f}"] or 0) * 100 for k in GATE_S for r in S(OUT, k)["rows"]]
-        rf = [abs(summarise(r["m"])[f"oct_t{f}"] or 0) * 100 for k in GATE_S for r in S(REF, k)["rows"]]
+        v = [abs(summarise(r["m"])[f"oct_t{f}"] or 0) * 100 for k in GATE_S for r in clean(OUT, k)]
+        rf = [abs(summarise(r["m"])[f"oct_t{f}"] or 0) * 100 for k in GATE_S for r in clean(REF, k)]
         check(f"S octave decay {f} Hz, largest |error| (%)", max(v), max(rf), 0.5, 3.0, np.percentile(v, 90))
-    v = [summarise(r["m"])[f"oct_dev{f}"] or 0 for k in GATE_S for r in S(OUT, k)["rows"] for f in OCT]
-    rf = [summarise(r["m"])[f"oct_dev{f}"] or 0 for k in GATE_S for r in S(REF, k)["rows"] for f in OCT]
+    v = [summarise(r["m"])[f"oct_dev{f}"] or 0 for k in GATE_S for r in clean(OUT, k) for f in OCT]
+    rf = [summarise(r["m"])[f"oct_dev{f}"] or 0 for k in GATE_S for r in clean(REF, k) for f in OCT]
     check("S largest EDC difference to -30 dB, any octave (dB)", max(v), max(rf), 0.1, 0.5, np.percentile(v, 90))
     U, UR = json.load(open(os.path.join(OUT, "units.json"))), json.load(open(os.path.join(REF, "units.json")))
     for name in ["CLA"] + [f"Altiverb RT {k}" for k in GATE_UNITS]:
@@ -524,7 +531,7 @@ def report_stage():
     rows = [(d, summarise(r["m"]), r) for d in D for r in d["rows"]]
     reps = [(d, summarise(p["m"]), p) for d in D for p in d["pairs"] if p["cross"]]
     intk = [(d, summarise(p["m"]), p) for d in D for p in d["pairs"] if not p["cross"]]
-    out = [f"## Pulse check, program S: {len(D)} settings, {len(rows)} captures held out by RT step (§25.18 baseline); model vs capture "
+    out = [f"## Pulse check, program S: {len(D)} settings, {len(rows)} captures held out by RT step (§29 baseline); model vs capture "
            f"[cross-take capture vs capture, {len(reps)} pairs] (in-take pairs in braces where shown)"]
 
     def med(rr, k, f=lambda x: x):

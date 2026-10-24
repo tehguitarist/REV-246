@@ -2816,3 +2816,32 @@ for rt in 0.3 0.6; do EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/m
 | HF 0.2 / RT 0.6 (13) | −47.3 → −45.9 | −31.8 → −30.3 | −24.4 → −23.5 | −25.3 → −26.7 |
 
 Per setting: 2.0_0.3_0.4 −43.4 / −27.7 / −23.5 → −50.1 / −40.8 / −31.1; 2.0_0.6_0.2 → −51.1 / −48.1 / −42.6; 1.0_0.6_0.2 → −50.3 / −42.9 / −34.3; 0.1_0.6_0.2 and 0.4_0.6_0.2 lose 1.3–1.8 dB (the LF dependence inside the cell, §25.19, which a rule across LF steps can't follow). The gate passes (its 16 S settings don't include these). **Adopted:** the S baseline is now `analysis/loop_cv/hfcells_chain3_cap0.8475_stepfree/` (`pulse_check`'s default; the pulse check's 8 changed settings rerun), and S scores are quoted on step-free and good captures from here on.
+
+## 29. The shortest-RT regime: the HF control saturates at RT × HF ≈ 0.12 s (`EMT_HFRT_MIN`, `loop_cv.py --retake --tag hfrt`) **[S: at RT 0.3 HF 0.2 and HF 0.4 are the same filter, per loop and LF step; S: modelling HF 0.2 / RT 0.3 as HF 0.4 (nothing fitted on HF 0.2) takes it from −33 / −15 to −50 / −37 dB and its decay errors from 1–6 % to ≤ 0.3 %; H: the floor's form across programs (M ~0.2 s)]**
+
+```
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_CV_FOLDS=$PWD/analysis/loop_cv/cap0.8475_folds SHELF_TAG=_rt03wide SHELF_HFDP=-0.08,0.012,0.002 \
+    .venv/bin/python tools/lowband_shelf.py --stage hfcell --workers 6 --only <RT 0.3, HF 0.2 / 0.4 / 0.6, every LF>     # common pole, wide grid
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_CV_FOLDS=$PWD/analysis/loop_cv/cap0.8475_folds SHELF_TAG=_clean SHELF_CLEAN=1 SHELF_LOOPB=0.08 \
+    .venv/bin/python tools/lowband_shelf.py --stage hfloop --workers 6 --only <RT 0.3 HF 0.2 / 0.4, RT 0.6 HF 0.2>            # per-loop poles, clean captures
+EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 9 -- \
+    .venv/bin/python tools/loop_cv.py --retake --tag hfrt --stage run --rt 0.3 --workers 8                                   # analysis/loop_cv/hfcells_chain3_cap0.8475_hfrt/
+```
+
+`NEXT_STEPS.md` §0 item 4 (§25.17's fold-back at each program's shortest RT; the pulse check's RT 0.3 / HF 0.2 decay error, §26.1). All on clean captures (§28: no slipped or bad files).
+
+**1. At RT 0.3 the HF pole folds below the ceiling, and HF 0.2 equals HF 0.4.** A common pole shift on a wide grid (−0.08…+0.012) puts the best pole at HF 0.2 at 0.799 / 0.806 / 0.816 / 0.824 (LF 0.1 / 0.4 / 1.0 / 2.0), 0.023–0.049 below the 0.8475 ceiling (cost −4.7…−7.2 dB); HF 0.4 and 0.6 move by ≤ 0.005. Each loop's pole fitted separately (`hfloop`, bounds ±0.08): **HF 0.2 and HF 0.4 give the same four poles to within 0.0005 at every LF step** (0.1_0.3_0.2 0.7689 / 0.7894 / 0.8097 / 0.8368, 0.1_0.3_0.4 0.7684 / 0.7889 / 0.8093 / 0.8364; LF 2.0 0.7997 / 0.8182 / 0.8347 / 0.8510 against 0.7983 / 0.8168 / 0.8341 / 0.8506), rising with the loop length as a length-scaled law does. Read back through the law (the extra HF loss rate at 6.4 kHz over the law's k), all 32 loop-settings sit at 315–324 dB/s, with no LF trend: one HF setting, whatever the knob says below it. At RT 0.6 / HF 0.2 the poles sit at the ceiling (0.846–0.853) instead.
+
+**2. The rule: the HF control acts as max(HF, 0.12 s / RT)** (`EMT_HFRT_MIN=0.12` in `q2_injection.G_capped`). In S only HF 0.2 / RT 0.3 asks for less than 0.12 s (0.06 s); HF 0.4 / RT 0.3 and HF 0.2 / RT 0.6 sit exactly on the floor, so nothing else changes. **AP230's damping-step table agrees independently** (§14.3, fitted on the first pass): HF 0.2 and HF 0.4 share step 3 at RT 0.3; along each HF row the step falls with RT, though not as a strict function of RT × HF (RT 1.0 / HF 0.2 at 0.20 s is step 1, RT 0.6 / HF 0.4 at 0.24 s step 2), so the unit's tables are indexed by both controls and saturate at the same corner.
+
+**3. Held out by HF step: HF 0.2 / RT 0.3 modelled as HF 0.4 / RT 0.3, its law, ramp and HF cells (chosen from HF 0.4 data only, §28), nothing fitted on HF 0.2** (`loop_cv --retake --tag hfrt`, fold 0.3 rerun), R (L), clean captures:
+
+| | 0–50 | 50–150 | 150–300 | 300–600 |
+|---|---|---|---|---|
+| HF 0.2 / RT 0.3, §28 baseline | −48.6 | −32.8 (−32.1) | −14.6 (−14.4) | −12.9 |
+| **HF 0.2 / RT 0.3, with the floor** | **−53.6** | **−50.1 (−49.8)** | **−37.1 (−36.2)** | **−25.0** |
+| HF 0.4 / RT 0.3 (unchanged) | −49.6 | −50.0 | −37.6 | −25.2 |
+
+Per setting at 50–150 / 150–300 ms: 0.1_0.3_0.2 −30.2 / −11.8 → −50.4 / −37.9; 0.4_0.3_0.2 −31.6 / −13.0 → −49.9 / −35.6; 1.0_0.3_0.2 −34.1 / −16.0 → −49.8 / −36.0; 2.0_0.3_0.2 −35.3 / −19.7 → −50.3 / −40.9. All 128 (clean, R): −50.9 / −51.7 / −49.0 / −44.2 / −37.4 dB (0–50 … 600–1000 ms), the median unchanged; the four were the library's worst settings at 150–300 ms (−12…−20 dB) and are now at the RT 0.3 level (−36…−41). **The pulse check's decay error is gone:** 0.1_0.3_0.2's clean captures had octave decays −0.8…−5.9 % off (125 Hz–4 kHz); with the floor every octave 125 Hz–8 kHz is within ±0.3 %. The gate (with its S tails now leaving out the slipped and bad captures, `pulse_check.DEFECTS`) passes and its worst S decay errors fall from 3.45 / 4.69 / 5.90 % to 0.37 / 0.24 / 0.44 % (500 Hz / 1 kHz / 4 kHz), the largest EDC difference from 2.17 to 0.27 dB: every S tail inside the spec's absolute targets. **Adopted:** the S baseline is `analysis/loop_cv/hfcells_chain3_cap0.8475_hfrt/` with `EMT_HFRT_MIN=0.12` (`pulse_check`'s default sets it; the 4 pulse settings rerun). Numbers: one (the floor), chosen from HF 0.4's own value at RT 0.3.
+
+**4. M and L (H).** M shows the same collapse: at RT 0.6 HF 0.1 and HF 0.2 fold to the same common pole at each LF (0.811 / 0.805, 0.825 / 0.822, 0.830 / 0.824 at LF 0.1 / 1.2 / 2.0; `chain3_ml_poles.log`), about S's poles at RT 0.3, where M's lines (S's × 2) see S's per-pass losses. In RT × HF form M needs a floor of about 0.2 s (it must fold at RT 0.6 and not at RT 0.8, where HF 0.1 sits at the ceiling), not 2 × 0.12 s, so how the floor scales across programs is open. L at RT 2.2 has a drift the pole hardly moves (§25.17), a different effect. Not applied to `ml_lines` yet.

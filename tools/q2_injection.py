@@ -1147,6 +1147,8 @@ def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None, ap23
 COMPACT = "diffuser_tied_fix-0.707107_ap230new"     # 5 taps per loop, all-pass gains -1/sqrt(2) (model_s_results 16.8-16.9)
 P_MAX = float(os.environ.get("EMT_PMAX", 0.84))   # HF one-pole: largest pole (refit, HF 0.2 / RT 0.6, all four loops 0.835-0.845);
                                                   # EMT_PMAX overrides (model_s_results 25.18: 0.8475, from S / M / L in 25.17)
+HFRT_MIN = float(os.environ.get("EMT_HFRT_MIN", 0.0))   # floor on RT x HF (s): the HF control acts as max(HF, HFRT_MIN / RT)
+                                                  # (model_s_results 29: 0.12 makes HF 0.2 / RT 0.3 act as HF 0.4); 0 = off
 DC_MIN = 0.18         # smallest total per-pass gain at DC (refit, LF 0.1 / RT 0.6-1.4, all four loops 0.17-0.20)
 
 
@@ -1184,7 +1186,8 @@ def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None, gamma=0.0, hf_d
             if floored and gamma and gamma_dc:
                 H = H * 10 ** (gamma * 60 / (L["hi"] * rt) * Pi / (20 * q1.FS))
         if hf < 1.0:
-            p_law = float(q1.onepole_for(np.array(10 ** (kk / rt * L["k"] * (1 / hf - 1))), law["f_ref"]))
+            hf_e = max(hf, HFRT_MIN / rt) if HFRT_MIN else hf      # the RT x HF floor (model_s_results 29)
+            p_law = float(q1.onepole_for(np.array(10 ** (kk / rt * L["k"] * (1 / hf_e - 1))), law["f_ref"]))
             p = p_map(p_law) if p_map else min(p_law, p_max)
             if hf_dp and str(hf) in hf_dp and hf_dp.get("p_above", 0.0) <= p < hf_dp["p_below"] and lf not in hf_dp.get("exclude_lf", []):
                 p = p + hf_dp[str(hf)]
