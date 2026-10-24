@@ -2607,3 +2607,30 @@ for rt in ...; do EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-g
 The drift at strong HF, M / L's structural signal there, disappears and nothing gets worse; the residual gains are small because M / L's late reverb is limited by their time variance (ml_structure §9). **The curve transfers across programs.**
 
 **Reading.** The HF pole is one function of the law's pole in all three programs: the law up to ≈ 0.6, a ramp above it, and a ceiling ≈ 0.8475 (not 0.84) — a property of the coefficient computation, not of a program or a setting. For M / L it is the fix for their strong-HF drift (to adopt in `ml_lines.line_coefs` as a pole map, H until the pulse check). For S the 24-value table stays: the library samples the strong region too sparsely to pin the curve held out, and the table also absorbs S's stepped captures. **Next:** (1) put the pole map into `ml_lines` (default after the pulse check); (2) in S, the cap 0.8475 with the ramp and table refitted around it; (3) the fold-back at each program's shortest RT (with S's stepped captures, the same regime).
+
+### 25.18 S refitted around the 0.8475 ceiling; no staircase in the pole curve at the library's resolution (`EMT_PMAX`, `tools/loop_read/ramp_refit.py`, `lowband_shelf.py --stage hfcell --workers 8`, `loop_cv.py --retake` with `EMT_PMAX`; `tools/loop_read/staircase.py`) **[S: the refit is neutral in S and shrinks the HF table where it pushed past 0.84; the S baseline is this refit (§25.18), consistent with M / L's ceiling; S: no regular staircase above ~0.9·10⁻³ in p_law or in the per-pass target loss]**
+
+```
+.venv/bin/python tools/loop_read/ramp_refit.py 0.8475                                                  # analysis/loop_cv/cap0.8475_folds/, ramp_refit_cap0.8475.log
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_CV_FOLDS=$PWD/analysis/loop_cv/cap0.8475_folds \
+    .venv/bin/python tools/memguard.py --limit-gb 8 -- .venv/bin/python tools/lowband_shelf.py --stage hfcell --workers 8   # chain3_shelf_hfcell_cap0.8475/
+for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 9 -- \
+    .venv/bin/python tools/loop_cv.py --retake --stage run --rt $rt --workers 8; done                   # analysis/loop_cv/hfcells_chain3_cap0.8475/
+.venv/bin/python tools/loop_read/staircase.py                                                          # analysis/lowband/chain3_staircase.log
+```
+
+`EMT_PMAX` sets the HF pole's ceiling everywhere (`q2_injection.P_MAX`, read at import, so a pool's workers see it; default 0.84 so earlier results reproduce); `EMT_CV_FOLDS` points `lowband_shelf` at another fold set; the `hfcell` outputs take a `_cap<value>` suffix. Held out as before: the ramp's slope per RT fold from the other RT steps' best poles (§25.17's rows, p₀ 0.62 kept), the HF cells per setting from its cell's other LF steps on the new base.
+
+**1. The ramp around 0.8475:** c = 0.116…0.137 per fold (the same fit at 0.84: 0.116…0.143; §22.8's 0.128…0.130). **The HF table** (grid on the new base, 96 settings, 8 workers, 4.3 GB, 5 min): median |dp| 0.001 as before, but the entries that pushed the pole past the old ceiling shrink — HF 0.2 / RT 0.6 +0.0085 → +0.001 (the pole stays at about 0.8485; the ceiling now does what the table did).
+
+**2. On the baseline bench** (8 folds, 8 workers, 4.2–4.3 GB, 8 min), §25.11 → refit, R [excess]:
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| All 128 | −51.6 [+4.3] → −51.6 [+4.4] | −48.9 [+5.9] → −48.9 [+6.0] | −44.0 [+3.6] → −44.0 [+3.7] | −37.3 [+0.1] → −37.3 [−0.0] |
+| HF 0.2 | −51.1 [+6.0] → −51.4 [+5.6] | −43.8 [+9.9] → −43.4 [+10.5] | −37.7 [+6.1] → −38.6 [+5.8] | −38.7 [+2.7] → −38.7 [+2.0] |
+| RT 0.8 | −51.6 [+6.2] → −51.5 [+5.9] | −48.7 [+6.4] → −48.7 [+6.4] | −42.3 [+3.0] → −42.3 [+3.0] | −28.7 [−1.5] → −30.0 [−1.7] |
+
+L / R all windows unchanged to 0.1 dB; per setting at 300–600 ms 7 better and 5 worse by more than 0.5 dB (worst 0.4_0.8_0.2 +3.8, 2.0_1.4_0.2 +2.7 dB). **Neutral in S, with the same number of parameters; adopted as the S baseline because the ceiling now matches M / L's (§25.17) and the table no longer stands in for it.** Run it with `EMT_PMAX=0.8475` and the `hfcells_chain3_cap0.8475` fold set.
+
+**3. A staircase in the pole curve?** If the firmware looked the pole up in a table indexed by the requested loss, the best poles would sit on steps around the smooth curve. Pooled S (352 per-loop points, ~88 independent settings: the shift was common to the loops), M (44) and L (72) best poles minus S's curve (rms 3.3·10⁻³), scanned for a periodic remainder against p_law (periods 0.002–0.05) and against the per-pass target loss at f_ref (0.05–2 dB), permutation-tested: best periods 0.0058 (p = 0.51) and 0.084 dB (p = 0.77), amplitudes 0.7·10⁻³ against a null 95 % of 0.87·10⁻³, and the programs' phases disagree. **No regular staircase above ~0.9·10⁻³ (steps of about 0.003, ≈ 2⁻⁸, or coarser).** Finer steps are below what this data resolves: S's best poles are one shift per setting (per-loop rounding averages out) and M / L's are drift-based (time variance, ±3–5·10⁻³). A per-loop pole fit on S (four poles per setting, ~384 values spaced ~0.002 in p_law) would reach about 2⁻⁸ where HF is strong and perhaps 2⁻⁹.

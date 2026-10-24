@@ -1,0 +1,9 @@
+468 points (S 352, M 44, L 72); remainder rms 3.25 x 1e-3
+index p_law: best period 0.005754, amplitude 0.73 x 1e-3; permutation p = 0.512 (null 95 % 0.87)
+   S: amplitude at that period 0.32 x 1e-3, phase -32 deg
+   M: amplitude at that period 2.05 x 1e-3, phase +8 deg
+   L: amplitude at that period 1.61 x 1e-3, phase -52 deg
+index target loss dB: best period 0.08391, amplitude 0.68 x 1e-3; permutation p = 0.766 (null 95 % 0.87)
+   S: amplitude at that period 0.44 x 1e-3, phase -119 deg
+   M: amplitude at that period 2.26 x 1e-3, phase +149 deg
+   L: amplitude at that period 2.52 x 1e-3, phase -140 deg

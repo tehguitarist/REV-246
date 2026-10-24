@@ -56,7 +56,8 @@ WS, BANDS = ("150-300", "300-600", "600-1000"), ("25-50", "50-100", "100-200", "
 
 def outdir(stage, keep=False):
     nyq = stage.startswith(("floor", "cell")) and not GAMMA_DC
-    return os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_{stage}" + ("K" if keep else "") + ("N" if nyq else ""))
+    cap = f"_cap{os.environ['EMT_PMAX']}" if os.environ.get("EMT_PMAX") else ""        # 25.18: a refit around another HF cap
+    return os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_{stage}" + ("K" if keep else "") + ("N" if nyq else "") + cap)
 
 
 def base_r0(lab, law):
@@ -192,7 +193,7 @@ def run(stage, only, keep):
     keys = sorted(k for k in info if (only is None or k in only) and sel[stage](info[k]))
     keys = [k for k in keys if not os.path.exists(os.path.join(od, k + ".json"))]
     print(f"{stage}: {len(keys)} settings to do", flush=True)
-    if WORKERS > 1 and stage in ("hfbb",):                            # one process, a pool of workers (~0.6 GB each)
+    if WORKERS > 1 and stage in ("hfbb", "hfcell"):                            # one process, a pool of workers (~0.6 GB each)
         from concurrent.futures import ProcessPoolExecutor, as_completed
         with ProcessPoolExecutor(WORKERS, max_tasks_per_child=4) as ex:
             for i, fu in enumerate(as_completed([ex.submit(_run_one, (stage, k, os.path.join(od, k + ".json"), keep)) for k in keys])):
@@ -255,7 +256,7 @@ def report_dc(keep):
 
 
 # ---------------------------------------------------------------- the DC floor and LF 0.1's DC ratio (model_s_results 25.5)
-CV04 = os.path.join(ROOT, "analysis", "loop_cv", "lf04dc")           # the §25.4 baseline's folds
+CV04 = os.environ.get("EMT_CV_FOLDS") or os.path.join(ROOT, "analysis", "loop_cv", "lf04dc")   # the §25.4 baseline's folds (EMT_CV_FOLDS: another set, 25.18)
 FL_DC = np.round(np.arange(0.1300, 0.13601, 0.0002), 5)               # LF 0.1's DC ratio (law 0.1317)
 FL_DCMIN = np.round(np.arange(0.170, 0.2001, 0.005), 4)               # DC_MIN (0.18)
 FL_BETA = (0.0, 0.01, 0.019, 0.03, 0.04)                              # beta (0.019)
@@ -597,7 +598,7 @@ def hfbb(key, path):
 
 def _run_one(a):
     stage, k, path, keep = a
-    {"hfbb": hfbb}[stage](k, path)
+    {"hfbb": hfbb, "hfcell": hfcell}[stage](k, path)
     return k
 
 

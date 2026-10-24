@@ -1145,7 +1145,8 @@ def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None, ap23
 
 
 COMPACT = "diffuser_tied_fix-0.707107_ap230new"     # 5 taps per loop, all-pass gains -1/sqrt(2) (model_s_results 16.8-16.9)
-P_MAX = 0.84          # HF one-pole: largest pole (refit, HF 0.2 / RT 0.6, all four loops 0.835-0.845)
+P_MAX = float(os.environ.get("EMT_PMAX", 0.84))   # HF one-pole: largest pole (refit, HF 0.2 / RT 0.6, all four loops 0.835-0.845);
+                                                  # EMT_PMAX overrides (model_s_results 25.18: 0.8475, from S / M / L in 25.17)
 DC_MIN = 0.18         # smallest total per-pass gain at DC (refit, LF 0.1 / RT 0.6-1.4, all four loops 0.17-0.20)
 
 

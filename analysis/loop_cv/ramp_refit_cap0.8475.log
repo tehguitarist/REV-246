@@ -1,0 +1,8 @@
+fold RT 0.3: c at cap 0.8475 = 0.1321 (same fit at cap 0.84: 0.1358; §22.8's fold value 0.1299)
+fold RT 0.6: c at cap 0.8475 = 0.1322 (same fit at cap 0.84: 0.1360; §22.8's fold value 0.1283)
+fold RT 0.8: c at cap 0.8475 = 0.1156 (same fit at cap 0.84: 0.1156; §22.8's fold value 0.1299)
+fold RT 1: c at cap 0.8475 = 0.1365 (same fit at cap 0.84: 0.1431; §22.8's fold value 0.1283)
+fold RT 1.4: c at cap 0.8475 = 0.1327 (same fit at cap 0.84: 0.1366; §22.8's fold value 0.1283)
+fold RT 1.8: c at cap 0.8475 = 0.1322 (same fit at cap 0.84: 0.1360; §22.8's fold value 0.1283)
+fold RT 2.2: c at cap 0.8475 = 0.1322 (same fit at cap 0.84: 0.1360; §22.8's fold value 0.1283)
+fold RT 2.5: c at cap 0.8475 = 0.1322 (same fit at cap 0.84: 0.1360; §22.8's fold value 0.1283)
