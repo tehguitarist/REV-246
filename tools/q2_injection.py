@@ -1527,6 +1527,8 @@ def _final_setting(a_):
         gamma, fl = fc["gamma"], dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
     if fc and "hf_dp" in fc and not pcurve:         # and its HF pole shift, on every loop (model_s_results 25.7)
         hfdp = {str(lab["hf"]): fc["hf_dp"], "p_above": 0.0, "p_below": 1.0, "exclude_lf": [], "slope": fc.get("hf_slope", 0.0)}
+    if fc and "lf_gain" in fc:                      # the (LF, RT) cell's per-loop gain and DC section (32.2)
+        fl["loopcell"] = dict(gain=fc["lf_gain"], dc=fc["lf_dc"])
     if pcurve:                                      # one pole curve instead of the ramp, hfdp and HF cells (25.17)
         hfdp, pramp = None, None
         fl["p_curve"] = pcurve
@@ -1536,20 +1538,22 @@ def _final_setting(a_):
 
 
 def final_G(lab, b230, law, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, Gmod=None, dc_min=DC_MIN, beta=FINAL_BETA,
-            gamma_dc=True, p_curve=None):
+            gamma_dc=True, p_curve=None, loopcell=None):
     """The final model's group spectra for one setting with the loop terms of final_stage (law["lf"] keyed by float).
     Gmod: a function (lab, law, w, Gs) -> Gs applied to the loop responses last (a candidate change on top)."""
     w = 2 * np.pi * np.fft.rfftfreq(q1.grid_n(lab["rt"]))
-    Gs = final_Gs(lab, law, w, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp, b230, dc_min, beta, gamma_dc, p_curve)
+    Gs = final_Gs(lab, law, w, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp, b230, dc_min, beta, gamma_dc, p_curve, loopcell)
     if Gmod:
         Gs = Gmod(lab, law, w, Gs)
     return make_G(lab, law, Gs, b230, FINAL_DIFF)
 
 
 def final_Gs(lab, law, w, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, b230=0.0, dc_min=DC_MIN, beta=FINAL_BETA,
-             gamma_dc=True, p_curve=None):
+             gamma_dc=True, p_curve=None, loopcell=None):
     """final_G's loop responses on the grid w (dc_min, beta: the DC floor's constants, model_s_results 25.5).
-    p_curve: {knots, values, cap}, the HF pole as one curve of the law's pole (model_s_results 25.17)."""
+    p_curve: {knots, values, cap}, the HF pole as one curve of the law's pole (model_s_results 25.17).
+    loopcell: {"gain": [4], "dc": [4]}, each loop's broadband gain (dB per pass) and a DC section with the shelf's pole (dB):
+    the (LF, RT) cell's per-loop shelf terms (cells.json lf_gain / lf_dc, model_s_results 32.2)."""
     p_map = (lambda p: min(p + pramp[0] * max(0.0, p - pramp[1]), P_MAX)) if pramp else None   # --pramp c,p0 (model_s_results 22.8)
     if p_curve:
         p_map = pcurve_map(p_curve)
@@ -1570,6 +1574,9 @@ def final_Gs(lab, law, w, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None
     if loopk:                                       # --loopb: the AP230 step's two-tap F(k b) in every loop as well
         bl = loopk * b230
         Gs = [Gi * ((1 - bl) + bl * np.exp(-1j * w)) for Gi in Gs]
+    if loopcell:                                    # the (LF, RT) cell's per-loop gain and DC section (model_s_results 32.2)
+        import model_s as m
+        Gs = [Gi * 10 ** (g_ / 20) * m.shelf(w, 10 ** (d_ / 20), 1.0, law["a"]) for Gi, g_, d_ in zip(Gs, loopcell["gain"], loopcell["dc"])]
     return Gs
 
 

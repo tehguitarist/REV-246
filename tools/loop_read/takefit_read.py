@@ -3,6 +3,7 @@
     EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 EMT_CV_FOLDS=$PWD/analysis/loop_cv/cap0.8475_folds \
         SHELF_CELLS=$PWD/analysis/loop_cv/hfcells_chain3_cap0.8475_hfrt/cells.json \
         .venv/bin/python tools/loop_read/takefit_read.py            # analysis/lowband/chain3_takefit_read.{log,json}
+    (SHELF_TAKEFIT=<takefit dir> with SHELF_CELLS at that run's cells: another baseline, e.g. _s321 -> chain3_takefit_read_s321)
 
 1. Each loop's correction (broadband gain, DC section, HF pole: 12 numbers per setting, fitted per take) as a per-pass
    magnitude change in dB at 125 Hz ... 8 kHz, and the unit's absolute per-pass DC and Nyquist gains (baseline + correction).
@@ -23,7 +24,7 @@ import lowband_shelf as ls, q2_injection as q2, q1_generalise as q1, model_s as 
 
 ROOT = os.path.dirname(os.path.dirname(HERE))
 TF = ls.TAKEFIT_DIR
-OUT = os.path.join(ROOT, "analysis", "lowband", "chain3_takefit_read")
+OUT = os.path.join(ROOT, "analysis", "lowband", "chain3_takefit_read" + os.path.basename(TF).split("cap0.8475")[-1].replace("_s29", ""))   # _s321: on §32.1
 F = np.array([125, 250, 500, 1000, 2000, 4000, 8000.])
 LFS, HFS = [0.1, 0.4, 1.0, 2.0], [0.2, 0.4, 0.6, 1.0]
 LAW_DC = {0.1: 0.1317, 0.4: 0.414}                # the global law's DC ratios (LF 0.4: §25.4)

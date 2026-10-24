@@ -3005,3 +3005,45 @@ for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_HFRT_MIN=0.12 EMT_KERNEL=chain
 L the same (all 128 −51.6 / −48.9 / −43.9 → −51.9 / −49.3 / −44.4). Flat and HF 1.0 settings unchanged (no slope). Per setting (R): 29 better and 8 worse by more than 0.5 dB at 150–300 ms, 29 / 7 at 300–600; best 1.0_1.0_0.2 −7.5 / −7.0, 0.4_1.0_0.2 −7.2 / −5.9, 2.0_1.0_0.2 −6.4 / −6.5; worst 0.1_2.2_0.2 +1.7 / +2.4, 1.0_2.2_0.6 +1.6 / +2.1 dB (the LF dependence inside a cell, as §28's HF cells). All eight folds were checked to carry the slope (every setting with one changed, every other one identical to the §29 folds), since the working tree was briefly reverted by another session's `git pull --autostash` while the folds ran.
 
 **5. Gate and adoption.** `PULSE_CV=…/hfcells_chain3_cap0.8475_slope EMT_HFRT_MIN=0.12 pulse_check.py --stage gate --tag slope`: **PASS** (S median R null 50–150 / 150–300 / 300–600 ms −51.29 / −49.40 / −45.23 dB against −51.31 / −49.23 / −44.93; every S octave decay and EDC metric, CLA, the Altiverb, M and L unchanged; 4.8 GB, 2 min). **Adopted: the S baseline is now `analysis/loop_cv/hfcells_chain3_cap0.8475_slope/`** (`pulse_check`'s default); the pulse check's 80 settings with a slope rerun (`--stage s --only <keys>`), the other 48 are unchanged. 20 numbers on top of §29.
+
+### 32.2 The shelf side per (LF, RT) cell and loop, at RT ≥ 1.0: 140 numbers (`lowband_shelf.py --stage takefit | lfxfer` on §32.1, `SHELF_TAG=_s321`; `tools/loop_read/lfxfer_report.py`, `lf_cells.py --zero-mean-gain`; `loop_cv.py --retake --tag lfcellzm`) **[S: on §32.1 the per-setting refit's remaining lead is mostly LF 0.1 at long RT and is a per-(LF, RT, loop) shelf term; S: each loop's gain differences and DC section per cell, held out by HF step, gain 0.6 / 1.0 / 1.8 dB at 150–300 / 300–600 / 600–1000 ms on all 128 with nothing worse before 150 ms; S: the cells' common broadband gain does not survive the gain refit (capture gain); baseline]**
+
+```
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 EMT_CV_FOLDS=$PWD/analysis/loop_cv/cap0.8475_folds \
+    SHELF_CELLS=$PWD/analysis/loop_cv/hfcells_chain3_cap0.8475_slope/cells.json SHELF_TAG=_s321 \
+    .venv/bin/python tools/memguard.py --limit-gb 8 -- .venv/bin/python tools/lowband_shelf.py --stage takefit --workers 8   # 7 min, 5.7 GB
+SHELF_TAKEFIT=$PWD/analysis/lowband/chain3_shelf_takefit_cap0.8475_s321 <same> .venv/bin/python tools/memguard.py --limit-gb 8 -- \
+    .venv/bin/python tools/lowband_shelf.py --stage lfxfer --workers 8                                                   # 6.5 min, 4.1 GB
+.venv/bin/python tools/loop_read/lfxfer_report.py                                                                          # analysis/lowband/chain3_lfxfer_report.log
+.venv/bin/python tools/loop_read/lf_cells.py --zero-mean-gain                                                             # -> analysis/loop_cv/hfcells_chain3_cap0.8475_lfcellzm/
+for rt in 1.0 1.4 1.8 2.2 2.5; do EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 9 -- \
+    .venv/bin/python tools/loop_cv.py --retake --tag lfcellzm --stage run --rt $rt --workers 8; done                       # 55-120 s per fold, 4.3 GB
+.venv/bin/python tools/loop_read/foldcmp.py analysis/loop_cv/hfcells_chain3_cap0.8475_slope analysis/loop_cv/hfcells_chain3_cap0.8475_lfcellzm
+```
+
+**1. What is left on §32.1.** `takefit` rerun on the §32.1 baseline (`_s321`): the baseline −51.7 / −49.4 / −44.9 dB (R, all 128, 50–150 / 150–300 / 300–600 ms, takefit bench), the per-setting refit held out by take −52.1 / −52.4 / −48.4: still 3.0 / 3.5 dB. The RT 1.0 corrections the slope absorbed are gone (4 kHz 0.025 → 0.009 dB per pass rms). The lead is largest at **LF 0.1, RT 1.4–2.5: 10–12 dB at 300–600 ms in every HF step** (0.1_2.5_0.6, _0.2, _0.4 12.2–12.3 dB), i.e. on the shelf side, where §32's per-(LF, RT, loop) DC end and the LF part of the additive model live.
+
+**2. Per-loop shelf terms per (LF, RT) cell, on the takefit bench** (`lfxfer`: each loop's gain and DC section, the mean of the cell's other HF steps' fits from one take, scored on the other take; R, 150–300 / 300–600 ms):
+
+| Settings | §32.1 | per-loop means (8 per cell) | common + slope across loops (4 per cell) | per-setting refit |
+|---|---|---|---|---|
+| all 128 | −49.4 / −44.9 | **−50.4 / −46.4** | −50.2 / −46.0 | −52.4 / −48.4 |
+| RT ≥ 1.0 | −50.3 / −46.6 | −51.4 / −47.9 | −51.3 / −47.7 | −53.1 / −50.8 |
+| LF 0.1, RT ≥ 1.4 | −48.1 / −40.7 | **−50.5 / −47.4** | −48.2 / −44.8 | −52.6 / −50.9 |
+| RT ≤ 0.8 | −45.6 / −38.2 | −45.7 / −37.2 | −45.8 / −37.2 | −50.2 / −42.1 |
+
+At RT ≤ 0.8 the cell means hurt (LF 2.0 / RT 0.8 +6…+9 dB, the cell whose takes disagree most in §32; LF 0.4 / RT 0.6 +3…+8), as §32's split predicted, so the term is used at RT ≥ 1.0 only. Near the DC floor (LF 0.1, RT 1.4–1.8) the loop pattern is not linear in the loop length (LF 0.1 / RT 1.4 DC +0.015 / −0.051 / −0.070 / +0.036 dB, loops 1–4: §32.3's knee), so the per-loop form is kept, not the slope.
+
+**3. On the baseline bench** (`loop_cv --retake`, clock and gain refitted per capture; RT ≥ 1.0 folds rerun, RT ≤ 0.8 unchanged), against §32.1, all 128, R [excess over repeat]:
+
+| Variant | 0–50 | 50–150 | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|---|
+| §32.1 | −51.0 | −51.8 [+4.8] | −49.4 [+6.1] | −44.7 [+3.0] | −37.6 [−0.4] |
+| lf_gain + lf_dc as fitted (`_lfcell`, 160 numbers) | −51.0 | −51.5 [+5.0] | −50.4 [+5.4] | −46.5 [+2.0] | −40.4 [−0.7] |
+| the same, lf_gain minus its loop mean (`_lfcellzm`, 140) | −50.9 | **−51.8 [+4.8]** | **−50.0 [+5.6]** | **−45.7 [+2.4]** | **−39.4 [−0.6]** |
+
+The full form gains more late but costs the early windows on settings it barely touches: flat settings 0–50 −50.0 → −49.6 and 50–150 −51.0 → −50.5 dB, the cluster, which no loop term can improve or spoil in a correct model. `takefit` keeps each capture's gain fixed, so the cells' common broadband gain (LF 1.0 wants +0.001…+0.007 dB per pass in every cell) carries capture-level error, which the per-capture gain refit then trades against the cluster (the §0 rule on benches with fixed gains). Without the common gain nothing before 150 ms moves (flat settings unchanged in every window) and the late gain stays: **adopted**. By group (`_lfcellzm`, R): LF 0.1 −48.2 / −40.8 / −33.2 → −49.6 / −42.5 / −34.2 dB (150–300 / 300–600 / 600–1000; excess +7.3 / +4.8 / +4.2 → +5.9 / +3.3 / −0.3); HF 0.2 −48.3 / −43.7 → −49.8 / −45.5; RT ≥ 1.4 −50.5 / −47.1 / −42.4 → −51.2 / −47.9 / −43.6; RT ≤ 0.8 unchanged. L: −51.9 / −49.3 / −44.4 / −37.7 → −51.8 / −50.0 / −45.6 / −39.1. Per setting (R), better / worse by more than 0.5 dB: 27 / 3 at 150–300 ms, 39 / 4 at 300–600 (worst 0.4_2.5_0.2 +1.1 / +2.3, 0.1_1.0_0.4 +0.7 / +0.8 dB).
+
+**4. Gate:** `PULSE_CV=…_lfcellzm`: **PASS**; S median R null 50–150 / 150–300 / 300–600 ms −51.29 / −50.30 / −46.55 dB against −51.29 / −49.40 / −45.23; every S octave decay and EDC metric unchanged or better (8 kHz 0.42 → 0.39 %); CLA, the Altiverb, M and L unchanged. (`_lfcell` also passes, 50–150 −51.06.) **The S baseline is now `analysis/loop_cv/hfcells_chain3_cap0.8475_lfcellzm/`** (`pulse_check`'s default; `cells.json`'s `lf_gain` / `lf_dc` per setting at RT ≥ 1.0, read by `q2.final_Gs(loopcell=…)`, `pulse_check.setting_G`, `lowband_shelf.base_kw`); the pulse check's 80 RT ≥ 1.0 settings rerun. 140 numbers (20 cells × 4 loops × DC + 3 gain differences) on top of §32.1.
+
+**Reading.** The unit's shelf terms deviate from the law per (LF, RT) cell and per loop, near the DC floor's knee in a non-linear way across the loops: the shelf coefficients look computed (or tabulated) per (LF, RT) and loop, not from one length-scaled law (**H**). As a table at the library's steps this gives nothing between them; a form for the plugin (the knee as a function of each loop's requested DC gain, §32.3) is open. RT ≤ 0.8 is untouched and is now the largest excess (§32: not separable there).
