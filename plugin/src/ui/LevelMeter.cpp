@@ -60,10 +60,10 @@ void LevelMeter::paint(juce::Graphics& g)
             const auto colour = i == 0 ? design::levelRed : i == 1 ? design::levelYellow : design::levelGreen;
             const auto box = toLocal(slots[i]->bounds().reduced(3.0f));
             // A lit lamp: a brighter middle fading to the colour at the edges, in a soft halo that tapers off.
-            juce::ColourGradient lamp(colour.brighter(0.7f), box.getCentre(), colour.darker(0.15f),
+            juce::ColourGradient lamp(colour.brighter(0.3f), box.getCentre(), colour.darker(0.25f),
                                       box.getTopLeft(), true);
-            drawWithGlow(lg, getLocalBounds(), scale, colour.withAlpha(0.5f), 34.0f * k, [&](juce::Graphics& g1) {
-                drawWithGlow(g1, getLocalBounds(), scale, colour.withAlpha(0.8f), 12.0f * k, [&](juce::Graphics& g2) {
+            drawWithGlow(lg, getLocalBounds(), scale, colour.withAlpha(0.38f), 34.0f * k, [&](juce::Graphics& g1) {
+                drawWithGlow(g1, getLocalBounds(), scale, colour.withAlpha(0.6f), 12.0f * k, [&](juce::Graphics& g2) {
                     g2.setGradientFill(lamp);
                     g2.fillRoundedRectangle(box, 4.0f * k);
                 });
