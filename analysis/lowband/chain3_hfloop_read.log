@@ -1,0 +1,28 @@
+384 loop poles from 96 settings
+precision (|take A - take B|, median) by p_law: 0-0.2: 1.4e-4 (n 91); 0.2-0.4: 1.5e-4 (n 105); 0.4-0.6: 1.3e-4 (n 102); 0.6-0.75: 0.9e-4 (n 22); 0.75-1.0: 13.5e-4 (n 64)
+fit gain over the §25.18 baseline (100 Hz-10 kHz from 50 ms, all captures, in sample): median -0.66 dB, 10 % -2.18
+p - p_base: median +0.10e-3, rms 5.25e-3
+poles where the law asks past the ceiling (p_law > 0.86, n 30): median 0.8453, IQR 0.8131-0.8472 (ceiling 0.8475)
+well-determined poles (|A-B|/2 < 3e-4, p_law < 0.86): n 331; held-out curve remainder rms 1.42e-3 (take precision rms 0.10e-3)
+staircase vs p_law: best period 0.00117, amplitude 0.623e-3, permutation p = 0.310 (null 95 % 0.863e-3)
+staircase vs target loss dB: best period 0.1134, amplitude 0.644e-3, permutation p = 0.287 (null 95 % 0.880e-3)
+grid test on the absolute poles (well-determined), Rayleigh R and permutation-free p ~ exp(-n_eff R^2):
+   2^-6 (0.01562): R 0.140, p ~ 0.229  (n_eff 75; resolvable if take precision << step: 0.07e-3)
+   2^-7 (0.00781): R 0.127, p ~ 0.299  (n_eff 75; resolvable if take precision << step: 0.07e-3)
+   2^-8 (0.00391): R 0.106, p ~ 0.431  (n_eff 75; resolvable if take precision << step: 0.07e-3)
+   2^-9 (0.00195): R 0.134, p ~ 0.261  (n_eff 75; resolvable if take precision << step: 0.07e-3)
+   2^-10 (0.00098): R 0.113, p ~ 0.384  (n_eff 75; resolvable if take precision << step: 0.07e-3)
+   2^-11 (0.00049): R 0.154, p ~ 0.171  (n_eff 75; resolvable if take precision << step: 0.07e-3)
+   2^-12 (0.00024): R 0.071, p ~ 0.684  (n_eff 75; resolvable if take precision << step: 0.07e-3)
+
+unweighted grid test (well-determined poles, n 331):
+   2^-6: R 0.024, p ~ 0.831
+   2^-7: R 0.076, p ~ 0.146
+   2^-8: R 0.049, p ~ 0.453
+   2^-9: R 0.032, p ~ 0.706
+   2^-10: R 0.032, p ~ 0.708
+   2^-11: R 0.050, p ~ 0.443
+   2^-12: R 0.075, p ~ 0.152
+
+curve remainder split (settings with 4 well-determined loops, n 82): common to the setting's loops rms 0.86e-3; loop-specific rms 0.85e-3 (take precision ~0.1e-3)
+common part by (HF, RT) cell: between-cell rms 0.54e-3, within-cell (across LF) rms 0.79e-3

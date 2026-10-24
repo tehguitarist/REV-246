@@ -187,13 +187,13 @@ def run(stage, only, keep):
     sel = {"free": lambda g: True, "dc": lambda g: g["lf"] == LF_DC,
            "floor": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] == 0.3),
            "perloop": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] <= 1.0),
-           "hfcell": lambda g: g["hf"] < 1.0, "bbcell": lambda g: True, "octaves": lambda g: True, "hfbb": lambda g: g["hf"] < 1.0}
+           "hfcell": lambda g: g["hf"] < 1.0, "bbcell": lambda g: True, "octaves": lambda g: True, "hfbb": lambda g: g["hf"] < 1.0, "hfloop": lambda g: g["hf"] < 1.0}
     sel["bbscore"] = sel["bbcell"]
     sel["floorscore"] = sel["cellscore"] = sel["floor"]
     keys = sorted(k for k in info if (only is None or k in only) and sel[stage](info[k]))
     keys = [k for k in keys if not os.path.exists(os.path.join(od, k + ".json"))]
     print(f"{stage}: {len(keys)} settings to do", flush=True)
-    if WORKERS > 1 and stage in ("hfbb", "hfcell"):                            # one process, a pool of workers (~0.6 GB each)
+    if WORKERS > 1 and stage in ("hfbb", "hfcell", "hfloop"):                            # one process, a pool of workers (~0.6 GB each)
         from concurrent.futures import ProcessPoolExecutor, as_completed
         with ProcessPoolExecutor(WORKERS, max_tasks_per_child=4) as ex:
             for i, fu in enumerate(as_completed([ex.submit(_run_one, (stage, k, os.path.join(od, k + ".json"), keep)) for k in keys])):
@@ -204,7 +204,7 @@ def run(stage, only, keep):
         if stage == "dc":
             dc(k, path, keep)
         else:
-            {"free": free, "floor": floor, "floorscore": floorscore, "cellscore": cellscore, "perloop": perloop, "hfcell": hfcell, "bbcell": bbcell, "bbscore": bbscore, "octaves": octaves, "hfbb": hfbb}[stage](k, path)
+            {"free": free, "floor": floor, "floorscore": floorscore, "cellscore": cellscore, "perloop": perloop, "hfcell": hfcell, "bbcell": bbcell, "bbscore": bbscore, "octaves": octaves, "hfbb": hfbb, "hfloop": hfloop}[stage](k, path)
         print(f"  {i + 1}/{len(keys)} {k}", flush=True)
 
 
@@ -596,9 +596,44 @@ def hfbb(key, path):
     json.dump(dict(key=key, **d["lab"], b230=d["b230"], base=base, grid=rows), open(path, "w"))
 
 
+CAP_CELLS = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475", "cells.json")   # the §25.18 floor and HF cells
+
+
+def hfloop(key, path):
+    """Per setting (HF < 1) on the §25.18 baseline (run with EMT_PMAX=0.8475 and EMT_CV_FOLDS at its fold set): the four
+    loops' HF poles fitted separately (each loop's one-pole replaced, its baseline pole read from its own HF section at
+    Nyquist), least squares on the 100 Hz - 10 kHz residual from 50 ms, on all captures and on each of the two takes
+    (AMPL 0 + 90, AMPL 30 + 60). model_s_results 25.19."""
+    t, lfdc, kw = base_kw(key, CAP_CELLS)
+    d = prep(key, lambda rt: dict(t), lfdc)
+    args = dict(lfrt=t["lfrt"], gamma=t["gamma"], hfdp=t["hfdp"], pramp=t["pramp"], b230=d["b230"], **kw)
+    G = q2.final_Gs(d["lab"], d["law"], d["w"], **args)
+    G1 = q2.final_Gs(dict(d["lab"], hf=1.0), d["law"], d["w"], **args)
+    Hn = [float(np.real(g[-1] / g1[-1])) for g, g1 in zip(G, G1)]                 # (1 - p) / (1 + p) at Nyquist
+    pb = np.array([(1 - h) / (1 + h) for h in Hn])
+    z1 = np.exp(-1j * d["w"])
+    op = lambda p_: (1 - p_) / (1 - p_ * z1)
+    Gs_of = lambda u: [g1 * op(p_ + du) for g1, p_, du in zip(G1, pb, u)]
+    d["Gs0"] = G
+    r0 = reverb(d, G)
+    out = dict(key=key, **d["lab"], b230=d["b230"], p_base=pb.tolist(), amps=[c["amp"] for c in d["caps"]])
+    for name, caps in (("all", d["caps"]), ("take_0_90", [c for c in d["caps"] if c["amp"] in (0, 90)]),
+                       ("take_30_60", [c for c in d["caps"] if c["amp"] in (30, 60)])):
+        res = lambda u: residual(d, Gs_of(u), caps, t0=0.05, sos=SOSB, norm="normB")
+        base = float(np.sum(residual(d, None, caps, t0=0.05, sos=SOSB, norm="normB", r=r0) ** 2))
+        f = least_squares(res, np.zeros(4), bounds=(-0.03, 0.03), x_scale=1e-3, diff_step=1e-4, max_nfev=40)
+        J = f.jac
+        try:
+            se = np.sqrt(np.diag(np.linalg.inv(J.T @ J)) * 2 * f.cost / max(len(f.fun) - 4, 1))
+        except np.linalg.LinAlgError:
+            se = np.full(4, np.nan)
+        out[name] = dict(dp=f.x.tolist(), p=(pb + f.x).tolist(), se=se.tolist(), base=base, cost=float(2 * f.cost), nfev=int(f.nfev))
+    json.dump(out, open(path, "w"))
+
+
 def _run_one(a):
     stage, k, path, keep = a
-    {"hfbb": hfbb, "hfcell": hfcell}[stage](k, path)
+    {"hfbb": hfbb, "hfcell": hfcell, "hfloop": hfloop}[stage](k, path)
     return k
 
 
@@ -707,7 +742,7 @@ def report_octaves():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "cellscore", "perloop", "hfcell", "bbcell", "bbscore", "octaves", "report", "octreport", "floorreport", "cellreport", "perloopreport", "hfcellreport", "bbreport", "hfbb"], required=True)
+    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "cellscore", "perloop", "hfcell", "bbcell", "bbscore", "octaves", "report", "octreport", "floorreport", "cellreport", "perloopreport", "hfcellreport", "bbreport", "hfbb", "hfloop"], required=True)
     ap.add_argument("--workers", type=int, default=1, help="hfbb: a pool of workers in this one process")
     ap.add_argument("--only", default=None)
     ap.add_argument("--keep-lfrt", action="store_true")
