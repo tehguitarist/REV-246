@@ -274,6 +274,7 @@ def main():
     ap.add_argument("--retake", action="store_true", help="the hfcells constants on this kernel's refitted compact numbers (implies --hfcells)")
     ap.add_argument("--xadd", default=None, help="with --retake: dense_mid x tag (after the fold letter) added to the injection")
     ap.add_argument("--pcurve", action="store_true", help="with --retake: the §25.17 pole curve (fitted without the fold's RT step) in place of pramp, hfdp and the HF cells")
+    ap.add_argument("--tag", default=None, help="with --retake: a variant fold set beside the baseline (folder suffix; files already in it are kept, e.g. a re-chosen cells.json, model_s_results 28)")
     ap.add_argument("--refs", default=None, help="report: the repeat-capture reference file (default nulls_free on this kernel)")
     a = ap.parse_args()
     global OUT, CELLS, HFCELLS, RETAKE, XADD, REFS, PCURVE
@@ -283,7 +284,7 @@ def main():
         OUT = os.path.join(BASE_OUT, "hfcells" if a.hfcells or a.retake else "cells" if a.cells else "lf04dc")
         if a.retake:
             cap = os.environ.get("EMT_PMAX")
-            src, OUT = OUT, OUT + f"_{q1.ms.KTAG}" + (f"_{a.xadd}" if a.xadd else "") + ("_pcurve" if a.pcurve else "") + (f"_cap{cap}" if cap else "")
+            src, OUT = OUT, OUT + f"_{q1.ms.KTAG}" + (f"_{a.xadd}" if a.xadd else "") + ("_pcurve" if a.pcurve else "") + (f"_cap{cap}" if cap else "") + (f"_{a.tag}" if a.tag else "")
             os.makedirs(OUT, exist_ok=True)
             for f in [f"fold_{rt}.json" for rt in RTS] + ["cells.json"]:      # the constants, unchanged
                 if not os.path.exists(os.path.join(OUT, f)):

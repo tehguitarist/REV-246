@@ -62,7 +62,7 @@ import loop_fir as lf_  # noqa: E402
 q2 = lf_.q2
 q1 = q2.q1
 FS, PRE = q1.FS, q1.PRE
-CV = os.environ.get("PULSE_CV") or os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475")
+CV = os.environ.get("PULSE_CV") or os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_stepfree")   # model_s_results 28
 REF = os.path.join(ROOT, "analysis", "pulse")                   # the full run: the gate's reference
 OUT = REF
 COMPACT = f"diffuser_tied_fix-0.707107_ap230new_{q1.ms.KTAG}"

@@ -57,7 +57,8 @@ WS, BANDS = ("150-300", "300-600", "600-1000"), ("25-50", "50-100", "100-200", "
 def outdir(stage, keep=False):
     nyq = stage.startswith(("floor", "cell")) and not GAMMA_DC
     cap = f"_cap{os.environ['EMT_PMAX']}" if os.environ.get("EMT_PMAX") else ""        # 25.18: a refit around another HF cap
-    return os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_{stage}" + ("K" if keep else "") + ("N" if nyq else "") + cap)
+    tag = os.environ.get("SHELF_TAG", "")                                                 # 28: a separate run (e.g. _percap)
+    return os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_{stage}" + ("K" if keep else "") + ("N" if nyq else "") + cap + tag)
 
 
 def base_r0(lab, law):
@@ -498,9 +499,11 @@ def hfcell(key, path):
         Gs = q2.final_Gs(d["lab"], d["law"], d["w"], lfrt=t["lfrt"], gamma=t["gamma"], pramp=t["pramp"], b230=d["b230"],
                          hfdp={hf: float(dp), "p_above": 0.0, "p_below": 1.0, "exclude_lf": []}, **kw)
         r = reverb(d, Gs)
-        rows.append(dict(dp=float(dp), cost=float(np.sum(residual(d, None, d["caps"], sos=SOSB, norm="normB", r=r) ** 2)),
+        cc = [float(np.sum(residual(d, None, [c], sos=SOSB, norm="normB", r=r) ** 2)) for c in d["caps"]]   # per capture (28)
+        rows.append(dict(dp=float(dp), cost=float(sum(cc)), costs=cc,
                          nulls=[nulls_broad(c["y"], model(d, c, r) * c["g"], c["te"]) for c in d["caps"]]))
-    json.dump(dict(key=key, **d["lab"], base=base, base_nulls=[nulls_broad(c["y"], model(d, c, r0) * c["g"], c["te"]) for c in d["caps"]],
+    json.dump(dict(key=key, **d["lab"], base=base, base_costs=[float(np.sum(residual(d, None, [c], sos=SOSB, norm="normB", r=r0) ** 2)) for c in d["caps"]],
+                   base_nulls=[nulls_broad(c["y"], model(d, c, r0) * c["g"], c["te"]) for c in d["caps"]],
                    amps=[c["amp"] for c in d["caps"]], grid=rows), open(path, "w"))
 
 
