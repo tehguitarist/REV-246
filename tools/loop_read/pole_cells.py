@@ -19,11 +19,13 @@ unit poles to 3e-4); above about 0.856 the unit gives one value, about 0.8465, b
 Pole-limited cells (HF 0.2 at RT <= 0.8, HF 0.4 at RT 0.3; §32.3's set): each loop's pole is the curve at its law pole,
 a piecewise-linear curve on fixed knots, flat beyond the last, fitted on the other RT steps' points (held out by RT step),
 or, at a law pole >= FOLD, the baseline's pole there (the 0.8475 ceiling + the (HF, RT) cell's shift, chosen held out by
-LF step on the bench: the drop-back value).
+LF step on the bench: the drop-back value). The takefit drop-back poles are not used for it: LF 0.4's (0.841-0.844, the
+shelf knee's cell) pull a mean of the other LF steps 2e-3 under the unit at LF 2.0, which costs 12 dB there.
 --all: the same curve (knots extended down to 0) for every HF < 1 setting at every RT step, in place of the ramp, the
 ceiling, the HF cells and their slopes (the drop-back loops keep the baseline's pole), each RT step's curve fitted on the
-other RT steps. The takefit drop-back poles are not used for it: LF 0.4's (0.841-0.844, the
-shelf knee's cell) pull a mean of the other LF steps 2e-3 under the unit at LF 2.0, which costs 12 dB there.
+other RT steps (model_s_results 32.5). --all --by-lf: each LF step's curve fitted on the other LF steps instead (32.6):
+leaving an RT step out removes every point in a stretch of law poles only that RT step samples (0.64-0.75: HF 0.2 /
+RT 1.0), while the claim to test is that the curve is the same for every LF step.
 """
 import glob, json, os, sys
 
@@ -36,9 +38,11 @@ import q1_generalise as q1  # noqa: E402
 import q2_injection as q2  # noqa: E402
 
 ALL = "--all" in sys.argv
+BY_LF = "--by-lf" in sys.argv                             # with --all: hold out by LF step, not RT step (32.6)
+GROUP = "lf" if BY_LF else "rt"
 SRC = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_lowrt")
-OUT = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_" + ("pall" if ALL else "pcell"))
-LOG = os.path.join(ROOT, "analysis", "lowband", "chain3_pole_cells" + ("_all" if ALL else ""))
+OUT = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_" + ("pallf" if BY_LF else "pall" if ALL else "pcell"))
+LOG = os.path.join(ROOT, "analysis", "lowband", "chain3_pole_cells" + ("_allf" if BY_LF else "_all" if ALL else ""))
 KNOTS = np.array(([0.0, 0.15, 0.25, 0.35, 0.45, 0.55] if ALL else []) + [0.62, 0.68, 0.74, 0.78, 0.81, 0.837])   # flat beyond the last
 FOLD = 0.856                                              # between the highest law pole on the curve (0.8515) and the lowest dropped (0.8602)
 LAM = 1e-6                                                # second-difference penalty on the knot values
@@ -107,17 +111,17 @@ def main():
     cells = json.load(open(os.path.join(SRC, "cells.json")))
     info = q2.q1_tables()[0]
     curves, out, lines = {}, [], []
-    for rt in sorted({g["rt"] for g in q2.q1_tables()[0].values()}) if ALL else (0.3, 0.6, 0.8):
-        c = fit_curve([p for p in pts if p["rt"] != rt and KNOTS[0] - 0.02 <= p["pl"] < FOLD])
-        curves[str(rt)] = c.tolist()
-        lines.append(f"RT {rt} held out: curve at knots {KNOTS.tolist()} = " + " ".join(f"{x:.4f}" for x in c))
+    for v in sorted({g[GROUP] for g in info.values()}) if ALL else (0.3, 0.6, 0.8):
+        c = fit_curve([p for p in pts if p[GROUP] != v and KNOTS[0] - 0.02 <= p["pl"] < FOLD])
+        curves[str(v)] = c.tolist()
+        lines.append(f"{GROUP.upper()} {v} held out: curve at knots {KNOTS.tolist()} = " + " ".join(f"{x:.4f}" for x in c))
     by_key = {r["key"]: r for r in rows}
     for key, g in sorted(info.items()):
         lab = dict(lf=g["lf"], rt=g["rt"], hf=g["hf"])
         if not POLE(lab) or key not in by_key:
             continue
         pl = np.array(by_key[key]["p_law"])
-        c = np.array(curves[str(lab["rt"])])
+        c = np.array(curves[str(lab[GROUP])])
         hp = [float((hat(x) @ c)[0]) if x < FOLD else pb for x, pb in zip(pl, by_key[key]["pb"])]   # dropped: the HF cell
         cells.setdefault(key, {})["hf_poles"] = [round(x, 6) for x in hp]
         unit = by_key[key]["unit"]

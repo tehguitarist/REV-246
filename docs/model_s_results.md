@@ -3161,3 +3161,26 @@ L: all 128 −52.1 / −50.3 / −45.9 / −39.1 → −52.3 / −51.1 / −46.3
 
 **Reading.** One map from the law's pole to the unit's, with a drop-back past ≈ 0.856, describes S's HF poles at every setting as well as or better than the per-cell tables, with a quarter of the numbers. It also gives the plugin values between the library's steps. What it misses is a per-loop spread at HF 0.2 / RT 1.0–1.8 beyond the law's length scaling (§32.1's slopes there: +18, +6, −9·10⁻³). Open: that spread as a function (it changes sign with RT, which a curve of p_law alone cannot do); 0.1_0.6_0.6; whether M / L follow the same curve (`ml_lines`' §25.17 curve has the law → ramp → ceiling shape).
 
+### 32.6 The curve held out by LF step: HF 0.2 / RT 1.0 was a gap in the RT split (`pole_cells.py --all --by-lf`; `loop_cv.py --retake --tag pallf`) **[S: the unit's poles at HF 0.2 / RT 1.0 lie on the curve (in-sample 0.36·10⁻³ rms, better than the old cells' 0.44); §32.5's losses there came from leaving RT 1.0 out, which removes every point between law poles 0.64 and 0.75; S: held out by LF step the curve is better than §32.5 overall and loses less in its worst settings; baseline]**
+
+```
+<§32.4's environment> .venv/bin/python tools/loop_read/pole_cells.py --all --by-lf    # -> analysis/loop_cv/hfcells_chain3_cap0.8475_pallf/, analysis/lowband/chain3_pole_cells_allf.{log,json}
+for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do <as §32.5> --tag pallf ...; done                                           # 34-110 s per fold, 3.4-4.1 GB
+```
+
+§32.5 lost up to 4.9 dB at HF 0.2 / RT 1.0. That looked like a per-loop spread beyond the curve (§32.1's slope there is +18·10⁻³). It isn't one. Fitted on all RT steps, the curve meets the unit's poles at HF 0.2 / RT 1.0 to 0.36·10⁻³ rms, against the old cells' 0.44, and the per-loop residuals there have no slope (LF 0.1 +0.4 / +0.2 / +0.5 / +0.3, LF 2.0 −0.3 / −0.5 / −0.1 / −0.4 ·10⁻³). But HF 0.2 / RT 1.0 is the only RT step whose law poles fall between 0.64 and 0.75 (RT 1.4 reaches 0.64, RT 0.3 / 0.8 start at 0.749). With it left out, the curve is a straight line across the start of the bend. A smooth parametric form (two softened hinges, 6 numbers) bridges that gap no better and fails at low poles (2.6·10⁻³ at RT 1.4). The claim being tested is that the pole map is the same for every LF step, so hold out by LF step: each LF step's curve is fitted on the other three, which still sample every RT step. The knots agree across the four folds to ≤ 1·10⁻³ (top six 0.618 / 0.684 / 0.756 / 0.804 / 0.835 / 0.852). Offline pole rms (×10⁻³) held out by LF step / by RT step / old cells: HF 0.2 / RT 1.0 0.45 / 0.81 / 0.44; all HF < 1 0.46 / 0.49 / 0.92.
+
+**On the bench**, R [excess over repeat], §32.4 → §32.5 → **§32.6**:
+
+| Settings | 150–300 | 300–600 |
+|---|---|---|
+| All 128 | −50.3 [+4.5] → −51.2 [+3.9] → **−51.3 [+3.8]** | −46.0 [+1.6] → −46.6 [+1.0] → **−46.6 [+0.8]** |
+| HF 0.2 | −49.9 [+5.4] → −49.1 [+5.3] → **−50.0 [+5.2]** | −45.5 [+2.1] → −44.4 [+2.6] → −44.6 [+1.6] |
+| HF 0.4 | −50.0 [+5.4] → −52.0 [+3.6] → **−51.9 [+3.6]** | −46.0 [+2.3] → −47.8 [+0.5] → **−47.7 [+0.6]** |
+| RT ≤ 1.0 | −49.3 [+3.8] → −49.5 [+3.2] → **−49.8 [+3.2]** | −42.8 [+0.0] → −42.6 [−0.3] → **−42.9 [−0.4]** |
+| RT ≥ 1.4 | −51.2 [+5.0] → −52.1 [+4.3] → **−52.1 [+4.3]** | −47.9 [+3.4] → −49.2 [+2.6] → **−49.1 [+2.6]** |
+
+All 128, 50–150 ms −52.0 → −52.3 dB; L all 128 −52.4 / −51.0 / −46.4 / −39.4 dB (excess +5.4 / +5.0 / +1.2 / −0.8). Against §32.5: 0.1_1.0_0.2 −5.9 / −4.3, 0.4_1.0_0.2 −5.7 / −4.6, 2.0_0.8_0.2 −2.6 dB (150–300 / 300–600); 0.1_0.6_0.2 +3.2 (its loop 1 is at the curve's top, which LF 0.1's fold puts 0.9·10⁻³ lower), 0.1_0.8_0.2 +1.5. Against §32.4, better / worse by more than 0.5 dB: 50 / 10 at 150–300 ms, 42 / 8 at 300–600. The worst are 1.0_1.0_0.2 +3.5 / +3.1, 0.1_0.6_0.2 +3.2, 0.1_0.6_0.6 +2.6 / +1.6 and 0.4_1.8_0.2 +0.9 / +2.5 dB: the per-setting common offset of §25.19 (±0.4·10⁻³, varying with LF inside a cell), which the old cells carried and one curve cannot.
+
+**Gate:** `PULSE_CV=…_pallf`: **PASS**. S medians −52.12 / −51.41 / −46.90 dB (§32.5 −52.11 / −51.52 / −46.73). Worst decay errors 1 kHz 0.58 → 0.34 %, 8 kHz 0.54 → 0.29 %, the rest unchanged; EDC 0.16 dB. CLA, the Altiverb, M and L unchanged. **The S baseline is now `analysis/loop_cv/hfcells_chain3_cap0.8475_pallf/`** (`pulse_check`'s default); the pulse check's 96 HF < 1 settings were rerun, report within ±0.1 %. For the plugin the curve is the all-data fit; its knot values are those of the folds to ≤ 1·10⁻³.
+
