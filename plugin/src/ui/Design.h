@@ -60,9 +60,8 @@ inline constexpr float funnelDx[] = {0.0f, 301.0f, 534.0f, 825.0f, 1107.0f, 1383
 // The seven-segment displays: digit area inset in the box, slant and colours.
 inline constexpr float displayInsetX = 26.0f, displayInsetY = 24.0f;
 inline constexpr float displaySlantDegrees = 4.0f;
-inline const juce::Colour segmentLit{0xffff2a1a};
-inline const juce::Colour segmentGlow{0xffff1500};
-inline const juce::Colour segmentCore{0xffffb59a}; // the hot centre of a lit segment
+inline const juce::Colour segmentLit{0xffff5a1c};
+inline const juce::Colour segmentGlow{0xffff0a00};
 inline constexpr float segmentGhostAlpha = 0.3f;
 
 // The LEVEL LEDs, top (OVL) to bottom (-12). Thresholds in dBFS of the input after the INPUT fader: the scale reads
