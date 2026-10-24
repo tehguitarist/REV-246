@@ -205,7 +205,7 @@ Everything below is committed and pushed (`main` after the merge of PR #1). Read
 - **Low-pass steps** (none in the library). Look for LP-varied IRs elsewhere: Wave Arts / Impulse Record "Vintage German DSP"; Past to Future CLA combos; Altiverb; the Foleytronics video (LP 2.0 / 8.0 / 10 / 12 seen). Failing that, approximate it.
 - **DELAY steps** (always 0 in the library).
 - **Independent repeat captures** (none: the rate sets are one capture). The time-variance question (the CLA IR's L-only "1 % gain jitter") can only be approached by joint fits across settings, by the cross-unit comparison with the CLA IR, or by a repeat from another library.
-- **Program E** (EMT 250) and **program D** (delay/echo) are out of scope.
+- **Program E** (EMT 250): a late item, after Non-Lin and before the plugin (user, 24 October 2026). The 246's 250 program reportedly sounds different from a real 250; start from the Altiverb REV-250 presets (9 files, `library_notes.md` §6), and ask for real 250 captures only if those are not enough. **Program D** (delay/echo) stays out of scope.
 
 ---
 
