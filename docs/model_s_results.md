@@ -3132,3 +3132,32 @@ With §32.3's shelf side in place, `takefit` rerun at RT ≤ 0.8 leaves almost n
 
 **Reading.** The unit computes each loop's HF pole from the law's target alone, through one bent, saturating map, and replaces it with a fixed lower value past a limit. That is a firmware computation, not a per-setting table, and it gives values between the library's steps (for the plugin). Open: whether the same curve replaces the ramp, ceiling and HF cells everywhere (S at RT ≥ 1.0, and M / L, whose §25.17 pole curve has the same law → ramp → ceiling shape); LF 0.4's low drop-back values; what is left at 0.4_0.6_0.2 (+9.7 dB), 1.0_0.8_0.2 (+11.7) and 0.4_0.8_0.2 (+9.5) at 150–300 ms.
 
+### 32.5 The same curve at every HF < 1 setting, in place of the ramp, the ceiling, the HF cells and their slopes: 12 numbers (`pole_cells.py --all`; `loop_cv.py --retake --tag pall`) **[S: one curve of the law's pole, held out by RT step, predicts the unit's poles at every RT step about as well as the baseline's ramp, ceiling, 24 HF cells and 20 slopes, and better at RT 0.3 and RT ≥ 1.4; S: on the bench all 128 −50.3 / −46.0 → −51.2 / −46.6 dB at 150–300 / 300–600 ms; HF 0.2 at RT 1.0–1.8 is worse; baseline]**
+
+```
+<§32.4's environment> .venv/bin/python tools/loop_read/pole_cells.py --all       # -> analysis/loop_cv/hfcells_chain3_cap0.8475_pall/, analysis/lowband/chain3_pole_cells_all.{log,json}
+for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 9 -- \
+    .venv/bin/python tools/loop_cv.py --retake --tag pall --stage run --rt $rt --workers 8; done                 # 41-112 s per fold, 2.7-3.7 GB
+```
+
+§32.4 left open whether its curve is the unit's pole map everywhere. **Offline** (unit poles from takefit as §32.4, 360 loop-settings with HF < 1 and agreeing takes; one curve on knots 0, 0.15, 0.25, 0.35, 0.45, 0.55 plus §32.4's, fitted on the other RT steps; pole rms ×10⁻³, curve vs baseline): RT 0.3 1.27 vs 1.85, RT 0.6 (curve loops) and 0.8 level, RT 1.0 0.73 vs 0.50 (HF 0.2 1.21 vs 0.44, where §32.1's slope is +18·10⁻³), RT 1.4 / 1.8 / 2.2 / 2.5 0.42 / 0.42 / 0.26 / 0.27 vs 0.61 / 0.39 / 0.48 / 0.43. The knot values agree across the eight held-out folds to ≤ 1·10⁻³ (0.618 / 0.685 / 0.756 / 0.805 / 0.835 / 0.852 at the top six; below 0.62 the curve is the law to ±0.003).
+
+**The rule** (`--all`): every HF < 1 setting gets `hf_poles` from the curve fitted without its RT step. Loops past the drop-back point (HF 0.2 / RT 0.6, loops 2–4 or all four) keep the baseline's pole there (the ceiling + that cell's shift). The ramp, the ceiling elsewhere, the HF cells and their slopes are no longer used. That is 12 knot values + 1 drop-back cell value in place of the fold ramp, 24 HF cells and 20 slopes.
+
+**On the baseline bench** (all eight folds rerun), against §32.4, median [excess over repeat]:
+
+| Settings, R | 50–150 | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| All 128 | −52.0 [+4.6] → **−52.2 [+4.3]** | −50.3 [+4.5] → **−51.2 [+3.9]** | −46.0 [+1.6] → **−46.6 [+1.0]** | −39.4 → −39.6 |
+| HF 0.4 | −51.9 → −52.6 | −50.0 [+5.4] → **−52.0 [+3.6]** | −46.0 [+2.3] → **−47.8 [+0.5]** | −40.1 → −40.8 |
+| HF 0.6 | −51.9 → −52.0 | −50.9 [+4.5] → −51.7 [+4.1] | −46.0 → −46.3 | −39.8 → −39.5 |
+| HF 0.2 | −52.9 → −52.7 | −49.9 [+5.4] → −49.1 [+5.3] | −45.5 [+2.1] → −44.4 [+2.6] | −39.4 → −39.4 |
+| RT ≥ 1.4 | −52.4 → −53.0 | −51.2 [+5.0] → −52.1 [+4.3] | −47.9 [+3.4] → −49.2 [+2.6] | −43.6 → −44.1 |
+| RT ≤ 1.0 | −51.8 → −51.9 | −49.3 [+3.8] → −49.5 [+3.2] | −42.8 → −42.6 | −29.9 → −29.9 |
+
+L: all 128 −52.1 / −50.3 / −45.9 / −39.1 → −52.3 / −51.1 / −46.3 / −39.5 (excess +5.3 / +5.0 / +1.4 / −0.8). Flat and HF 1.0 settings unchanged; 0–50 ms −51.0 → −51.2. Per setting (R), better / worse by more than 0.5 dB: 46 / 9 at 150–300 ms, 39 / 9 at 300–600. Best: 1.0_0.6_0.4 −4.6, 0.1_1.0_0.4 −4.4 / −5.5, 2.0_1.8_0.4 −3.5 / −4.6, 2.0_2.2_0.4 −3.2 / −4.3 dB. Worst: HF 0.2 at RT 1.0 (0.4_1.0_0.2 +4.9 / +4.3, 0.1_1.0_0.2 +4.1 / +4.1, 1.0_1.0_0.2 +2.8 / +2.1), 0.4_1.8_0.2 +2.6 at 300–600, 0.1_0.6_0.6 +2.8 / +1.6. The offline check predicted these: at HF 0.2 / RT 1.0 the unit's loops spread more than the curve gives (§32.1's slope, the largest of any cell).
+
+**Gate:** `PULSE_CV=…_pall`: **PASS**. S medians 50–150 / 150–300 / 300–600 ms −51.90 / −50.30 / −46.65 → **−52.11 / −51.52 / −46.73 dB**; every S octave decay error and the EDC difference unchanged (worst ≤ 0.58 %, 0.15 dB). CLA, the Altiverb, M and L unchanged. **The S baseline is now `analysis/loop_cv/hfcells_chain3_cap0.8475_pall/`** (`pulse_check`'s default); the pulse check's 96 HF < 1 settings were rerun, report within ±0.1 %.
+
+**Reading.** One map from the law's pole to the unit's, with a drop-back past ≈ 0.856, describes S's HF poles at every setting as well as or better than the per-cell tables, with a quarter of the numbers. It also gives the plugin values between the library's steps. What it misses is a per-loop spread at HF 0.2 / RT 1.0–1.8 beyond the law's length scaling (§32.1's slopes there: +18, +6, −9·10⁻³). Open: that spread as a function (it changes sign with RT, which a curve of p_law alone cannot do); 0.1_0.6_0.6; whether M / L follow the same curve (`ml_lines`' §25.17 curve has the law → ramp → ceiling shape).
+

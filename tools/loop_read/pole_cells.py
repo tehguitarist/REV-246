@@ -9,6 +9,8 @@ fold set for loop_cv --retake --tag pcell, the §32.3 baseline's folds and cells
                                                           #            analysis/lowband/chain3_pole_cells.{log,json}
     for rt in 0.3 0.6 0.8; do EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py \\
         --limit-gb 9 -- .venv/bin/python tools/loop_cv.py --retake --tag pcell --stage run --rt $rt --workers 8; done
+    <same> .venv/bin/python tools/loop_read/pole_cells.py --all     # -> ..._pall/, chain3_pole_cells_all.*: every HF < 1 setting,
+                                                                    #    all eight RT folds to rerun (--tag pall)
 
 The unit's per-loop poles (baseline pole + takefit's pole shift, mean of the takes; settings whose takes disagree by more
 than 2e-3 left out) against each loop's law pole (uncapped, the HF floor applied) lie on one curve for every LF step,
@@ -17,7 +19,10 @@ unit poles to 3e-4); above about 0.856 the unit gives one value, about 0.8465, b
 Pole-limited cells (HF 0.2 at RT <= 0.8, HF 0.4 at RT 0.3; §32.3's set): each loop's pole is the curve at its law pole,
 a piecewise-linear curve on fixed knots, flat beyond the last, fitted on the other RT steps' points (held out by RT step),
 or, at a law pole >= FOLD, the baseline's pole there (the 0.8475 ceiling + the (HF, RT) cell's shift, chosen held out by
-LF step on the bench: the drop-back value). The takefit drop-back poles are not used for it: LF 0.4's (0.841-0.844, the
+LF step on the bench: the drop-back value).
+--all: the same curve (knots extended down to 0) for every HF < 1 setting at every RT step, in place of the ramp, the
+ceiling, the HF cells and their slopes (the drop-back loops keep the baseline's pole), each RT step's curve fitted on the
+other RT steps. The takefit drop-back poles are not used for it: LF 0.4's (0.841-0.844, the
 shelf knee's cell) pull a mean of the other LF steps 2e-3 under the unit at LF 2.0, which costs 12 dB there.
 """
 import glob, json, os, sys
@@ -30,13 +35,14 @@ import lowband_shelf as ls  # noqa: E402
 import q1_generalise as q1  # noqa: E402
 import q2_injection as q2  # noqa: E402
 
+ALL = "--all" in sys.argv
 SRC = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_lowrt")
-OUT = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_pcell")
-LOG = os.path.join(ROOT, "analysis", "lowband", "chain3_pole_cells")
-KNOTS = np.array([0.62, 0.68, 0.74, 0.78, 0.81, 0.837])    # flat beyond the last: no data above it below the drop-back
+OUT = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_" + ("pall" if ALL else "pcell"))
+LOG = os.path.join(ROOT, "analysis", "lowband", "chain3_pole_cells" + ("_all" if ALL else ""))
+KNOTS = np.array(([0.0, 0.15, 0.25, 0.35, 0.45, 0.55] if ALL else []) + [0.62, 0.68, 0.74, 0.78, 0.81, 0.837])   # flat beyond the last
 FOLD = 0.856                                              # between the highest law pole on the curve (0.8515) and the lowest dropped (0.8602)
 LAM = 1e-6                                                # second-difference penalty on the knot values
-POLE = lambda lab: (lab["hf"] == 0.2 and lab["rt"] <= 0.8) or (lab["hf"] == 0.4 and lab["rt"] == 0.3)
+POLE = (lambda lab: lab["hf"] < 1.0) if ALL else (lambda lab: (lab["hf"] == 0.2 and lab["rt"] <= 0.8) or (lab["hf"] == 0.4 and lab["rt"] == 0.3))
 
 
 def poles():
@@ -96,12 +102,12 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     for f in glob.glob(os.path.join(SRC, "fold_*.json")):
         rt = float(os.path.basename(f).split("_")[1].replace(".json", ""))
-        if not f.endswith("_rows.json") or rt > 0.8:          # RT >= 1.0 folds are unchanged: their rows too
+        if not f.endswith("_rows.json") or (rt > 0.8 and not ALL):   # RT >= 1.0 folds are unchanged: their rows too
             open(os.path.join(OUT, os.path.basename(f)), "w").write(open(f).read())
     cells = json.load(open(os.path.join(SRC, "cells.json")))
     info = q2.q1_tables()[0]
     curves, out, lines = {}, [], []
-    for rt in (0.3, 0.6, 0.8):
+    for rt in sorted({g["rt"] for g in q2.q1_tables()[0].values()}) if ALL else (0.3, 0.6, 0.8):
         c = fit_curve([p for p in pts if p["rt"] != rt and KNOTS[0] - 0.02 <= p["pl"] < FOLD])
         curves[str(rt)] = c.tolist()
         lines.append(f"RT {rt} held out: curve at knots {KNOTS.tolist()} = " + " ".join(f"{x:.4f}" for x in c))
