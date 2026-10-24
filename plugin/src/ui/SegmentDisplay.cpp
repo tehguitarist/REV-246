@@ -156,7 +156,7 @@ void SegmentDisplay::paint(juce::Graphics& g)
         };
 
         // Ghost segments (everything that could light), then the lit ones with their glow.
-        lg.setColour(design::segmentLit.withAlpha(design::segmentGhostAlpha * alpha));
+        lg.setColour(design::segmentGlow.withAlpha(design::segmentGhostAlpha * alpha * 1.3f)); // ghosts stay red
         for (int i = 0; i < digits; ++i)
         {
             for (const auto& p : paths)
@@ -183,9 +183,9 @@ void SegmentDisplay::paint(juce::Graphics& g)
             }
         };
         const auto k = s * 2.5f;
-        drawWithGlow(lg, getLocalBounds(), scale, design::segmentGlow.withAlpha(0.6f * alpha), 64.0f * k, [&](juce::Graphics& g1) {
-            drawWithGlow(g1, getLocalBounds(), scale, design::segmentGlow.withAlpha(0.85f * alpha), 30.0f * k, [&](juce::Graphics& g2) {
-                drawWithGlow(g2, getLocalBounds(), scale, design::segmentGlow.withAlpha(0.95f * alpha), 8.0f * k, lit);
+        drawWithGlow(lg, getLocalBounds(), scale, design::segmentGlow.withAlpha(0.5f * alpha), 64.0f * k, [&](juce::Graphics& g1) {
+            drawWithGlow(g1, getLocalBounds(), scale, design::segmentGlow.withAlpha(0.7f * alpha), 30.0f * k, [&](juce::Graphics& g2) {
+                drawWithGlow(g2, getLocalBounds(), scale, design::segmentGlow.withAlpha(0.8f * alpha), 8.0f * k, lit);
             });
         });
     });

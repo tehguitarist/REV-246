@@ -60,7 +60,7 @@ inline constexpr float funnelDx[] = {0.0f, 301.0f, 534.0f, 825.0f, 1107.0f, 1383
 // The seven-segment displays: digit area inset in the box, slant and colours.
 inline constexpr float displayInsetX = 26.0f, displayInsetY = 24.0f;
 inline constexpr float displaySlantDegrees = 4.0f;
-inline const juce::Colour segmentLit{0xffff5a1c};
+inline const juce::Colour segmentLit{0xffff8a3a};
 inline const juce::Colour segmentGlow{0xffff0a00};
 inline constexpr float segmentGhostAlpha = 0.3f;
 
