@@ -62,6 +62,7 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     rv::ui::PresetBar presetBar;
     rv::ui::BarButton linkButton;
     rv::ui::HelpButton helpButton;
+    rv::ui::BarLabel titleLabel, versionLabel;
 
     // Tips show only while the "?" is on, except the "?"'s own.
     static constexpr int tipDelayMs = 300;

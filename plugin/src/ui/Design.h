@@ -49,10 +49,11 @@ inline constexpr float joyX[] = {897.0f, 1198.0f, 1431.0f, 1722.0f, 2004.0f, 228
 // The funnel (wedge) above each joystick. The value's red line runs from the narrow bottom (minimum) to the wide
 // top (maximum), following the wedge, which is slightly curved. Edges of the wedge's dark interior measured on
 // the art for the first funnel; the others are the same shape shifted by funnelDx.
-// The indicator is a soft band, funnelBandHeight tall (5x the old 10 px line), brightest at its centre and fading out
-// above and below. It stays inside the wedge: the wedge's interior runs from funnelTopY to funnelBottomY, and the
+// The indicator is a soft band, funnelBandHeight tall: a bright core in the middle (funnelCoreFraction of it) fading
+// out above and below. It stays inside the wedge: the wedge's interior runs from funnelTopY to funnelBottomY, and the
 // band's centre travels from funnelMinY to funnelMaxY, half a band in from each end.
-inline constexpr float funnelBandHeight = 50.0f;
+inline constexpr float funnelBandHeight = 110.0f; // a 50 px bright core (5x the old line) with a fade above and below
+inline constexpr float funnelCoreFraction = 0.4545f; // 50 / 110
 inline constexpr float funnelTopY = 538.0f, funnelBottomY = 1035.0f;
 inline constexpr float funnelMinY = funnelBottomY - funnelBandHeight * 0.5f;
 inline constexpr float funnelMaxY = funnelTopY + funnelBandHeight * 0.5f;

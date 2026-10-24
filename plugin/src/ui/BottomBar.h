@@ -30,6 +30,21 @@ class BarButton : public DesignComponent
     bool on = false, held = false;
 };
 
+// Static text in the bottom bar (the product name, the version).
+class BarLabel : public DesignComponent
+{
+  public:
+    BarLabel(juce::Rectangle<float> slot, juce::String text, float capHeight, juce::Colour colour,
+             juce::Justification justification = juce::Justification::centred);
+    void paint(juce::Graphics&) override;
+
+  private:
+    juce::String text;
+    float capHeight;
+    juce::Colour colour;
+    juce::Justification justification;
+};
+
 // The "?" that turns the tooltips on and off (off by default). Its own tooltip is always available, so the way to
 // turn the others on can be found with them off.
 class HelpButton : public BarButton
@@ -39,7 +54,8 @@ class HelpButton : public BarButton
     juce::String getTooltip() override { return isOn() ? "Disable tooltips" : "Enable tooltips"; }
 };
 
-// Preset name with previous / next: a click on the name opens the preset menu.
+// Preset name with previous / next (a click on the name opens the preset menu), SAVE (always asks for a name) and
+// OVERRIDE (overwrites the current user preset; greyed out while a built-in preset is loaded).
 class PresetBar
 {
   public:
@@ -54,6 +70,6 @@ class PresetBar
 
     rv::PresetManager& presets;
     juce::Component& parent;
-    BarButton prev, next, name, save;
+    BarButton prev, next, name, save, override;
 };
 } // namespace rv::ui

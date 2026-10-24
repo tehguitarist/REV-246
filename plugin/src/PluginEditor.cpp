@@ -65,8 +65,12 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
       outputFader(images, L::Image::whiteFader, L::outputFader.cx, rv::design::gainTop, rv::design::gainBottom,
                   *p.apvts.getParameter(P::id::outputGain), bubble, [](float v) { return P::gainText(v); }),
       presetBar(p.presets, *this),
-      linkButton({3151.0f - 130.0f, rv::design::barTop + 35.0f, 260.0f, 80.0f}, "LINK", rv::ui::BarButton::Kind::toggle),
-      helpButton({3340.0f, rv::design::barTop + 35.0f, 90.0f, 80.0f})
+      linkButton({2880.0f, rv::design::barTop + 35.0f, 220.0f, 80.0f}, "LINK", rv::ui::BarButton::Kind::toggle),
+      helpButton({3112.0f, rv::design::barTop + 35.0f, 90.0f, 80.0f}),
+      // The product name in the middle of the bar; the plugin's version (JUCE's, from the CMake project) at the right.
+      titleLabel({1597.0f, rv::design::barTop + 35.0f, 300.0f, 80.0f}, "REV-246", 42.0f, rv::design::gold),
+      versionLabel({3240.0f, rv::design::barTop + 35.0f, 200.0f, 80.0f}, juce::String("v") + JucePlugin_VersionString, 30.0f,
+                   rv::design::labelDimmed, juce::Justification::centredRight)
 {
     setLookAndFeel(&lookAndFeel);
 
@@ -163,7 +167,7 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
     for (auto& l : leds) designComponents.push_back(l.get());
     for (auto* c : std::initializer_list<rv::ui::DesignComponent*>{&powerButton, &programDisplay, &lowpassDisplay, &reflectionsDisplay,
                                                                   &decayDisplay, &levelMeter, &panKnob, &mixFader, &inputFader,
-                                                                  &outputFader, &linkButton, &helpButton})
+                                                                  &outputFader, &linkButton, &helpButton, &titleLabel, &versionLabel})
         designComponents.push_back(c);
     presetBar.addTo(designComponents);
     for (auto* c : designComponents)

@@ -120,12 +120,14 @@ void Funnel::paint(juce::Graphics& g)
                     const auto top = toLocal(juce::Point<float>(0.0f, y0)).y, bottom = toLocal(juce::Point<float>(0.0f, y1)).y;
                     juce::ColourGradient fade(juce::Colour(0xffff2a14).withAlpha(0.0f), 0.0f, top,
                                               juce::Colour(0xffff2a14).withAlpha(0.0f), 0.0f, bottom, false);
-                    fade.addColour(0.3, juce::Colour(0xffff2a14).withAlpha(0.35f * alpha));
-                    fade.addColour(0.5, juce::Colour(0xffff6a3c).withAlpha(0.95f * alpha));
-                    fade.addColour(0.7, juce::Colour(0xffff2a14).withAlpha(0.35f * alpha));
+                    const auto edge = 0.5 - 0.5 * (double)design::funnelCoreFraction; // where the core starts
+                    fade.addColour(edge * 0.45, juce::Colour(0xffff2a14).withAlpha(0.22f * alpha));
+                    fade.addColour(edge, juce::Colour(0xffff3a20).withAlpha(0.95f * alpha));
+                    fade.addColour(1.0 - edge, juce::Colour(0xffff3a20).withAlpha(0.95f * alpha));
+                    fade.addColour(1.0 - edge * 0.45, juce::Colour(0xffff2a14).withAlpha(0.22f * alpha));
 
-                    drawWithGlow(lg, getLocalBounds(), scale, juce::Colour(0xffff1a08).withAlpha(0.55f * alpha),
-                                 20.0f * getScale() * 2.5f, [&](juce::Graphics& cg) {
+                    drawWithGlow(lg, getLocalBounds(), scale, juce::Colour(0xffff1a08).withAlpha(0.35f * alpha),
+                                 14.0f * getScale() * 2.5f, [&](juce::Graphics& cg) {
                                      cg.setGradientFill(fade);
                                      cg.fillPath(band);
                                  });

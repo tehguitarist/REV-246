@@ -113,6 +113,7 @@ if (RV_BUILD_TESTS)
         JUCE_STANDALONE_APPLICATION=1
         JUCE_MODAL_LOOPS_PERMITTED=1
         JucePlugin_Name="REV-246"
+        JucePlugin_VersionString="${PROJECT_VERSION}"
     )
     target_link_libraries(REV246Tests PRIVATE
         REV246Assets
