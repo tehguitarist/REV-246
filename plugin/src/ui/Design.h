@@ -51,15 +51,14 @@ inline constexpr float joyX[] = {897.0f, 1198.0f, 1431.0f, 1722.0f, 2004.0f, 228
 // The funnel (wedge) above each joystick. The value's red line runs from the narrow bottom (minimum) to the wide
 // top (maximum), following the wedge, which is slightly curved. Edges of the wedge's dark interior measured on
 // the art for the first funnel; the others are the same shape shifted by funnelDx.
-// The indicator is a soft band, funnelBandHeight tall: a bright core in the middle (funnelCoreFraction of it) fading
-// out above and below. The band and its glow are clipped to the wedge's interior, which runs from funnelTopY to
-// funnelBottomY (measured on the art), and the core's centre travels so that at the minimum the core's lower edge is
-// at the very bottom of the wedge and at the maximum its upper edge is at the very top.
-inline constexpr float funnelBandHeight = 70.0f; // a 30 px bright core (3x the old line) with a fade above and below
-inline constexpr float funnelCoreFraction = 0.4286f; // 30 / 70
+// The indicator is a bar of funnelSegments equal segments (the real unit has 8) over the wedge's interior, which runs
+// from funnelTopY to funnelBottomY (measured on the art); the segment nearest the value is lit, with faint lines
+// between all of them. The segments, their lines and the glow are clipped to the wedge.
+inline constexpr int funnelSegments = 10;
 inline constexpr float funnelTopY = 526.0f, funnelBottomY = 1029.0f;
-inline constexpr float funnelMinY = funnelBottomY - funnelBandHeight * funnelCoreFraction * 0.5f;
-inline constexpr float funnelMaxY = funnelTopY + funnelBandHeight * funnelCoreFraction * 0.5f;
+inline constexpr float funnelLineThickness = 3.5f;   // the faint dividing lines
+inline constexpr float funnelLineAlpha = 0.45f;
+inline constexpr float funnelGap = 3.0f;             // dark gap kept each side of a lit segment's lines
 inline constexpr float funnelInset = 3.0f; // keeps the band inside the gold edge
 struct FunnelPoint
 {

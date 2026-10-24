@@ -79,63 +79,68 @@ Funnel::Funnel(int col)
 
 void Funnel::setFraction(float f)
 {
-    f = juce::jlimit(0.0f, 1.0f, f);
-    if (std::abs(f - fraction) < 1e-4f)
+    const auto seg = juce::jlimit(0, design::funnelSegments - 1,
+                                  juce::roundToInt(juce::jlimit(0.0f, 1.0f, f) * (float)(design::funnelSegments - 1)));
+    if (seg == segment)
         return;
-    fraction = f;
+    segment = seg;
     layer.invalidate();
     repaint();
 }
 
 void Funnel::paint(juce::Graphics& g)
 {
-    layer.paint(g, getLocalBounds(), juce::String(fraction, 4) + (isDimmed() ? "d" : "n"),
-                [this](juce::Graphics& lg, float scale) {
-                    const auto yc = design::funnelMinY + (design::funnelMaxY - design::funnelMinY) * fraction;
-                    const auto y0 = yc - design::funnelBandHeight * 0.5f, y1 = yc + design::funnelBandHeight * 0.5f;
-                    const auto dx = design::funnelDx[column];
-                    const auto alpha = contentAlpha();
+    layer.paint(g, getLocalBounds(), juce::String(segment) + (isDimmed() ? "d" : "n"), [this](juce::Graphics& lg, float scale) {
+        const auto dx = design::funnelDx[column];
+        const auto alpha = contentAlpha();
+        const auto top = design::funnelTopY, bottom = design::funnelBottomY;
+        const auto segH = (bottom - top) / (float)design::funnelSegments;
 
-                    // The wedge's interior between two heights, inset from its edges.
-                    auto wedge = [&](float ya, float yb) {
-                        juce::Path path;
-                        constexpr int steps = 12;
-                        for (int i = 0; i <= steps; ++i)
-                        {
-                            float left, right;
-                            const auto y = ya + (yb - ya) * (float)i / (float)steps;
-                            edgesAt(y, left, right);
-                            const auto p = toLocal(juce::Point<float>(left + dx + design::funnelInset, y));
-                            i == 0 ? path.startNewSubPath(p) : path.lineTo(p);
-                        }
-                        for (int i = steps; i >= 0; --i)
-                        {
-                            float left, right;
-                            const auto y = ya + (yb - ya) * (float)i / (float)steps;
-                            edgesAt(y, left, right);
-                            path.lineTo(toLocal(juce::Point<float>(right + dx - design::funnelInset, y)));
-                        }
-                        path.closeSubPath();
-                        return path;
-                    };
-                    const auto band = wedge(y0, y1);
-                    lg.reduceClipRegion(wedge(design::funnelTopY, design::funnelBottomY)); // nothing leaves the wedge
+        // The wedge's interior between two heights, inset from its edges.
+        auto wedge = [&](float ya, float yb) {
+            juce::Path path;
+            constexpr int steps = 8;
+            for (int i = 0; i <= steps; ++i)
+            {
+                float left, right;
+                const auto y = ya + (yb - ya) * (float)i / (float)steps;
+                edgesAt(y, left, right);
+                const auto p = toLocal(juce::Point<float>(left + dx + design::funnelInset, y));
+                i == 0 ? path.startNewSubPath(p) : path.lineTo(p);
+            }
+            for (int i = steps; i >= 0; --i)
+            {
+                float left, right;
+                const auto y = ya + (yb - ya) * (float)i / (float)steps;
+                edgesAt(y, left, right);
+                path.lineTo(toLocal(juce::Point<float>(right + dx - design::funnelInset, y)));
+            }
+            path.closeSubPath();
+            return path;
+        };
+        lg.reduceClipRegion(wedge(top, bottom)); // nothing leaves the wedge
 
-                    // Brightest at the centre, fading to nothing at the ends (a smooth falloff, not a line per value).
-                    const auto top = toLocal(juce::Point<float>(0.0f, y0)).y, bottom = toLocal(juce::Point<float>(0.0f, y1)).y;
-                    juce::ColourGradient fade(juce::Colour(0xffff2a14).withAlpha(0.0f), 0.0f, top,
-                                              juce::Colour(0xffff2a14).withAlpha(0.0f), 0.0f, bottom, false);
-                    const auto edge = 0.5 - 0.5 * (double)design::funnelCoreFraction; // where the core starts
-                    fade.addColour(edge * 0.45, juce::Colour(0xffff2a14).withAlpha(0.22f * alpha));
-                    fade.addColour(edge, juce::Colour(0xffff3a20).withAlpha(0.95f * alpha));
-                    fade.addColour(1.0 - edge, juce::Colour(0xffff3a20).withAlpha(0.95f * alpha));
-                    fade.addColour(1.0 - edge * 0.45, juce::Colour(0xffff2a14).withAlpha(0.22f * alpha));
+        // The lit segment (counted from the bottom): a brighter middle fading to the red at its edges, in a soft glow.
+        const auto yBottom = bottom - segH * (float)segment, yTop = yBottom - segH;
+        const auto lit = wedge(yTop + design::funnelGap * 0.5f, yBottom - design::funnelGap * 0.5f);
+        const auto topL = toLocal(juce::Point<float>(0.0f, yTop)).y, bottomL = toLocal(juce::Point<float>(0.0f, yBottom)).y;
+        juce::ColourGradient fill(juce::Colour(0xffff2e18).withAlpha(alpha), 0.0f, topL,
+                                  juce::Colour(0xffff2e18).withAlpha(alpha), 0.0f, bottomL, false);
+        fill.addColour(0.5, juce::Colour(0xffff5a30).withAlpha(alpha));
+        drawWithGlow(lg, getLocalBounds(), scale, juce::Colour(0xffff1a08).withAlpha(0.26f * alpha),
+                     12.0f * getScale() * 2.5f, [&](juce::Graphics& cg) {
+                         cg.setGradientFill(fill);
+                         cg.fillPath(lit);
+                     });
 
-                    drawWithGlow(lg, getLocalBounds(), scale, juce::Colour(0xffff1a08).withAlpha(0.33f * alpha),
-                                 15.0f * getScale() * 2.5f, [&](juce::Graphics& cg) {
-                                     cg.setGradientFill(fade);
-                                     cg.fillPath(band);
-                                 });
-                });
+        // Faint lines between the segments, over everything.
+        lg.setColour(juce::Colours::black.withAlpha(design::funnelLineAlpha));
+        for (int i = 1; i < design::funnelSegments; ++i)
+        {
+            const auto y = top + segH * (float)i;
+            const auto line = wedge(y - design::funnelLineThickness * 0.5f, y + design::funnelLineThickness * 0.5f);
+            lg.fillPath(line);
+        }
+    });
 }
 } // namespace rv::ui

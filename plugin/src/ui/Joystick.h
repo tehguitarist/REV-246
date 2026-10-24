@@ -30,17 +30,18 @@ class Joystick : public DesignComponent, private juce::Timer
     int repeats = 0;
 };
 
-// The wedge above a lever: a glowing red line at the value's height, following the wedge's width.
+// The wedge above a lever: a bar of segments (faint dividing lines always visible) with the one nearest the value lit.
 class Funnel : public DesignComponent
 {
   public:
     explicit Funnel(int column);
     void setFraction(float f); // 0 = minimum (narrow end) .. 1 = maximum
+    int litSegment() const { return segment; }
     void paint(juce::Graphics&) override;
 
   private:
     CachedLayer layer;
     int column;
-    float fraction = 0.5f;
+    int segment = 4; // 0 = the bottom segment
 };
 } // namespace rv::ui
