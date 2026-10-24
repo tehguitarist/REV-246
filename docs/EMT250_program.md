@@ -1,0 +1,104 @@
+# REV-250 (EMT 250 program) — initial investigation
+
+*Status note (October 2026): a first measurement pass on the Altiverb REV-250 presets, not yet a model. Read with `library_notes.md` §6 (what the files are) and `algorithm_research.md` §1 / `period_dsp_practice.md` §3.1 (the EMT 250 patent and the 1977 algorithm drawing). Every number below is a direct measurement on the deconvolved plugin captures unless marked **[H]** (hypothesis).*
+
+**Scope (confirmed by the user, October 2026):** the REV-250 captures are the **246's Program E — the EMT 250 program running on the 246's hardware** — *not* a real EMT 250. So the target is the 250 algorithm **on the 246 specifically**: device rate 26,373.6 Hz, 64 K-word delay RAM, and the 246's analogue chain. Real-250 captures are welcome later only as a cross-check of the "sounds different from a real 250" claim (`NEXT_STEPS.md` §0); they are not the emulation target. §5 qualifies the shared-chain assumption. (For reference, the real 250 ran at ~24 kHz, not the often-quoted 32 kHz — see §9.)
+
+## 0. Data
+
+- 9 labelled presets `EMT256_REV-250 <RT>s.wav`, RT 0.4 / 1.0 / 1.5 / 2.0 / 2.5 / 3.0 / 3.6 / 4.0 / 4.5 s, plus one unlabelled `REV-250` (a short preset, §6). The RT steps are the EMT 250's own range.
+- Deconvolved caches: `analysis/altiverb/cache/REV-250*.npy` (48 kHz, 26 s). All measurements here are on those.
+
+## 1. Decay law
+
+Octave-band T60, L channel (s); the label RT is the 1 kHz value:
+
+| RT label | 125 Hz | 250 | 500 | 1 k | 2 k | 4 k | 8 k |
+|---|---|---|---|---|---|---|---|
+| 0.4 | 0.49 | 0.53 | 0.54 | 0.45 | 0.47 | 0.44 | 0.41 |
+| 1.0 | 1.37 | 1.24 | 1.12 | 1.01 | 0.95 | 0.80 | 0.72 |
+| 1.5 | 1.81 | 1.95 | 1.64 | 1.49 | 1.49 | 1.23 | 1.01 |
+| 2.0 | 2.66 | 2.64 | 2.27 | 1.96 | 1.85 | 1.63 | 1.29 |
+| 2.5 | 3.54 | 3.19 | 2.79 | 2.53 | 2.32 | 2.06 | 1.63 |
+| 3.0 | 4.05 | 3.72 | 3.29 | 3.00 | 2.75 | 2.48 | 1.96 |
+| 3.6 | 5.03 | 4.36 | 4.07 | 3.55 | 3.38 | 2.97 | 2.30 |
+| 4.0 | 5.85 | 5.01 | 4.46 | 3.95 | 3.74 | 3.24 | 2.57 |
+| 4.5 | 6.49 | 5.40 | 4.96 | 4.41 | 4.12 | 3.63 | 2.92 |
+
+- **RT(1 kHz) = the label** (0.45 … 4.41 s). **[measured]**
+- **LF decays slower, HF faster**, with a fixed per-preset balance: RT(125 Hz)/RT(1 k) ≈ 1.1–1.5, RT(8 k)/RT(1 k) ≈ 0.66–0.91. This is the 250's LF/MF/HF decay set once per preset; they are **not neutral**, the same caveat as the 246 presets (`library_notes.md` §6). **[measured]**
+
+## 2. Onset and stereo
+
+- **R arrives before L:** R first arrival 20.23 ms, L 32.15 ms, so **R leads L by 11.92 ms** (= 314 device samples at 26,373.6 Hz), constant across all nine RT presets. The unlabelled `REV-250` differs (L 19.9 / R 24.9 ms). **[measured]**
+- **Early reflections: 3 taps** at 0 / 16.31 / 27.27 ms (= 0 / 430 / 719 device samples) with gains 1.00 / 0.71 / 0.59 (R channel), **identical at every RT step**. L carries the *same* 3 taps delayed 11.92 ms (gains 1.00 / 0.71 / 0.59). This is the 250 patent's 3-tap early-density path (B1–B3). **[measured]**
+- **The 3-tap gains are fixed, not RT-dependent.** The patent says their gains are "damped as a function of RT in accordance with an e-function" (`algorithm_research.md` §1.1). Not observed here: either the Altiverb preset freezes the early-reflection level, or the 246's E program uses fixed early taps. **[measured; interpretation H]**
+- **The reverb tail is decorrelated between L and R** (ρ ≈ 0 at every lag, including 0 and ±11.92 ms; delaying R by 11.92 ms nulls L to only −2.6 dB). So the 12 ms offset is an **onset-only** L/R delay, and the reverb itself is synthesized per channel — the patent's output discorrelator/distributor (`period_dsp_practice.md` §3.1). **[measured]**
+
+## 3. Loop structure — three combs
+
+Using the harness's decay-flattened ACF method (`tools/harness/core.py: find_loops`, re-implemented at 48 kHz, 200 Hz–8 kHz), which recovers the 246 S loops correctly as a control (50.1 / 52.7 / 55.4 / 60.2 ms):
+
+- **Three loops at 167.98 / 190.12 / 210.52 ms** (48 kHz samples 8063 / 9126 / 10105), present in **both channels**, stable across RT 3.0 / 3.6 / 4.0 / 4.5 s. **[measured]**
+- This matches the 1977 algorithm drawing's **"three parallel combs"** (`period_dsp_practice.md` §3.1, P31/P32), not the patent's "about 15 loops".
+- **Only resolvable at RT ≥ 3.0 s:** at short RT the feedback gain is too low and the decay-flattening amplifies noise; the ACF at these lags is at the noise floor for RT 0.4–2.0. The lengths themselves are RT-invariant. **[measured]**
+- **Integer device samples = 4430 / 5014 / 5552** at 26,373.6 Hz. The measured times sit **+54…58 ppm** above those integers (residuals +0.26 / +0.28 / +0.30 device samples, scaling with the loop length), i.e. a capture-clock ratio, the same order as the known Altiverb clock offset (`library_notes.md` §6, −45 ppm). At 32 kHz the same times give 5375 / 6084 / 6737 — only the middle is near-integer (and 32 kHz is itself now doubtful for a real 250; §9) — so the 26.4 kHz reading is the consistent one, as the confirmed 246 hardware requires. **[measured]**
+- **No further loops found** up to 2.5 s by the same method (longer lags are noise). **[measured]**
+
+## 4. Modulation
+
+- **Measurable now, from the single-realisation captures:**
+  - **Comb coherence bounds the depth.** Decay-flattened ACF at k × the loop period falls only 0.23 → 0.07 (168 ms loop) from k = 1 to 8, i.e. the three loops stay coherent over ~8 recirculations (1.3 s). That is a little below the damping-only prediction, so a delay modulation is present but **small** — well under one sample, or slow — the same order as 246 M/L's 0.11–0.14 rad rotation (`ml_structure.md` §9). **[measured]**
+  - Mode contrast 2.8–3.8 dB vs 5.1 dB for a static 246 S comb (same metric). **[measured; interpretation H]**
+  - The sweep-ghost method that gave M/L's rate (`ml_structure.md` §9: ghost lags ±L·f_m/f, halving per octave) needs the loop model first, so `f_m·L` is not readable yet.
+- **What one realisation cannot give:** the rate, depth and decorrelation curve. These need repeat captures; the plugin is a convolution of one frozen capture, so re-capturing reproduces the same IR.
+- **Data sources, best first:**
+  1. **246-E repeat captures at one setting, AMPL varied.** The E program has an AMPL control (remote levers: "pre-delay and ampl for S/M/L/250", `EMT246_unit_facts.md` §3), and AMPL moves only the early section, not the loops. So AMPL pairs are repeat captures of the E's own reverb — exactly the method that found M/L's time variance. **This is the only way to measure the E's modulation without assuming it matches a real 250.**
+  2. **Real EMT 250 impulse-train captures** (one impulse every ~10 s, the `NEXT_STEPS.md` §10 method): direct snapshots of the real 250's modulation (depth, rate, which part varies), with no sweep smear. Since the E is "exactly" the 250 program, this is a legitimate **prior** for the E's modulation — but the E's implementation still has to be confirmed against it (the "sounds different from a real 250" caveat).
+  3. **Real EMT 250 sweep captures:** ghost-lag analysis as in (1) of the list above, but a sweep smears the modulation, so it is the weakest of the three.
+- **A possible shortcut:** if the E reuses the 246's stochastic-control hardware (Tests 21/22) rather than the 250's delay randomisation, M/L's 0.83 Hz / 0.11–0.14 rad may transfer directly. Whether it does is open (§8).
+
+## 5. Chain — shared, but not chain3
+
+- The REV-250 single-tap spectrum matches the **LONG RT 6.0s** preset tap exactly (L and R separately, to ≤ 0.03 dB), and is **darker than chain3 / S / M / CLA**: −2.4 dB at 8 kHz (L), −5.9 dB (R), −10.9 dB at 11 kHz, against chain3's +0.33 / +0.37 dB at 8 kHz. **[measured]**
+- So the Altiverb library carries **two tap shapes**: bright (S / M / CLA, = chain3) and dark (L / REV-250). Either the L and REV-250 presets bake in a lower output LP, or they were captured through a different path. The "same hardware chain" assumption therefore holds only within a family: **the reverb algorithm is still separable, but REV-250 needs its own chain kernel** (a "chain4" fitted on the LONG RT cluster, reusing `tools/chain_kernel.py`). **[measured; cause H]**
+
+## 6. The unlabelled `REV-250` preset
+
+- Not in the RT family: T30 ≈ 18 ms (L) / 45 ms (R), first arrival L 19.9 / R 24.9 ms. A short ambience/gate-like preset. Treat separately. **[measured]**
+
+## 7. Discovery plan (reusing the 246 pipeline)
+
+1. **Chain4** for the L / REV-250 family: `tools/chain_kernel.py` on the LONG RT presets' cluster-only windows, so the darker tap is divided out.
+2. **Device-rate recovery** (`tools/deconv_grid.py` at 26,373.6 Hz) and a per-capture clock fit (the +54…58 ppm measured in §3) to land the loops on their integer device samples 4430 / 5014 / 5552.
+3. **Grey-box fit.** Three uncoupled loops at 168 / 190 / 211 ms (integers once the rate is known); the loop filters carry the LF/HF decay (§1). Loops are **linear in the read-tap coefficients** once the lengths are fixed, so least squares applies — same as 246 S (`model_s_results.md` §17). Priors from the 1977 drawing: **three read taps per comb**, and the output lines use adjacent-tap interpolation (out = f·x[τ] + (1−f)·x[τ+1], `period_dsp_practice.md` §3.1).
+4. **Onset model:** 3-tap early path (fixed gains) + the 11.92 ms L/R offset + a per-channel discorrelator; fit after the loops.
+5. **Modulation = the accuracy ceiling.** Model the static structure and score accuracy-over-null (as for M/L). Get the modulation from **246-E AMPL repeat captures** (the E's own; §4), and use **real-250 impulse-train captures** as a prior/cross-check. The UAD 250 bench (`NEXT_STEPS.md` §10) validates detectors.
+6. **Held-out nulls:** the 9 RT presets are one per RT step, so hold out by RT step (train on 7, predict 2) with per-capture clock/shift/gain, exactly the 246 S protocol.
+
+## 8. Open questions
+
+- The 3-tap early path is fixed in RT here, against the patent's e-function claim — an Altiverb-preset artefact or a real difference in the 246's E program?
+- Are there really three read taps per comb (the drawing), and what are their positions/weights? Not yet measured.
+- How much of the mode smearing is delay randomisation vs the long-loop mode overlap? §7 step 5.
+- **Which modulation mechanism does the E use:** the 250 patent's randomised delay lengths (Fig. 3/4), or the 246's own stochastic control (the 0.83 Hz / 0.11–0.14 rad rotation found in M/L)? If the latter, M/L's numbers transfer. §4.
+- **Is the E's modulation the same as a real 250's?** The "sounds different from a real 250" claim needs quantifying; real-250 impulse-train captures answer this directly.
+- (Settled) The source is the 246's Program E at 26,373.6 Hz; the loops are 4430 / 5014 / 5552 device samples. A real EMT 250 is not the emulation target, but its modulation is a useful prior.
+
+## 9. Patent and hardware cross-check (review pass, October 2026)
+
+A re-read of the patent PDF and a search for newer sources turned up several details our first summary had compressed, plus one fact that needs correcting.
+
+**9.1 Corrected: the real 250 ran at ~24 kHz, not 32 kHz.** Blesser via Dattorro gives 32 kHz / 8 K words [C: R9], but Morrin's 2024 board-level teardown measures **~24 kHz** (~166 instructions at the 4 MHz clock) and 8,192 × 16-bit words [C: R44]. The patent's "long-loop total delay ≥ 300 ms" decides it: 300 ms = 7,200 words at 24 kHz (fits 8 K) but 9,600 at 32 kHz (does not fit). So the production 250 ran at ~24 kHz; 32 kHz is inconsistent with its own memory. (`algorithm_research.md` §1.1 updated.) Our target is unaffected — the 246's E runs at 26,373.6 Hz — but any future real-250 comparison should assume ~24 kHz.
+
+**9.2 The output stage takes the delayed dry input too [C: R1].** The discorrelator/distributor receives **both** line 12 (delay unit 1, the delayed dry input) **and** line 14 (the reverb), combining/delaying them "such as shown by Schroeder page 225". Our summary mentioned only the reverb feed.
+
+**9.3 The 3-tap early path is per-loop and RT-dependent [C: R1].** Claims 1 and 8 place a second 3-tap delay (t_B, B1–B3, h1–h3) **inside every loop circuit**, fed from the joint input; its gains are "damped as a function of RT". Our measured 3 early taps are **fixed** across RT (§2) — so they are probably **not** the t_B path. Morrin's teardown offers a better candidate: the Reverb program reads **three pre-delay taps** (A/D #1–#3 off the variable +t_d line) [C: R44], which would be fixed. That also explains the 0 / 16.31 / 27.27 ms spacing better than the t_B gains would. Open question (was §8): which path the measured taps are.
+
+**9.4 Randomisation is LFSR address jitter, not a slow sine [C: R44].** The 250's I/O mux has a "Noise" function (an LFSR) and an "8-rotate"; Morrin reads them as generating **pseudo-random memory addresses** for the reverb program. This is the hardware form of the patent's "randomly controlled delay-length variation". It is *not* the 246 M/L's 0.83 Hz rotation — so if the E reuses the 250 scheme, its modulation is fast address jitter, and if it reuses the 246's stochastic control it is a slow rotation. §4's coherence bound (loops coherent over ~8 recirculations) suggests the E's jitter is small either way.
+
+**9.5 Memory check corroborates the 246-E reading.** 8 K words at 24 kHz is 341 ms — enough for one ≥300 ms long loop, but our three loops (168 + 190 + 211 ms = 569 ms) need ~13.7 K words at 24 kHz. They do not fit a real 250; they fit the 246's 64 K words easily. Independent confirmation that REV-250 is the 246's E, not a real 250.
+
+**9.6 Smaller corrections to `algorithm_research.md` §1.1.** Feedback is from "an output of the delay circuit" (drawn as the end), not provably the end; the t_B notation (the PDF OCR showed "t5"); the tapped-loop idea is Kuttruff 1962 [C: R42], with Blesser's contribution the non-harmonic placement + energy e-function + the parallel unreverberated path; the instruction timing is 100 ns (one OCR instance read "100 µs"); claim 5's "300 ns/µs" is garbled — the description's "300 ms" is authoritative.
+
+**Sources checked online:** the patent (Google Patents, full text + claims + citations) [R1]; Morrin's teardown [R44]; DuckDuckGo result set (UA product page — marketing only, no algorithm detail; vintagedigital — 403). No other independent algorithmic analysis of the 250 was found beyond the patent, Dattorro/Blesser and Morrin.
