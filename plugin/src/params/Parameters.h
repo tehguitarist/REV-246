@@ -17,8 +17,8 @@ namespace id
 inline constexpr const char* program = "program";
 inline constexpr const char* lowpass = "lowpass";
 inline constexpr const char* delay = "delay";
-inline constexpr const char* ampl = "ampl"; // N: SPAN
-inline constexpr const char* lf = "lf";     // N: EARLY RT
+inline constexpr const char* ampl = "ampl"; // N: SPAN (confirmed by the front-panel photo: SPAN in the AMPL slot)
+inline constexpr const char* lf = "lf";     // N: EARLY RT (in the LF slot, RT blank, LATE in the HF slot)
 inline constexpr const char* rt = "rt";
 inline constexpr const char* hf = "hf";     // N: LATE RT
 inline constexpr const char* mix = "mix";

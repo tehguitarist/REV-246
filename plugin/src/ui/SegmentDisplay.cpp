@@ -35,7 +35,7 @@ juce::Path vSegment(float xc, float y0, float y1, float t)
 
 std::array<juce::Path, 7> segmentPaths(float w, float h)
 {
-    const auto t = w * 0.17f, gap = t * 0.62f, half = t * 0.5f;
+    const auto t = w * 0.21f, gap = t * 0.55f, half = t * 0.5f;
     const auto mid = h * 0.5f;
     return {hSegment(half + gap * 0.2f, w - half - gap * 0.2f, half, t),            // a
             vSegment(w - half, half + gap, mid - gap * 0.55f, t),                   // b
@@ -136,11 +136,11 @@ void SegmentDisplay::paint(juce::Graphics& g)
         const auto s = getScale();
         const auto area = getLocalBounds().toFloat().reduced(design::displayInsetX * s, design::displayInsetY * s);
         const auto pitch = area.getWidth() / (float)digits;
-        const auto w = pitch * 0.72f, h = area.getHeight();
+        const auto w = pitch * 0.68f, h = area.getHeight();
         const auto paths = segmentPaths(w, h);
         const auto shear = std::tan(juce::degreesToRadians(design::displaySlantDegrees));
         const auto dots = std::vector<Digit>(layoutDigits());
-        const auto pointR = w * 0.085f;
+        const auto pointR = w * 0.105f;
         const auto alpha = contentAlpha();
 
         auto place = [&](int i) {
