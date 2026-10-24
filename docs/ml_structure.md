@@ -827,3 +827,26 @@ With a DC-only slow term in the scoring the ranking is the same (`tail.log`). Th
 - **The chain's response runs on past 19 ms with a smooth low-frequency tail** in both channels (−45…−47 dB at lags 300–600), and the library's capture-side slow term is a DC offset, not a free quadratic. **S**
 - §12.1's "longer FIRs are unphysical" was the quadratic slow term, not the data.
 - Left in S's reverb after chain3: a phase of −1.1…−1.4° at 25 Hz (both channels), ±0.07 dB above 30 Hz (`model_s_results.md` §24).
+
+## 14. The pulse check on M and L (`tools/pulse_check.py --stage ml`, October 2026) **[S: the static model passes its static metrics; S: the apparent late-decay excess is Tomkin's longer fades in M / L; S: the rotation through a sweep does not change the late decay]**
+
+`EMT_KERNEL=chain3 .venv/bin/python tools/pulse_check.py --stage ml --workers 8` → `analysis/pulse/ml/`, report in `analysis/pulse/report.log` (`model_s_results.md` §26 for S and the method). All 340 groups (M 160, 479 captures; L 180, 360 captures): the static model (§8's line law with S's HF pole curve, θ = 0) rebuilt per capture by `ml_lines.fitted` (clock, shift and two gains per channel fitted before any line; everything after predicted), against each capture and every capture pair. EDCs from the R onset + 20 ms; coherence, fine structure and echo density over the 250 ms after it; up to the capture's usable end. Median model [capture pair], R:
+
+| Metric | M | L |
+|---|---|---|
+| octave decay (−5 / −25 dB), signed, 125 Hz–8 kHz | +0.3…+0.6 % [−0.2…+0.2] | +0.3…+1.0 % [+0.0…+0.3] |
+| octave decay, \|error\| | 0.5–2.1 % [0.2–2.3] | 0.5–1.7 % [0.2–2.1] |
+| EDT, signed | −0.3…+0.5 % | −0.1…+0.4 % |
+| largest EDC difference to −30 dB | 0.18–0.90 dB [0.13–0.88] | 0.20–0.77 dB [0.13–0.98] |
+| echo density \|difference\| | 0.021 [0.023] | 0.009 [0.009] |
+| L/R coherence, model − capture | ≤ 0.005 [≤ 0.002] | ≤ 0.001 [≤ 0.001] |
+| fine structure 100 Hz–1 kHz / 1–4 kHz / 4–10 kHz | 0.980 / 0.983 / 0.984 [0.970 / 0.977 / 0.982] | 1.000 / 1.000 / 1.000 [1.000] |
+| late decay (−25 / −40 dB), signed, ≤ 1 kHz | +4.3…+6.0 % [−0.2…+0.4] | +5.2…+8.8 % [+0.4…+1.6] |
+
+- **Early decay, EDCs, coherence, echo density and fine structure are at the capture-to-capture spread** (the EDC differences of 0.2–0.9 dB are the time variance: the pairs differ as much). Subgroups: short RT (M ≤ 1.0 s) +1.1…+1.7 % below 500 Hz, LF 0.1 in M +1.2…+2.5 % at 250 Hz–2 kHz, L at HF ≤ 0.2 +1.3…+2.1 % at 125–250 Hz: all within ±3 %, and the short-RT / LF 0.1 regime is where S's own errors sit too.
+- **Decorrelation (null per window, model [pair]):** M first pass −47.7 [−48.3], recirc1 −20.8 [−19.3], recirc2 −16.2 [−13.8], recirc3 −12.7 [−10.2], 0.3–0.6 s −12.9 [−10.5], 0.6–1 s −9.9 [−7.8], 1–2 s −7.3 [−6.2]; L first pass −45.3 [−51.9], recirc1 −18.9 [−17.5], recirc2 −15.9 [−13.5], recirc3 −12.7 [−10.2], 0.3–0.6 s −17.6 [−15.9], 0.6–1 s −13.0 [−10.4], 1–2 s −8.9 [−6.5]. The static model sits 1.5–3 dB closer to each capture than the captures are to each other, as §9.5's periodic θ predicts (a pair differs by twice a capture's own time variance); the decorrelation curve itself is §9.5's sim (rotating model through a sweep), not rerun here. L's first pass is 6.6 dB short of the pair value (−45.3 against −51.9; M 0.6 dB): the first-pass L gap of §7.6 / §12.
+- **The late-decay excess is the file fade, not the model:**
+  - Through §9.5's simulated sweep, the rotating model's late decay (−25 / −40 dB) differs from the static model's by only −5.5…+4.3 % per octave, scattered around zero (mean ≈ −0.3 %; 8 SIM_KEYS settings × 4 renders), while model vs capture reads +2…+24 % at the same settings. The rotation does not explain it.
+  - Kept further from the file end, it goes away: late model / capture at 1 kHz with the fit ending 0.15 / 0.6 / 1.2 s before the usable end: M +2.9 / +0.7 / −0.8 %, L +5.6 / +5.4 / +4.6 %; the slope of the capture / model energy ratio, frames ending 1 / 2.5 / 4 s before the last sample: **L 250 Hz +6.1 / +0.7 / −0.0 %, 1 kHz +4.7 / +0.6 / +0.0 %**, M ±0.5…0.9 % at 1 s.
+  - The ratio against time before the end (250 Hz–4 kHz, median): M falls from ~1.0 s before the last sample (−2.2 dB at 0.7 s, where a 0.70 s fade would give 0), L slopes from ~4 s (−0.5 dB at 2 s, −4.2 dB at 1 s). **M's fade is ~1.0 s and L's ~3–4 s, not the 0.72 s `ml_lines.usable_end` assumes** (`library_notes.md` §2). Away from the fades the static model's late decay matches to under 1 %.
+- **Consequences:** (1) §8.3's per-octave RT reading (from the onset to `usable_end`) is partly fade-biased in L, so the "RT shortfall" of 0.97 at 125 Hz there needs re-reading with program-specific fade ends before anything is fitted to it; §9.5's sweep effect (L 0.958–0.992) is independent of the fade. (2) `ml_lines`' time windows that end near a file's end (1–2 s, 2–4 s in long-RT L groups) carry fade bias; the recirculation windows don't.

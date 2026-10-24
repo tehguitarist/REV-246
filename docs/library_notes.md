@@ -43,6 +43,10 @@ Non-Lin: SPAN 0–0.5 s, EARLY RT −3.0…10 s, LATE RT 0–2.0 s. The grid is 
 
 **File properties** (96 kHz set, 2,437 files): variable length (about 0.7–11 s), trimmed and faded per setting. 1,622 files end in digital silence, 1,751 are flagged `fade_out`, 1,323 have under 2 ms pre-roll. So **RT must come from the label, not the file** (`label_mismatch_rt` on 1,190 files is mostly truncation), and absolute noise floors are not available.
 
+**Fades and bad captures (pulse check, `model_s_results.md` §26, `ml_structure.md` §14):**
+- **The fade is longer in M and L than in S.** S: a linear 0.70 s ramp (q2's `ramp.json`, compensated in every S score). From the capture / static-model energy ratio against time before the last non-zero sample (250 Hz–4 kHz, median over groups): **M about 1.0 s, L about 3–4 s** (the ratio is already −0.5 dB 2 s before the end and keeps sloping out to ~4 s). `ml_lines.usable_end` assumes 0.72 s for all programs, so anything measured in the last ~0.3 s (M) or ~3 s (L) before a file's end is biased (late decays read 4–9 % fast; the recirculation windows are early and unaffected).
+- **Four bad S AMPL-0 captures:** `12_0_0_10_06_06` (1.0_0.6_0.6), `12_0_0_10_06_10` (1.0_0.6_1.0), `12_0_0_04_10_04` (0.4_1.0_0.4, from ~300 ms) and `12_0_0_01_03_02` (0.1_0.3_0.2) null against their own setting's other captures at only −10…−26 dB (normal −50…−57 dB). Drop them from per-setting fits.
+
 ## 3. Harness results (96 kHz set: `analysis/library/tomkin96/report.md`)
 
 - **S clusters** found in 384 files (101 with exactly the S loop set `1321-1389-1461-1587`, so the library unit runs the same firmware as the CLA unit). 15 files have a `novel_cluster` (all Non-Lin). M and L files have no cluster match only because `cluster_templates` holds the S pattern alone (and the 16 ms search window is too short for L's 55 ms cluster); their clusters are S's ×2 and ×4 (`ml_structure.md` §1).

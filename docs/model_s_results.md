@@ -2673,3 +2673,67 @@ EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/loop_read/lfk.py   # an
 **The law's per-LF factor is already optimal; the LF dependence inside a cell is not a scale of the HF target (S).** Not scored on `loop_cv`: without the table both are twice the baseline's pole error, the quantity that drives the nulls. The table stays.
 
 **Reading of §25.14–25.20 (the strong-HF line).** What stands: (1) AP230's damping is not the b > 0 problem; the HF loop filter at strong HF / short RT is. (2) The HF pole follows one coefficient-domain curve in S, M and L — the law, a ramp above ~0.62, a ceiling ≈ 0.8475 — and M / L now use it. (3) Around it S's poles deviate by ~1.4·10⁻³ rms (half per setting, LF-dependent inside a cell; half per loop), not a staircase, not a coarse grid, not the per-LF k; S keeps its 24-value HF table (H for its structure). (4) 16 S captures at short RT / strong HF carry a lag step (data issue, §25.16). (5) Each program's shortest RT folds back below the ceiling (H).
+
+## 26. The pulse check: stage G on S, M and L against every dataset (`tools/pulse_check.py`) **[S: the §25.18 S model passes every perceptual metric on the library by a wide margin; S: on other units the S model is library-accurate at 1–4 kHz and the "−35 dB cross-unit ceiling" was mostly a fixed low-band transfer that CLA and the Altiverb share and the model lacks; S: M / L pass their static metrics, and their apparent late-decay excess is Tomkin's file fades; S: four bad AMPL-0 captures; H: the low-band transfer is Tomkin's capture chain]**
+
+```
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/pulse_check.py --stage s --workers 8     # 128 settings, ~8 min, 4.5 GB
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/pulse_check.py --stage units [--chain]   # CLA + 5 Altiverb S presets, ~2.5 min
+EMT_KERNEL=chain3 .venv/bin/python tools/pulse_check.py --stage ml --workers 8                    # 340 M / L groups, ~4 min, 5.4 GB
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/pulse_check.py --stage report            # analysis/pulse/report.log
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/pulse_check.py --stage gate --tag <name> # the ~3 min sanity gate (§26.5)
+```
+
+NEXT_STEPS §5 item 6a; first full validation since §18 (which ran on the §17 model). Stage G of `analysis_harness_spec.md` as one tool: per capture the model is rendered with the constants of the `loop_cv` fold that left its RT step out (the §25.18 baseline, 3 numbers per capture: clock, shift, gain), the capture is fade-compensated (q2's ramp, up to `comp_end`), and every metric is computed for model against capture and, as the tolerance, for capture against capture (S's cross-take pairs AMPL 0–30 and 60–90; in-take pairs 0–90 / 30–60 as a check). Metrics: G1 nulls per window and octave; G2 octave EDC decay time (−5 / −25 dB), late decay (−25 / −40 dB), EDT, largest EDC difference to −30 dB; G3 the decay time per third octave; G4 echo density (Abel–Huang) and L/R coherence per third octave; G5 spectral fine-structure correlation. The nulls reproduce `loop_cv`'s rows exactly.
+
+### 26.1 S on the library: every perceptual metric passes by a wide margin **[S]**
+
+All 128 settings, 512 captures, held out by RT step; R, median model [cross-take repeat]:
+
+| Metric | Spec target (G2–G5) | Model | Repeat |
+|---|---|---|---|
+| octave decay time, \|ratio − 1\|, 125 Hz–8 kHz | ±3 % | 0.1–0.2 % (RT ≤ 0.6: 0.2–0.3 %) | 0.0 % |
+| octave decay bias (signed) | — | within ±0.1 % (LF 0.1 +0.1…+0.2 %) | 0.0 % |
+| EDT \|ratio − 1\| | — | 0.1 % (LF 0.1 at 250 Hz 0.5 %) | 0.0 % |
+| largest EDC difference to −30 dB | ±0.5 dB | 0.03–0.05 dB (RT ≤ 0.6: 0.07–0.09) | ≤ 0.01 dB |
+| third-octave decay within ±3 % (or the repeat spread) | ±3 % | 488–512 of 512 per band | — |
+| echo density, mean \|difference\| 20–300 ms | repeat spread | 0.003 | 0.002 |
+| L/R coherence, model − capture, per third octave | repeat spread | ≤ 0.001 (the capture's own: 0.78 at 100 Hz … 0.02 at 6.4 kHz) | ≤ 0.001 |
+| fine-structure correlation 100 Hz–10 kHz, 50–300 ms | repeat value | 1.000 | 1.000 |
+
+- **At −50 dB nulls the perceptual metrics are saturated:** nothing a listener could hear separates the model from the hardware on the library, and these metrics can't steer refinement there; the nulls (and their excess over the repeat) remain the instrument for S.
+- **Nulls, R, model [cross-take] {in-take}:** 50–150 −51.6 [−56.4] {−56.6}; 150–300 −48.9 [−54.2] {−55.5}; 300–600 −44.0 [−47.4] {−49.2}; 600–1000 −37.3 [−40.0] {−41.3}. The in-take pairs (one take at two AMPL settings) are only 0.2–1.5 dB more alike than the cross-take pairs, so the two takes hardly differ in the reverb. Octave nulls (all, 50–150 / 150–300 / 300–600): 125 Hz −53.3 / −49.9 / −47.2, **250 Hz −47.8 / −47.9 / −44.8**, 500 −53.5 / −49.9 / −44.9, 1 k −50.9 / −49.5 / −45.1, 2 k −54.3 / −50.2 / −44.4, 4 k −54.1 / −48.4 / −41.2, **8 k −47.1 / −44.9 / −37.4**: the weak bands are the known 250 Hz transfer error (§25.12) and the top octave.
+- **The tails hide two things the medians don't (found by the gate, §26.5):**
+  - **RT 0.3 at HF 0.2, every LF step: the model decays 2–6 % too fast at 500 Hz–4 kHz** (1 kHz −4.8…−5.3 %, 4 kHz −2.0…−5.9 %), the same in all four captures of each setting, so a model error, not data. It is the shortest-RT regime of NEXT_STEPS §0 item 3, now with a concrete target. (The other settings' worst octave errors are ≤ 3 %; 15 of 512 captures exceed 3 % anywhere.)
+  - **Four bad AMPL-0 captures** (`library_notes.md` §2): 1.0_0.6_0.6, 1.0_0.6_1.0 and 0.4_1.0_0.4 (from 300 ms) and 0.1_0.3_0.2 null against their own repeat captures at only −10…−26 dB (normal −50…−57) and against the model at −10…−27 dB, with octave decay errors of 14–47 %. The medians and `loop_cv`'s scores are robust to them, but any per-setting fit at those settings should drop them.
+
+### 26.2 S on other units: library-accurate at 1–4 kHz; the cross-unit gap is a shared low-band transfer **[S]**
+
+`--stage units`: the model at LF 1.0, HF 0.9 (all-RT constants, the ramp as the median of the cap folds', AP230 step 0), nothing refitted; per IR clock, shift, gain and §18's 14-number channel FIR on the cluster-only region. R:
+
+| IR | 50–150 | 150–300 | 300–600 | 600–1000 | §17 / §18 (same windows) |
+|---|---|---|---|---|---|
+| CLA | −37.8 | −37.4 | −37.0 | −34.5 | −37.5 / −37.4 / −37.2 / −34.9 (no FIR) |
+| Altiverb RT 1.6 | −35.5 | −35.1 | −34.7 | −33.7 | −35.0 / −34.7 / −34.5 / −33.5 |
+| Altiverb RT 2.2 | −35.7 | −35.3 | −35.4 | −34.8 | −35.3 / −34.9 / −34.9 / −34.2 |
+
+- **No regression on other units** since §17 / §18 (0.2–0.5 dB better), and decays, EDT, echo density, coherence and fine structure pass there too: octave decay within ±0.3 % (CLA) and ±0.3…1.3 % (Altiverb, worst at RT 0.6), late decay within ±0.4 % (CLA) / ±2.4 %, EDT within ±2 % (125 Hz worst), coherence ≤ 0.01, fine structure ≥ 0.998.
+- **The octave nulls show where the gap is:** on every unit IR, 125 Hz −18…−20 dB, 250 Hz −25…−26, 500 Hz −34…−36, but **1–2 kHz −46…−57 dB** (CLA 1 k −50.5 / −52.0 / −52.7, 2 k −55.6 / −57.5 / −52.6): library accuracy in the mid band on another unit. 8 kHz −34…−50.
+- **The units agree with each other in the low band; the model doesn't.** Altiverb RT 1.0 against CLA directly (same panel setting, same FIR): 125 Hz −35, 250 Hz −43, 500 Hz −49 dB at 50–150 ms (a one-off check, not in the tool). So the low-band gap is not unit-to-unit spread.
+- **It is a fixed transfer, the same on both units and both channels:** unit / model per third octave over 50–600 ms, coherence ≥ 0.999 in every band, CLA [Altiverb RT 1.6], L ≈ R: 63 Hz +2.2 dB / −3° [+3.0 / −1°], 100 Hz +0.5 / −8° [+0.7 / −8°], 160 Hz −0.7 / −2° [−0.7 / −2°], 250 Hz +0.1 / +3° [+0.1 / +3°], 400 Hz −0.2 / −1° [−0.2 / −0°], ≤ 0.05 dB / 0.5° from 630 Hz up. A wavy shape (gain peaks at ~40–63 and ~300 Hz, dips at ~160 and ~400 Hz), not a high-pass: **putting CLA's per-chain high-pass and S&H pole relative to Tomkin's on the model (NEXT_STEPS §4: 2 × 6.65 Hz vs 1.8 Hz, p 0.325 vs 0.301; `--chain`) makes it 2–4 dB worse** (CLA 125 Hz −19 → −15 dB).
+- **Held out by unit, the CLA transfer closes most of the gap on the Altiverb:** measured on CLA only (1/6 octave, 40 Hz–1 kHz, L / R averaged, ~25 complex values) and applied to the model for the five Altiverb presets: **125 Hz −19 → −34 dB, 250 Hz −26 → −43, 500 Hz −34 → −43**, broadband R (50–150 / 150–300 / 300–600 / 600–1000) RT 1.6 −35.5 / −35.1 / −34.7 / −33.7 → **−39.9 / −39.3 / −38.1 / −36.7**, RT 2.2 → **−40.1 / −40.0 / −39.5 / −39.0**, RT 0.6–1.0 +1.7…+4.1 dB in the first windows; L +1.7…+2.3 dB (L's channel filter limits it at −37.6…−38). What limits the Altiverb now is 8 kHz (−34…−36), 2–4 kHz (−35…−43) and L's chain.
+- **Reading.** §18's "the two units differ from each other as much as the model differs from either (−35…−37 dB)" is revised: in the mid band the model is as close to another unit as on the library, and most of the cross-unit gap was a low-band transfer shared by two independent units and absent from the Tomkin-trained model. The model absorbed Tomkin's low band (it nulls to −53 dB at 125 Hz on the library), so the likeliest source is Tomkin's capture chain or its deconvolution at 40–400 Hz (**H**: it has the shape of the old deconvolution-kernel ripple, −0.2 dB at 160 Hz and +0.13 dB at 280 Hz, `ml_structure.md` §10, at about three times its size, and the chain kernel is fitted on cluster-only windows under 20 ms long, which barely constrain 40–200 Hz, §12–13). It does not change any S constant. It matters for the plugin: if CLA and the Altiverb are the unit, the emulation wants this low-band correction (a few biquads; not yet compacted), and cross-unit validation should apply it before comparing.
+
+### 26.3 What this means for the accuracy budget and for the algorithm
+
+- **Perceptual accuracy is no longer the open question for S:** decays, EDCs, coherence, echo density and fine structure are 10–100× inside the spec's tolerances. Refinement past −50 dB is about the exact algorithm (coefficients, fixed point), and the null excess over the repeat is the only metric that still moves.
+- **Validate on other units in octaves, not broadband:** a broadband null hides a library-accurate mid band behind a low-band chain difference. The mid band (500 Hz–4 kHz) is the cross-unit test of the algorithm; 63–400 Hz tests the capture chain.
+- **The remaining S model errors with a shape:** RT 0.3 / HF 0.2 decays (§26.1), 250 Hz (§25.12), the top octave (8 kHz −37 dB at 300–600 ms on the library, −34…−36 on the Altiverb).
+
+### 26.4 M and L: see `ml_structure.md` §14
+
+The static M / L model (θ = 0, S's pole curve) passes its static metrics (early decay within 1 %, echo density, coherence and fine structure at the capture-to-capture spread); the apparent 4–9 % late-decay excess is Tomkin's longer fades in M (~1 s) and L (~3–4 s), not the model.
+
+### 26.5 The sanity gate (`--stage gate --tag <name>`)
+
+A ~3-minute check to run after any model change: 16 S settings (two per RT step, every LF and HF step), CLA and the Altiverb RT 1.6 preset, 8 M / L groups (ml_variance's SIM_KEYS), scored as above into `analysis/pulse/gate_<tag>/`, then PASS / FAIL against the full run on the same keys: S median R nulls at 50–150 / 150–300 / 300–600 ms and CLA / Altiverb nulls not worse by more than 0.5 dB; S's largest octave decay error not more than 0.5 % worse and its 90th percentile within ±3 %; EDC largest not 0.1 dB worse, 90th percentile within 0.5 dB; M / L first-pass and recirc1 nulls not worse by more than 0.5 dB, early decay median within 3 % and not 0.3 % worse. The model is whatever `setting_G` builds (`PULSE_CV`, `EMT_PMAX`); a new model term has to be wired into `setting_G` (S) or `ml_lines` (M / L) first. Results are cached per tag, so use a new tag per candidate. The self-test (the baseline against itself) passes and reproduces the full run's numbers exactly.
