@@ -1,0 +1,9 @@
+Package: rev246
+Version: __VERSION__
+Section: sound
+Priority: optional
+Architecture: amd64
+Maintainer: Leigh Pierce <leighpierce@me.com>
+Description: REV-246 reverb plugin (VST3)
+ A model of a classic digital reverb: mono in, stereo out, with the original
+ programmes and controls, built with JUCE.

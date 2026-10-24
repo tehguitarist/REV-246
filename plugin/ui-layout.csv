@@ -1,0 +1,59 @@
+component,file,x,y,w,h,description
+base,main,1747.5,690,3495,1380,background art; the bottom bar below it is drawn in code
+S button,S Out,445,586,125,125,In = pressed / selected
+S button,S In,445,586,125,125,In = pressed / selected
+S led,red led on,563,586,50,50,
+S led,red led off,563,586,50,50,
+M button,M Out,445,738,125,125,In = pressed / selected
+M button,M In,445,738,125,125,In = pressed / selected
+M led,red led on,563,738,50,50,
+M led,red led off,563,738,50,50,
+L button,L Out,445,889,125,125,In = pressed / selected
+L button,L In,445,889,125,125,In = pressed / selected
+L led,red led on,563,889,50,50,
+L led,red led off,563,889,50,50,
+E button,E Out,445,1041,125,125,In = pressed / selected
+E button,E In,445,1041,125,125,In = pressed / selected
+E led,red led on,563,1041,50,50,
+E led,red led off,563,1041,50,50,
+N button,N Out,445,1193,125,125,In = pressed / selected
+N button,N In,445,1193,125,125,In = pressed / selected
+N led,yellow led on,563,1193,50,50,
+N led,Yellow led off,563,1193,50,50,
+power button,Power Out Off,148.5,237.5,188,188,"Out Off = plugin bypassed (idle), Out In = plugin on (idle), In Off / In On = pressed while it was off / on"
+power button,Power Out In,148.5,237.5,188,188,"Out Off = plugin bypassed (idle), Out In = plugin on (idle), In Off / In On = pressed while it was off / on"
+power button,Power In Off,148.5,237.5,188,188,"Out Off = plugin bypassed (idle), Out In = plugin on (idle), In Off / In On = pressed while it was off / on"
+power button,Power In On,148.5,237.5,188,188,"Out Off = plugin bypassed (idle), Out In = plugin on (idle), In Off / In On = pressed while it was off / on"
+lowpass joy,joy-mid,897,1167,193,193,"mid = rest, up/down = lever moved"
+lowpass joy,joy-up,897,1167,193,193,"mid = rest, up/down = lever moved"
+lowpass joy,joy-down,897,1167,193,193,"mid = rest, up/down = lever moved"
+delay joy,joy-mid,1198,1167,193,193,"mid = rest, up/down = lever moved"
+delay joy,joy-up,1198,1167,193,193,"mid = rest, up/down = lever moved"
+delay joy,joy-down,1198,1167,193,193,"mid = rest, up/down = lever moved"
+ampl joy,joy-mid,1431,1167,193,193,"mid = rest, up/down = lever moved"
+ampl joy,joy-up,1431,1167,193,193,"mid = rest, up/down = lever moved"
+ampl joy,joy-down,1431,1167,193,193,"mid = rest, up/down = lever moved"
+lf joy,joy-mid,1722,1167,193,193,"mid = rest, up/down = lever moved"
+lf joy,joy-up,1722,1167,193,193,"mid = rest, up/down = lever moved"
+lf joy,joy-down,1722,1167,193,193,"mid = rest, up/down = lever moved"
+rt joy,joy-mid,2004,1167,193,193,"mid = rest, up/down = lever moved"
+rt joy,joy-up,2004,1167,193,193,"mid = rest, up/down = lever moved"
+rt joy,joy-down,2004,1167,193,193,"mid = rest, up/down = lever moved"
+hf joy,joy-mid,2280,1167,193,193,"mid = rest, up/down = lever moved"
+hf joy,joy-up,2280,1167,193,193,"mid = rest, up/down = lever moved"
+hf joy,joy-down,2280,1167,193,193,"mid = rest, up/down = lever moved"
+pan knob,Knob,2687,263,153,153,"7 to 5 o'clock sweep, centre default"
+mix fader,red fader,2684,545,100,211,cap centre at 100% (y 545) .. 0% (y 1185)
+input fader,White Fader,2996,218,100,211,"cap centre +12 (218), 0 (480), -inf (1238)"
+output fader,White Fader,3307,218,100,211,
+program display,,490.0,235.5,434,151,display box
+lowpass display,,897.5,235.5,285,151,display box
+reflections display,,1317.5,235.5,461,151,display box
+decay display,,2002.0,235.5,828,151,display box
+level ovl,,149.5,491.0,52,75,display box
+level p3,,149.5,596.2,52,75,display box
+level 0,,149.5,701.4,52,75,display box
+level m3,,149.5,806.6,52,75,display box
+level m6,,149.5,911.8,52,75,display box
+level m9,,149.5,1017.0,52,75,display box
+level m12,,149.5,1122.2,52,75,display box

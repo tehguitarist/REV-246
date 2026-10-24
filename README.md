@@ -23,6 +23,10 @@ Goal: recreate the EMT 246 digital reverb's S/M/L programs (Non-Lin as a bonus) 
 | `period_dsp_practice.md` | 1978–1990 reverb and TMS32010 practice (EMT, Lexicon, patents, German sources) turned into ranked, testable candidates (K1–K7) for the dense per-loop injection/read-out found in Q2, with test recipes, and the offline results for every candidate (§7: K1 holds, five equal signed taps per loop; K2–K7 not supported; in-sample) |
 | `analysis_harness_spec.md` | IR-library harness test specification (stages A–G), plus implementation status of A–C |
 
+### Plugin (`plugin/`)
+
+The JUCE plugin scaffold (panel, parameters, presets, installers; the reverb is a placeholder): `plugin/README.md`.
+
 ### Code (`tools/`, `tests/`)
 
 | Path | What it does |

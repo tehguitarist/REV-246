@@ -23,6 +23,13 @@ The full file map is in `README.md`.
 - **Tomkin library: work on the 96 kHz set only.** The 48 kHz files are the same capture rendered at another rate (`docs/library_notes.md` §5), so they carry no extra information and must not be used as a held-out set or as repeat captures. Leave `--separate-rates` off. Files are trimmed and faded per setting: take RT from the label, not the file.
 - **Efficiency matters.** The original ran on 2 × TMS32010 (about 50–70 weighted delay taps per sample). Prefer compact structural models over free FIRs.
 
+## Plugin (`plugin/`)
+
+A JUCE VST3/AU scaffold lives in `plugin/` (see `plugin/README.md` and `plugin/docs/DEVELOPMENT.md`). It is independent of the
+Python research code. Rules: **all C++ must be cross-platform** (no `M_PI`: MSVC; use `juce::MathConstants`), the plugin CI
+workflows (`.github/workflows/plugin-*.yml`) stay **manual-only** until told otherwise, and every GitHub Action must run
+on the current Node (check `runs.using`). Don't commit `plugin/build/`; `ui/` masters are never modified.
+
 ## Conventions
 
 - **Label claims:**
