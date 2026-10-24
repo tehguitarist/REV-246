@@ -54,7 +54,7 @@ SHELF_FLOOR = os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_floorN")  
 SHELF_HF = os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_hfcell")      # lowband_shelf.py --stage hfcell
 CELLS = False
 HFCELLS = False
-RETAKE, XADD, REFS = False, None, None
+RETAKE, XADD, REFS, PCURVE = False, None, None, False
 DENSE = os.path.join(ROOT, "analysis", "dense_mid")
 
 
@@ -201,19 +201,26 @@ def run_stage(rt, workers):
         cmd += ["--lfdc", ",".join(f"{k}:{x}" for k, x in fold["lfdc"].items())]
     if CELLS:
         cmd += ["--floorcells", os.path.join(OUT, "cells.json")]
+    if PCURVE:                                      # §25.17: the pole curve fitted without this RT step replaces pramp, hfdp, HF cells
+        pc = json.load(open(os.path.join(ROOT, "analysis", "lowband", "chain3_polecurve.json")))
+        th = pc["folds"][str(rt)] if str(rt) in pc["folds"] else pc["folds"][repr(rt)]
+        json.dump(dict(knots=pc["knots"], values=th[:len(pc["knots"])], cap=th[len(pc["knots"])]), open(os.path.join(OUT, f"fold_{rt}_pcurve.json"), "w"), indent=1)
+        i = cmd.index("--hfdp"); del cmd[i:i + 2]
+        i = cmd.index("--pramp"); del cmd[i:i + 2]
+        cmd += ["--pcurve", os.path.join(OUT, f"fold_{rt}_pcurve.json")]
     if XADD:                                        # dense_mid's 2 folds: A trains on RT 0.3 / 0.8 / 1.4 / 2.2
         fd = "B" if rt in (0.3, 0.8, 1.4, 2.2) else "A"
         cmd += ["--xadd", os.path.join(DENSE, q1.ms.KTAG, f"x_{fd}_{XADD}.npy")]
     with open(os.path.join(OUT, f"fold_{rt}.log"), "w") as f:
         subprocess.run(cmd, check=True, stdout=f, stderr=subprocess.STDOUT)
-    src = sorted(glob.glob(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit_lfrt_gamma*_hfdp_pramp*" + ("_lfdc" if "lfdc" in fold else "") + ("_cells" if CELLS else "") + ("_xadd" if XADD else "") + "_smoke.json")),
+    src = sorted(glob.glob(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit_lfrt_gamma*" + ("" if PCURVE else "_hfdp_pramp*") + ("_lfdc" if "lfdc" in fold else "") + ("_cells" if CELLS else "") + ("_xadd" if XADD else "") + ("_pcurve" if PCURVE else "") + "_smoke.json")),
                  key=os.path.getmtime)[-1]
     os.replace(src, os.path.join(OUT, f"fold_{rt}_rows.json"))
 
 
 def report_stage():
     if RETAKE:                                      # §25.7 (chain2) -> re-taken on this kernel; with XADD: the re-take -> + the correction
-        ref = os.path.join(BASE_OUT, "hfcells" + (f"_{q1.ms.KTAG}" if XADD else ""))
+        ref = os.path.join(BASE_OUT, "hfcells" + (f"_{q1.ms.KTAG}" if XADD or PCURVE else ""))
         a = {(r["key"], r["amp"]): r for p in glob.glob(os.path.join(ref, "fold_*_rows.json")) for r in json.load(open(p))["rows"]}
     elif OUT == BASE_OUT:                           # §21 -> the CV loop terms
         a = {(r["key"], r["amp"]): r for r in json.load(open(os.path.join(q2.OUT, q1.ms.tagged("final_s") + "_refit.json")))["rows"]}
@@ -236,7 +243,7 @@ def report_stage():
         return np.median(e) if e else np.nan
     ks = list(c)
     out = [f"## All loop terms, leave-one-RT-out ({len({k[0] for k in ks})} settings, {len(ks)} captures; every setting scored with constants "
-           f"fitted without its RT step); R null [excess over repeat]: " + ((f"re-taken on {q1.ms.KTAG} -> + {XADD}" if XADD else f"§25.7 -> re-taken on {q1.ms.KTAG}") if RETAKE else "§21 -> CV" if OUT == BASE_OUT else "§25.6 -> + HF cells" if HFCELLS else "§25.4 -> + floor cells" if CELLS else "§22.9 -> + LF 0.4 dc") + "; kernel " + str(q1.ms.KTAG) + "; refs " + os.path.basename(rp)]
+           f"fitted without its RT step); R null [excess over repeat]: " + ((f"re-taken on {q1.ms.KTAG} -> pole curve (no ramp, hfdp, HF cells)" if PCURVE else f"re-taken on {q1.ms.KTAG} -> + {XADD}" if XADD else f"§25.7 -> re-taken on {q1.ms.KTAG}") if RETAKE else "§21 -> CV" if OUT == BASE_OUT else "§25.6 -> + HF cells" if HFCELLS else "§25.4 -> + floor cells" if CELLS else "§22.9 -> + LF 0.4 dc") + "; kernel " + str(q1.ms.KTAG) + "; refs " + os.path.basename(rp)]
     out.append("| Settings | " + " | ".join(ws[1:5]) + " |\n|---|" + "---|" * 4)
     groups = [("All 128", lambda r: True), ("Flat", lambda r: r["lf"] == 1.0 and r["hf"] == 1.0), ("LF 0.1", lambda r: r["lf"] == 0.1),
               ("LF 0.4", lambda r: r["lf"] == 0.4), ("LF 2.0", lambda r: r["lf"] == 2.0), ("HF 0.2", lambda r: r["hf"] == 0.2),
@@ -266,15 +273,16 @@ def main():
     ap.add_argument("--hfcells", action="store_true", help="also the HF pole shift per (HF, RT) cell (implies --cells)")
     ap.add_argument("--retake", action="store_true", help="the hfcells constants on this kernel's refitted compact numbers (implies --hfcells)")
     ap.add_argument("--xadd", default=None, help="with --retake: dense_mid x tag (after the fold letter) added to the injection")
+    ap.add_argument("--pcurve", action="store_true", help="with --retake: the §25.17 pole curve (fitted without the fold's RT step) in place of pramp, hfdp and the HF cells")
     ap.add_argument("--refs", default=None, help="report: the repeat-capture reference file (default nulls_free on this kernel)")
     a = ap.parse_args()
-    global OUT, CELLS, HFCELLS, RETAKE, XADD, REFS
-    RETAKE, XADD, REFS = a.retake, a.xadd, a.refs
+    global OUT, CELLS, HFCELLS, RETAKE, XADD, REFS, PCURVE
+    RETAKE, XADD, REFS, PCURVE = a.retake, a.xadd, a.refs, a.pcurve
     if a.lf04dc or a.cells or a.hfcells or a.retake:
         CELLS, HFCELLS = a.cells or a.hfcells or a.retake, a.hfcells or a.retake
         OUT = os.path.join(BASE_OUT, "hfcells" if a.hfcells or a.retake else "cells" if a.cells else "lf04dc")
         if a.retake:
-            src, OUT = OUT, OUT + f"_{q1.ms.KTAG}" + (f"_{a.xadd}" if a.xadd else "")
+            src, OUT = OUT, OUT + f"_{q1.ms.KTAG}" + (f"_{a.xadd}" if a.xadd else "") + ("_pcurve" if a.pcurve else "")
             os.makedirs(OUT, exist_ok=True)
             for f in [f"fold_{rt}.json" for rt in RTS] + ["cells.json"]:      # the constants, unchanged
                 if not os.path.exists(os.path.join(OUT, f)):

@@ -1,0 +1,15 @@
+368 (setting, loop) rows; held-out pole error, rms x 1e-3 (weighted), leave-one-RT-out
+candidate                                   | all  | RT 0.3 | RT 0.6 | RT 0.8 | RT 1 | RT 1.4 | RT 1.8 | RT 2.2 | RT 2.5
+law + cap                                   | 4.73 |  6.23 |  3.49 | 12.82 |  5.64 |  2.75 |  2.21 |  0.49 |  0.52
+ramp + cap (no table)                       | 1.80 |  1.99 |  3.49 |  1.59 |  1.05 |  2.83 |  2.21 |  0.49 |  0.52
+smooth curve (11 numbers)                   | 1.41 |  2.11 |  2.90 |  2.16 |  1.29 |  2.06 |  1.12 |  0.33 |  0.28
+law at refitted f_ref + exponent + cap (3)  | 5.40 |  5.73 |  4.28 | 12.97 |  4.09 |  6.35 |  3.82 |  1.33 |  1.10
+
+by p_law bin (mean signed error x 1e-3 / n): 0-0.3; 0.3-0.45; 0.45-0.55; 0.55-0.62; 0.62-0.7; 0.7-0.8; 0.8-1.0
+law + cap                                    -0.33/160  -0.70/67  +1.73/54  +3.74/20  -3.13/9  -17.70/30  -14.51/28
+ramp + cap (no table)                        -0.33/160  -0.70/67  +1.73/54  +3.74/20  +1.94/9  -0.58/30  -4.95/28
+smooth curve (11 numbers)                    -0.02/160  -0.09/67  -0.16/54  +1.26/20  +2.10/9  -0.05/30  -0.78/28
+law at refitted f_ref + exponent + cap (3)   -1.49/160  -0.49/67  +3.51/54  +8.20/20  +1.74/9  -15.85/30  -14.27/28
+
+all-RT fit, smooth curve: Delta at knots 0.00:-1.74 0.30:+1.83 0.45:-0.08 0.55:-4.22 0.62:-3.59 0.70:+8.67 0.78:+23.44 0.90:+26.68 (x1e-3); cap 0.8475
+all-RT fit, refitted law: f_ref 6574 Hz, exponent 1.0273, cap 0.8483

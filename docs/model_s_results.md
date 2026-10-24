@@ -2572,3 +2572,38 @@ The test is model-agnostic and the same for every program: capture and model ban
 - The drift is not one fraction of the line length (it differs by program, by RT step and changes sign between M's RT 0.6 and 0.8): it is the signature of the HF pole slightly off per cell. **M / L run S's laws and limits without S's ramp (§22.8) and HF cells (§25.7)**, and these are the cells where S needed them; §25.15 showed in S that those terms carry real pole information.
 
 **Reading.** The strong-HF line comes down to one structural item shared by all three programs: **at strong HF and short RT the HF pole law is off per cell** (S carries the fix as a ramp plus a per-cell table; M / L lack it and drift). The "advance" was a capture-level step in 16 S files. **Next:** (1) treat the 16 stepped S captures as a data issue in the strong-HF excess figures (score the 9 settings against step-free pairs, and refit §25.14's corrections on step-free captures); (2) carry S's ramp / HF cell corrections to M / L, length-scaled, or better, find the HF pole law that makes the table unnecessary in all three (a law in the coefficient domain, NEXT_STEPS' "tables as curves"); (3) the step itself (whether the same takes show it in other bands / windows).
+
+### 25.17 The HF pole as one curve of the law's pole, across S, M and L (`tools/loop_read/polelaw.py`, `polecurve.py`, `ml_poles.py`, `ml_curve.py`; `q2_injection.py --pcurve`, `loop_cv.py --retake --pcurve`) **[S: below p_law ≈ 0.5 the law is right; S: the pole ceiling is ≈ 0.8475, not 0.84, in all three programs; S: the ramp above ≈ 0.62 exists in M / L too; S: S's curve, nothing fitted on M / L, removes their strong-HF drift; S: in S the curve does not replace the HF table (level overall, worse at HF 0.2); H: the fold-back at each program's shortest RT; baseline unchanged]**
+
+```
+EMT_KERNEL=chain3 .venv/bin/python tools/loop_read/polelaw.py        # S: p_law, p_base, own best dp from the hfcell grid -> analysis/lowband/chain3_polelaw.{json,log}
+EMT_KERNEL=chain3 .venv/bin/python tools/loop_read/polecurve.py      # curves, leave-one-RT-out -> chain3_polecurve.{json,log}
+for rt in ...; do EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 9 -- .venv/bin/python tools/loop_cv.py --retake --pcurve --stage run --rt $rt --workers 8; done
+.venv/bin/python tools/loop_read/ml_poles.py M|L <keys>              # M / L own best pole (drift zero) -> chain3_ml_poles.log
+.venv/bin/python tools/loop_read/ml_curve.py M|L <keys>              # S's curve applied to M / L -> chain3_ml_curve.log
+```
+
+**1. In S the best pole is a function of the law's pole alone, where that can be checked.** Each setting's own best HF pole p_true = the §25.6 baseline's pole (law, ramp, fold hfdp, cap) + its own best common shift (the `hfcell` grid's parabolic minimum, weighted by the cost curvature; 96 settings × 4 loops). Cells with the same p_law but different HF and RT land on the same pole: HF 0.2 / RT 1.8 against HF 0.6 / RT 0.3 (p_law 0.464–0.488) 0.4638 / 0.4691 / 0.4796 / 0.4861 against 0.4636 / 0.4691 / 0.4768 / 0.4893; HF 0.4 / RT 1.8 against HF 0.6 / RT 0.8 (0.221–0.235) to ±0.001. The curve Δ = p_true − p_law: ~0 below 0.45, a dip of about −0.004 at 0.55–0.62, a rise above 0.62 (+0.009 at 0.70, +0.023 at 0.78) and a ceiling. Held-out pole error (leave-one-RT-out, rms × 10⁻³, weighted): law + cap 0.84 4.7; ramp + cap without the table 1.8; **a smooth curve (8 knots + cap, 9 numbers) 1.4** (cap 0.8475); the law with a refitted reference frequency and exponent (3 numbers) 5.4 — no other f_ref makes the knee.
+- **Where it can't be checked:** above p_law ≈ 0.6 each p_law range is covered by one or two (HF, RT) cells, and where two overlap they disagree (p_law 0.75–0.78: HF 0.2 / RT 0.8, well determined, wants +0.018…+0.022; HF 0.4 / RT 0.3, with 30–3000× less curvature and stepped captures (§25.16), wants less). Held out by RT the curve misses there by −3…−6·10⁻³ (HF 0.2 / RT 0.6–0.8) and +2·10⁻³ (HF 0.2 / RT 1.4); the HF table, borrowing from the same cell's other LF steps, hits within ±1·10⁻³.
+
+**2. On the baseline bench (`loop_cv --retake --pcurve`: the curve fitted without the fold's RT step in place of the ramp, the fold's hfdp and the 24-value HF table; 8 workers, 4.1–4.3 GB, 8 min):** all 128 −51.6 / −48.9 / −44.0 / −37.3 → −51.4 / −48.9 / −43.7 / −37.4 dB (R); RT ≥ 1.4 better (150–300 ms −50.4 → −51.0, 300–600 −47.0 → −47.6), HF 0.2 worse (150–300 −43.8 → −41.4, 600–1000 −38.7 → −34.5); 36 settings better and 29 worse at 300–600 ms, the worst all HF 0.2 (0.4_0.8_0.2 +9.1, 2.0_1.4_0.2 +7.6 dB). **In S the curve does not replace the table** (not adopted): the strong region is not sampled densely enough to pin a curve held out by RT.
+
+**3. M and L: an independent test** (`ml_poles.py`). M / L run S's law per line (lengths × 2 / × 4, so their strong-HF settings sit at other p_law values), capped at 0.84, with no ramp and no table. Per setting a common pole shift on a grid (−0.06…+0.02), and the shift that zeroes the capture-vs-model lag drift (§25.16's track, 300–600 ms minus 60–100 ms):
+- **Ceiling:** wherever the law asks past the cap (p_law 0.85–0.99), the best pole is **0.8443–0.8517** (M HF 0.1 / 0.2 at RT 0.8–1.8, L HF 0.1 at RT 2.6–4.5; 24 settings), centred on S's fitted cap 0.8475. **The law's 0.84 is too low in all three programs (S).**
+- **Ramp:** at p_law 0.63–0.80 the best poles sit +0.003…+0.018 above the law (M 0.1 / 2.0 _1.8_0.2: +0.018; M _0.8_0.4: +0.010…+0.015; L _2.6_0.3: +0.003…+0.006), S's curve to about ±0.007.
+- **Below ≈ 0.6** the best poles are within ±0.003…0.007 of the law (M / L's time variance limits this measurement), as in S.
+- **Fold-back at each program's shortest RT:** M at RT 0.6 (HF 0.1 / 0.2: best 0.805–0.830), S at RT 0.3 (HF 0.2: ≤ 0.828, the grid's edge), L at RT 2.2 (no zero crossing in the grid). It depends on the RT regime, not on p_law (M at RT 1.2 with p_law 0.988–0.997 sits at 0.844–0.848). The same regime holds S's stepped captures (§25.16). **H**.
+
+**4. S's curve applied to M / L, nothing fitted on them** (`ml_curve.py`, the all-RT curve from S; each program's shortest RT left out; stored clocks and gains; residual at 150–600 ms, 177 Hz – 2.8 kHz, R):
+
+| Program, HF | Settings | Median drift, law → curve (samples) | Median residual, law → curve | Better / worse (> 0.3 dB) |
+|---|---|---|---|---|
+| M HF 0.1 | 11 | 0.39 → 0.06 | −19.0 → −19.3 dB | 9 / 0 |
+| M HF 0.2 | 12 | 0.33 → 0.06 | −17.9 → −18.6 dB | 8 / 0 |
+| M HF 0.4 / 0.9 | 23 | 0.01…0.03, unchanged | unchanged | 2 / 0 |
+| L HF 0.1 | 12 | 0.04 → 0.00 | −24.1 → −24.5 dB | 12 / 0 |
+| L HF 0.3 / 0.5 / 1.0 | 36 | unchanged | unchanged | 0 / 0 |
+
+The drift at strong HF, M / L's structural signal there, disappears and nothing gets worse; the residual gains are small because M / L's late reverb is limited by their time variance (ml_structure §9). **The curve transfers across programs.**
+
+**Reading.** The HF pole is one function of the law's pole in all three programs: the law up to ≈ 0.6, a ramp above it, and a ceiling ≈ 0.8475 (not 0.84) — a property of the coefficient computation, not of a program or a setting. For M / L it is the fix for their strong-HF drift (to adopt in `ml_lines.line_coefs` as a pole map, H until the pulse check). For S the 24-value table stays: the library samples the strong region too sparsely to pin the curve held out, and the table also absorbs S's stepped captures. **Next:** (1) put the pole map into `ml_lines` (default after the pulse check); (2) in S, the cap 0.8475 with the ramp and table refitted around it; (3) the fold-back at each program's shortest RT (with S's stepped captures, the same regime).
