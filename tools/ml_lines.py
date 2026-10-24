@@ -57,16 +57,24 @@ OUT = os.path.join(ROOT, "analysis", "ml_lines")
 FS, K0 = cc.FS, cc.K0
 LAW = json.load(open(os.path.join(ROOT, "analysis", "q1", "laws.json")))
 P_MAX, DC_MIN, BETA = 0.84, 0.18, 0.019                    # S's coefficient limits (model_s_results §16.15-16.16)
+DROP_BACK = 0.8465                                          # S's HF 0.2 / RT 0.6 pole past the drop-back point (model_s_results 32.4)
 
 
 def _pole_curve():
-    """The HF pole as one curve of the law's pole (model_s_results §25.17, S's all-RT fit: law, ramp above ~0.62, ceiling
-    ~0.8475), the default for M / L's lines since §25.20; ML_POLE_CURVE=0 restores the capped law (min(p, P_MAX))."""
-    if os.environ.get("ML_POLE_CURVE") == "0":
+    """The HF pole as one curve of the law's pole: S's curve of model_s_results 32.6 (all-data fit, piecewise linear in the
+    law's pole) with its drop-back past the fold point to S's HF 0.2 / RT 0.6 cell value, the default for M / L's lines
+    since ml_structure 8.7. ML_POLE_CURVE=25: §25.17's curve (law, ramp above ~0.62, ceiling ~0.8475; the default from
+    §25.20); ML_POLE_CURVE=0: the capped law (min(p, P_MAX))."""
+    mode = os.environ.get("ML_POLE_CURVE", "32")
+    if mode == "0":
         return None
-    pc = json.load(open(os.path.join(ROOT, "analysis", "lowband", "chain3_polecurve.json")))
-    kn, th = np.array(pc["knots"]), np.array(pc["all"])
-    return lambda p: min(p + float(np.interp(p, kn, th[:len(kn)])), float(th[len(kn)]))
+    if mode == "25":
+        pc = json.load(open(os.path.join(ROOT, "analysis", "lowband", "chain3_polecurve.json")))
+        kn, th = np.array(pc["knots"]), np.array(pc["all"])
+        return lambda p: min(p + float(np.interp(p, kn, th[:len(kn)])), float(th[len(kn)]))
+    pc = json.load(open(os.path.join(ROOT, "analysis", "lowband", "chain3_pole_cells_allf.json")))
+    kn, th, fold = np.array(pc["knots"]), np.array(pc["all"]), float(pc["fold"])
+    return lambda p: float(np.interp(p, kn, th)) if p < fold else DROP_BACK
 
 
 POLE_MAP = _pole_curve()

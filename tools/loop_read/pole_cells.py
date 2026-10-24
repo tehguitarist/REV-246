@@ -130,7 +130,9 @@ def main():
         lines.append(f"  {key}: law " + " ".join(f"{x:.4f}" for x in pl) + " | base " + " ".join(f"{x:.4f}" for x in by_key[key]["pb"])
                      + " | model " + " ".join(f"{x:.4f}" for x in hp) + ("" if uu is None else " | unit " + " ".join(f"{x:.4f}" for x in uu)))
     json.dump(cells, open(os.path.join(OUT, "cells.json"), "w"), indent=1)
-    json.dump(dict(knots=KNOTS.tolist(), fold=FOLD, curves=curves, rows=out), open(LOG + ".json", "w"), indent=1)
+    c_all = fit_curve([p for p in pts if KNOTS[0] - 0.02 <= p["pl"] < FOLD]).tolist()     # all data: the plugin's / M and L's map
+    lines.append(f"all data: curve at knots {KNOTS.tolist()} = " + " ".join(f"{x:.4f}" for x in c_all))
+    json.dump(dict(knots=KNOTS.tolist(), fold=FOLD, curves=curves, all=c_all, rows=out), open(LOG + ".json", "w"), indent=1)
     lines.insert(0, f"{len(out)} pole-limited settings with hf_poles -> {OUT}; drop-back above a law pole of {FOLD}")
     open(LOG + ".log", "w").write("\n".join(lines) + "\n")
     print("\n".join(lines))
