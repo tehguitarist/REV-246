@@ -252,8 +252,14 @@ def q1_tables():
     return info, fade, law, ap, eps0
 
 
-def files_of(g):
-    return [(int(k), f["file"]) for k, f in sorted(g["files"].items()) if not k.startswith("_")]
+CLEAN = os.environ.get("Q2_CLEAN") == "1"   # --clean (sets Q2_CLEAN for the workers): no data defects (tools/defects.py) in the free fit or the repeat pairs
+
+
+def files_of(g, key=None):
+    """(AMPL, file) of a setting; with --clean and the setting's key, without its defective captures (model_s_results 30)."""
+    from defects import DEFECTS
+    return [(int(k), f["file"]) for k, f in sorted(g["files"].items()) if not k.startswith("_")
+            and not (CLEAN and key is not None and (key, int(k)) in DEFECTS)]
 
 
 def _band(name):
@@ -276,7 +282,7 @@ def fit_setting(args):
     key, g, fade, law, b230, eps0, iters, refs = args
     lab = dict(lf=g["lf"], rt=g["rt"], hf=g["hf"])
     G = q1.group_spectra(lab, law, q1.grid_n(g["rt"]), b230=b230)
-    fl = files_of(g)
+    fl = files_of(g, key)
     eps = {nm: eps0[nm] for _, nm in fl}
     shift = {nm: 0.0 for _, nm in fl}
 
@@ -309,7 +315,8 @@ def fit_setting(args):
         its own clock and gain fit against the in-sample model (as q1 run_split)."""
         out = {}
         amps = {a: nm for a, nm in fl}
-        for a_, b_ in ((30, 60), (60, 90), (90, 30), (0, 30)):
+        pairs = ((30, 60), (60, 90), (90, 30), (0, 30)) + (((0, 90),) if 30 not in ys and 60 not in ys else ())   # --clean: 0 + 90 only
+        for a_, b_ in pairs:
             if a_ in ys and b_ in ys:
                 n = min(len(ys[a_]), len(ys[b_]))
                 te = min(fade[amps[a_]], fade[amps[b_]])
@@ -353,6 +360,8 @@ def free_stage(workers, iters, only=None, refs=False):
     from concurrent.futures import ProcessPoolExecutor, as_completed
     info, fade, law, ap, eps0 = q1_tables()
     ap_t = os.path.join(OUT, q1.ms.tagged("ap230_g0.7071") + ".json")
+    if q1.ms.KTAG and not os.path.exists(ap_t):          # chain3 has none: the baseline's (loop_cv --ap230) chain2 table
+        ap_t = os.path.join(OUT, "ap230_g0.7071_chain2.json")
     if q1.ms.KTAG and os.path.exists(ap_t):
         ap = json.load(open(ap_t))
     os.makedirs(vdir(), exist_ok=True)
@@ -1687,7 +1696,7 @@ def nulls_stage(source, workers, only=None):
     if source == "free":
         for r in json.load(open(free_json())):
             k = r["key"]
-            caps = [dict(amp=a, file=nm, eps=r["eps"][nm], fade2=fade[nm]) for a, nm in files_of(info[k])]
+            caps = [dict(amp=a, file=nm, eps=r["eps"][nm], fade2=fade[nm]) for a, nm in files_of(info[k], k) if nm in r["eps"]]
             jobs.append((k, dict(lf=r["lf"], rt=r["rt"], hf=r["hf"]), r["b230"], json.loads(json.dumps(law_all)), False,
                          os.path.join(vdir(), k + ".npy"), caps, ends))
     else:
@@ -1744,6 +1753,7 @@ def main():
     global OUT
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--stage", default="free", choices=["windows", "ramp", "free", "joint", "nulls", "residues", "regress", "branches", "breport", "filters", "tied", "diffuser", "ap230", "loops", "cla", "capped", "final", "report"])
+    ap.add_argument("--clean", action="store_true", help="free / nulls: leave the bad and slipped captures (tools/defects.py) out (model_s_results 30)")
     ap.add_argument("--g230", type=float, default=-0.7071067812, help="ap230: the all-pass gain for the step measurement")
     ap.add_argument("--ap230", default=None, help="diffuser, final: an AP230 step table from the ap230 stage (default: q1's; final: ap230_g0.7071.json)")
     ap.add_argument("--pramp", default=None, help="final: 'c,p0': HF pole = min(p + c max(0, p - p0), P_MAX) (p the law's uncapped pole)")
@@ -1785,6 +1795,9 @@ def main():
     ap.add_argument("--only", default=None, help="comma-separated setting keys (lf_rt_hf)")
     ap.add_argument("--out", default=OUT)
     a = ap.parse_args()
+    if getattr(a, "clean", False):
+        global CLEAN
+        os.environ["Q2_CLEAN"], CLEAN = "1", True
     OUT = a.out
     os.makedirs(OUT, exist_ok=True)
     only = a.only.split(",") if a.only else None

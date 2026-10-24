@@ -605,10 +605,7 @@ def hfbb(key, path):
 CAP_CELLS = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475", "cells.json")   # the §25.18 floor and HF cells
 LOOP_B = float(os.environ.get("SHELF_LOOPB", "0.03"))      # hfloop: bound on each loop's pole shift (29: wider at RT 0.3)
 CLEAN = bool(os.environ.get("SHELF_CLEAN"))                 # hfloop: fit only the clean captures (29)
-CLEAN_OUT = {("0.1_0.3_0.2", 0), ("1.0_0.6_0.6", 0), ("1.0_0.6_1.0", 0), ("0.4_1.0_0.4", 0),       # bad AMPL-0 (library_notes 2)
-             ("0.1_0.3_0.2", 60), ("0.1_0.3_0.4", 60), ("0.4_0.3_0.2", 60), ("0.4_0.3_0.4", 30), ("0.4_0.3_0.4", 60),
-             ("1.0_0.3_0.2", 30), ("1.0_0.3_0.2", 60), ("1.0_0.3_0.4", 30), ("1.0_0.3_0.4", 60), ("1.0_0.6_0.2", 30),
-             ("1.0_0.6_0.2", 60), ("2.0_0.3_0.2", 30), ("2.0_0.6_0.2", 30)}                       # slipped (model_s_results 28)
+from defects import DEFECTS as CLEAN_OUT  # noqa: E402  (library_notes 2, model_s_results 28)
 
 
 def hfloop(key, path):

@@ -74,7 +74,7 @@ def onset_ms(path):
     return (lo + int(np.argmax(a[lo:main + 1] > a.max() * 1e-2))) / fs * 1000
 
 
-BAD = {("0.1_0.3_0.2", 0), ("1.0_0.6_0.6", 0), ("1.0_0.6_1.0", 0), ("0.4_1.0_0.4", 0)}     # library_notes §2
+from defects import BAD  # noqa: E402  library_notes §2
 
 
 def classify(k, z, caps, amp):
