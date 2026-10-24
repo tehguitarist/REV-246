@@ -62,6 +62,7 @@ def prep(key):
 
 
 THROUGH_G = False                                                   # --through-g: a second correction per loop through one pass of G_i
+FROM0 = False                                                       # --from0: weight every capture with a cluster from 0 ms (model_s_results 25.13)
 _LAW = {}
 
 
@@ -90,6 +91,8 @@ def load(key, full=False):
         w = z[f"w{j}"].astype(np.float64)
         e = int(np.nonzero(w)[0][-1]) + 1                               # no samples past the weighted window
         res = z[f"res{j}"] if FIT_BAND == BAND else sosfiltfilt(SOS_FIT, (z[f"y{j}"] - z[f"m{j}"]).astype(np.float64), axis=0)
+        if FROM0 and int(z[f"amp{j}"]) > 0:                         # --from0: the cluster window weighted too (AMPL 0 has no cluster)
+            w[PRE:int(np.nonzero(w)[0][0])] = 1.0
         files.append(dict(y=res[:e].astype(np.float64), w=w[:e], amp=0))
     R = list(z["R"].astype(np.complex128))
     if THROUGH_G:
@@ -170,16 +173,17 @@ def keys_for(rts, subset=True):
 
 def tag(fold):
     return fold + ("_" + "_".join(f"{c}{v:g}" for c, v in sorted(SUBSET.items())) if SUBSET else "") + ("_G" if THROUGH_G else "") + \
-        ("" if BASIS == "dense" else "_" + BASIS) + ("" if FIT_BAND == BAND else f"_band{FIT_BAND[0]}-{FIT_BAND[1]}") + \
-        ("" if WIN is None else f"_win{WIN[0]}-{WIN[1]}") + ("" if BASE is None else f"_on-{BASE}")
+        ("" if BASIS == "dense" else "_" + BASIS.replace(":", "-").replace("+", "_")) + ("" if FIT_BAND == BAND else f"_band{FIT_BAND[0]}-{FIT_BAND[1]}") + \
+        ("" if WIN is None else f"_win{WIN[0]}-{WIN[1]}") + ("" if BASE is None else f"_on-{BASE}") + ("_from0" if FROM0 else "")
 
 
 def stag(fold):
     """Score tag: the fit's tag, plus the projection band if any."""
-    return tag(fold) + ("" if PROJECT is None else f"_proj{PROJECT[0]}-{PROJECT[1]}") + ("_all" if TEST_ALL else "")
+    return tag(fold) + ("" if PROJECT is None else f"_proj{PROJECT[0]}-{PROJECT[1]}") + ("_all" if TEST_ALL else "") + ("_regain" if REGAIN else "")
 
 
 PROJECT = None                                                      # --project lo,hi: score the correction band-limited to lo-hi Hz
+REGAIN = False                                                      # --regain: score with each capture's gain refitted (base and corrected alike)
 TEST_ALL = False                                                    # --test-all: score every setting at the test RT steps, outside SUBSET too
 
 
@@ -191,6 +195,8 @@ def basis_map(J):
     """Sparse map from the basis coefficients to the dense excitation vector (None = dense: identity)."""
     if BASIS == "dense":
         return None
+    if BASIS.startswith("combo:"):
+        return combo_map(J)
     from scipy.sparse import lil_matrix
     off, o = {}, 0
     for c in (0, 1):
@@ -229,6 +235,54 @@ def basis_map(J):
             for k in range(max(-K, -t), min(K, J.Lx[i] - 1 - t) + 1):   # within this loop's excitation
                 M[off[(c, i)] + t + k, col + k + K] += sg
     return M.tocsr()
+
+
+def combo_map(J):
+    """--basis combo:PART+PART: a few columns built from the baseline's own excitation x0 (5 signed taps per loop and
+    channel), each in the dense layout (so the fit's x_ is an --xadd correction like any other; model_s_results 25.13):
+      gain          x0 per channel (2): the loop-path level
+      ck2           x0 delayed by -2..+2 lags per channel (10): a short level filter
+      ap230         x0 through d log A230 / d g_ff and d g_fb (2, shared by L and R; b = 0): AP230 not quite all-pass
+      bandLO-HI     x0 zero-phase band-passed to LO-HI Hz and its Hilbert pair, per channel (4): a narrow loop-path transfer term"""
+    from scipy.signal import hilbert
+    x0 = x_base()
+    off, o = {}, 0
+    for c in (0, 1):
+        for i, L in enumerate(J.Lx):
+            off[(c, i)] = o
+            o += L
+    seg = lambda v, c, i: v[off[(c, i)]:off[(c, i)] + J.Lx[i]]
+    cols = []
+
+    def per_seg(fn, chans=(0, 1)):                                  # one column: fn applied to each loop's x0 segment in chans
+        v = np.zeros(o)
+        for c in chans:
+            for i in range(4):
+                v[off[(c, i)]:off[(c, i)] + J.Lx[i]] = fn(seg(x0, c, i))
+        return v
+    Nf = 1 << 15
+    w = 2 * np.pi * np.fft.rfftfreq(Nf)
+    for part in BASIS.split(":")[1].split("+"):
+        if part == "gain":
+            cols += [per_seg(lambda u: u, (c,)) for c in (0, 1)]
+        elif part == "ck2":
+            cols += [per_seg(lambda u, k=k: np.roll(np.r_[u, np.zeros(4)], k)[:len(u)] if k >= 0 else np.r_[u[-k:], np.zeros(-k)], (c,))
+                     for c in (0, 1) for k in range(-2, 3)]
+        elif part == "ap230":
+            g0, h = q2.FINAL_DIFF["g20"], 1e-5
+            A = lambda g1, g2: (-g1 + np.exp(-1j * w * 230)) / (1 - g2 * np.exp(-1j * w * 230))
+            for D in ((A(g0 + h, g0) - A(g0 - h, g0)) / (2 * h) / A(g0, g0), (A(g0, g0 + h) - A(g0, g0 - h)) / (2 * h) / A(g0, g0)):
+                cols.append(per_seg(lambda u, D=D: np.fft.irfft(np.fft.rfft(u, Nf) * D, Nf)[:len(u)]))
+        elif part.startswith("band"):
+            lo, hi = (float(x) for x in part[4:].split("-"))
+            sos = butter(4, (lo, hi), btype="band", fs=FS, output="sos")
+            bp = lambda u: sosfiltfilt(sos, np.r_[np.zeros(4000), u, np.zeros(4000)], padtype=None)[4000:4000 + len(u)]
+            hb = lambda u: np.imag(hilbert(np.r_[np.zeros(4000), bp(u), np.zeros(4000)]))[4000:4000 + len(u)]
+            cols += [per_seg(f_, (c,)) for c in (0, 1) for f_ in (bp, hb)]
+        else:
+            raise ValueError(part)
+    from scipy.sparse import csr_matrix
+    return csr_matrix(np.array(cols).T)
 
 
 WIN = None                                                          # --win s0,ext: the correction's support (default q1's 230, 1700)
@@ -311,15 +365,19 @@ def score(fold):
             n = min(len(c["y"]), len(cb["y"]))
             m1 = c["m"][:n] + add[:n] * c["g"][:n]
             te = min(c["te"], cb["te"])
+            m0 = c["m"][:n]
+            if REGAIN:                                              # one gain per capture refitted over 50 ms .. te, as q1._clock_job
+                i0, i1 = PRE + int(0.05 * FS), min(PRE + int(c["te"] * FS), n)
+                m0, m1 = (u * np.sum(c["y"][i0:i1] * u[i0:i1]) / np.sum(u[i0:i1] ** 2) for u in (m0, m1))
             res = {}
             for f, sos in ls.SOS_OCT.items():
-                y, a0, a1, yb = (sosfiltfilt(sos, v[:n], axis=0)[:, 1] for v in (c["y"], c["m"], m1, cb["y"]))
+                y, a0, a1, yb = (sosfiltfilt(sos, v[:n], axis=0)[:, 1] for v in (c["y"], m0, m1, cb["y"]))
                 for a, b in ls.W_OCT:
                     i0, i1 = PRE + int(a / 1000 * FS), min(PRE + int(b / 1000 * FS), PRE + int(te * FS), n)
                     if i1 - i0 >= int(0.05 * FS):
                         e = lambda u, v: float(10 * np.log10(np.sum((u - v) ** 2) / np.sum(u ** 2)))
                         res[f"{f}_{a}-{b}"] = [e(y[i0:i1], a0[i0:i1]), e(y[i0:i1], a1[i0:i1]), e(y[i0:i1], yb[i0:i1])]
-            bb = ls.nulls_broad(c["y"][:n], c["m"][:n], te), ls.nulls_broad(c["y"][:n], m1, te), ls.nulls_broad(c["y"][:n], cb["y"][:n], te)
+            bb = ls.nulls_broad(c["y"][:n], m0, te), ls.nulls_broad(c["y"][:n], m1, te), ls.nulls_broad(c["y"][:n], cb["y"][:n], te)
             rows.append(dict(oct=res, broad=bb))
         json.dump(dict(key=k, lab=g["lab"], rows=rows), open(path, "w"))
         print(k, flush=True)
@@ -472,10 +530,12 @@ def main():
     ap.add_argument("--win", default=None)
     ap.add_argument("--project", default=None)
     ap.add_argument("--test-all", action="store_true")
+    ap.add_argument("--regain", action="store_true", help="score: refit each capture's gain over 50 ms .. te for the baseline and the corrected model")
+    ap.add_argument("--from0", action="store_true", help="weight the cluster window (0-50 ms) too, captures with a cluster")
     ap.add_argument("--base", default=None, help="a fitted correction's tag (after the subset) held fixed underneath, e.g. gain_band200-1500")
     a = ap.parse_args()
-    global THROUGH_G, BASIS, FIT_BAND, SOS_FIT, WIN, PROJECT, TEST_ALL, BASE
-    TEST_ALL, BASE = a.test_all, a.base
+    global THROUGH_G, BASIS, FIT_BAND, SOS_FIT, WIN, PROJECT, TEST_ALL, BASE, FROM0, REGAIN
+    TEST_ALL, BASE, FROM0, REGAIN = a.test_all, a.base, a.from0, a.regain
     PROJECT = tuple(int(x) for x in a.project.split(",")) if a.project else None
     WIN = tuple(int(x) for x in a.win.split(",")) if a.win else None
     THROUGH_G, BASIS = a.through_g, a.basis

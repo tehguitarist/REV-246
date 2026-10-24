@@ -1,0 +1,35 @@
+=== combo:gain --from0
+fold A: 40 settings, 12346272 samples, 2 unknowns; training residual -0.19 dB re the baseline's (200-10000 Hz, weighted)
+[memguard] peak footprint 1.22 GB, 3 s, exit 0
+fold B: 48 settings, 15480364 samples, 2 unknowns; training residual -0.14 dB re the baseline's (200-10000 Hz, weighted)
+[memguard] peak footprint 1.55 GB, 4 s, exit 0
+[memguard] peak footprint 0.33 GB, 26 s, exit 0
+[memguard] peak footprint 0.32 GB, 24 s, exit 0
+=== combo:ck2 --from0
+fold A: 40 settings, 12346272 samples, 10 unknowns; training residual -0.36 dB re the baseline's (200-10000 Hz, weighted)
+[memguard] peak footprint 1.30 GB, 5 s, exit 0
+fold B: 48 settings, 15480364 samples, 10 unknowns; training residual -0.26 dB re the baseline's (200-10000 Hz, weighted)
+[memguard] peak footprint 1.57 GB, 7 s, exit 0
+[memguard] peak footprint 0.33 GB, 26 s, exit 0
+[memguard] peak footprint 0.35 GB, 24 s, exit 0
+=== combo:ck2+ap230 --from0
+fold A: 40 settings, 12346272 samples, 12 unknowns; training residual -0.41 dB re the baseline's (200-10000 Hz, weighted)
+[memguard] peak footprint 1.35 GB, 6 s, exit 0
+fold B: 48 settings, 15480364 samples, 12 unknowns; training residual -0.29 dB re the baseline's (200-10000 Hz, weighted)
+[memguard] peak footprint 1.63 GB, 8 s, exit 0
+[memguard] peak footprint 0.33 GB, 26 s, exit 0
+[memguard] peak footprint 0.34 GB, 24 s, exit 0
+=== combo:ck2+ap230+band200-250 --from0
+fold A: 40 settings, 12346272 samples, 16 unknowns; training residual -0.42 dB re the baseline's (200-10000 Hz, weighted)
+[memguard] peak footprint 1.36 GB, 10 s, exit 0
+fold B: 48 settings, 15480364 samples, 16 unknowns; training residual -0.29 dB re the baseline's (200-10000 Hz, weighted)
+[memguard] peak footprint 1.64 GB, 14 s, exit 0
+[memguard] peak footprint 0.34 GB, 26 s, exit 0
+[memguard] peak footprint 0.33 GB, 23 s, exit 0
+=== combo:ck2+ap230+band200-250
+fold A: 40 settings, 12346272 samples, 16 unknowns; training residual -0.67 dB re the baseline's (200-10000 Hz, weighted)
+[memguard] peak footprint 1.27 GB, 10 s, exit 0
+fold B: 48 settings, 15480364 samples, 16 unknowns; training residual -0.36 dB re the baseline's (200-10000 Hz, weighted)
+[memguard] peak footprint 1.62 GB, 13 s, exit 0
+[memguard] peak footprint 0.34 GB, 25 s, exit 0
+[memguard] peak footprint 0.32 GB, 24 s, exit 0

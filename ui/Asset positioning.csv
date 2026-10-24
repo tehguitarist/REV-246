@@ -1,0 +1,43 @@
+﻿Asset,X,Y,H,W,Notes
+"S Out, S In",445,586,125,125,in used when the button is pressed
+"M In, M Out",445,738,125,125,in used when the button is pressed
+"L In, L Out",445,889,125,125,in used when the button is pressed
+"E In, E Out",445,1041,125,125,in used when the button is pressed
+"N In, N Out",445,1193,125,125,in used when the button is pressed
+"Power In Off, Power In Off, Power Out On, Power Out Off",148.5,237.5,188,188,"power IN used for when button is pressed to bypass plugin. If off, it should display in off when pressed, then move to out on, and vice versa"
+"joy-down, joy-mid, joy-up (for Lowpass)",897,1167,193,193,"mid is the default look, up or down is when the joystick is moved up or down. Holding should move the value up with a half second delay between each move, mouse scroll or dragging on the display should also move it."
+"joy-down, joy-mid, joy-up (for Reflections, Delay)",1198,1167,193,193,"mid is the default look, up or down is when the joystick is moved up or down. Holding should move the value up with a half second delay between each move, mouse scroll or dragging on the display should also move it."
+"joy-down, joy-mid, joy-up (for Reflections, AMPL)",1431,1167,193,193,"mid is the default look, up or down is when the joystick is moved up or down. Holding should move the value up with a half second delay between each move, mouse scroll or dragging on the display should also move it."
+"joy-down, joy-mid, joy-up (for Decay, LF x)",1722,1167,193,193,"mid is the default look, up or down is when the joystick is moved up or down. Holding should move the value up with a half second delay between each move, mouse scroll or dragging on the display should also move it."
+"joy-down, joy-mid, joy-up (for Decay ,RT)",2004,1167,193,193,"mid is the default look, up or down is when the joystick is moved up or down. Holding should move the value up with a half second delay between each move, mouse scroll or dragging on the display should also move it."
+"joy-down, joy-mid, joy-up (for Decay, HF x)",2280,1167,193,193,"mid is the default look, up or down is when the joystick is moved up or down. Holding should move the value up with a half second delay between each move, mouse scroll or dragging on the display should also move it."
+Knob,2687,263,153,153,"This is a 0700 to 1700 style knob with 12 oclock being no panning and the default, drop shadow at 315 degree angle, 4.7px offset, 0.4px radius and 50% opacity"
+red fader,2684,"545 (max), 1185 (min)",211,100,"drop shadow with 315 degree angle, 50% opacity, radius 0.8px, and 5.7px offset"
+white fader (for Input),2996,"218 (+12), 480 (0), 1238 (- infinity)",211,100,"drop shadow with 315 degree angle, 50% opacity, radius 0.8px, and 5.7px offset"
+white fader (for Output),3307,"218 (+12), 480 (0), 1238 (- infinity)",211,100,"drop shadow with 315 degree angle, 50% opacity, radius 0.8px, and 5.7px offset"
+"red LED on, red LED off (for S)",563,586,50,50,
+"red LED on, red LED off (for M)",563,738,50,50,
+"red LED on, red LED off (for L)",563,889,50,50,
+"red LED on, red LED off (for E)",563,1041,50,50,
+"red LED on, red LED off (for N)",563,1193,50,50,
+,,,,,"All mesaurements from centre of asset, not top left."
+,,,,,
+DISPLAY BOX LOCATIONS BELOW,,,,,"These measurements are from top left corner, not centre"
+OVL Level indicator,123.5,453.5,52,75,Red
+3,123.5,,52,75,Yellow
+0,123.5,,52,75,Green
+-3,123.5,,52,75,Green
+-6,123.5,,52,75,Green
+-9,123.5,,52,75,Green
+-12,123.5,,52,75,Green
+Program display,273,160,151,434,"5 digits (with decimal point dots) inbetween each digit) showing truncated program name ie SHT.RT, MED.RT LNG.RT N.LIN, E.250, should have dim digits underneath when not lit up and plenty of glow, see reference images)."
+Lowpass display,755,160,151,285,"3 digits with decimal points in between, same look as above"
+Reflections Display,1087,160,151,461,"6 Digits with decimal points inbetween, same look as above"
+,1588,160,151,828,"9 digits with decimal points in between, same look as above"
+,,,,,
+Lowpass funnel,"877 (min), 814 (max)","1020 (min), 527 (max)",10,"34 (min), 167 (max)",Red line with slightly rounded corners and a red glow
+,"1179 (min), 1116 (max)","1020 (min), 527 (max)",10,"34 (min), 167 (max)",Red line with slightly rounded corners and a red glow
+,"1412 (min), 1406 (max)","1020 (min), 527 (max)",10,"34 (min), 167 (max)",Red line with slightly rounded corners and a red glow
+,"1703 (min), 1540 (max)","1020 (min), 527 (max)",10,"34 (min), 167 (max)",Red line with slightly rounded corners and a red glow
+,"1985 (min), 1922 (max)","1020 (min), 527 (max)",10,"34 (min), 167 (max)",Red line with slightly rounded corners and a red glow
+,"2261 (min), 2198 (max)","1020 (min), 527 (max)",10,"34 (min), 167 (max)",Red line with slightly rounded corners and a red glow
