@@ -15,6 +15,7 @@ class DesignComponent : public juce::Component, public juce::SettableTooltipClie
     explicit DesignComponent(juce::Rectangle<float> designBoundsIn) : designBounds(designBoundsIn) {}
 
     juce::Rectangle<float> getDesignBounds() const { return designBounds; }
+    void setDesignBounds(juce::Rectangle<float> r) { designBounds = r; }
 
     // s = editor width / design width. Edges are rounded (not position and size separately), so
     // neighbouring components can't drift apart by a pixel.

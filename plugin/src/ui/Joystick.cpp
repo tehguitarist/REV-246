@@ -96,25 +96,30 @@ void Funnel::paint(juce::Graphics& g)
                     const auto dx = design::funnelDx[column];
                     const auto alpha = contentAlpha();
 
-                    // The wedge's interior between y0 and y1, inset from its edges.
-                    juce::Path band;
-                    constexpr int steps = 10;
-                    for (int i = 0; i <= steps; ++i)
-                    {
-                        float left, right;
-                        const auto y = y0 + (y1 - y0) * (float)i / (float)steps;
-                        edgesAt(y, left, right);
-                        const auto p = toLocal(juce::Point<float>(left + dx + design::funnelInset, y));
-                        i == 0 ? band.startNewSubPath(p) : band.lineTo(p);
-                    }
-                    for (int i = steps; i >= 0; --i)
-                    {
-                        float left, right;
-                        const auto y = y0 + (y1 - y0) * (float)i / (float)steps;
-                        edgesAt(y, left, right);
-                        band.lineTo(toLocal(juce::Point<float>(right + dx - design::funnelInset, y)));
-                    }
-                    band.closeSubPath();
+                    // The wedge's interior between two heights, inset from its edges.
+                    auto wedge = [&](float ya, float yb) {
+                        juce::Path path;
+                        constexpr int steps = 12;
+                        for (int i = 0; i <= steps; ++i)
+                        {
+                            float left, right;
+                            const auto y = ya + (yb - ya) * (float)i / (float)steps;
+                            edgesAt(y, left, right);
+                            const auto p = toLocal(juce::Point<float>(left + dx + design::funnelInset, y));
+                            i == 0 ? path.startNewSubPath(p) : path.lineTo(p);
+                        }
+                        for (int i = steps; i >= 0; --i)
+                        {
+                            float left, right;
+                            const auto y = ya + (yb - ya) * (float)i / (float)steps;
+                            edgesAt(y, left, right);
+                            path.lineTo(toLocal(juce::Point<float>(right + dx - design::funnelInset, y)));
+                        }
+                        path.closeSubPath();
+                        return path;
+                    };
+                    const auto band = wedge(y0, y1);
+                    lg.reduceClipRegion(wedge(design::funnelTopY, design::funnelBottomY)); // nothing leaves the wedge
 
                     // Brightest at the centre, fading to nothing at the ends (a smooth falloff, not a line per value).
                     const auto top = toLocal(juce::Point<float>(0.0f, y0)).y, bottom = toLocal(juce::Point<float>(0.0f, y1)).y;
@@ -126,8 +131,8 @@ void Funnel::paint(juce::Graphics& g)
                     fade.addColour(1.0 - edge, juce::Colour(0xffff3a20).withAlpha(0.95f * alpha));
                     fade.addColour(1.0 - edge * 0.45, juce::Colour(0xffff2a14).withAlpha(0.22f * alpha));
 
-                    drawWithGlow(lg, getLocalBounds(), scale, juce::Colour(0xffff1a08).withAlpha(0.35f * alpha),
-                                 14.0f * getScale() * 2.5f, [&](juce::Graphics& cg) {
+                    drawWithGlow(lg, getLocalBounds(), scale, juce::Colour(0xffff1a08).withAlpha(0.33f * alpha),
+                                 15.0f * getScale() * 2.5f, [&](juce::Graphics& cg) {
                                      cg.setGradientFill(fade);
                                      cg.fillPath(band);
                                  });

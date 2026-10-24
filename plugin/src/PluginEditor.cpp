@@ -65,14 +65,27 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
       outputFader(images, L::Image::whiteFader, L::outputFader.cx, rv::design::gainTop, rv::design::gainBottom,
                   *p.apvts.getParameter(P::id::outputGain), bubble, [](float v) { return P::gainText(v); }),
       presetBar(p.presets, *this),
-      linkButton({2880.0f, rv::design::barTop + 35.0f, 220.0f, 80.0f}, "LINK", rv::ui::BarButton::Kind::toggle),
-      helpButton({3112.0f, rv::design::barTop + 35.0f, 90.0f, 80.0f}),
+      linkButton({0.0f, rv::design::barTop + 35.0f, 220.0f, 80.0f}, "LINK", rv::ui::BarButton::Kind::toggle), // x: see below
+      helpButton({0.0f, rv::design::barTop + 35.0f, 90.0f, 80.0f}),
       // The product name in the middle of the bar; the plugin's version (JUCE's, from the CMake project) at the right.
       titleLabel({1597.0f, rv::design::barTop + 35.0f, 300.0f, 80.0f}, "REV-246", 42.0f, rv::design::gold),
-      versionLabel({3240.0f, rv::design::barTop + 35.0f, 200.0f, 80.0f}, juce::String("v") + JucePlugin_VersionString, 30.0f,
+      versionLabel({0.0f, rv::design::barTop + 35.0f, 200.0f, 80.0f}, juce::String("v") + JucePlugin_VersionString, 30.0f,
                    rv::design::labelDimmed, juce::Justification::centredRight)
 {
     setLookAndFeel(&lookAndFeel);
+
+    // The right end of the bar, laid out from the version number's width (fonts differ by platform): the version sits
+    // barEdgePad from the panel's right edge, the "?" the same distance to its left, and LINK just left of the "?".
+    {
+        const auto versionText = juce::String("v") + JucePlugin_VersionString;
+        const auto textW = rv::ui::textWidth(rv::ui::labelFont(30.0f), versionText) + 2.0f;
+        const auto right = rv::layout::designWidth - rv::design::barEdgePad;
+        const auto y = rv::design::barTop + 35.0f;
+        versionLabel.setDesignBounds({right - textW, y, textW, 80.0f});
+        const auto helpRight = right - textW - rv::design::barEdgePad;
+        helpButton.setDesignBounds({helpRight - 90.0f, y, 90.0f, 80.0f});
+        linkButton.setDesignBounds({helpRight - 90.0f - 12.0f - 220.0f, y, 220.0f, 80.0f});
+    }
 
     // Programme buttons and lamps.
     struct Prog { L::Slot button, led; L::Image out, in, ledOn, ledOff; };

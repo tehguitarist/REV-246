@@ -11,7 +11,9 @@ inline constexpr int defaultWidth = 1398;
 inline constexpr int defaultHeight = 612;
 inline constexpr float minScale = 0.25f, maxScale = 0.60f;
 
-// The bottom bar (presets, link, help) sits under main.png and is drawn in code.
+// The bottom bar (presets, link, help) sits under main.png and is drawn in code. The version number keeps
+// barEdgePad from the panel's right edge, and the "?" keeps the same distance from the version number.
+inline constexpr float barEdgePad = 57.0f;
 inline constexpr float barTop = 1380.0f;
 inline constexpr float barHeight = 150.0f;
 inline const juce::Colour barColour{0xff1a272d}; // main.png's own bottom edge
@@ -50,13 +52,14 @@ inline constexpr float joyX[] = {897.0f, 1198.0f, 1431.0f, 1722.0f, 2004.0f, 228
 // top (maximum), following the wedge, which is slightly curved. Edges of the wedge's dark interior measured on
 // the art for the first funnel; the others are the same shape shifted by funnelDx.
 // The indicator is a soft band, funnelBandHeight tall: a bright core in the middle (funnelCoreFraction of it) fading
-// out above and below. It stays inside the wedge: the wedge's interior runs from funnelTopY to funnelBottomY, and the
-// band's centre travels from funnelMinY to funnelMaxY, half a band in from each end.
-inline constexpr float funnelBandHeight = 110.0f; // a 50 px bright core (5x the old line) with a fade above and below
-inline constexpr float funnelCoreFraction = 0.4545f; // 50 / 110
-inline constexpr float funnelTopY = 538.0f, funnelBottomY = 1035.0f;
-inline constexpr float funnelMinY = funnelBottomY - funnelBandHeight * 0.5f;
-inline constexpr float funnelMaxY = funnelTopY + funnelBandHeight * 0.5f;
+// out above and below. The band and its glow are clipped to the wedge's interior, which runs from funnelTopY to
+// funnelBottomY (measured on the art), and the core's centre travels so that at the minimum the core's lower edge is
+// at the very bottom of the wedge and at the maximum its upper edge is at the very top.
+inline constexpr float funnelBandHeight = 70.0f; // a 30 px bright core (3x the old line) with a fade above and below
+inline constexpr float funnelCoreFraction = 0.4286f; // 30 / 70
+inline constexpr float funnelTopY = 526.0f, funnelBottomY = 1029.0f;
+inline constexpr float funnelMinY = funnelBottomY - funnelBandHeight * funnelCoreFraction * 0.5f;
+inline constexpr float funnelMaxY = funnelTopY + funnelBandHeight * funnelCoreFraction * 0.5f;
 inline constexpr float funnelInset = 3.0f; // keeps the band inside the gold edge
 struct FunnelPoint
 {

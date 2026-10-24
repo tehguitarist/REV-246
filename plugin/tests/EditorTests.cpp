@@ -38,6 +38,11 @@ TEST_CASE("snapshot")
     const auto program = juce::SystemStats::getEnvironmentVariable("REV_SNAPSHOT_PROGRAM", "0").getIntValue();
     p.apvts.getParameter(rv::params::id::program)->setValueNotifyingHost(
         p.apvts.getParameter(rv::params::id::program)->convertTo0to1((float)program));
+    // REV_SNAPSHOT_EXTREME=min|max puts every lever at its end, to check the funnel indicators reach the wedge's ends.
+    const auto extreme = juce::SystemStats::getEnvironmentVariable("REV_SNAPSHOT_EXTREME", {});
+    if (extreme.isNotEmpty())
+        for (int i = 0; i < rv::params::numJoys; ++i)
+            p.apvts.getParameter(rv::params::joyId((rv::params::Joy)i))->setValueNotifyingHost(extreme == "max" ? 1.0f : 0.0f);
     std::unique_ptr<juce::AudioProcessorEditor> base(p.createEditor());
     dynamic_cast<Rev246Editor&>(*base).getLevelMeter().setPeakLinear(0.7f); // lights some of the LEVEL LEDs
     base->setSize(1747, 764);
