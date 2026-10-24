@@ -17,7 +17,7 @@ Everything below is committed and pushed (`main` after the merge of PR #1). Read
 
 **What this session established** (`ml_structure.md` §15–16, `model_s_results.md` §27–31).
 - **Library processing, not the unit:** M's fade is a linear 1.0 s ramp, L's a linear ramp of per-file length (~0.31 × the file); 13 S files carry a sample slip at 99.9 ms file time; 4 AMPL-0 captures are bad. All are listed in **`tools/defects.py`** (the one list every tool reads) and `library_notes.md` §2.
-- **The CLA / Altiverb low-band transfer** is a minimum-phase analogue response the two captures share to 0.05 dB, not the stock unit; the manual's optional balanced I/O transformers are the best-supported source (H) (§27, `EMT246_unit_facts.md` §2b).
+- **The CLA / Altiverb low-band transfer** is a minimum-phase analogue response the two captures share to 0.05 dB, not the stock unit; the manual's optional balanced I/O transformers are a candidate (H), but the mechanism is not shown: with the stock 100 µF coupling a line transformer's LF resonance sits at 2–10 Hz, not 40–60 Hz (§27, `EMT246_unit_facts.md` §2b).
 - **The HF control saturates:** at the shortest RT the strongest HF steps are one filter; the HF control acts as max(HF, 0.12 s × scale / RT) (§29; S and M confirmed, L untestable).
 - **S's loops are uncoupled** (≤ 2·10⁻⁴), and what is left of S's excess at 150–600 ms is **per-setting, per-loop coefficient detail in the shelf DC and the HF pole** (10⁻³ level): a 12-number refit per setting, held out by take, takes the excess over cross-take repeats from +6.1 / +5.3 to +2.7 / +1.3 dB, with no smooth trend (§31).
 

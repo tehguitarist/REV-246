@@ -39,7 +39,8 @@ models such a unit on the wet path:
 
 - **Low-band EQ (measured, S):** the colour that CLA's and the Altiverb's IRs share but Tomkin's library and the stock
   unit do not (`../docs/model_s_results.md` §27): about +3 dB at 40–60 Hz, −0.6 dB at 160 Hz, ripple up to 400 Hz,
-  minimum phase, on both outputs. The transformer option is the best-supported explanation for it (H).
+  minimum phase, on both outputs. The transformer option is a candidate explanation (H), not a demonstrated one: with the stock coupling capacitor a
+  line transformer's resonance would sit at 2–10 Hz, not 40–60 Hz.
 - **Transformer distortion (guessed, H):** a flux model of an input transformer (mono, before the reverb) and an output
   transformer per channel. Odd harmonics, mostly 3rd, growing with level and falling steeply with frequency: at
   0 dBFS (= +12 dBu, the unit's maximum) 0.35 % at 20 Hz, 0.08 % at 40 Hz, 0.01 % at 100 Hz, 0.0001 % at 1 kHz;
