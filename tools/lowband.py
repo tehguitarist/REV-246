@@ -296,7 +296,7 @@ def _ml_check(a_):
         _, u, gs, _ = mlines.fit_warp(yb, [C, R], sl, nf)
         m = ob.apply_f(mlines.warp(Craw, *u) * np.array([gs[ch][0] for ch in (0, 1)])[None], P) + \
             ob.apply_f(mlines.warp(Rraw, *u) * np.array([gs[ch][1] for ch in (0, 1)])[None], P)
-        end = mlines.usable_end(yb)
+        end = mlines.usable_end(yb, g[amp], prog)
         row = dict(prog=prog, key=key, amp=amp, nulls={})
         variants = [("model", m)] + ([("tfix", post_filter(m, 0.6))] if os.path.exists(tfix_path("A")) else [])  # rt 0.6 -> fold A
         for vn, mv in variants:

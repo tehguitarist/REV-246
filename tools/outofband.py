@@ -162,14 +162,14 @@ def _job(a):
     rows = []
     for amp in amps:
         yb, yr = caps[amp]
-        end = mlines.usable_end(yb)
+        end = mlines.usable_end(yb, g[amp], prog)
         sl, nf = mlines.fit_window(prog, amp > 0)
         _, u, gs, (Cw, _) = mlines.fit_warp(yb, [C, R], sl, nf)                    # the law stage's in-band fit
         Cwr, Rwr = mlines.warp(Craw, *u), mlines.warp(Rraw, *u)
         cl_raw = apply_f(Cwr * np.array([gs[ch][0] for ch in (0, 1)])[None], P)
         mraw = cl_raw + apply_f(Rwr * np.array([gs[ch][1] for ch in (0, 1)])[None], P)
         # repeat capture: another capture of the group, clock and gains fitted in band (ml_lines.fit_repeat)
-        other = max((x for x in amps if x != amp), key=lambda x: min(mlines.usable_end(caps[x][0])))
+        other = max((x for x in amps if x != amp), key=lambda x: min(mlines.usable_end(caps[x][0], g[x], prog)))
         cl_b = Cw * np.array([gs[ch][0] for ch in (0, 1)])[None]
         ob = caps[other][0]
 
@@ -181,7 +181,7 @@ def _job(a):
         _, gr = mlines.gains(yb[:nf], [cl_b[:nf], mlines.warp(ob[:nf], *v)[:nf]], sl)
         orw = mlines.warp(caps[other][1], *v)
         rep = np.stack([gr[ch][0] * cl_raw[:, ch] + gr[ch][1] * orw[:, ch] for ch in (0, 1)], 1)
-        oe = mlines.usable_end(ob)
+        oe = mlines.usable_end(ob, g[other], prog)
         variants = {"model": mraw, "repeat": rep, "model_hp": apply_f(mraw, HP)}
         row = dict(key=key, amp=int(amp), clock=list(u), rt_law=rt_law, nulls={}, decay={})
         t0 = [K0 + cc.ONSET[prog][ch] for ch in (0, 1)]

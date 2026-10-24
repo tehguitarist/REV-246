@@ -252,10 +252,33 @@ def windows(prog):
     return out
 
 
-def usable_end(y):
-    """Last index before Tomkin's fade (per channel): the last non-zero sample minus the ramp and a guard."""
+_FADES = None
+
+
+def fade_start(f, prog):
+    """Seconds before a file's end where Tomkin's fade starts, plus a guard: M / L from tools/ml_fade.py's per-file table
+    (ml_structure §15: M a linear 1.0 s ramp, ~0.3 s on files under 1.5 s; L linear, ~0.3 x the file length), its
+    program fallback where the reverb meets the floor before the fade; S (or no file) S's 0.70 s ramp (FADE)."""
+    global _FADES
+    if f is None or prog not in ("M", "L"):
+        return FADE, None
+    if _FADES is None:
+        _FADES = json.load(open(os.path.join(ROOT, "analysis", "ml_fade", "fade.json")))
+    e = _FADES.get(os.path.basename(f))
+    if e is not None:
+        return e["start"] + _FADES["_guard"], None
+    return (None, _FADES["_fallback"]["L"]) if prog == "L" else (_FADES["_fallback"]["M"] + _FADES["_guard"], None)
+
+
+def usable_end(y, f=None, prog=None):
+    """Last index before Tomkin's fade (per channel): the file's end (the last sample above 1e-6 of the peak) minus the
+    fade and a guard; f (the capture's file) and prog select the measured M / L fade, else S's 0.72 s (FADE)."""
     a = np.abs(y)
-    return [int(np.nonzero(a[:, ch] > a[:, ch].max() * 1e-6)[0][-1] - FADE * FS) for ch in (0, 1)]
+    last = [int(np.nonzero(a[:, ch] > a[:, ch].max() * 1e-6)[0][-1]) for ch in (0, 1)]
+    t, frac = fade_start(f, prog)
+    if frac is not None:                            # L fallback: a fraction of the file's length (from tap 0)
+        return [int(e - frac * (e - K0) - _FADES["_guard"] * FS) for e in last]
+    return [int(e - t * FS) for e in last]
 
 
 def gains(y, parts, sl):
@@ -370,7 +393,7 @@ def _law_job(a):
     rows = []
     for amp in amps:
         y = caps[amp]
-        end = usable_end(y)
+        end = usable_end(y, g[amp], prog)
         sl, nf = fit_window(prog, amp > 0)
         _, u, gs, (Cw, _) = fit_warp(y, [C, R0], sl, nf)
         row = dict(key=key, amp=amp, end=[(e - K0) / FS for e in end], clock=u, gains=gs, active=active)
@@ -383,9 +406,9 @@ def _law_job(a):
             if vn == "law":
                 row["bands"] = band_decay(y, mdl, [K0 + cc.ONSET[prog][ch] for ch in (0, 1)], end)
         cl_part = Cw * np.array([gs[ch][0] for ch in (0, 1)])[None]                     # the fitted model's cluster
-        other = max((x for x in amps if x != amp), key=lambda x: min(usable_end(caps[x])))   # the longest other capture
+        other = max((x for x in amps if x != amp), key=lambda x: min(usable_end(caps[x], g[x], prog)))   # the longest other capture
         rep = fit_repeat(y, caps[other], cl_part, M, amp > 0)
-        oe = usable_end(caps[other])
+        oe = usable_end(caps[other], g[other], prog)
         row["repeat"] = {w: [null_db(y[:, ch], rep[:, ch], K0 + W[ch][w][0], min(K0 + W[ch][w][1], end[ch], oe[ch])) for ch in (0, 1)]
                          for w in W[0] if amp > 0 or w != "cluster_gap"}
         row["repeat_with"] = other
@@ -444,7 +467,7 @@ def fitted(prog, key, tag="", **variant):
         r = rows[amp]
         Cw, Rw = warp(C, *r["clock"]), warp(R, *r["clock"])
         mdl = np.stack([r["gains"][ch][0] * Cw[:, ch] + r["gains"][ch][1] * Rw[:, ch] for ch in (0, 1)], 1)
-        out[amp] = (caps[amp], mdl, usable_end(caps[amp]))
+        out[amp] = (caps[amp], mdl, usable_end(caps[amp], g[amp], prog))
     return out
 
 
