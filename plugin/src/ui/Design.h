@@ -31,6 +31,10 @@ inline constexpr Shadow knobShadow{4.7f, 0.4f, 0.5f};
 inline constexpr Shadow faderShadow{5.7f, 0.8f, 0.5f};
 inline constexpr float shadowDirX = 0.7071f, shadowDirY = 0.7071f;
 
+// The pan knob's cap art is darkened and given more contrast when it is loaded (the asset itself is untouched).
+inline constexpr float knobBrightness = 0.86f; // multiplies the colour
+inline constexpr float knobContrast = 1.10f;   // about mid-grey
+
 // The pan knob runs 7 to 5 o'clock: 150 degrees either side of 12.
 inline constexpr float panSweepDegrees = 150.0f;
 
@@ -45,9 +49,14 @@ inline constexpr float joyX[] = {897.0f, 1198.0f, 1431.0f, 1722.0f, 2004.0f, 228
 // The funnel (wedge) above each joystick. The value's red line runs from the narrow bottom (minimum) to the wide
 // top (maximum), following the wedge, which is slightly curved. Edges of the wedge's dark interior measured on
 // the art for the first funnel; the others are the same shape shifted by funnelDx.
-inline constexpr float funnelLineHeight = 10.0f;
-inline constexpr float funnelMinY = 1025.0f, funnelMaxY = 532.0f; // line centre
-inline constexpr float funnelInset = 3.0f;                         // keeps the line inside the gold edge
+// The indicator is a soft band, funnelBandHeight tall (5x the old 10 px line), brightest at its centre and fading out
+// above and below. It stays inside the wedge: the wedge's interior runs from funnelTopY to funnelBottomY, and the
+// band's centre travels from funnelMinY to funnelMaxY, half a band in from each end.
+inline constexpr float funnelBandHeight = 50.0f;
+inline constexpr float funnelTopY = 538.0f, funnelBottomY = 1035.0f;
+inline constexpr float funnelMinY = funnelBottomY - funnelBandHeight * 0.5f;
+inline constexpr float funnelMaxY = funnelTopY + funnelBandHeight * 0.5f;
+inline constexpr float funnelInset = 3.0f; // keeps the band inside the gold edge
 struct FunnelPoint
 {
     float y, left, right;

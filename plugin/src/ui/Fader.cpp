@@ -157,7 +157,8 @@ void PanKnob::paint(juce::Graphics& g)
     const auto cap = toLocal(layout::panKnob.bounds());
     const auto pw = juce::jmax(1, juce::roundToInt(cap.getWidth() * scale));
     const auto ph = juce::jmax(1, juce::roundToInt(cap.getHeight() * scale));
-    const auto sp = sprite.get(images, layout::Image::knob, pw, ph, design::knobShadow, (float)pw / layout::panKnob.w);
+    const auto sp = sprite.get(images, layout::Image::knob, pw, ph, design::knobShadow, (float)pw / layout::panKnob.w,
+                          design::knobBrightness, design::knobContrast);
     const auto angle = juce::degreesToRadians((param.getValue() * 2.0f - 1.0f) * design::panSweepDegrees);
 
     // The shadow rotates with the baked sprite; at the knob's size the difference from a fixed light is invisible.

@@ -15,7 +15,7 @@ juce::Rectangle<float> unionBounds()
     auto r = slots[0]->bounds();
     for (auto* s : slots)
         r = r.getUnion(s->bounds());
-    return r.expanded(30.0f);
+    return r.expanded(70.0f); // room for the glow
 }
 } // namespace
 
@@ -51,18 +51,24 @@ juce::String LevelMeter::getTooltip()
 void LevelMeter::paint(juce::Graphics& g)
 {
     layer.paint(g, getLocalBounds(), juce::String(lit) + (over ? "o" : "n"), [this](juce::Graphics& lg, float scale) {
-        drawWithGlow(lg, getLocalBounds(), scale, juce::Colours::white.withAlpha(0.5f), 10.0f * getScale() * 2.5f,
-                     [this](juce::Graphics& cg) {
-                         for (int i = 0; i < design::numLevelLeds; ++i)
-                         {
-                             const bool on = i == 0 ? over : (design::numLevelLeds - i) <= lit;
-                             if (!on)
-                                 continue;
-                             const auto colour = i == 0 ? design::levelRed : i == 1 ? design::levelYellow : design::levelGreen;
-                             cg.setColour(colour);
-                             cg.fillRoundedRectangle(toLocal(slots[i]->bounds().reduced(3.0f)), 4.0f * getScale());
-                         }
-                     });
+        const auto k = getScale() * 2.5f;
+        for (int i = 0; i < design::numLevelLeds; ++i)
+        {
+            const bool on = i == 0 ? over : (design::numLevelLeds - i) <= lit;
+            if (!on)
+                continue;
+            const auto colour = i == 0 ? design::levelRed : i == 1 ? design::levelYellow : design::levelGreen;
+            const auto box = toLocal(slots[i]->bounds().reduced(3.0f));
+            // A lit lamp: a brighter middle fading to the colour at the edges, in a soft halo that tapers off.
+            juce::ColourGradient lamp(colour.brighter(0.7f), box.getCentre(), colour.darker(0.15f),
+                                      box.getTopLeft(), true);
+            drawWithGlow(lg, getLocalBounds(), scale, colour.withAlpha(0.5f), 34.0f * k, [&](juce::Graphics& g1) {
+                drawWithGlow(g1, getLocalBounds(), scale, colour.withAlpha(0.8f), 12.0f * k, [&](juce::Graphics& g2) {
+                    g2.setGradientFill(lamp);
+                    g2.fillRoundedRectangle(box, 4.0f * k);
+                });
+            });
+        }
     });
 }
 } // namespace rv::ui
