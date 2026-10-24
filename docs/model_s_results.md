@@ -3032,7 +3032,7 @@ for rt in 1.0 1.4 1.8 2.2 2.5; do EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0
 | LF 0.1, RT ≥ 1.4 | −48.1 / −40.7 | **−50.5 / −47.4** | −48.2 / −44.8 | −52.6 / −50.9 |
 | RT ≤ 0.8 | −45.6 / −38.2 | −45.7 / −37.2 | −45.8 / −37.2 | −50.2 / −42.1 |
 
-At RT ≤ 0.8 the cell means hurt (LF 2.0 / RT 0.8 +6…+9 dB, the cell whose takes disagree most in §32; LF 0.4 / RT 0.6 +3…+8), as §32's split predicted, so the term is used at RT ≥ 1.0 only. Near the DC floor (LF 0.1, RT 1.4–1.8) the loop pattern is not linear in the loop length (LF 0.1 / RT 1.4 DC +0.015 / −0.051 / −0.070 / +0.036 dB, loops 1–4: §32.3's knee), so the per-loop form is kept, not the slope.
+At RT ≤ 0.8 the cell means hurt (LF 2.0 / RT 0.8 +6…+9 dB, the cell whose takes disagree most in §32; LF 0.4 / RT 0.6 +3…+8), as §32's split predicted, so the term is used at RT ≥ 1.0 only. Near the DC floor (LF 0.1, RT 1.4–1.8) the loop pattern is not linear in the loop length (LF 0.1 / RT 1.4 DC +0.015 / −0.051 / −0.070 / +0.036 dB, loops 1–4: §32's knee), so the per-loop form is kept, not the slope.
 
 **3. On the baseline bench** (`loop_cv --retake`, clock and gain refitted per capture; RT ≥ 1.0 folds rerun, RT ≤ 0.8 unchanged), against §32.1, all 128, R [excess over repeat]:
 
@@ -3046,4 +3046,48 @@ The full form gains more late but costs the early windows on settings it barely 
 
 **4. Gate:** `PULSE_CV=…_lfcellzm`: **PASS**; S median R null 50–150 / 150–300 / 300–600 ms −51.29 / −50.30 / −46.55 dB against −51.29 / −49.40 / −45.23; every S octave decay and EDC metric unchanged or better (8 kHz 0.42 → 0.39 %); CLA, the Altiverb, M and L unchanged. (`_lfcell` also passes, 50–150 −51.06.) **The S baseline is now `analysis/loop_cv/hfcells_chain3_cap0.8475_lfcellzm/`** (`pulse_check`'s default; `cells.json`'s `lf_gain` / `lf_dc` per setting at RT ≥ 1.0, read by `q2.final_Gs(loopcell=…)`, `pulse_check.setting_G`, `lowband_shelf.base_kw`); the pulse check's 80 RT ≥ 1.0 settings rerun. 140 numbers (20 cells × 4 loops × DC + 3 gain differences) on top of §32.1.
 
-**Reading.** The unit's shelf terms deviate from the law per (LF, RT) cell and per loop, near the DC floor's knee in a non-linear way across the loops: the shelf coefficients look computed (or tabulated) per (LF, RT) and loop, not from one length-scaled law (**H**). As a table at the library's steps this gives nothing between them; a form for the plugin (the knee as a function of each loop's requested DC gain, §32.3) is open. RT ≤ 0.8 is untouched and is now the largest excess (§32: not separable there).
+**Reading.** The unit's shelf terms deviate from the law per (LF, RT) cell and per loop, near the DC floor's knee in a non-linear way across the loops: the shelf coefficients look computed (or tabulated) per (LF, RT) and loop, not from one length-scaled law (**H**). As a table at the library's steps this gives nothing between them; a form for the plugin (the knee as a function of each loop's requested DC gain) is open. RT ≤ 0.8 is untouched and is now the largest excess (§32: not separable there; §32.3 takes it up).
+
+### 32.3 The shelf side at RT ≤ 0.8: the same cells, taken without the pole-limited HF steps: 96 numbers (`tools/loop_read/lowrt_xfer.py`; `lf_cells.py --low`; `loop_cv.py --retake --tag lowrt`) **[S: at RT ≤ 0.8 each loop's gain and DC section per (LF, RT) cell transfer across HF steps as at RT ≥ 1.0 once HF 0.2 (and HF 0.4 at RT 0.3) are left out of the cell mean; S: there the cells' common gain is real (removing it loses most of the gain); baseline]**
+
+```
+.venv/bin/python tools/loop_read/lowrt_xfer.py > analysis/lowband/chain3_lowrt_xfer.log                     # seconds, offline on the §32.2 takefit (_s321)
+.venv/bin/python tools/loop_read/lf_cells.py --low [--zero-mean-gain]                                         # -> analysis/loop_cv/hfcells_chain3_cap0.8475_lowrt[zm]/
+for rt in 0.3 0.6 0.8; do EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 9 -- \
+    .venv/bin/python tools/loop_cv.py --retake --tag lowrt --stage run --rt $rt --workers 8; done                 # 32-55 s per fold, 3.3-4.2 GB
+.venv/bin/python tools/loop_read/foldcmp.py analysis/loop_cv/hfcells_chain3_cap0.8475_lfcellzm analysis/loop_cv/hfcells_chain3_cap0.8475_lowrt
+```
+
+§32 and §32.2 found that at RT ≤ 0.8 neither the additive split nor the cell means transfer. §32.2's cell means at RT ≤ 0.8 averaged over all the cell's other HF steps, HF 0.2 included. At HF 0.2 (and HF 0.4 at RT 0.3, the HF floor of §29) the pole sits at or near the 0.8475 ceiling. There takefit's broadband gain trades with the pole (e.g. LF 0.4 / RT 0.6 / HF 0.2: loop 1 −0.26 / −0.32 dB per pass at 1 / 4 kHz, the other loops about 0; §0 item 1's regime (c)). A shelf mean that includes those fits carries the pole error into every other HF step of the cell.
+
+**1. The transfer without the pole-limited steps** (offline, takefit on §32.1, held out by HF step and by take; take B's per-pass change per loop from all 12 numbers, predicted by the shelf side, the 8 numbers, of take A's fits at the cell's other HF steps; explained variance at 125 / 250 / 500 Hz / 1 kHz, targets outside the pole-limited steps):
+
+| RT | mean of all other HF steps (§32.2) | **without HF 0.2 (and HF 0.4 at RT 0.3)** | the same, gain's loop mean removed |
+|---|---|---|---|
+| 0.3 | 0.91 / 0.92 / 0.85 / 0.76 | **0.93 / 0.94 / 0.93 / 0.91** | 0.25 / 0.19 / 0.16 / 0.18 |
+| 0.6 | 0.97 / 0.99 / 0.24 / −5.9 | **0.99 / 0.99 / 0.96 / 0.58** | 0.92 / 0.87 / 0.27 / −1.2 |
+| 0.8 | 0.88 / 0.30 / −6.5 / −23 | **0.94 / 0.95 / 0.94 / 0.81** | 0.85 / 0.81 / 0.60 / 0.26 |
+| 1.0–2.5 | 0.93 / 0.93 / 0.91 / 0.90 | 0.92 / 0.92 / 0.93 / 0.94 | 0.77 / 0.66 / 0.20 / 0.20 |
+
+At RT ≤ 0.8 this does as well as at RT ≥ 1.0. The median of all other steps is close to it (RT 0.8: 0.94 / 0.94 / 0.91 / 0.78) but loses more at 2–8 kHz. For the pole-limited targets themselves the shelf side explains the low band (125 / 250 Hz 0.64 / 0.48, 0.91 / 0.92, 0.69 / 0.33 at RT 0.3 / 0.6 / 0.8) and nothing at 1 kHz and above: what is left there is the pole side, regimes (a) and (c) of §0 item 1. Unlike at RT ≥ 1.0, the common gain is most of the term. RT 0.3 / LF 1.0 is the clearest case: at HF 0.6 and 1.0 it is +0.036 / +0.054 / +0.065 / +0.124 dB per pass, loops 1–4, the same at 250 Hz, 1 kHz and 4 kHz. That is less loss than the law, 0.4–1.0 % of the per-pass loss, and loop 4 has twice the share of the others. LF 0.4 / RT 0.6 shows the same loop pattern in its DC section (+0.08 / +0.12 / +0.15 / +0.30 dB, the DC floor's knee, §32 item 3).
+
+**2. On the baseline bench** (`lf_cells.py --low`: the §32.2 fold set with `lf_gain` / `lf_dc` added at RT ≤ 0.8, each setting's value the mean of the cell's other HF steps outside the pole-limited ones; HF 0.2 settings get their cell's HF 0.4–1.0 mean; RT ≤ 0.8 folds rerun, clock and gain refitted per capture), R [excess over repeat]:
+
+| Settings | 50–150 | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| All 128, §32.2 | −51.8 [+4.8] | −50.0 [+5.6] | −45.7 [+2.4] | −39.4 [−0.6] |
+| All 128, **`_lowrt`** | **−52.0 [+4.6]** | **−50.3 [+4.9]** | **−46.0 [+1.8]** | −39.4 [−0.6] |
+| All 128, `_lowrtzm` (gain's loop mean removed) | −51.8 [+4.8] | −50.1 [+5.4] | −45.8 [+2.5] | −39.4 [−0.3] |
+| RT ≤ 1.0 | −51.3 [+6.7] → −51.7 [+6.3] | −47.7 [+6.2] → **−49.3 [+4.5]** | −41.4 [+1.5] → **−42.8 [+0.4]** | −30.4 → −30.4 |
+| Flat | −51.0 → −51.7 | −49.4 [+3.0] → −50.0 [+2.4] | −45.5 [+0.6] → −46.8 [−0.1] | −37.4 → −37.4 |
+| LF 0.1 | −51.7 → −51.9 | −49.6 [+5.9] → −50.0 [+5.4] | −42.5 [+3.3] → −43.0 [+2.5] | −34.2 → −34.2 |
+| HF 0.6 | −51.7 → −51.9 | −50.3 [+5.3] → −50.9 [+4.5] | −45.5 [+1.8] → −46.0 [+0.8] | −39.8 → −39.8 |
+
+L the same (all 128 −51.8 / −50.0 / −45.6 / −39.1 → −52.1 / −50.3 / −45.9 / −39.1). Per setting (R), better / worse by more than 0.5 dB: 39 / 0 at 150–300 ms, 27 / 4 at 300–600 (worst 2.0_0.3_0.6, 2.0_0.6_0.4 +0.7). Before 150 ms: 0–50 ms 3 / 0 (worst +0.2), 50–150 ms 12 / 2 (worst 1.0_0.8_1.0 +0.6). Best at 150–300 ms: 1.0_0.3_1.0 −35.9 → −47.4 dB, 1.0_0.3_0.6 −35.3 → −44.2, 1.0_0.3_0.2 −36.0 → −43.2, 0.4_0.6_0.6 −40.0 → −47.5, 0.4_0.6_0.4 −38.4 → −44.9. With the common gain removed (`_lowrtzm`) most of the gain is lost and LF 2.0 gets worse (2.0_0.6_0.4 +5.6 dB at 300–600 ms). At RT ≤ 0.8 the common gain is the unit, not capture gain: the per-capture gain refit does not trade it against the cluster here (flat 0–50 ms −50.0 → −49.8 R, −50.3 → −51.5 L). §32.2's zero-mean rule stays at RT ≥ 1.0, where the common gain was 0.001–0.007 dB per pass and did trade.
+
+**3. Gate:** `PULSE_CV=…_lowrt pulse_check.py --stage gate --tag lowrt`: **PASS**. S median R null 50–150 / 150–300 / 300–600 ms −51.90 / −50.30 / −46.65 dB, against −51.29 / −50.30 / −46.55. S worst octave decay error 125 Hz 1.18 → 0.52 %, 500 Hz 0.37 → 0.54 %, the rest unchanged or better. Largest EDC difference 0.27 → 0.18 dB. CLA, the Altiverb, M and L unchanged. **The S baseline is now `analysis/loop_cv/hfcells_chain3_cap0.8475_lowrt/`** (`pulse_check`'s default). The pulse check's 48 RT ≤ 0.8 settings were rerun (`--stage s --only`), and its report moved by ±0.1 % at most. Parameters: 96 numbers on top of §32.2 (12 cells × 4 loops × gain + DC section).
+
+**What is left at RT ≤ 0.8** (R, 150–300 ms [excess]): the pole-limited cells. These are HF 0.2 at RT 0.6 (LF 0.1 / 0.4 −30 [+19]), HF 0.2 at RT 0.8 (LF 0.1 / 0.4 / 1.0 −36…−40 [+14…+17]) and HF 0.2 / 0.4 at RT 0.3 (LF 0.1 / 0.4 / 2.0 −36…−41 [+5…+7]); this is the pole side, regimes (a) and (c) of §0 item 1. The rest are LF 0.4 / RT 0.6 at HF 0.4–1.0 (−45…−47 [+8…+11], the floor's knee) and 1.0_0.3_0.4 (−24.5 [+19], unchanged; §0 item 5, single clean take, no takefit). Its LF 1.0 / RT 0.3 neighbours now sit at −43…−47 dB, so it is the setting, not the cell. Every other RT ≤ 0.8 setting is within +6 dB of the repeat level at 150–300 ms.
+
+**Reading.** The shelf side follows the same (LF, RT, loop) structure at every RT step. §32's "not separable at RT ≤ 0.8" was the pole-limited steps' fits leaking into the cell means. The common per-pass gain at short RT (LF 1.0 / RT 0.3: 0.4–1 % less loss than the law, loop 4 twice the others) is the shelf's broadband level, not a capture effect (**H** for its cause: the law's per-loop loss at large per-pass losses, or a coefficient computed differently near the gain's low end).
+
