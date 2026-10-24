@@ -27,6 +27,8 @@ inline constexpr const char* inputGain = "inputGain";
 inline constexpr const char* outputGain = "outputGain";
 inline constexpr const char* power = "power"; // true = processing, false = bypassed
 inline constexpr const char* link = "link";   // input and output faders move together
+// The commercial-capture low-band stage on the wet output (dsp/CaptureEq.h); off = faithful to Tomkin and the unit.
+inline constexpr const char* captureEq = "captureEq";
 } // namespace id
 
 enum class Program

@@ -36,3 +36,12 @@
 ## Parameters
 - IDs in `src/params/Parameters.h` are permanent. The joystick step tables are placeholders (H) until the unit's exact
   step tables are known; only step counts and ranges are from the data sheet (`../docs/EMT246_unit_facts.md`).
+- `captureEq` (default off) switches on `src/dsp/CaptureEq.h`, the 10-number cascade of the "CLA" entry in
+  `../analysis/unit_transfer/bq.json`: a first-order high-pass, an RBJ low shelf and two RBJ peaking sections, with
+  the formulas of `../tools/unit_transfer.py` (`hp1_sos`, `lowshelf_sos`, `peak_sos`). It was fitted at the device
+  rate; the plugin designs the same sections at the host rate from the same parameters, which matches `bq_resp`
+  within 0.001 dB at 50 Hz–2 kHz from 22.05 to 192 kHz (no prewarping needed; the fit is undefined below ~50 Hz).
+  `tests/CaptureEqTests.cpp` checks the coefficients and the processed impulse response against `bq_resp` values;
+  if `bq.json` is refitted, update `CaptureEq::cla` and the test's reference table together. The stage always runs
+  (warm state, a 20 ms crossfade when toggled); off, its weight is exactly 0 and the wet signal is unchanged.
+  Presets skip it, like `power` and `link`.

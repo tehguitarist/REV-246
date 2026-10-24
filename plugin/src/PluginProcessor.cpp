@@ -20,6 +20,7 @@ Rev246Processor::Rev246Processor()
     pIn = apvts.getRawParameterValue(id::inputGain);
     pOut = apvts.getRawParameterValue(id::outputGain);
     pPower = apvts.getRawParameterValue(id::power);
+    pCaptureEq = apvts.getRawParameterValue(id::captureEq);
     for (int i = 0; i < rv::params::numJoys; ++i)
         pJoy[(size_t)i] = apvts.getRawParameterValue(rv::params::joyId((rv::params::Joy)i));
 }
@@ -35,12 +36,14 @@ bool Rev246Processor::isBusesLayoutSupported(const BusesLayout& layouts) const
 void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     engine.prepare(sampleRate, samplesPerBlock);
-    for (auto* s : {&inGain, &outGain, &mixAmount, &panLeft, &panRight, &wetOn})
+    captureEq.prepare(sampleRate);
+    for (auto* s : {&inGain, &outGain, &mixAmount, &panLeft, &panRight, &wetOn, &captureOn})
         s->reset(sampleRate, rampSeconds);
     inGain.setCurrentAndTargetValue(rv::params::gainLinear(*pIn));
     outGain.setCurrentAndTargetValue(rv::params::gainLinear(*pOut));
     mixAmount.setCurrentAndTargetValue(*pMix);
     wetOn.setCurrentAndTargetValue(*pPower >= 0.5f ? 1.0f : 0.0f);
+    captureOn.setCurrentAndTargetValue(*pCaptureEq >= 0.5f ? 1.0f : 0.0f);
     scratch.setSize(3, samplesPerBlock, false, false, true);
     setLatencySamples(0);
 }
@@ -71,6 +74,7 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     outGain.setTargetValue(gainLinear(*pOut));
     mixAmount.setTargetValue(*pMix);
     wetOn.setTargetValue(*pPower >= 0.5f ? 1.0f : 0.0f);
+    captureOn.setTargetValue(*pCaptureEq >= 0.5f ? 1.0f : 0.0f);
     // The pan places the dry signal; constant power with unity at the centre.
     const auto angle = (juce::jlimit(-1.0f, 1.0f, pPan->load()) + 1.0f) * juce::MathConstants<float>::pi * 0.25f;
     panLeft.setTargetValue(std::cos(angle) * juce::MathConstants<float>::sqrt2);
@@ -93,6 +97,16 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     while (peak > prior && !inputPeak.compare_exchange_weak(prior, peak)) {}
 
     engine.process(mono, wetL, wetR, n);
+
+    // The optional capture EQ on both wet channels. It always runs so its state is warm when switched on; off, the
+    // crossfade weight is exactly 0 and the wet signal passes unchanged.
+    for (int i = 0; i < n; ++i)
+    {
+        const auto w = captureOn.getNextValue();
+        const auto eqL = captureEq.process(0, wetL[i]), eqR = captureEq.process(1, wetR[i]);
+        wetL[i] += w * (eqL - wetL[i]);
+        wetR[i] += w * (eqR - wetR[i]);
+    }
 
     auto* outL = buffer.getWritePointer(0);
     auto* outR = buffer.getWritePointer(1);
