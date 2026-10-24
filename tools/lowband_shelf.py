@@ -176,6 +176,9 @@ def dc(key, path, keep):
     json.dump(res, open(path, "w"))
 
 
+WORKERS = 1
+
+
 def run(stage, only, keep):
     info = q2.q1_tables()[0]
     od = outdir(stage, keep)
@@ -183,18 +186,24 @@ def run(stage, only, keep):
     sel = {"free": lambda g: True, "dc": lambda g: g["lf"] == LF_DC,
            "floor": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] == 0.3),
            "perloop": lambda g: g["lf"] == 0.1 or (g["lf"] == 0.4 and g["rt"] <= 1.0),
-           "hfcell": lambda g: g["hf"] < 1.0, "bbcell": lambda g: True, "octaves": lambda g: True}
+           "hfcell": lambda g: g["hf"] < 1.0, "bbcell": lambda g: True, "octaves": lambda g: True, "hfbb": lambda g: g["hf"] < 1.0}
     sel["bbscore"] = sel["bbcell"]
     sel["floorscore"] = sel["cellscore"] = sel["floor"]
     keys = sorted(k for k in info if (only is None or k in only) and sel[stage](info[k]))
     keys = [k for k in keys if not os.path.exists(os.path.join(od, k + ".json"))]
     print(f"{stage}: {len(keys)} settings to do", flush=True)
+    if WORKERS > 1 and stage in ("hfbb",):                            # one process, a pool of workers (~0.6 GB each)
+        from concurrent.futures import ProcessPoolExecutor, as_completed
+        with ProcessPoolExecutor(WORKERS, max_tasks_per_child=4) as ex:
+            for i, fu in enumerate(as_completed([ex.submit(_run_one, (stage, k, os.path.join(od, k + ".json"), keep)) for k in keys])):
+                print(f"  {i + 1}/{len(keys)} {fu.result()}", flush=True)
+        return
     for i, k in enumerate(keys):                                         # one process, ~0.6 GB (measured)
         path = os.path.join(od, k + ".json")
         if stage == "dc":
             dc(k, path, keep)
         else:
-            {"free": free, "floor": floor, "floorscore": floorscore, "cellscore": cellscore, "perloop": perloop, "hfcell": hfcell, "bbcell": bbcell, "bbscore": bbscore, "octaves": octaves}[stage](k, path)
+            {"free": free, "floor": floor, "floorscore": floorscore, "cellscore": cellscore, "perloop": perloop, "hfcell": hfcell, "bbcell": bbcell, "bbscore": bbscore, "octaves": octaves, "hfbb": hfbb}[stage](k, path)
         print(f"  {i + 1}/{len(keys)} {k}", flush=True)
 
 
@@ -563,6 +572,35 @@ def bbcell(key, path):
     json.dump(dict(key=key, **d["lab"], base=base, grid=rows), open(path, "w"))
 
 
+HFBB_EPS = np.round(np.arange(-0.15, 0.0501, 0.0125), 4)       # hfbb: broadband decay rate x (1 + eps) on the capped-pole loops
+
+
+def hfbb_Gs(d, t1, kw, eps):
+    """Candidate strong-HF loops (model_s_results 25.15): HF pole min(p_law, P_MAX), no ramp and no HF-cell shift (the
+    fold's own law terms, floor cells and LF 0.4 dc kept), broadband rate x (1 + eps)."""
+    G = q2.final_Gs(d["lab"], d["law"], d["w"], lfrt=t1["lfrt"], gamma=t1["gamma"], hfdp=t1["hfdp"], pramp=None, b230=d["b230"], **kw)
+    rate = 60 / (d["law"]["lf"][d["lab"]["lf"]]["hi"] * d["lab"]["rt"])
+    return [Gi * 10 ** (eps * rate * Pi / (20 * q1.FS)) for Gi, Pi in zip(G, q1.P)]
+
+
+def hfbb(key, path):
+    """Per setting (HF < 1): 100 Hz-10 kHz costs from 50 ms and from 150 ms, all captures, of the §25.7 baseline and of
+    the candidate loops over the eps grid."""
+    d = bb_prep(key)
+    t, lfdc, kw = base_kw(key, HF_CELLS_JSON)
+    t1 = dict(t, hfdp=cv_terms(d["lab"]["rt"])["hfdp"])               # the fold's law hfdp, not the HF cell's
+    cost = lambda r: [float(np.sum(residual(d, None, d["caps"], t0=t0, sos=SOSB, norm="normB", r=r) ** 2)) for t0 in (0.05, 0.15)]
+    base = cost(reverb(d, d["Gs0"]))
+    rows = [[float(e)] + cost(reverb(d, hfbb_Gs(d, t1, kw, e))) for e in HFBB_EPS]
+    json.dump(dict(key=key, **d["lab"], b230=d["b230"], base=base, grid=rows), open(path, "w"))
+
+
+def _run_one(a):
+    stage, k, path, keep = a
+    {"hfbb": hfbb}[stage](k, path)
+    return k
+
+
 def bb_choice(D, key):
     """The cell's other HF steps: lowest mean broadband change (dB) among the points that do not worsen the low band."""
     me = next(d for d in D if d["key"] == key)
@@ -668,13 +706,14 @@ def report_octaves():
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "cellscore", "perloop", "hfcell", "bbcell", "bbscore", "octaves", "report", "octreport", "floorreport", "cellreport", "perloopreport", "hfcellreport", "bbreport"], required=True)
+    ap.add_argument("--stage", choices=["free", "dc", "floor", "floorscore", "cellscore", "perloop", "hfcell", "bbcell", "bbscore", "octaves", "report", "octreport", "floorreport", "cellreport", "perloopreport", "hfcellreport", "bbreport", "hfbb"], required=True)
+    ap.add_argument("--workers", type=int, default=1, help="hfbb: a pool of workers in this one process")
     ap.add_argument("--only", default=None)
     ap.add_argument("--keep-lfrt", action="store_true")
     ap.add_argument("--gamma-nyq", action="store_true", help="floor stages: gamma on the Nyquist end only, DC held at DC_MIN")
     a = ap.parse_args()
-    global GAMMA_DC
-    GAMMA_DC = not a.gamma_nyq
+    global GAMMA_DC, WORKERS
+    GAMMA_DC, WORKERS = not a.gamma_nyq, a.workers
     if a.stage == "octreport":
         out = report_octaves()
         open(os.path.join(ROOT, "analysis", "lowband", f"{q1.ms.KTAG or 'library'}_shelf_octaves_report.log"), "w").write("\n".join(out) + "\n")
