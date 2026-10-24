@@ -127,8 +127,8 @@ void Funnel::paint(juce::Graphics& g)
         juce::ColourGradient fill(juce::Colour(0xffff2e18).withAlpha(alpha), 0.0f, topL,
                                   juce::Colour(0xffff2e18).withAlpha(alpha), 0.0f, bottomL, false);
         fill.addColour(0.5, juce::Colour(0xffff5a30).withAlpha(alpha));
-        drawWithGlow(lg, getLocalBounds(), scale, juce::Colour(0xffff1a08).withAlpha(0.34f * alpha),
-                     12.0f * getScale() * 2.5f, [&](juce::Graphics& cg) {
+        drawWithGlow(lg, getLocalBounds(), scale, juce::Colour(0xffff1a08).withAlpha(0.5f * alpha),
+                     16.0f * getScale() * 2.5f, [&](juce::Graphics& cg) {
                          cg.setGradientFill(fill);
                          cg.fillPath(lit);
                      });
