@@ -132,7 +132,7 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
         proc.uiState().setProperty(Rev246Processor::UiProps::tooltipsOn, on, nullptr);
         helpButton.setOn(on);
     };
-    linkButton.setTooltip("Link: moving the INPUT or OUTPUT fader moves the other by the same number of dB.");
+    linkButton.setTooltip("Link: moving the INPUT or OUTPUT fader moves the other by the same number of dB the opposite way, keeping the overall gain.");
     linkButton.onToggle = [this](bool on) {
         auto& pr = param(P::id::link);
         pr.beginChangeGesture();
@@ -230,7 +230,7 @@ void Rev246Editor::stepJoy(Joy j, int direction, int hold)
 void Rev246Editor::moveLinked(rv::ui::Fader& from, rv::ui::Fader& to, float oldPos, float newPos)
 {
     const auto delta = P::gainDbFromPosition(newPos) - P::gainDbFromPosition(oldPos);
-    const auto target = P::gainPositionFromDb(P::gainDbFromPosition(to.position()) + delta);
+    const auto target = P::gainPositionFromDb(P::gainDbFromPosition(to.position()) - delta);
     (void)from;
     if (!linkedGestureOpen)
     {
