@@ -1,0 +1,12 @@
+S 1.0_0.6_0.2: slope ppm per capture +8 +651 +649 +10 | median +330
+S 2.0_0.6_0.2: slope ppm per capture +12 +488 +12 +14 | median +13
+S 1.0_0.3_0.2: slope ppm per capture +25 +860 +860 +28 | median +444
+S 1.0_0.3_0.4: slope ppm per capture +122 +820 +990 +152 | median +486
+S 2.0_0.8_0.2: slope ppm per capture -15 +125 -17 -15 | median -15
+S 0.1_0.6_0.2: slope ppm per capture -7 -7 -6 -7 | median -7
+S 0.4_0.6_0.2: slope ppm per capture -20 -19 -18 -19 | median -19
+S 1.0_0.8_0.2: slope ppm per capture -14 -13 -13 -14 | median -14
+S 1.0_1.0_0.2: slope ppm per capture -5 -4 -3 -5 | median -4
+S 1.0_0.6_1.0: slope ppm per capture -7 -6 -6 -7 | median -6
+S 1.0_1.4_1.0: slope ppm per capture -1 -0 +0 -1 | median -1
+S 2.0_1.8_0.6: slope ppm per capture -1 -0 -1 -1 | median -1

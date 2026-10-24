@@ -2506,7 +2506,7 @@ Logs: `analysis/loop_fir/fit_chain3_current_kc8.log`, `analysis/loop_fir/chain3_
 
 **Reading.** NEXT_STEPS' "AP230 at b > 0" is the strong-HF loop filter at short RT, and the one place left where the loops (not the excitation) carry 10 dB. Its form: the pole stays at or under the 0.84 cap or on the law, and the missing decay is broadband, 2.5–6 % per pass, at LF 1.0 / 2.0 (LF 0.1 / 0.4's floor cells already carry a broadband term there). **Next:** a compact candidate law — HF pole min(p_law, 0.84) without the ramp, plus a broadband loss term at strong HF / short RT (a function to find from the read values: of p_law's excess over the cap, HF × RT, or the per-pass decay) — fitted leaving one RT step out and scored on `loop_cv --retake`; it should also shrink the HF table. Separately, the 50–150 ms excess at HF 0.2 / 0.4 short RT (not in the loops).
 
-### 25.15 The plain capped HF law fails; the strong-HF cells want the baseline's pole plus a fractional advance per pass (`lowband_shelf.py --stage hfbb`; `tools/loop_read/capforms.py`) **[S: the capped law without ramp and table is 10–28 dB worse, no broadband term repairs it; S: in the strong-HF cells the correction is the baseline's pole plus an advance of 0.3–0.8 samples per pass, ∝ loop length; H: its cause and why it depends on LF; baseline unchanged]**
+### 25.15 The plain capped HF law fails; the strong-HF cells want the baseline's pole plus a fractional advance per pass (`lowband_shelf.py --stage hfbb`; `tools/loop_read/capforms.py`) **[S: the capped law without ramp and table is 10–28 dB worse, no broadband term repairs it; the "advance" is withdrawn in §25.16 — it is a lag step in some captures, not loop structure; baseline unchanged]**
 
 ```
 EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 8 -- .venv/bin/python tools/lowband_shelf.py --stage hfbb --workers 8   # analysis/lowband/chain3_shelf_hfbb/
@@ -2542,3 +2542,33 @@ It is worse almost everywhere, by 10–28 dB at HF 0.2 / RT 0.6–1.0, and no br
 - **Sizes:** the advance carries the ~10 dB the free corrections gain at 150–300 ms in these cells (§25.14.2); the cells with no advance are the ones where a pole shift alone describes the correction.
 
 **Reading.** NEXT_STEPS' strong-HF item is narrower than §25.14 said: the baseline's pole (law + ramp + HF cell) is right to about ±0.005; what the strong-HF, short-RT settings at LF ≥ 1.0 lack is a per-pass phase advance of 2–5·10⁻⁴ of the loop length. **Open (H):** what in the unit makes the loops' phase run ahead there, and why LF 0.1 / 0.4 don't need it (a fractional read position that depends on the coefficient set, a filter structure whose delay differs from a one-pole's at the same magnitude, or an interaction with the LF section's implementation). **Next:** test a per-pass fractional advance d_i = κ P_i in those cells on `loop_cv --retake` (κ from the training RT steps; where it applies is the open question); look for the same advance in M / L at their strong-HF settings (`ml_lines`, length-scaled) — if it scales ×2 / ×4 with M / L's lines, it is in the loop structure, not the library.
+
+### 25.16 The "advance" is a lag step in some S captures; M / L show a per-cell HF phase drift instead (`tools/loop_read/warp.py`, `steps.py`, `steps_ml.py`) **[S: S's advance comes from 16 captures with a +1.2…+1.8-sample lag step after ~110 ms; S: M / L have no such steps and no length-scaled advance; S: M / L drift smoothly at strong HF / short RT, the same in every capture and LF step; H: the step's cause; baseline unchanged]**
+
+```
+EMT_KERNEL=chain3 .venv/bin/python tools/loop_read/warp.py S <keys>        # warp_S.log: lag-vs-time slope per capture
+EMT_KERNEL=chain3 .venv/bin/python tools/loop_read/steps.py                # steps.log: lag step per capture, all 128 settings (3 s)
+.venv/bin/python tools/loop_read/steps_ml.py M|L <keys>                     # steps_M.log, steps_L.log
+```
+
+The test is model-agnostic and the same for every program: capture and model band-limited to 177 Hz – 2.8 kHz, their relative lag tracked in 40 ms windows (hop 20 ms, sub-sample cross-correlation peak, R) from 60 ms on. A per-pass advance d on a loop of length P would make the lag drift with slope −d / P: a fraction, so a mechanism in the loop structure would show the same slope in M / L (d × 2 / × 4 in samples per pass). S: dense_mid's prep (the §25.7 baseline, clocks per capture); M / L: `ml_lines.fitted` (the law model with stored clocks and gains; the 0.83 Hz rotation averaged).
+
+**1. In S the advance is a step in some captures, not a drift in the setting.** Per capture, at 1.0_0.6_0.2 the AMPL 30 and 60 captures fit +649 / +651 ppm and AMPL 0 / 90 +8 / +10; at 1.0_0.3_0.2 +860 / +860 against +25 / +28; at 1.0_0.3_0.4 +820 / +990 against +122 / +152; at 2.0_0.6_0.2 and 2.0_0.8_0.2 one capture each (AMPL 30: +488, +125). The settings without an advance in §25.15 sit at −20…+0 ppm in every capture. The lag tracks show why (`warp.py` traces): **not a drift but a step.** In the AMPL 30 / 60 captures the lag jumps from 0 to +1.3…+1.6 samples between 100 and 120 ms and stays there. AMPL 30's and 60's tracks agree to about 0.01 samples, and AMPL 0's and 90's likewise, so these files are two reverb takes (the reverb does not depend on AMPL), one with a shift of about 1.4 device samples (≈ 5 samples at 96 kHz) from ~110 ms on.
+- **Library scan** (`steps.py`, step = median lag 120–300 ms − median lag 60–100 ms, flagged at ≥ 0.5 samples): **16 captures in 9 of 128 settings, all at RT 0.3 / 0.6 with HF 0.2 / 0.4** (0.1 / 0.4 / 1.0 / 2.0 _0.3_0.2, 0.1 / 0.4 / 1.0 _0.3_0.4, 1.0 / 2.0 _0.6_0.2), steps +1.2…+1.8 samples, by AMPL 0 / 30 / 60 / 90: 1 / 7 / 7 / 1. These are the cells where §25.15 read an advance, and its "LF dependence" is which files carry a step.
+- **Consequences:** (a) §25.15's per-pass advance is not loop structure (withdrawn). (b) The excess figures in these cells are biased: the repeat reference pairs each capture with the next AMPL, so the AMPL 30 → 60 pair compares one take with itself. (c) The free corrections there (§25.14, trained on AMPL 30 + 90 = one take of each kind) fitted a compromise between takes. The cause of the step — the unit's own take-to-take variation at strong settings or a slip in the capture chain — is open (**H**); its clustering at short RT / strong HF argues against a random slip.
+
+**2. M and L: no steps, no length-scaled advance; a smooth per-cell drift at strong HF / short RT** (median lag at 60–100 / 120–200 / 200–300 / 300–450 / 450–600 ms per capture, and the slope):
+
+| Program, settings | Lag by 450–600 ms (samples) | Slope (ppm) | Captures and LF steps |
+|---|---|---|---|
+| M, HF 0.1 / 0.2, RT 0.6 | +0.5…+1.4 | +9…+22 | every capture and LF step alike |
+| M, HF 0.1 / 0.2, RT 0.8 | −0.1…−0.9 | −8…−23 | alike |
+| M, HF 0.9, RT 0.6 / 0.8 (control) | −0.1…+0.01 | −1…−6 | alike |
+| L, HF 0.1 / 0.3, RT 2.2 | +0.5…+1.4 | +47…+118 | alike (LF 0.1 too) |
+| L, HF 0.1 / 0.3, RT 2.6 | −0.01…−0.13 | −2…−7 | alike |
+| L, HF 1.0, RT 2.2 / 2.6 (control) | ±0.03 | ±2 | alike |
+
+- Every capture of a setting tracks the same (M AMPL 60 / 99, L AMPL 0 / 80, to about 0.1–0.4 samples), with no jumps: no take-to-take step as in S.
+- The drift is not one fraction of the line length (it differs by program, by RT step and changes sign between M's RT 0.6 and 0.8): it is the signature of the HF pole slightly off per cell. **M / L run S's laws and limits without S's ramp (§22.8) and HF cells (§25.7)**, and these are the cells where S needed them; §25.15 showed in S that those terms carry real pole information.
+
+**Reading.** The strong-HF line comes down to one structural item shared by all three programs: **at strong HF and short RT the HF pole law is off per cell** (S carries the fix as a ramp plus a per-cell table; M / L lack it and drift). The "advance" was a capture-level step in 16 S files. **Next:** (1) treat the 16 stepped S captures as a data issue in the strong-HF excess figures (score the 9 settings against step-free pairs, and refit §25.14's corrections on step-free captures); (2) carry S's ramp / HF cell corrections to M / L, length-scaled, or better, find the HF pole law that makes the table unnecessary in all three (a law in the coefficient domain, NEXT_STEPS' "tables as curves"); (3) the step itself (whether the same takes show it in other bands / windows).
