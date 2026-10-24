@@ -8,7 +8,7 @@ models against every dataset, on the metrics the nulls can hide. Results: docs/m
     EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/pulse_check.py --stage gate --tag <name>   # ~3 min sanity gate
 
   s       Program S, Tomkin 96 kHz library, all 128 settings held out: each setting rendered with the constants of the
-          loop_cv fold that left its RT step out (the §32.3 baseline, analysis/loop_cv/hfcells_chain3_cap0.8475_lowrt with EMT_HFRT_MIN=0.12: fold
+          loop_cv fold that left its RT step out (the §32.4 baseline, analysis/loop_cv/hfcells_chain3_cap0.8475_pcell with EMT_HFRT_MIN=0.12: fold
           constants + cells.json), per capture clock, shift and gain as q2_injection.fit_capture (3 numbers). The capture is
           fade-compensated (/ ramp, up to comp_end). One JSON per setting in analysis/pulse/s/ (resumable).
   units   Program S on other units, nothing refitted: the CLA IR (LF 1.0, RT 1.0, HF 0.9, AMPL 80) and the five Altiverb
@@ -64,7 +64,7 @@ import loop_fir as lf_  # noqa: E402
 q2 = lf_.q2
 q1 = q2.q1
 FS, PRE = q1.FS, q1.PRE
-CV = os.environ.get("PULSE_CV") or os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_lowrt")   # model_s_results 32.3
+CV = os.environ.get("PULSE_CV") or os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_pcell")   # model_s_results 32.4
 REF = os.path.join(ROOT, "analysis", "pulse")                   # the full run: the gate's reference
 OUT = REF
 COMPACT = f"diffuser_tied_fix-0.707107_ap230new_{q1.ms.KTAG}"
@@ -187,6 +187,8 @@ def setting_G(lab, b230, law, fold, fc):
         gamma, fl = fc["gamma"], dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
     if fc and "hf_dp" in fc:
         hfdp = {str(lab["hf"]): fc["hf_dp"], "p_above": 0.0, "p_below": 1.0, "exclude_lf": [], "slope": fc.get("hf_slope", 0.0)}
+    if fc and "hf_poles" in fc:                     # each loop's HF pole outright (model_s_results 32.4)
+        hfdp = {"poles": fc["hf_poles"]}
     if fc and "lf_gain" in fc:                      # the (LF, RT) cell's per-loop gain and DC section (model_s_results 32.2)
         fl["loopcell"] = dict(gain=fc["lf_gain"], dc=fc["lf_dc"])
     return q2.final_G(lab, b230, law, 0.0, 0.0, fold["lfrt"], gamma, None, hfdp, tuple(fold["pramp"]), **fl)

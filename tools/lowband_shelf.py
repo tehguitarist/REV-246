@@ -473,6 +473,8 @@ def base_kw(key, table=CELLS_JSON):
         kw = dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
     if "hf_dp" in fc:
         t["hfdp"] = {str(q2.q1_tables()[0][key]["hf"]): fc["hf_dp"], "p_above": 0.0, "p_below": 1.0, "exclude_lf": [], "slope": fc.get("hf_slope", 0.0)}
+    if "hf_poles" in fc:                                # each loop's HF pole outright (32.4)
+        t["hfdp"] = {"poles": fc["hf_poles"]}
     if "lf_gain" in fc:                                 # the (LF, RT) cell's per-loop gain and DC section (32.2)
         kw["loopcell"] = dict(gain=fc["lf_gain"], dc=fc["lf_dc"])
     return t, lfdc, kw

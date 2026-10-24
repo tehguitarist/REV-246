@@ -3091,3 +3091,44 @@ L the same (all 128 −51.8 / −50.0 / −45.6 / −39.1 → −52.1 / −50.3 
 
 **Reading.** The shelf side follows the same (LF, RT, loop) structure at every RT step. §32's "not separable at RT ≤ 0.8" was the pole-limited steps' fits leaking into the cell means. The common per-pass gain at short RT (LF 1.0 / RT 0.3: 0.4–1 % less loss than the law, loop 4 twice the others) is the shelf's broadband level, not a capture effect (**H** for its cause: the law's per-loop loss at large per-pass losses, or a coefficient computed differently near the gain's low end).
 
+### 32.4 The HF pole in the pole-limited cells: one curve of the law's pole with a drop-back: 6 numbers (`lowband_shelf.py --stage takefit` on §32.3, `SHELF_TAG=_lowrt`; `tools/loop_read/pole_cells.py`; `loop_cv.py --retake --tag pcell`) **[S: the unit's per-loop HF pole is a function of the law's (uncapped) pole alone, the same for every LF step, loop and RT step, up to about 0.84; S: above a law pole of about 0.856 the unit gives a lower fixed value instead (the drop-back), so loop 1 at LF 0.1 / 0.4, RT 0.6, HF 0.2 stays on the curve while its other loops drop back; S: on the bench this takes the pole-limited settings 4–15 dB deeper at 150–300 ms; baseline]**
+
+```
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 EMT_CV_FOLDS=$PWD/analysis/loop_cv/cap0.8475_folds \
+    SHELF_CELLS=$PWD/analysis/loop_cv/hfcells_chain3_cap0.8475_lowrt/cells.json SHELF_TAG=_lowrt \
+    .venv/bin/python tools/memguard.py --limit-gb 8 -- .venv/bin/python tools/lowband_shelf.py --stage takefit --workers 8 --only <RT <= 0.8 keys>
+                                     # 110 s, 3.7 GB (RT >= 1.0 files copied from _s321: unchanged there) -> chain3_shelf_takefit_cap0.8475_lowrt/
+SHELF_TAKEFIT=$PWD/analysis/lowband/chain3_shelf_takefit_cap0.8475_lowrt <same> .venv/bin/python tools/loop_read/takefit_read.py     # -> chain3_takefit_read_lowrt.{log,json}
+SHELF_TAKEFIT=<same> <same> .venv/bin/python tools/loop_read/pole_cells.py        # seconds -> analysis/loop_cv/hfcells_chain3_cap0.8475_pcell/, analysis/lowband/chain3_pole_cells.{log,json}
+for rt in 0.3 0.6 0.8; do EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 9 -- \
+    .venv/bin/python tools/loop_cv.py --retake --tag pcell --stage run --rt $rt --workers 8; done                   # 36-49 s per fold, 3.3-3.8 GB
+```
+
+With §32.3's shelf side in place, `takefit` rerun at RT ≤ 0.8 leaves almost nothing on the shelf side in the pole-limited cells (gain ≤ 0.03 dB per pass except LF 0.4 / RT 0.6 / HF 0.2), and the pole side is clean. The pole corrections (×10⁻³, loops 1–4, the two takes agreeing to 0.2) run across the loops in the same pattern in every cell. Examples: HF 0.2 / RT 0.8, LF 0.1 +0.5 / +1.6 / +2.5 / −1.2 and LF 0.4 +0.3 / +1.0 / +1.5 / −4.7. HF 0.2 / RT 0.3, LF 0.1 +0.8 / +2.0 / +2.9 / −2.0. The loops under the 0.8475 ceiling want a higher pole; the loop at it wants a lower one.
+
+**1. One curve.** The unit's per-loop poles (baseline pole + takefit's shift, mean of the takes) against each loop's law pole (uncapped, HF floor applied; `pole_cells.poles`), for every HF < 1 setting. HF 0.2 / RT 0.8 and HF 0.4 / RT 0.3 have the same law target, k (1 / HF − 1) / RT, so the same law poles, and their unit poles agree to 3·10⁻⁴ in every loop and LF step (e.g. LF 0.1: 0.7679 / 0.7887 / 0.8091 / 0.8363 and 0.7678 / 0.7890 / 0.8097 / 0.8363). The unit's pole does not depend on RT beyond the law's target. Sorted by law pole, the unit's poles from every LF step, loop and RT step lie on one smooth concave curve. Below ≈ 0.62 it is the law (−0.2·10⁻³ on average, the HF cells' job). It rises above the law from ≈ 0.66 (+0.004 at 0.67, +0.025 at 0.78–0.81, the ramp's region) and flattens towards ≈ 0.852 (law 0.8123 → 0.8362, 0.8298 → 0.8484, 0.8362 → 0.8518, 0.8452 → 0.8524). The baseline's ramp + hard ceiling at 0.8475 + HF cells bend too late and cap in the wrong place. In loss terms at 6.4 kHz the unit gives 0.993 × the law's per-pass loss below 10 dB, up to 1.085 × at 16 dB, and saturates at ≈ 18.8 dB. No other reference frequency makes it proportional (best 7 kHz, pole rms 5.9·10⁻³), so the bend is in the coefficient computation (**H**), not a mis-set f_ref.
+
+**2. The drop-back.** At HF 0.2 / RT 0.6 the law poles are 0.845–0.914. The unit gives one value per setting in every loop whose law pole is ≥ 0.86 (0.8461–0.8472 at LF 0.1 / 1.0 / 2.0, 0.841–0.844 at LF 0.4), *below* the curve's top. Loop 1 at LF 0.1 and LF 0.4 (law 0.8452 / 0.8515) stays on the curve (0.8524 / 0.8503). This is §0 item 1's regime (c): that loop was never "the floor's broadband loss landing in the pole". It is the one loop whose law pole is under the drop-back point, where the model dropped all four. The drop-back point lies between 0.8515 and 0.8602; `FOLD` = 0.856 (**H** for the mechanism: a coefficient past a limit replaced by a fixed value, not clipped to the limit).
+
+**3. The rule in the model** (`cells.json` `hf_poles`, each loop's pole outright, read by `q2.G_capped`'s `hf_dp["poles"]`, `pulse_check.setting_G` and `lowband_shelf.base_kw`). It applies only in the pole-limited cells, §32.3's set fixed in advance: HF 0.2 at RT ≤ 0.8 and HF 0.4 at RT 0.3, 16 settings. Each loop's pole is a piecewise-linear curve of its law pole on fixed knots (0.62, 0.68, 0.74, 0.78, 0.81, 0.837, flat beyond the last; 6 values, light second-difference penalty), fitted on the unit poles of the other RT steps (held out by RT step). The knot values agree across the three folds to ≤ 1·10⁻³: 0.611 / 0.685 / 0.756 / 0.805 / 0.835 / 0.852. A loop with law pole ≥ 0.856 keeps the baseline's pole, the drop-back value: 0.8475 + the (HF, RT) cell's shift, chosen held out by LF on the bench. A first version took the drop-back value from the other LF steps' takefit poles instead. It lost 12 dB on 2.0_0.6_0.2, because LF 0.4's drop-back poles (the shelf knee's cell) pulled the mean 2·10⁻³ under the unit there; so it was not used. Held out against the unit's poles (40 loop-settings with agreeing takes): rms 2.37 → 1.24·10⁻³ overall, 2.49 → 0.86·10⁻³ (max 6.0 → 2.1) on the curve's loops.
+
+**4. On the baseline bench** (RT ≤ 0.8 folds rerun; nothing else changes), R, median over clean captures [excess over repeat after]:
+
+| Setting | 50–150 | 150–300 | 300–600 |
+|---|---|---|---|
+| 0.1_0.6_0.2 | −45.9 → −51.2 | **−30.2 → −45.5 [+4.0]** | −23.7 → −29.0 |
+| 0.4_0.6_0.2 | −46.7 → −50.9 | **−30.9 → −39.8 [+9.7]** | −23.9 → −27.6 |
+| 0.1_0.8_0.2 | −49.3 → −51.7 | **−38.0 → −45.5 [+7.4]** | −31.2 → −35.3 |
+| 0.4_0.8_0.2 | −48.3 → −51.4 | **−36.0 → −43.7 [+9.5]** | −30.4 → −35.0 |
+| 1.0_0.8_0.2 | −49.7 → −50.6 | −40.1 → −42.3 [+11.7] | −35.1 → −37.1 |
+| 0.1_0.3_0.2 / _0.4 | −50.6 → −51.3 | −38.5 → −42.7 [+1.3] | (fade) |
+| 0.4_0.3_0.2 / _0.4 | −50.0 → −51.3 | −36.2 → −42.2 [+1.0] | (fade) |
+| 2.0_0.3_0.2 / _0.4 | −50.3 → −50.8 | −41.3 → −44.8 [+0.2…+3.3] | −31.0 → −31.5 |
+| 2.0_0.8_0.2 (takes disagree) | −49.9 → −50.1 | −44.0 → −43.2 | −39.0 → −38.2 |
+
+1.0_0.3_0.2, 1.0_0.6_0.2 and 2.0_0.6_0.2 are unchanged (to 0.6 dB), and so is 1.0_0.3_0.4 (−24.5): its error is not the pole. Per setting (R), better / worse by more than 0.5 dB: 12 / 1 at 150–300 ms, 6 / 1 at 300–600; nothing before 50 ms moves by more than 0.6 dB. Groups, R: HF 0.2 150–300 / 300–600 excess +6.2 / +3.0 → +5.4 / +2.1 dB; RT ≤ 1.0 +4.5 / +0.4 → +3.8 / +0.0; all 128 −50.3 / −46.0 dB, unchanged medians (16 settings touched), excess +4.9 / +1.8 → +4.5 / +1.6. L the same.
+
+**5. Gate:** `PULSE_CV=…_pcell pulse_check.py --stage gate --tag pcell`: **PASS**. S medians unchanged (−51.90 / −50.30 / −46.65). S worst octave decay errors: 1 kHz 0.24 → 0.59 %, 8 kHz 0.39 → 0.54 %, 2 kHz 0.69 → 0.44 %, the rest unchanged or better. Largest EDC difference 0.18 → 0.15 dB. CLA, the Altiverb, M and L unchanged. **The S baseline is now `analysis/loop_cv/hfcells_chain3_cap0.8475_pcell/`** (`pulse_check`'s default); the pulse check's 16 settings were rerun, report within ±0.1 %. Parameters: 6 knot values (+ the drop-back point, fixed between two data points) replace the HF cell shift in 16 settings.
+
+**Reading.** The unit computes each loop's HF pole from the law's target alone, through one bent, saturating map, and replaces it with a fixed lower value past a limit. That is a firmware computation, not a per-setting table, and it gives values between the library's steps (for the plugin). Open: whether the same curve replaces the ramp, ceiling and HF cells everywhere (S at RT ≥ 1.0, and M / L, whose §25.17 pole curve has the same law → ramp → ceiling shape); LF 0.4's low drop-back values; what is left at 0.4_0.6_0.2 (+9.7 dB), 1.0_0.8_0.2 (+11.7) and 0.4_0.8_0.2 (+9.5) at 150–300 ms.
+

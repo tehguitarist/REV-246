@@ -1171,7 +1171,8 @@ def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None, gamma=0.0, hf_d
     law's broadband decay rate (gamma < 0: faster decay; a constant share, not proportional to the lift; model_s_results 22.3).
     hf_dp: {"<hf>": dp, "p_below": x, "exclude_lf": [..]}: the HF pole + dp at that HF step where the law's pole is below x,
     except at the listed LF steps (model_s_results 22.5, 22.7); optional "slope": s, each loop's pole also + s (P_i - Pbar) / Pbar
-    (the HF cells' slope across the loops, model_s_results 32).
+    (the HF cells' slope across the loops, model_s_results 32); optional "poles": [4], each loop's HF pole outright (the pole
+    curve with its drop-back in the pole-limited cells, model_s_results 32.4).
     p_map: a function of the law's (uncapped) HF pole replacing min(p, p_max) (model_s_results 22.8).
     gamma_dc=False: gamma's extra loss on the Nyquist end only, the DC end held at dc_min (model_s_results 25.6)."""
     beta = BETA_LF if beta is None else beta
@@ -1179,7 +1180,7 @@ def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None, gamma=0.0, hf_d
     rt, lf, hf = lab["rt"], lab["lf"], lab["hf"]
     L = law["lf"][lf]
     out = []
-    for Pi in q1.P:
+    for i, Pi in enumerate(q1.P):
         kk = -3 * Pi / q1.FS
         g = 10 ** (kk / (L["hi"] * rt))
         H = np.ones(len(w), complex)
@@ -1199,7 +1200,9 @@ def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None, gamma=0.0, hf_d
             hf_e = max(hf, HFRT_MIN / rt) if HFRT_MIN else hf      # the RT x HF floor (model_s_results 29)
             p_law = float(q1.onepole_for(np.array(10 ** (kk / rt * L["k"] * (1 / hf_e - 1))), law["f_ref"]))
             p = p_map(p_law) if p_map else min(p_law, p_max)
-            if hf_dp and str(hf) in hf_dp and hf_dp.get("p_above", 0.0) <= p < hf_dp["p_below"] and lf not in hf_dp.get("exclude_lf", []):
+            if hf_dp and "poles" in hf_dp:                         # each loop's pole outright (model_s_results 32.4)
+                p = hf_dp["poles"][i]
+            elif hf_dp and str(hf) in hf_dp and hf_dp.get("p_above", 0.0) <= p < hf_dp["p_below"] and lf not in hf_dp.get("exclude_lf", []):
                 p = p + hf_dp[str(hf)] + hf_dp.get("slope", 0.0) * (Pi - np.mean(q1.P)) / np.mean(q1.P)   # slope across the loops (32)
             H = H * (1 - p) / (1 - p * np.exp(-1j * w))
         out.append(g * H)
@@ -1527,6 +1530,8 @@ def _final_setting(a_):
         gamma, fl = fc["gamma"], dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
     if fc and "hf_dp" in fc and not pcurve:         # and its HF pole shift, on every loop (model_s_results 25.7)
         hfdp = {str(lab["hf"]): fc["hf_dp"], "p_above": 0.0, "p_below": 1.0, "exclude_lf": [], "slope": fc.get("hf_slope", 0.0)}
+    if fc and "hf_poles" in fc and not pcurve:      # each loop's HF pole outright (model_s_results 32.4)
+        hfdp = {"poles": fc["hf_poles"]}
     if fc and "lf_gain" in fc:                      # the (LF, RT) cell's per-loop gain and DC section (32.2)
         fl["loopcell"] = dict(gain=fc["lf_gain"], dc=fc["lf_dc"])
     if pcurve:                                      # one pole curve instead of the ramp, hfdp and HF cells (25.17)
