@@ -423,6 +423,23 @@ Band levels at the onset agree with the model within ±0.15 dB in every octave a
 - **For the null target:** the reverb windows are now limited by the time variance, not the model (e below v). By the M/L rule in `NEXT_STEPS.md` §2 the next proof is statistical, the decorrelation curve, which needs a model of the variation itself.
 - **Next (Q3b):** with the deterministic model in hand, the model-minus-capture residual in each recirculation window is the variation itself (plus e, 2–9 dB lower). `ml_lines.fitted(prog, key)` returns each capture of a setting with its model and usable end, from the stored clock and gains (no refit; reproduces the stored nulls exactly). Test which part varies (line gains, matrix signs, tap positions, the output kernel as averaged address jitter) by how that residual grows per pass, and check whether the 0.2–2 % RT shortfall follows it.
 
+### 8.5 The law stage rerun (24 October 2026) **[S: the line laws stand on chain3 IRs, the M / L fades and S's pole curve and HF floor; H: L's shortest RT at LF 0.1]**
+
+`EMT_KERNEL=chain3 tools/ml_lines.py --stage law --workers 4` (all 340 groups, 20 min, 4.0 GB peak), then `--stage fit` and `--stage report`; `analysis/ml_lines/{law,fit.json,fit.log,report.log}` are the new files. The old ones held the 0.72 s fade, the old IRs and the capped pole law. Nothing is fitted in the law stage. Median, R, new [old]:
+
+| Window | M | L |
+|---|---|---|
+| cluster and gap | −53.5 [−45.8] | −52.6 [−45.5] |
+| first pass | −48.0 [−44.1] | −45.6 [−42.7] |
+| recirculation 1 / 2 / 3 | −20.7 / −16.0 / −12.6 [−20.8 / −16.0 / −12.6] | −18.9 / −15.8 / −12.6 [−18.9 / −15.7 / −12.6] |
+
+- **Recirculations unchanged and still better than a repeat capture** (repeat: M −19.7 / −13.7 / −9.8, L −17.6 / −13.4 / −10.0); the model's own error is 5–7 dB under the capture-to-capture variance in every window. Cluster and gap are at the repeat level, so −50 dB can't be shown further there.
+- **The HF 0.1 decay shortfall is gone** (measured RT / law at 500 Hz 0.980 → 0.999 in M, 0.977 → 0.995 in L; at 1 kHz 0.980 → 0.999 and 0.984 → 1.000): the pole curve and HF floor (§16). Level at the onset within 0.04 dB.
+- **Low bands still short** (L LF 2.0 at 125 Hz 0.958 → 0.976; M LF 0.1 at 1 kHz 0.986): the sweep's under-reading of long LF decays (§11.2).
+- **Per-LF fit unchanged:** Nyquist-end RT / label 1.280 / 1.033 / 0.986 / 0.958 (M), DC ratio 0.103 / 0.684 / 1.197 / 2.024; S's laws to 0.5 %. §8.3's per-LF numbers stand.
+- **Sample changes:** the M fade is a 1.0 s ramp (§15), so 15 of M's 160 groups (short RT) have no usable window and are out of the fit (145); recirculations 2 and 3 have fewer captures (M 384 / 337 of 443 / 436). Several changes came together (IRs, fades, pole curve, floor); they are not separated here.
+- **Lead for L's shortest RT (NEXT_STEPS §0 item 2):** at LF 0.1 / RT 2.2 / HF 0.1 the per-setting fit's decay exceeds the law's by 5–15 % at 250 Hz – 8 kHz (fit / law 1.00 1.05 1.11 1.15 1.13 1.10 1.08 per octave; old 1.03 … 1.11), with the fitted DC gain 0.133 against the law's floor 0.18. M's shortest RT agrees to 1 %. This is where the −12 dB nulls are, but it is not yet shown to be the cause.
+
 ## 9. The time variance: a slowly rotating coupling (Q3b, October 2026)
 
 `.venv/bin/python tools/ml_variance.py [--stage rot|report|sim|all]` → `analysis/ml_variance/` (`rot/` one file per AMPL group, `report.log`, `sim/`, `sim.log`). Works on the residual capture − model of §8 (`ml_lines.fitted`: stored clocks and gains, nothing refitted).
