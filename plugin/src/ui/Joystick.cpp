@@ -71,8 +71,8 @@ void edgesAt(float y, float& left, float& right)
 } // namespace
 
 Funnel::Funnel(int col)
-    : DesignComponent(juce::Rectangle<float>(design::funnelEdges[0].left + design::funnelDx[col] - 30.0f, 500.0f,
-                                             design::funnelEdges[0].right - design::funnelEdges[0].left + 60.0f, 560.0f)),
+    : DesignComponent(juce::Rectangle<float>(design::funnelEdges[0].left + design::funnelDx[col] - 70.0f, 470.0f,
+                                             design::funnelEdges[0].right - design::funnelEdges[0].left + 140.0f, 620.0f)),
       column(col)
 {
     setOpaque(false);
@@ -120,7 +120,21 @@ void Funnel::paint(juce::Graphics& g)
             path.closeSubPath();
             return path;
         };
-        lg.reduceClipRegion(wedge(top, bottom)); // nothing leaves the wedge
+
+        // The lit segment (counted from the bottom).
+        const auto yBottom = bottom - segH * (float)segment, yTop = yBottom - segH;
+        const auto lit = wedge(yTop + design::funnelGap * 0.5f, yBottom - design::funnelGap * 0.5f);
+
+        // A little of the indicator's glow spills out past the wedge's edges, onto the frame and the panel.
+        const auto k = getScale() * 2.5f;
+        drawWithGlow(lg, getLocalBounds(), scale, juce::Colour(0xffff1a08).withAlpha(0.7f * alpha), 34.0f * k, [&](juce::Graphics& g1) {
+            drawWithGlow(g1, getLocalBounds(), scale, juce::Colour(0xffff2a14).withAlpha(0.9f * alpha), 14.0f * k, [&](juce::Graphics& g2) {
+                g2.setColour(juce::Colour(0xffff2e18).withAlpha(alpha)); // drawn again below; this casts the spill
+                g2.fillPath(lit);
+            });
+        });
+
+        lg.reduceClipRegion(wedge(top, bottom)); // everything else stays inside the wedge
 
         // The glow also lights the wedge itself: a red tint, strongest around the lit segment and falling away from it.
         {
@@ -135,9 +149,7 @@ void Funnel::paint(juce::Graphics& g)
             lg.fillPath(wedge(top, bottom));
         }
 
-        // The lit segment (counted from the bottom): a brighter middle fading to the red at its edges, in a soft glow.
-        const auto yBottom = bottom - segH * (float)segment, yTop = yBottom - segH;
-        const auto lit = wedge(yTop + design::funnelGap * 0.5f, yBottom - design::funnelGap * 0.5f);
+        // The lit segment: a brighter middle fading to the red at its edges, in a soft glow.
         const auto topL = toLocal(juce::Point<float>(0.0f, yTop)).y, bottomL = toLocal(juce::Point<float>(0.0f, yBottom)).y;
         juce::ColourGradient fill(juce::Colour(0xffff2e18).withAlpha(alpha), 0.0f, topL,
                                   juce::Colour(0xffff2e18).withAlpha(alpha), 0.0f, bottomL, false);

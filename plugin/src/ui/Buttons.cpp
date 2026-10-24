@@ -18,13 +18,21 @@ void ProgramButton::setSelected(bool s)
 
 void ProgramButton::paint(juce::Graphics& g)
 {
-    drawFitted(g, images, selected ? inImage : outImage, getLocalBounds().toFloat());
+    drawFitted(g, images, held ? inImage : outImage, getLocalBounds().toFloat());
 }
 
 void ProgramButton::mouseDown(const juce::MouseEvent&)
 {
+    held = true;
+    repaint();
     if (onClick)
         onClick();
+}
+
+void ProgramButton::mouseUp(const juce::MouseEvent&)
+{
+    held = false;
+    repaint();
 }
 
 Led::Led(ScaledImages& i, layout::Slot slot, layout::Image on_, layout::Image off)

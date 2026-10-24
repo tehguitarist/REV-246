@@ -7,7 +7,8 @@
 
 namespace rv::ui
 {
-// A programme button (S M L E N): a radio choice drawn as the raised key, or the pressed key while selected.
+// A programme button (S M L E N): a radio choice (the lamp beside it shows which is selected). The key is drawn raised
+// at rest, whatever the selection, and pressed in only while the mouse button is held down on it.
 class ProgramButton : public DesignComponent
 {
   public:
@@ -16,11 +17,12 @@ class ProgramButton : public DesignComponent
     std::function<void()> onClick;
     void paint(juce::Graphics&) override;
     void mouseDown(const juce::MouseEvent&) override;
+    void mouseUp(const juce::MouseEvent&) override;
 
   private:
     ScaledImages& images;
     layout::Image outImage, inImage;
-    bool selected = false;
+    bool selected = false, held = false;
 };
 
 // An indicator lamp: one of two images.
