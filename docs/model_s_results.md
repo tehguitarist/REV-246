@@ -3604,7 +3604,7 @@ Per octave, R, 50–150 ms (the chain fitted on 150–300 ms) [§26.2's FIR only
 
 **Verdict.** The claim of NEXT_STEPS §0 item 4 holds for CLA and only half for the Altiverb. On CLA the cross-unit floor (−37…−38 dB) was the chain: a counted 29-number per-unit model fitted on one window removes 10–14 dB, held out, to −51.9 / −48.0 dB at 50–150 / 300–600 ms (R), which is the S model's own accuracy against Tomkin; the rest (+27 / +11 dB over CLA's noise) is not any LTI chain and correlates with the model's Tomkin residual, i.e. it is the algorithm's remaining error, the same one the library shows. The −70 dB stretch target needs that error fixed first, and the library can't show it. On the Altiverb the chain explains the cluster and the low band, but its reverb sits at −39…−41 dB because of an 8 kHz (and, for the compact form, 500 Hz) difference that no LTI chain and no HF setting removes and CLA doesn't share (H: the Altiverb capture's own). M / L's Altiverb first pass behaves the same. **Nothing about the digital model is adopted** (371 numbers). `unit_chain.py` stays as the analysis tool; the CLA chain's 13-number cascade (fitted 150–300 ms) is a candidate for the plugin's TRANSFORMER stage in place of `bq.json` (the third section takes 500 Hz from −36 to −40 dB on CLA, 250 Hz from −38 to −52), not wired in (plugin out of scope).
 
-## 38. S's AP230 damping steps refitted on the current model: the M / L table, but tried, not adopted (`tools/s_brefit.py`, 25 October 2026) **[S: on the §35 baseline S's damped AP230 steps refit to 0.16966 / 0.32975 / 0.50017 (fitted on 0–50 ms, per-step sd 1–4·10⁻⁴, leave-one-LF-column-out within 2·10⁻⁴), 1.4–1.9·10⁻³ below the chain2 table and within 2–6·10⁻⁴ of M / L's refit (`ml_structure.md` §22): S, M and L share one damping table; S: that M / L table (fitted on other programs only) takes S's 35 damped settings from −51.7 to −54.4 dB at 50–150 ms (R median; every damped capture better there) and −47.5 → −48.6 at 150–300; S: but 1.0_1.0_0.2 loses 0.55–0.65 dB at 150–300 / 300–600 ms with every candidate table (its later windows prefer b ≈ 0.173, the old value masking its own HF 0.2 pole residual, §35), so **not adopted** under the strict rule; S: step 0 at b = 0 (from 0.00069) helps 50–300 ms but costs 24 HF 0.2 / long-RT settings 0.5–1.2 dB at 300–1000 ms: the loop cells were fitted around it; `EMT_AP230=ap230_mltable.json` keeps the damped-steps variant as a switch]**
+## 38. S's AP230 damping steps refitted on the current model: the M / L table; not adopted under the strict rule, then adopted by the user's decision (§38.1) (`tools/s_brefit.py`, 25–26 October 2026) **[S: on the §35 baseline S's damped AP230 steps refit to 0.16966 / 0.32975 / 0.50017 (fitted on 0–50 ms, per-step sd 1–4·10⁻⁴, leave-one-LF-column-out within 2·10⁻⁴), 1.4–1.9·10⁻³ below the chain2 table and within 2–6·10⁻⁴ of M / L's refit (`ml_structure.md` §22): S, M and L share one damping table; S: that M / L table (fitted on other programs only) takes S's 35 damped settings from −51.7 to −54.4 dB at 50–150 ms (R median; every damped capture better there) and −47.5 → −48.6 at 150–300; S: but 1.0_1.0_0.2 loses 0.55–0.65 dB at 150–300 / 300–600 ms with every candidate table (its later windows prefer b ≈ 0.173, the old value masking its own HF 0.2 pole residual, §35), so **not adopted** under the strict rule; S: step 0 at b = 0 (from 0.00069) helps 50–300 ms but costs 24 HF 0.2 / long-RT settings 0.5–1.2 dB at 300–1000 ms: the loop cells were fitted around it; `EMT_AP230=ap230_mltable.json` keeps the damped-steps variant as a switch]**
 
 ```
 EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 .venv/bin/python tools/memguard.py --limit-gb 9 -- \
@@ -3644,3 +3644,36 @@ The S − M / L differences (−2.0 / +0.7 / +5.7·10⁻⁴) are a third to a tw
 - **Step 0.** The 0.00069 offset is real in the sense §18 meant (a kernel-era artefact), but here the loop cells (HF poles, shelf cells, DC floor) were fitted with it in place, and removing it alone unbalances HF 0.2 / long RT late (300–1000 ms). It would need the loop cells refitted on b = 0, which is the §32–35 pipeline again; not done.
 
 **Not adopted** (strict rule: one setting over 0.5 dB). The baseline stays `ap230_g0.7071_chain2.json`; `EMT_AP230=ap230_mltable.json` (`loop_fir.AP230`, read by `pulse_check`, `loop_cv`, `lowband_shelf`) switches the damped steps to the M / L table. Findings kept: **S's damping steps on the current model are the M / L table** (S, M and L agree to ≤ 6·10⁻⁴), so the plugin can use one table for all three programs if the user accepts the trade (H for S until adopted); 0.16986 / 0.32968 / 0.49960 has spacings 0.1598 / 0.1700, unequal as §36.2 said.
+
+### 38.1 Adopted by the user's decision (26 October 2026): the new S baseline `_apml` **[S: the M / L damping table as S's AP230 steps (step 0 unchanged at 0.00069), accepting 1.0_1.0_0.2's +0.60 / +0.54 dB at 150–300 / 300–600 ms; bench all 127 settings R 50–150 ms −52.3 [+4.3] → −53.0 [+3.8] dB, RT ≤ 1.0 −52.0 [+6.2] → −53.2 [+4.6], later windows unchanged; gate PASS]**
+
+The strict rule rejected §38's candidate by one setting; the user chose the trade (+0.7 dB at 50–150 ms on the bench median, +1.2 dB at RT ≤ 1.0, every damped capture better there, against 0.6 dB late on 1.0_1.0_0.2).
+
+```
+# loop_fir.AP230 default -> ap230_mltable.json (EMT_AP230=ap230_g0.7071_chain2.json: the §35 table)
+mkdir analysis/loop_cv/hfcells_chain3_cap0.8475_apml; cp <_pshoulder>/{cells.json,dcfloor.json,fold_*.json} into it   # §35's constants and cells, unchanged
+for rt in 0.3 0.6 0.8 1.0; do EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 9 -- \
+    .venv/bin/python tools/loop_cv.py --retake --tag apml --stage run --rt $rt --workers 8; done      # 31-55 s, 4.2 GB per fold; RT >= 1.4 rows copied (no damped setting)
+.venv/bin/python tools/loop_read/foldcmp.py <_pshoulder> <_apml> --per-setting > <_apml>/foldcmp.log
+# pulse_check default PULSE_CV -> _apml; the 36 damped settings' analysis/pulse/s files removed, then
+EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 9 -- .venv/bin/python tools/pulse_check.py --stage s --only <the 36> --workers 8   # 85 s, 4.4 GB
+<same env> .venv/bin/python tools/pulse_check.py --stage report; <same env> ... --stage gate --tag apml      # PASS, 159 s, 4.9 GB
+```
+
+**Bench** (`_pshoulder` → `_apml`, 127 settings, 491 clean captures, held out as §35: each setting with the fold that left its RT step out; the AP230 table is fitted on M and L only, so held out for every S setting). Undamped settings byte-identical (RT 1.0 fold checked row by row). R median null [excess over the chain3 repeat]:
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| All 127 | −52.3 [+4.3] → **−53.0 [+3.8]** | −51.3 [+3.8] → −51.4 [+3.7] | −46.7 [+0.8] → −46.7 [+0.7] | −39.6 [−0.7] → −39.6 [−0.7] |
+| LF 0.1 | −52.2 [+5.9] → −52.9 [+5.3] | −50.8 [+4.3] → −51.0 [+4.2] | −43.2 [+1.1] → −43.5 [+1.0] | −34.3 [−0.9] → −34.3 [−0.9] |
+| LF 0.4 | −52.8 [+6.4] → −53.6 [+4.6] | −51.6 [+5.6] → −51.6 [+5.2] | −47.5 [+0.8] → −47.5 [+0.7] | −40.8 [−0.7] → −40.8 [−0.7] |
+| HF 0.2 | −52.9 [+6.2] → −53.9 [+4.9] | −50.1 [+5.4] → −50.0 [+5.3] | −44.7 [+2.1] → −44.6 [+2.1] | −39.2 [−0.1] → −39.2 [−0.1] |
+| HF 0.4 | −52.6 [+4.8] → −53.3 [+4.1] | −51.9 [+3.7] → −52.1 [+3.0] | −47.8 [+0.5] → −47.8 [+0.4] | −40.8 [−0.6] → −40.8 [−0.7] |
+| RT ≤ 1.0 | −52.0 [+6.2] → −53.2 [+4.6] | −50.1 [+3.2] → −50.3 [+3.0] | −43.2 [−0.5] → −43.2 [−0.5] | −30.1 [−1.7] → −30.1 [−1.7] |
+| RT ≥ 1.4 | −52.9 [+2.4] → −52.9 [+2.4] | −52.1 [+4.3] → −52.1 [+4.3] | −49.1 [+2.6] → −49.1 [+2.6] | −44.1 [+0.2] → −44.1 [+0.2] |
+
+L: all 127 −52.4 [+5.5] → −53.2 [+4.9] / −51.1 [+5.0] → −51.2 [+4.8] / −46.5 [+1.0] → −46.5 [+1.0] / −39.4 → −39.4; 0–50 ms R −51.2 → −51.4, L −51.8 → −52.1. Per setting (R, 50–1000 ms, beyond ±0.5 dB): 35 better at 50–150 ms (−1.6…−3.8 dB), 18 better at 150–300 (to −1.9, 0.1_0.6_0.4), 2 better at 300–600; worse only 1.0_1.0_0.2, +0.60 (150–300) / +0.54 (300–600), the accepted loss; next worst 2.0_1.0_0.2 / 2.0_0.8_0.2 +0.4.
+
+**Pulse check and gate.** The 36 damped settings rerun in `analysis/pulse/s`; report: decay, EDC and G6 unchanged to the printed precision except the worst 1/24-octave EDR band (4.6 → 5.4 %, 6.4 → 7.2 % in one group; 90th percentiles unchanged at 0.4 %). Gate (`analysis/pulse/gate_apml/`) PASS; its S medians against §35's gate −52.18 → −52.99 / −51.41 → −51.41 / −46.90 → −46.90 dB; CLA and the Altiverb identical (they use step 0); M / L identical.
+
+**The new S baseline is `analysis/loop_cv/hfcells_chain3_cap0.8475_apml/`** (`pulse_check`'s default `PULSE_CV`): §35's folds and cells with AP230's damped steps on the shared S / M / L table. Parameter count unchanged at 371 (the AP230 table now shared with M / L). Open, as §38: AP230 step 0 at b = 0 would need the loop cells refitted around it (H; deferred, see `NEXT_STEPS.md` §0).
