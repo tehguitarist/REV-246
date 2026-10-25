@@ -119,3 +119,42 @@ Detail and methods: `UAD250_test_plan.md` §2 (the plugin is a commercial emulat
 | Not available | read taps and positions per comb, loop-filter shape beyond the per-band multipliers, output discorrelator, the modulation's waveform (sinusoid / drift / random), whether its rate follows the sample clock (0.552 Hz at 24 kHz would be 0.607 Hz at 26,373.6 Hz) | open | needs E repeat captures, which do not exist |
 
 Offline: all UAD captures are archived (`tools/uad250/offline_bundle.py`); the fits here read only the Altiverb caches and synthetic simulation.
+
+## 11. Structure of Program E, decoded (26 October 2026)
+
+*Tool: `tools/e250/e_model.py` (`--stage prep`, `--stage static [--law 246]`); device-rate IRs `analysis/e250/dev_<RT>.npy` (gitignored), each normalised by R's first tap. Supersedes §3's loop lengths, §4's modulation reading and §10's "three parallel combs" / modulation rows. Labels C / S / H as elsewhere.*
+
+**11.1 Each preset is a different realisation; only the direct path is static.** The nine presets' three early taps agree to −53 dB (R) / −61 dB (L) against the mean of the other eight. The dense reverb, from about 20 ms after R's first tap, does not: a leave-one-out mean of the other eight presets nulls it by only about −1 dB in every octave and window from 30 ms to 1.5 s. The decorrelation does not depend on how far apart the RT steps are (4.0 / 4.5 s as poor as 1.0 / 4.5 s), so it is time variance, not RT-dependent structure. An SVD of the nine first passes gives one common component (28 % of the energy) and eight flat, noise-like ones: each capture is **a fixed static IR (≈ 28 % of the reverb energy, ≈ 0.25–0.3 at every time from 30 ms to 1.5 s, more at 125 Hz) plus a fresh random part (≈ 72 %)**. The decorrelation is already complete in the first pass and does not grow with time, unlike M / L's in-loop rotation (captures −27…−38 dB alike early). **[S]** Consequence: for the E's reverb the bar is accuracy over null, as for M / L; the −50 dB null applies to the direct path only.
+
+**11.2 The static network** (both channels; positions in device samples after R's first tap; every number held out by RT step unless stated):
+- **Direct path:** taps 0 / 429 / 718, gains +1 / −0.709 / +0.589, the chain kernel (tap 1's own response, 410 samples). L carries the same direct path **314 samples later, inverted, × 1.114**. **[S]**
+- **All-pass chain:** three all-passes, **46 / 146 / 392 samples, g = 0.709 / 0.710 / 0.710** (H(z) = (−g + z^−D) / (1 − g z^−D)), outside the loops, shared by the static and the random parts. Found by deconvolution sparsity (L1/L2 0.67 → 0.46), then by least squares on the static first pass, where moving any delay by one sample costs about 2 dB; the same in R and L; deconvolving them also sparsifies each preset's random part (0.77 → 0.69), which the static fit never saw. **[S]**
+- **Three loops with negative feedback: 2215 / 2507 / 2776 samples (84.0 / 95.1 / 105.3 ms).** The old 4430 / 5014 / 5552 (§3) are 2 P: a loop with negative feedback has its first positive autocorrelation peak at twice its length. With the chain kernel and the all-passes divided out, the static part is single taps alternating in sign every pass: loop A from 2223 (4438, …), B from 805 (3312, 5819, 8326, 10833), C from 1802 (4578, …). Each loop is read once, its first read scales with the loop gain (the read is after the loop filter: line = G{in − line(t − P)}), gains c = +0.327 / +0.400 / −0.397 (A / B / C, chain-kernel units). **[S]**
+- **L's reverb is R's static reverb 315 samples later, same sign** (one sample later than its direct path). **[S]**
+- **Loop filter = the 246's own loop law.** `ml_lines.line_coefs` at the E's line lengths with **LF 1.44 / HF 0.72** (one setting for the whole Altiverb family) predicts the octave T60 of the RT ≥ 1.0 presets held out by RT step to 1.6–3.3 % at 500 Hz–8 kHz (6.7 % at 125 Hz, where the measured T60 scatter most), with 2 numbers; a free 7-knot T60 = RT · m(f) curve gets 0.5–1.1 % at 1–8 kHz with 7. In the IR fit the two laws are level (ρ² within 0.01). So the E uses the 246's LF / HF control, plausibly unchanged (**S** for the shape, H for "the same code"). **RT 0.4 departs** (measured T60 8–15 % longer than the label at 500 Hz–2 kHz and up to 34 % at 8 kHz): the 246's HF saturation at short RT would explain 8 kHz (fully saturated −34 → −5 %), not the mid bands; label or T30 bias at a 0.4 s decay, open. **[H]**
+- **Count:** 16 numbers (2 direct gains, L gain, 3 loop gains, 3 all-pass gains, 7 law knots; with the 246 law 11), plus the integer delays and the measured chain kernel.
+
+**11.3 The random part: moving reads on the loop lines.** **[S for the observations, H for the mechanism]**
+- The random part's energy sits at the same fine-time positions across presets more than by chance (fine-energy correlation of the residuals 0.05–0.27 against ≈ 0.01 for shifted controls) and the strongest static taps are stable across presets (e.g. B's first read −0.10…−0.13). It is not sign or gain jitter on the static taps.
+- It recirculates in the loops: its autocorrelation is negative near each loop length, but **split into two lobes about 5–7 samples either side of P** (A −6 / +5, B −7 / +6, C −8 / +6), with a dip at exactly P and nothing at control lags. The reads that make it move by about 6 samples per pass: **≈ ±60 device samples per second, both directions, the same in all three loops** (a delay glide of ≈ ±0.23 %, ≈ ±4 cents). Within one capture this smears each moving read over ~20 samples; between captures the reads are elsewhere, hence the full decorrelation.
+- Its energy is spread evenly over the first pass from about 600 samples on (not clustered near the static reads), −7 dB under the static part before B's first read, about equal in the first pass and +2…+3 dB above it after the first recirculation.
+- **L's random part is partly R's with the opposite sign** (correlation −0.50 at the static alignment + 1 sample) and partly independent. The output stage adds the moving reads into L and R with opposite polarity, as the patent's output decorrelator / random mixing (§9, Fig. 4) would.
+- Hardware reading: Morrin's "Noise" (an LFSR) with the "8-rotate", "to generate pseudo-random memory addresses in the reverb algorithm" (R44), here as read addresses that glide. The motion law (sawtooth, triangle, random walk with reversals), the number of moving reads and their address range are not yet fitted.
+
+**11.4 Held-out scores** (RT ≥ 1.0, each RT step predicted from a fit on the other seven; ρ² = fraction of the held-out capture's 100 Hz–10 kHz energy explained with an optimal gain; the ceiling is the static fraction, ≈ 0.28):
+
+| held-out RT | direct path L / R (dB, to 19 ms) | ρ² 30–165 ms L, R: model / LOO mean | 170–500 ms | 500–1500 ms |
+|---|---|---|---|---|
+| 1.0 | -52.9 / -49.6 | 0.44, 0.25 / 0.45, 0.26 | 0.21, 0.21 / 0.19, 0.22 | 0.21, 0.22 / 0.09, 0.11 |
+| 1.5 | -50.7 / -47.7 | 0.47, 0.25 / 0.42, 0.15 | 0.21, 0.26 / 0.15, 0.16 | 0.23, 0.25 / 0.11, 0.15 |
+| 2.0 | -51.5 / -48.5 | 0.48, 0.28 / 0.45, 0.27 | 0.25, 0.25 / 0.22, 0.22 | 0.27, 0.24 / 0.21, 0.23 |
+| 2.5 | -49.6 / -46.8 | 0.45, 0.28 / 0.46, 0.30 | 0.26, 0.26 / 0.21, 0.23 | 0.25, 0.27 / 0.19, 0.21 |
+| 3.0 | -52.4 / -48.5 | 0.45, 0.28 / 0.37, 0.18 | 0.27, 0.23 / 0.17, 0.13 | 0.28, 0.25 / 0.23, 0.22 |
+| 3.6 | -51.7 / -48.4 | 0.47, 0.30 / 0.39, 0.21 | 0.25, 0.26 / 0.16, 0.15 | 0.27, 0.26 / 0.17, 0.16 |
+| 4.0 | -51.7 / -47.6 | 0.48, 0.27 / 0.45, 0.25 | 0.27, 0.26 / 0.20, 0.22 | 0.27, 0.26 / 0.17, 0.18 |
+| 4.5 | -50.8 / -47.6 | 0.46, 0.26 / 0.43, 0.25 | 0.27, 0.27 / 0.20, 0.19 | 0.28, 0.25 / 0.20, 0.19 |
+| **median** | -51.6 / -48.0 | 0.46, 0.27 / 0.44, 0.25 | 0.26, 0.26 / 0.19, 0.20 | 0.27, 0.25 / 0.18, 0.18 |
+
+The direct path is at the capture's own floor there (the leave-one-out mean of the other presets reaches −50.4 / −49.2 dB in the same window at RT 2.5): random reads already start around tap 2. The reverb's static part is explained to its ceiling in the first pass and better than the leave-one-out mean afterwards, with 16 numbers.
+
+**11.5 Literature check (26 October 2026).** No public source gives the 250's delays, gains or LFSR (Morrin's pages and the patent are structural only; nothing documents the 246's Program E). An unsourced forum recollection (Eventide forum, 2008) describes "predelay, 3 all-pass diffusers, a tank, a 4-output decorrelator" with tank times of 80–120 ms; the decoded structure fits it (three all-passes; loops of 84–105 ms).
