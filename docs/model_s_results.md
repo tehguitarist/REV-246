@@ -3677,3 +3677,34 @@ L: all 127 −52.4 [+5.5] → −53.2 [+4.9] / −51.1 [+5.0] → −51.2 [+4.8]
 **Pulse check and gate.** The 36 damped settings rerun in `analysis/pulse/s`; report: decay, EDC and G6 unchanged to the printed precision except the worst 1/24-octave EDR band (4.6 → 5.4 %, 6.4 → 7.2 % in one group; 90th percentiles unchanged at 0.4 %). Gate (`analysis/pulse/gate_apml/`) PASS; its S medians against §35's gate −52.18 → −52.99 / −51.41 → −51.41 / −46.90 → −46.90 dB; CLA and the Altiverb identical (they use step 0); M / L identical.
 
 **The new S baseline is `analysis/loop_cv/hfcells_chain3_cap0.8475_apml/`** (`pulse_check`'s default `PULSE_CV`): §35's folds and cells with AP230's damped steps on the shared S / M / L table. Parameter count unchanged at 371 (the AP230 table now shared with M / L). Open, as §38: AP230 step 0 at b = 0 would need the loop cells refitted around it (H; deferred, see `NEXT_STEPS.md` §0).
+
+### 38.2 Probe: AP230 step 0 at b = 0 with the loops re-adapted, on 12 settings (26 October 2026) **[S: with each setting's loops free (takefit's 12 numbers, held out by take), b = 0 beats b = 0.00069 at every window that matters (R medians −0.86 / −1.23 / −0.14 dB at 50–150 / 150–300 / 300–600 ms, worst +0.39), so the late loss of §38 is the loop tables' adaptation to the old b, not b = 0 itself; S: the loop change b = 0 needs is small and systematic — at HF 0.2 a common per-pass gain of +0.7…+1.0 mdB (sd < 0.1 across loops and settings) and HF poles −0.3…−0.6·10⁻⁴ (rising with the loop); H: carried as one held-out shift (leave one setting out over five HF 0.2 settings) on the current cells, b = 0 then improves every window on those five (−1.13 / −0.24 / −0.14 / −0.18 dB, worst +0.37); not tested on the bench, nothing adopted]**
+
+```
+analysis/q2/ap230_mltable_b0.json = ap230_mltable.json with step 0 at b = 0
+for t in 069 0; do EMT_AP230=<ap230_mltable.json | ap230_mltable_b0.json> EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 \
+    EMT_CV_FOLDS=$PWD/analysis/loop_cv/cap0.8475_folds SHELF_CELLS=$PWD/analysis/loop_cv/hfcells_chain3_cap0.8475_apml/cells.json SHELF_TAG=_probe$t \
+    .venv/bin/python tools/memguard.py --limit-gb 9 -- .venv/bin/python tools/lowband_shelf.py --stage takefit --workers 8 --only <12 keys>; done   # 58 s, 5.5 GB each
+# then a cells.json variant with the five HF 0.2 settings' hf_poles (and lf_gain / lf_dc) moved by the other four's mean takefit change, takefit again (base nulls), SHELF_TAG=_probe0pole / _probe0all   # 30 s each
+```
+
+**Subset** (12 undamped settings, from §38's grids): the five HF 0.2 settings that gain most early and lose most late at b = 0 (2.0_2.2_0.2, 0.4_1.8_0.2, 1.0_1.8_0.2, 1.0_1.4_0.2, 0.4_2.5_0.2), four HF 1.0 settings that gain at 150–600 ms (0.1_0.3_1.0, 0.1_0.8_1.0, 0.1_1.0_1.0, 2.0_1.8_1.0) and three neutral (1.0_1.4_1.0, 0.1_1.8_1.0, 1.0_2.5_0.6). Takefit (`lowband_shelf.py --stage takefit`): per setting, each loop's broadband gain, DC section and HF pole (12 numbers) fitted on one take and scored on the other, with its `base` the current compact model; strict 100 Hz–10 kHz nulls (`nulls_broad`), R, mean over held-out captures. The two runs differ only in AP230's step 0 (each with its own capture fits).
+
+| R, 12 settings, median | 50–150 ms | 150–300 | 300–600 |
+|---|---|---|---|
+| compact model, b 0.00069 → 0 (b alone; mean change) | −51.46 → −52.15 (−0.66) | −51.03 → −51.82 (−0.56) | −48.56 → −48.23 (+0.18) |
+| loops free per setting, b 0.00069 → 0 (held out by take; mean change, worst) | −51.56 → −52.35 (−0.86, +0.08) | −52.88 → −54.30 (−1.23, −0.33) | −50.35 → −50.81 (−0.14, +0.39) |
+
+**What the loops need** (takefit's fit at b = 0 minus at 0.00069, mean of the two takes): HF 0.2: gain +0.55…+1.31 mdB per pass, nearly equal over loops 1–4 in each setting; poles −0.2…−0.8·10⁻⁴, larger for the longer loops; DC sections ≤ 0.4 mdB. HF 1.0: gain +0.1…+0.7 mdB (2.9 at RT 0.3), DC +0.5…+2.4 mdB at LF 0.1 / RT ≤ 1.8. HF 0.6 (one setting): poles +0.2·10⁻⁴. So the change is a function of HF (and RT), the size the read noise of §36 allows (10⁻⁴ in a pole, 1 mdB in a gain), not per-setting structure.
+
+**Carried compactly, held out by setting (HF 0.2 only, five settings, the mean of the other four):**
+
+| R, mean change against the current model | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| b = 0 alone | −1.01 | +0.48 | +0.94 | +0.48 |
+| + the pole shift | −1.02 | +0.35 | +0.74 | +0.32 |
+| + pole, gain and DC shifts | **−1.13** (worst −0.91) | **−0.24** (worst +0.16) | **−0.14** (worst +0.09) | **−0.18** (worst +0.37) |
+
+The pole shift alone recovers a fifth of the late loss; the common gain does the rest. That gain is what the shelf cells deliberately drop (zero-mean `lf_gain`, because takefit holds each capture's gain fixed and a common gain can be capture-gain error, §32.2); here it is held out by setting and recovers the late windows, so it is not only capture gain (H until it passes the bench, where capture gains are refitted).
+
+**Effort for the full rebuild, from this probe:** (1) takefit on all 92 undamped settings at both b (≈ 6 min each, 5.5 GB); (2) a compact form of the loop change from those fits: per-loop gain, pole and DC shifts per (HF, RT) cell or as a function of HF and RT, held out by setting or LF step (an hour of analysis); (3) a variant `cells.json` with the shifts added (settings without `lf_gain` / `lf_dc` get them; `setting_G` already reads them) and `EMT_AP230=ap230_mltable_b0.json`; (4) the eight `loop_cv --retake` folds (≈ 5 min), foldcmp, pulse s, gate (≈ 10 min). Two to three hours with one iteration; the probe suggests gains of about 0.5–1 dB at 50–150 ms and a few tenths later on the settings that move, roughly half the bench.
