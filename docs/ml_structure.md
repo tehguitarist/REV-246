@@ -1139,3 +1139,13 @@ EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/pulse
 **The scan** (`slip_scan.log`): every M / L capture, the clock refitted on the cluster (AMPL 0: the first 30 ms of the first pass), residual per 2 ms bin from the first pass on while the model holds the capture within −25 dB, a jump ≥ 15 dB that stays (3 bins ≥ 12 dB over the 5 before) and a lag step ≥ 0.5 file samples. M: the five, no others. L: none; ten L captures show a 12–16 dB jump at 291–293 ms after tap 0 with no lag step (≤ 0.02 file samples) and no gain from realigning: that is the onset of L's R recirculation 1 (2268 + 5279 samples = 286.2 ms), where the static model is at −19 dB anyway, so model time, not the file.
 
 **Effect** (report, M, slipped captures and their pairs left out; 474 captures, 468 pairs): first pass −49.8 [−48.3] → −49.9 [−48.4] dB, recirculation 1 −20.7 [−19.0] → −20.7 [−19.3]; decay, EDC and G6 within one unit of the last printed digit. The law files keep their clocks (the captures are simply not scored); the gate's M groups hold none of them.
+
+### 22.1 The damped groups' law fits rerun on the adopted table (`ml_lines.py --stage law`, 25 October 2026) **[S: the per-capture clock, shift and gains of the 96 damped groups, refitted with the new b in the fit window, take the damped first pass a further step: L −53.58 → −54.44 dB, M −52.85 → −52.95 (R median), no capture worse than +0.06 dB, every later window unchanged; gate PASS; no model number added]**
+
+```
+# the 96 damped law files backed up and removed, then (resumable: only missing groups run)
+EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 9 -- .venv/bin/python tools/ml_lines.py --stage law --workers 8   # 96 groups, 146 s, 1.9 GB
+EMT_KERNEL=chain3 ... pulse_check.py --stage ml (the 96 damped groups, PULSE_OUT first, then into analysis/pulse/ml); --stage report; --stage gate --tag brefit_law   # PASS
+```
+
+§22 refitted b with each capture's clock, shift and gains held at the law stage's values, which had been fitted (on the cluster and first pass) with the stored b in the model. Rerunning the law stage for the damped groups on the adopted table is the same per-capture nuisance fit, not a model term. Clocks move by −0.0004…−0.0017 samples in shift and ±0.1 ppm, gains by ≈ 0.001 dB. Pulse check against §22 (slipped captures left out): L first pass −53.58 → −54.44 dB (worst capture −0.35, i.e. better), M −52.85 → −52.95 (worst +0.06); recirculations 1–3 and 0.3–4 s unchanged to 0.01 dB. Report: L first pass −52.9 → −53.0 dB over all groups, everything else within the last printed digit. b itself was not refitted again on the new clocks (the clock moves are 10⁻³ samples; a second pass would move b by far less than its 2–5·10⁻⁵ scatter, H).
