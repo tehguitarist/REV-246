@@ -1,0 +1,35 @@
+92 undamped settings with both takefit runs; change fit(b = 0) - fit(b = 0.00069), mean of the two takes
+- HF 0.2 (16): gain mdB [0.81 0.91 0.77 0.95] (sd [0.28 0.3  0.22 0.28]); DC mdB [-0.11 -0.26  0.16 -0.23] (sd [0.13 0.16 0.34 0.18]); pole 1e-4 [-0.27 -0.31 -0.46 -0.54] (sd [0.04 0.11 0.16 0.13])
+    RT 1.4 (4): gain 1.26 mdB, DC 0.06 mdB, pole -0.54e-4
+    RT 1.8 (4): gain 0.9 mdB, DC -0.11 mdB, pole -0.43e-4
+    RT 2.2 (4): gain 0.69 mdB, DC -0.18 mdB, pole -0.33e-4
+    RT 2.5 (4): gain 0.58 mdB, DC -0.21 mdB, pole -0.27e-4
+- HF 0.4 (20): gain mdB [0.65 0.84 0.73 0.95] (sd [0.27 0.39 0.3  0.4 ]); DC mdB [-0.01 -0.38 -0.07 -0.63] (sd [0.15 0.19 0.24 0.36]); pole 1e-4 [-0.07  0.11 -0.07 -0.11] (sd [0.11 0.09 0.24 0.19])
+    RT 1.0 (4): gain 1.4 mdB, DC -0.25 mdB, pole -0.31e-4
+    RT 1.4 (4): gain 0.92 mdB, DC -0.29 mdB, pole -0.09e-4
+    RT 1.8 (4): gain 0.67 mdB, DC -0.29 mdB, pole 0.03e-4
+    RT 2.2 (4): gain 0.52 mdB, DC -0.27 mdB, pole 0.08e-4
+    RT 2.5 (4): gain 0.46 mdB, DC -0.26 mdB, pole 0.12e-4
+- HF 0.6 (24): gain mdB [0.6  0.79 0.72 0.94] (sd [0.25 0.43 0.35 0.45]); DC mdB [ 0.21 -0.13  0.09 -0.64] (sd [0.25 0.13 0.18 0.48]); pole 1e-4 [0.05 0.27 0.12 0.15] (sd [0.15 0.04 0.2  0.15])
+    RT 0.8 (4): gain 1.4 mdB, DC -0.1 mdB, pole -0.1e-4
+    RT 1.0 (4): gain 1.09 mdB, DC -0.13 mdB, pole 0.07e-4
+    RT 1.4 (4): gain 0.73 mdB, DC -0.13 mdB, pole 0.2e-4
+    RT 1.8 (4): gain 0.55 mdB, DC -0.12 mdB, pole 0.25e-4
+    RT 2.2 (4): gain 0.44 mdB, DC -0.11 mdB, pole 0.24e-4
+    RT 2.5 (4): gain 0.38 mdB, DC -0.11 mdB, pole 0.24e-4
+- HF 1.0 (32): gain mdB [0.51 0.58 0.74 0.75] (sd [0.45 0.74 0.95 0.82]); DC mdB [1.17 1.45 1.23 0.3 ] (sd [0.58 0.56 0.76 1.48]); pole 1e-4 -- (sd --)
+    RT 0.3 (4): gain 2.44 mdB, DC -0.41 mdB
+    RT 0.6 (4): gain 0.98 mdB, DC 1.24 mdB
+    RT 0.8 (4): gain 0.63 mdB, DC 1.48 mdB
+    RT 1.0 (4): gain 0.44 mdB, DC 1.47 mdB
+    RT 1.4 (4): gain 0.26 mdB, DC 1.33 mdB
+    RT 1.8 (4): gain 0.17 mdB, DC 1.16 mdB
+    RT 2.2 (4): gain 0.13 mdB, DC 1.05 mdB
+    RT 2.5 (4): gain 0.1 mdB, DC 0.97 mdB
+
+held-out prediction error, rms over settings and loops (zero = do nothing), by part:
+- hf_step: gain 0.55 (of 0.92); dc 0.60 (of 0.92); pole 0.15 (of 0.28)  [gain / DC mdB, pole 1e-4]
+- hf_rt_cell: gain 0.08 (of 0.92); dc 0.43 (of 0.92); pole 0.05 (of 0.28)  [gain / DC mdB, pole 1e-4]
+- hf_logrt: gain 0.22 (of 0.92); dc 0.49 (of 0.92); pole 0.06 (of 0.28)  [gain / DC mdB, pole 1e-4]
+- zero: gain 0.92 (of 0.92); dc 0.92 (of 0.92); pole 0.28 (of 0.28)  [gain / DC mdB, pole 1e-4]
+- hf_rt_cell_nogain: gain 0.92 (of 0.92); dc 0.43 (of 0.92); pole 0.05 (of 0.28)  [gain / DC mdB, pole 1e-4]
