@@ -296,6 +296,8 @@ def setting_G(lab, b230, law, fold, fc):
     if fc and "dc_min" in fc:
         law["lf"][0.1]["dc"] = fc["dc"]
         gamma, fl = fc["gamma"], dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
+    elif q2.dcfloor_form(lab):                      # EMT_DCFLOOR: the floor's compact form (model_s_results 34)
+        fl = dict(floor_form=q2.dcfloor_form(lab))
     if fc and "hf_dp" in fc:
         hfdp = {str(lab["hf"]): fc["hf_dp"], "p_above": 0.0, "p_below": 1.0, "exclude_lf": [], "slope": fc.get("hf_slope", 0.0)}
     if fc and "hf_poles" in fc:                     # each loop's HF pole outright (model_s_results 32.4)

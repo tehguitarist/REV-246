@@ -1159,12 +1159,20 @@ P_MAX = float(os.environ.get("EMT_PMAX", 0.84))   # HF one-pole: largest pole (r
 HFRT_MIN = float(os.environ.get("EMT_HFRT_MIN", 0.0))   # floor on RT x HF (s): the HF control acts as max(HF, HFRT_MIN / RT)
                                                   # (model_s_results 29: 0.12 makes HF 0.2 / RT 0.3 act as HF 0.4); 0 = off
 DC_MIN = 0.18         # smallest total per-pass gain at DC (refit, LF 0.1 / RT 0.6-1.4, all four loops 0.17-0.20)
+DCFLOOR = json.load(open(os.environ["EMT_DCFLOOR"])) if os.environ.get("EMT_DCFLOOR") else None
+                      # EMT_DCFLOOR=<json>: the DC floor's compact form (model_s_results 34) for every setting without a
+                      # floor cell ({"settings": {key: {F, c, tau, F0, beta, gamma}}}, tools/loop_read/floor_form.py); off: the cells
+
+
+def dcfloor_form(lab):
+    """EMT_DCFLOOR's floor form for one setting (None when the switch is off or the setting has none)."""
+    return (DCFLOOR or {}).get("settings", {}).get(f"{lab['lf']}_{lab['rt']}_{lab['hf']}")
 
 
 BETA_LF = 0.0         # under the LF cap: extra top-end loss per pass = BETA_LF x the cap's lift at DC (dB per dB)
 
 
-def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None, gamma=0.0, hf_dp=None, p_map=None, gamma_dc=True):
+def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None, gamma=0.0, hf_dp=None, p_map=None, gamma_dc=True, floor_form=None):
     """q1.G_law with the two coefficient limits: HF pole <= p_max; g . r0 (per-pass gain at DC) >= dc_min. Where the DC
     floor lifts the shelf by D dB, the broadband (Nyquist-end) gain drops by beta . D dB, the DC end staying at dc_min.
     gamma: where the floor acts, the whole loop response also x 10^(gamma . rate . P / (20 fs)), rate = 60 / (hi RT) the
@@ -1174,7 +1182,11 @@ def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None, gamma=0.0, hf_d
     (the HF cells' slope across the loops, model_s_results 32); optional "poles": [4], each loop's HF pole outright (the pole
     curve with its drop-back in the pole-limited cells, model_s_results 32.4).
     p_map: a function of the law's (uncapped) HF pole replacing min(p, p_max) (model_s_results 22.8).
-    gamma_dc=False: gamma's extra loss on the Nyquist end only, the DC end held at dc_min (model_s_results 25.6)."""
+    gamma_dc=False: gamma's extra loss on the Nyquist end only, the DC end held at dc_min (model_s_results 25.6).
+    floor_form: {F, c, tau, F0, beta, gamma}, the DC floor's compact form (model_s_results 34) in place of dc_min / beta /
+    gamma on a cut shelf (law dc < hi): with x the law's per-pass DC gain in dB, the DC end is max(x, F - c) +
+    c exp(-max(x - F + c, 0) / tau) (a plateau F per RT step with a soft shoulder above it: c, tau in dB), and where
+    x < F0 (the deep floor) the Nyquist end loses beta (F0 - x) dB and, as gamma above, gamma . rate . P / fs dB."""
     beta = BETA_LF if beta is None else beta
     import model_s as m
     rt, lf, hf = lab["rt"], lab["lf"], lab["hf"]
@@ -1185,7 +1197,16 @@ def G_capped(lab, law, w, p_max=P_MAX, dc_min=DC_MIN, beta=None, gamma=0.0, hf_d
         g = 10 ** (kk / (L["hi"] * rt))
         H = np.ones(len(w), complex)
         floored = False
-        if L["dc"] != L["hi"]:
+        if floor_form and L["dc"] < L["hi"]:                      # the compact floor form (model_s_results 34)
+            r0 = 10 ** (kk * (1 / (L["dc"] * rt) - 1 / (L["hi"] * rt)))
+            ff = floor_form
+            x, Fd, c = 20 * np.log10(g * r0), 20 * np.log10(ff["F"]), ff["c"]
+            Dd = max(x, Fd - c) + c * np.exp(-max(x - Fd + c, 0.0) / ff["tau"])
+            u = 20 * np.log10(ff["F0"]) - x
+            if u > 0:
+                g = g * 10 ** ((-ff["beta"] * u + ff["gamma"] * 60 / (L["hi"] * rt) * Pi / q1.FS) / 20)
+            H = m.shelf(w, 10 ** (Dd / 20) / g, 1.0, law["a"])
+        elif L["dc"] != L["hi"]:
             r0 = 10 ** (kk * (1 / (L["dc"] * rt) - 1 / (L["hi"] * rt)))
             if g * r0 < dc_min:
                 floored = True
@@ -1528,6 +1549,8 @@ def _final_setting(a_):
     if fc and "dc_min" in fc:                       # --floorcells: this setting's floor constants (model_s_results 25.6)
         law["lf"][0.1]["dc"] = fc["dc"]
         gamma, fl = fc["gamma"], dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
+    elif dcfloor_form(lab):                         # EMT_DCFLOOR: the floor's compact form instead (model_s_results 34)
+        fl = dict(floor_form=dcfloor_form(lab))
     if fc and "hf_dp" in fc and not pcurve:         # and its HF pole shift, on every loop (model_s_results 25.7)
         hfdp = {str(lab["hf"]): fc["hf_dp"], "p_above": 0.0, "p_below": 1.0, "exclude_lf": [], "slope": fc.get("hf_slope", 0.0)}
     if fc and "hf_poles" in fc and not pcurve:      # each loop's HF pole outright (model_s_results 32.4)
@@ -1543,18 +1566,18 @@ def _final_setting(a_):
 
 
 def final_G(lab, b230, law, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, Gmod=None, dc_min=DC_MIN, beta=FINAL_BETA,
-            gamma_dc=True, p_curve=None, loopcell=None):
+            gamma_dc=True, p_curve=None, loopcell=None, floor_form=None):
     """The final model's group spectra for one setting with the loop terms of final_stage (law["lf"] keyed by float).
     Gmod: a function (lab, law, w, Gs) -> Gs applied to the loop responses last (a candidate change on top)."""
     w = 2 * np.pi * np.fft.rfftfreq(q1.grid_n(lab["rt"]))
-    Gs = final_Gs(lab, law, w, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp, b230, dc_min, beta, gamma_dc, p_curve, loopcell)
+    Gs = final_Gs(lab, law, w, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp, b230, dc_min, beta, gamma_dc, p_curve, loopcell, floor_form)
     if Gmod:
         Gs = Gmod(lab, law, w, Gs)
     return make_G(lab, law, Gs, b230, FINAL_DIFF)
 
 
 def final_Gs(lab, law, w, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, b230=0.0, dc_min=DC_MIN, beta=FINAL_BETA,
-             gamma_dc=True, p_curve=None, loopcell=None):
+             gamma_dc=True, p_curve=None, loopcell=None, floor_form=None):
     """final_G's loop responses on the grid w (dc_min, beta: the DC floor's constants, model_s_results 25.5).
     p_curve: {knots, values, cap}, the HF pole as one curve of the law's pole (model_s_results 25.17).
     loopcell: {"gain": [4], "dc": [4]}, each loop's broadband gain (dB per pass) and a DC section with the shelf's pole (dB):
@@ -1562,7 +1585,7 @@ def final_Gs(lab, law, w, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None
     p_map = (lambda p: min(p + pramp[0] * max(0.0, p - pramp[1]), P_MAX)) if pramp else None   # --pramp c,p0 (model_s_results 22.8)
     if p_curve:
         p_map = pcurve_map(p_curve)
-    Gs = G_capped(lab, law, w, dc_min=dc_min, beta=beta, gamma=gamma, hf_dp=hfdp, p_map=p_map, gamma_dc=gamma_dc)
+    Gs = G_capped(lab, law, w, dc_min=dc_min, beta=beta, gamma=gamma, hf_dp=hfdp, p_map=p_map, gamma_dc=gamma_dc, floor_form=floor_form)
     if tilt and str(lab["lf"]) in tilt:            # --tilt: a per-LF-step magnitude shape in dB/s on every loop (model_s_results 22.4)
         S = np.interp(w / (2 * np.pi) * q1.FS, tilt["f_hz"], tilt[str(lab["lf"])])
         Gs = [Gi * 10 ** (S * Pi / (20 * q1.FS)) for Gi, Pi in zip(Gs, q1.P)]

@@ -1,7 +1,8 @@
 """Two loop_cv fold sets compared on clean captures (tools/defects.py), R and L medians and the excess over the chain3
 repeat references (analysis/q2/nulls_free_chain3.json, §30), by group, and per setting (model_s_results 32).
 
-    .venv/bin/python tools/loop_read/foldcmp.py [base_dir] [candidate_dir]      # default: the §29 baseline -> the slope variant
+    .venv/bin/python tools/loop_read/foldcmp.py [base_dir] [candidate_dir] [--per-setting]   # default: the §29 baseline -> the slope variant
+--per-setting: also every setting's change in every window from 50 to 1000 ms, R and L, listing those beyond +-0.5 dB (34).
 """
 import glob, json, os, sys
 import numpy as np
@@ -28,6 +29,7 @@ ks = sorted(set(a) & set(b))
 rts = sorted({a[k]["rt"] for k in ks})
 print(f"{os.path.basename(A)} -> {os.path.basename(B)}: {len({k[0] for k in ks})} settings, {len(ks)} clean captures, RT folds {rts}")
 groups = [("All", lambda r: True), ("Flat", lambda r: r["lf"] == 1.0 and r["hf"] == 1.0), ("LF 0.1", lambda r: r["lf"] == 0.1),
+          ("LF 0.4", lambda r: r["lf"] == 0.4),
           ("HF 0.2", lambda r: r["hf"] == 0.2), ("HF 0.4", lambda r: r["hf"] == 0.4), ("HF 0.6", lambda r: r["hf"] == 0.6),
           ("RT <= 1.0", lambda r: r["rt"] <= 1.0), ("RT >= 1.4", lambda r: r["rt"] >= 1.4)]
 for ch, nm in ((1, "R"), (0, "L")):
@@ -51,3 +53,14 @@ for w in ("150-300", "300-600"):
     dl = sorted((np.mean(v), s) for s, v in per.items())
     print(f"\nR {w}, per setting: better > 0.5 dB {sum(x < -0.5 for x, _ in dl)}, worse > 0.5 {sum(x > 0.5 for x, _ in dl)} of {len(dl)}; "
           f"best {', '.join(f'{s} {x:+.1f}' for x, s in dl[:5])}; worst {', '.join(f'{s} {x:+.1f}' for x, s in dl[-5:])}")
+if "--per-setting" in sys.argv:                     # every window 50-1000 ms, R and L: each setting's change (mean over its
+    print("\nPer setting, mean change over the setting's clean captures (dB), every setting beyond +-0.5 dB:")   # clean captures)
+    for ch, nm in ((1, "R"), (0, "L")):
+        for w in WS[1:]:
+            per = {}
+            for k in ks:
+                if a[k]["null_comp"].get(w) and b[k]["null_comp"].get(w):
+                    per.setdefault(k[0], []).append(b[k]["null_comp"][w][ch] - a[k]["null_comp"][w][ch])
+            dl = sorted((float(np.mean(v)), s_) for s_, v in per.items())
+            out = [f"{s_} {x:+.2f}" for x, s_ in dl if abs(x) > 0.5]
+            print(f"  {nm} {w}: max worse {dl[-1][1]} {dl[-1][0]:+.2f}, max better {dl[0][1]} {dl[0][0]:+.2f}; beyond +-0.5: " + (", ".join(out) or "none"))

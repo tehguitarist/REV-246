@@ -471,6 +471,8 @@ def base_kw(key, table=CELLS_JSON):
         lfdc["0.1"] = fc["dc"]
         t["gamma"] = fc["gamma"]
         kw = dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
+    elif q2.dcfloor_form(q2.q1_tables()[0][key]):      # EMT_DCFLOOR: the floor's compact form (model_s_results 34)
+        kw = dict(floor_form=q2.dcfloor_form(q2.q1_tables()[0][key]))
     if "hf_dp" in fc:
         t["hfdp"] = {str(q2.q1_tables()[0][key]["hf"]): fc["hf_dp"], "p_above": 0.0, "p_below": 1.0, "exclude_lf": [], "slope": fc.get("hf_slope", 0.0)}
     if "hf_poles" in fc:                                # each loop's HF pole outright (32.4)
@@ -650,7 +652,14 @@ def hfloop(key, path):
 def takefit_base(key):
     """The current baseline's loop responses for takefit / addxfer: G, its HF 1.0 form G1, each loop's HF pole pb."""
     t, lfdc, kw = base_kw(key, HF_CELLS_JSON)
-    d = prep(key, lambda rt: dict(t), lfdc)
+    if os.environ.get("SHELF_PREP_CELLS"):          # the captures' clock / shift / gain fitted on another table's model (e.g. the
+        tp, lfdcp, _ = base_kw(key, os.environ["SHELF_PREP_CELLS"])   # baseline's), so two takefit runs differ only in
+        d = prep(key, lambda rt: dict(tp), lfdcp)                     # the loop responses (model_s_results 34)
+        law0 = q1.fit_laws(json.load(open(os.path.join(q2.Q1, "loops.json"))))
+        for lf_k in lfdcp:
+            d["law"]["lf"][float(lf_k)]["dc"] = float(lfdc.get(lf_k, law0["lf"][float(lf_k)]["dc"]))
+    else:
+        d = prep(key, lambda rt: dict(t), lfdc)
     args = dict(lfrt=t["lfrt"], gamma=t["gamma"], hfdp=t["hfdp"], pramp=t["pramp"], b230=d["b230"], **kw)
     G = q2.final_Gs(d["lab"], d["law"], d["w"], **args)
     hf1 = d["lab"]["hf"] >= 1.0

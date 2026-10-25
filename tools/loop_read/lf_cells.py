@@ -14,6 +14,15 @@ where §32 found the corrections separable into LF and HF parts (at RT <= 0.8 th
 --low (model_s_results 32.3): the same terms at RT <= 0.8 on top of the §32.2 baseline, taken only from the cell's HF steps
 outside the pole-limited regime (HF 0.2, and HF 0.4 at RT 0.3, where the ceiling / HF floor act and the takefit gain trades
 with the pole): with those left out, the cell's other HF steps predict the shelf side there as well as at RT >= 1.0.
+
+--delta NEW OLD --dir D (model_s_results 34): refit the shelf cells of fold set D in place after a model change below them
+(the DC floor's compact form): each setting with a NEW takefit gets lf_gain / lf_dc + (mean of NEW - mean of OLD) over the
+same sources as above (the cell's other HF steps; --low without the pole-limited ones; --zero-mean-gain: the gain's loop
+mean removed from the change). NEW and OLD must be takefit runs that differ only in the loop responses (SHELF_PREP_CELLS:
+the captures fitted on the same model), so the change is the cells' share of the model change and nothing else. Run it
+twice, as the two halves above:
+    .venv/bin/python tools/loop_read/lf_cells.py --zero-mean-gain --delta <NEW> <OLD> --dir <D>
+    .venv/bin/python tools/loop_read/lf_cells.py --low --delta <NEW> <OLD> --dir <D>
 """
 import glob, json, os, sys
 
@@ -29,6 +38,33 @@ TF = [json.load(open(p)) for p in glob.glob(os.path.join(ROOT, "analysis", "lowb
 RT_MIN = 1.0
 POLE = lambda c: c["hf"] == 0.2 or (c["rt"] == 0.3 and c["hf"] == 0.4)   # --low: pole-limited HF steps, not used as sources
 in_set = (lambda rt: rt < RT_MIN) if LOW else (lambda rt: rt >= RT_MIN)
+
+
+def delta(new, old, d):
+    """--delta: the cells of fold set d moved by the change between two takefit runs (model_s_results 34)."""
+    load = lambda p: {t["key"]: t for t in (json.load(open(f)) for f in glob.glob(os.path.join(p, "*.json")))}
+    N, O = load(new), load(old)
+    cells = json.load(open(os.path.join(d, "cells.json")))
+    fit = lambda c: np.mean([np.array(c["fit"][k][:8]) for k in ("A", "B") if k in c["fit"]], 0)
+    n, log = 0, []
+    for key, t in sorted(N.items()):
+        if not in_set(t["rt"]) or "lf_gain" not in cells.get(key, {}):
+            continue
+        src = [k for k, c in N.items() if c["lf"] == t["lf"] and c["rt"] == t["rt"] and c["hf"] != t["hf"] and c["fit"]
+               and k in O and O[k]["fit"] and not (LOW and POLE(c))]
+        if not src:
+            continue
+        u = np.mean([fit(N[k]) - fit(O[k]) for k in src], 0)
+        if ZM:
+            u[:4] -= u[:4].mean()
+        c = cells[key]
+        c["lf_gain"] = [round(float(x + y), 5) for x, y in zip(c["lf_gain"], u[:4])]
+        c["lf_dc"] = [round(float(x + y), 5) for x, y in zip(c["lf_dc"], u[4:8])]
+        log.append(f"  {key}: gain " + " ".join(f"{x:+.4f}" for x in u[:4]) + "  dc " + " ".join(f"{x:+.4f}" for x in u[4:8]))
+        n += 1
+    json.dump(cells, open(os.path.join(d, "cells.json"), "w"), indent=1)
+    print(f"{n} settings' shelf cells moved (RT {'<' if LOW else '>='} {RT_MIN}{', zero-mean gain change' if ZM else ''}) -> {d}/cells.json")
+    print("\n".join(log))
 
 
 def main():
@@ -59,4 +95,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    if "--delta" in sys.argv:
+        i = sys.argv.index("--delta")
+        delta(sys.argv[i + 1], sys.argv[i + 2], sys.argv[sys.argv.index("--dir") + 1])
+    else:
+        main()

@@ -3276,3 +3276,62 @@ The flagged bands were checked on the saved captures and model renders (clean ca
 
 **Reading.** No narrow-band ringing or mode-decay error was found in S; octave, third-octave and fine-resolution decays agree with the unit. Audit item 1 is closed.
 
+
+## 34. The DC floor's cells as one plateau per RT step plus a shared shoulder: tried, not adopted (`tools/loop_read/floor_form.py`; `EMT_DCFLOOR`; `lowband_shelf.py --stage takefit` with `SHELF_PREP_CELLS`; `lf_cells.py --delta`; `loop_cv.py --retake --tag pfloor`) **[S: the per-RT plateaus follow no law in RT (held out by RT step, RT 1.4 / 1.8 miss by +0.53 / −0.34 dB; by HF step 0.003 dB); S: the knee's shoulder is not one function of the requested DC gain: at the same request LF 0.1 / RT 1.8 lifts about 0.1 dB more per pass than LF 0.4 / RT 0.6, so it cannot be held out by RT step; S: the cells' Nyquist-end level at LF 0.1 / RT 1.0–1.4 beats a level fitted on takefit's gains (the §32.2 capture-gain trade); S: the shoulder, as a change of the shelf's own ratio, takes LF 0.4 / RT 0.6 2.5–4.1 dB deeper at 150–300 ms, which the shelf cells' DC section could not; nothing adopted]**
+
+```
+<§32.9's environment> SHELF_TAKEFIT=$PWD/analysis/lowband/chain3_shelf_takefit_cap0.8475_pallf \
+    .venv/bin/python tools/loop_read/floor_form.py --stage fit       # seconds -> analysis/lowband/chain3_floor_form.{log,json}, <D>/dcfloor.json
+.venv/bin/python tools/loop_read/floor_form.py --stage folds         # <D> = analysis/loop_cv/hfcells_chain3_cap0.8475_pfloor: _pallf's folds, cells.json without the 36 floor cells
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 EMT_CV_FOLDS=$PWD/analysis/loop_cv/cap0.8475_folds SHELF_CELLS=<D>/cells.json \
+    EMT_DCFLOOR=<D>/dcfloor.json SHELF_PREP_CELLS=$PWD/analysis/loop_cv/hfcells_chain3_cap0.8475_pallf/cells.json SHELF_TAG=_pfloor \
+    .venv/bin/python tools/memguard.py --limit-gb 9 -- .venv/bin/python tools/lowband_shelf.py --stage takefit --workers 8 --only <the 64 LF 0.1 / 0.4 keys>   # 242 s, 4.2 GB
+.venv/bin/python tools/loop_read/lf_cells.py --zero-mean-gain --delta <takefit _pfloor> <takefit _pallf> --dir <D>     # RT >= 1.0: 40 settings
+.venv/bin/python tools/loop_read/lf_cells.py --low --delta <takefit _pfloor> <takefit _pallf> --dir <D>                # RT <= 0.8: 24 settings
+for rt in 1.8 0.3 0.6 0.8 1.0 1.4 2.2 2.5; do EMT_DCFLOOR=<D>/dcfloor.json EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py \
+    --limit-gb 9 -- .venv/bin/python tools/loop_cv.py --retake --tag pfloor --stage run --rt $rt --workers 8; done                  # 34-117 s per fold, 3.4-4.1 GB
+.venv/bin/python tools/loop_read/foldcmp.py analysis/loop_cv/hfcells_chain3_cap0.8475_pallf <D> --per-setting                    # -> <D>/foldcmp.log
+PULSE_CV=<D> EMT_DCFLOOR=<D>/dcfloor.json EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 9 -- \
+    .venv/bin/python tools/pulse_check.py --stage gate --tag pfloor                                                              # 168 s, 3.7 GB
+```
+
+`NEXT_STEPS.md` §0 audit item 7. The 36 settings under the floor (LF 0.1 at every RT step, LF 0.4 / RT 0.3) carry §25.6's per-setting constants (`dc`, `dc_min`, `beta`, `gamma`, `gamma_dc`: 84 numbers, 26 distinct scalars). How `G_capped` uses them: per loop, the law's request x = g · r0 (g the broadband gain, r0 the shelf's DC ratio with LF 0.1's DC ratio replaced by the cell's `dc`); where x < `dc_min` the DC end is held at `dc_min` and the Nyquist end loses `beta` · lift + `gamma` · rate · P / fs dB (`gamma_dc` False: the Nyquist end only); `dc` also moves the loops above the floor (RT 1.8–2.5). The shelf cells (`lf_gain` / `lf_dc`, §32.2–32.3) sit on top.
+
+**1. The form** (`G_capped(floor_form=…)`, on a cut shelf, LF 0.1 / 0.4; switch `EMT_DCFLOOR=<json>`, read by `q2._final_setting`, `pulse_check.setting_G` and `lowband_shelf.base_kw` for every setting without a floor cell; off by default, so `_pallf` is unchanged). With x and the plateau F in dB:
+- DC end D = max(x, F − c) + c · exp(−max(x − F + c, 0) / τ): a plateau F per RT step (the deep floor) with a soft shoulder above it, continuous, approaching the law from above;
+- Nyquist end, where x < F0: −β (F0 − x) + γ · B dB, B the law's broadband loss per pass; F0 = the median of the per-RT plateaus (a rule, not a number);
+- the law's own LF 0.1 DC ratio (0.1317); no per-setting `dc`.
+
+Numbers: 6 plateaus (RT 0.3–1.8; RT 2.2 / 2.5 have no loop requesting under 0.2 per pass and take RT 1.8's), c, τ, β, γ: **10, against 84**. **Hold-out:** c, τ, β, γ (and F0) fitted without the scored RT step; each plateau from its RT step's other HF steps (as §25.6 chose the cells). β, γ on LF 0.1's floored loops at RT ≤ 1.8. Data: each loop's DC and Nyquist end as the unit has them, the `_pallf` model times §32.9's takefit (gain and DC section, mean of the takes).
+
+**2. Offline** (`chain3_floor_form.log`). All-data values: plateaus 0.1852 / 0.1845 / 0.1845 / 0.1846 / **0.1747** / **0.1898** at RT 0.3 / 0.6 / 0.8 / 1.0 / 1.4 / 1.8; c 0.373 dB, τ 1.94 dB, β 0.0215, γ −0.0169; the folds' c 0.29–0.51 (0.29 without RT 1.8, 0.51 without RT 0.6). Held out, rms over loops, dB per pass, DC end against the unit [the floor cells alone; `_pallf` with its shelf cells]: all LF 0.1 / 0.4 0.031 [0.045; 0.013], LF 0.1 0.033 [0.023], LF 0.4 0.030 [0.060]; LF 0.1 / RT 0.6–1.0 0.005–0.011 [0.020–0.023], RT 1.4 0.042 [0.044], **RT 1.8 0.069 [0.019]**, LF 0.4 / RT 0.6 0.068 [0.155]. Nyquist end's loop mean (what the shelf cells' zero-mean gain cannot take at RT ≥ 1.0): RT ≥ 1.0 0.0058 [0.0059]; LF 0.1 / RT 1.0 / 1.4 0.0021 / 0.0020 [0.0037 / 0.0044]. As a law in RT, held out by RT step, the plateaus miss by (dB, RT 0.3 … 1.8) −0.08 / −0.04 / −0.04 / −0.04 / **+0.53 / −0.34** (constant; a + b RT and a + b / RT are worse, rms 0.40 / 0.30), against 0.003 dB held out by HF step: per RT step it is. An LF 0.1 DC ratio refitted with the form (1 number, held out by RT) changes nothing (0.1318–0.1321; RT 1.8 still −0.09 / −0.08 / −0.05 dB on loops 1–3). At the knee the unit's lift over the law is not one function of the request: LF 0.4 / RT 0.6 at x = −12.7 / −14.5 dB lifts 0.11 / 0.24 dB, LF 0.1 / RT 1.8 at −12.7 / −14.0 dB 0.21 / 0.27.
+
+Offline the form looked usable: the shelf cells take each loop's DC end per (LF, RT) cell, so a DC error of a few hundredths of a dB should go into `lf_dc`, and the Nyquist level matched the cells.
+
+**3. The shelf cells on the new floor.** Refitting `lf_cells.py` from scratch would rebuild every cell on the current poles (its source is §32.1's `_s321` takefit), a second change. Instead `--delta`: `takefit` rerun on the form with the `_pallf` cells still in place, the captures' clock, shift and gain fitted on the `_pallf` model (`SHELF_PREP_CELLS`), so the two runs differ in the loop responses only; each cell + (mean of new − mean of old fits) over the same sources as §32.2 / §32.3 (other HF steps; RT ≥ 1.0 gain change zero-mean; RT ≤ 0.8 without the pole-limited steps). A smoke test on one setting reproduced the stored `_pallf` takefit bit for bit with the switch off. With `SHELF_PREP_CELLS` the held-out takefit nulls stay within 0.3 dB except 0.1_1.8_0.2 (0.6–1.2 dB worse) and LF 0.4 / RT 0.6–0.8 (0.4–3.6 dB better). Without it the prep model differs (the fold's γ instead of the cell's) and the capture gains move by up to 2 dB: takefit's capture fits are part of what it measures. The changes to the cells: RT ≥ 1.0 DC sections +0.005…+0.04 dB (LF 0.1), −0.001…−0.016 (LF 0.4), gains ≤ 0.003; RT ≤ 0.8 up to +0.17 dB gain and −0.17 dB DC (LF 0.4 / RT 0.3, where the form's Nyquist end loses 0.13 dB more than the unit: β · lift does not hold at LF 0.4, the cells had β = 0 there).
+
+**4. On the bench** (`loop_cv --retake`, all eight folds, clock and gain refitted per capture, 495 clean captures; `_pallf` → `_pfloor`, median null [excess over the chain3 repeat]):
+
+| Settings | 50–150 ms | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|
+| All 128, R | −52.3 [+4.2] → −52.2 [+4.3] | −51.3 [+3.8] → −51.3 [+3.7] | −46.6 [+0.8] → −46.4 [+0.8] | −39.6 [−0.8] → −39.5 [−0.6] |
+| LF 0.1 | −52.2 [+5.9] → **−51.9 [+6.3]** | −50.8 [+4.3] → −50.7 [+4.3] | −43.2 [+1.1] → **−42.9 [+1.1]** | −34.3 [−0.9] → −34.2 [−0.3] |
+| LF 0.4 | −52.8 [+6.4] → −52.8 [+6.4] | −51.6 [+5.9] → −51.6 [+5.6] | −47.6 [+1.6] → −47.5 [+0.8] | −40.8 [−0.7] → −40.8 [−0.7] |
+| RT ≤ 1.0 | −51.9 [+6.2] → −51.9 [+6.1] | −49.8 [+3.2] → −50.0 [+3.0] | −42.9 [−0.4] → −43.0 [−0.3] | −29.9 [−1.7] → −29.8 [−1.6] |
+| RT ≥ 1.4 | −52.9 [+2.4] → −52.9 [+2.5] | −52.1 [+4.3] → −52.1 [+4.3] | −49.1 [+2.6] → −49.1 [+2.6] | −44.1 [+0.2] → −44.1 [+0.2] |
+| HF 0.2 | −52.9 [+6.0] → −52.9 [+6.0] | −50.0 [+5.2] → **−49.6 [+5.2]** | −44.6 [+1.6] → −44.6 [+2.1] | −39.1 [−0.2] → −39.1 [−0.1] |
+| All 128, L | −52.4 [+5.4] → −52.3 [+5.5] | −51.0 [+5.0] → −51.0 [+4.9] | −46.4 [+1.2] → **−46.1 [+1.2]** | −39.4 [−0.8] → −39.3 [−0.6] |
+
+LF 1.0 and 2.0 are bit-identical (the switch touches only cut shelves). Per setting (R, mean over the setting's clean captures; `<D>/foldcmp.log`), beyond ±0.5 dB:
+- **Worse:** LF 0.1 / RT 1.0: 0.1_1.0_0.4 / _0.6 / _1.0 / _0.2 +2.6 / +2.6 / +1.7 / +1.8 dB at 300–600 ms, 0.1_1.0_1.0 +2.1 at 600–1000 and +1.0 at 50–150; LF 0.1 / RT 1.4 +0.7…+1.4 (300–1000 ms), +0.8…+1.0 at 50–150; LF 0.1 / RT 1.8 +0.5…+1.1 (0.1_1.8_0.2 +1.1 / +1.0 / +0.9); 0.1_0.6_1.0, 0.1_0.8_1.0 +0.9 / +0.8 at 300–600. L the same (worst 0.1_1.0_0.6 +2.9 at 300–600).
+- **Better:** LF 0.4 / RT 0.6: 0.4_0.6_0.2 / _0.4 / _1.0 / _0.6 −4.1 / −3.9 / −3.3 / −2.5 dB at 150–300 ms, 0.4_0.6_1.0 −3.8 at 300–600; 0.1_0.6_0.6 −1.4, 0.1_0.8_0.4 −1.2 / −1.6, 0.4_0.3_1.0 −1.2.
+
+**5. Gate** (`PULSE_CV=<D> EMT_DCFLOOR=<D>/dcfloor.json`, `analysis/pulse/gate_pfloor/gate.log`): **PASS**. S medians −52.12 / −51.44 / −46.84 dB (`_pallf` −52.12 / −51.41 / −46.90); worst octave decay errors 125 Hz 0.57 % (0.52), 500 Hz 0.33 % (0.54); EDC 0.16 dB; CLA, the Altiverb, M and L unchanged. The gate's medians hide what the per-setting rule catches.
+
+**Not adopted** (compaction rule): LF 0.1 loses 0.3 dB at 50–150 ms, HF 0.2 0.4 dB at 150–300, all 128 0.2–0.3 dB at 300–600, and 12 settings (all LF 0.1: RT 1.0 ×4, RT 1.4 ×3, RT 1.8 ×3, 0.1_0.6_1.0, 0.1_0.8_1.0) lose more than 0.5 dB in some window from 50 to 1000 ms (up to +2.9 dB); the LF 0.4 / RT 0.6 gains don't offset that. The baseline stays `_pallf` with its 84 floor-cell numbers; S stays at 366 (the form would have made it 292). The switch, `SHELF_PREP_CELLS`, `lf_cells.py --delta` and `foldcmp.py --per-setting` stay; the fold set, its comparison log and the gate log are kept.
+
+**Reading.** The losses have two causes, both offline-invisible because the shelf cells were expected to absorb them.
+- **The Nyquist level at LF 0.1 / RT 1.0–1.4.** The form's broadband loss there is 0.003–0.005 dB per pass below the cells' (fitted on takefit's per-loop gains, whose common part at RT ≥ 1.0 is partly capture-gain trade, §32.2), and the zero-mean shelf cells cannot take a common level. The cells' β and γ were chosen on refit-gain benches (§25.5–25.6) and the bench prefers them by 1–3 dB at 300–1000 ms.
+- **The knee at LF 0.1 / RT 1.8.** The shoulder fitted on the other RT steps under-lifts loops 1–3 by 0.06–0.09 dB per pass; it is a per-(LF, RT) effect, like §32.8's shelf cells. The shelf cells' DC section (pole a, multiplied on) cannot replace a change of the shelf's own DC ratio (the ratio of two shelves with the same pole is a section with another pole: a +0.01 dB bump at 200–400 Hz remains), so even takefit's own per-setting refit loses 0.6–1.2 dB there.
+
+The same mechanism is the form's one gain: at LF 0.4 / RT 0.6 (the knee setting, +9.6 dB excess, §0 item 3) putting the knee's lift into the shelf's own ratio (the refitted DC section takes −0.04…−0.17 dB back, net +0.04…+0.19 dB per pass at DC, loops 1–4) is 2.5–4.1 dB better at 150–300 ms. **Next (H):** the shoulder alone where no floor cell acts (LF 0.4 at RT ≥ 0.6, the cells kept elsewhere), 2 numbers, held out by RT step, scored on the bench; and a refit of the shelf cells' DC section as a change of the shelf ratio rather than a second section.
