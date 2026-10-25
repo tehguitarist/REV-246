@@ -3603,3 +3603,44 @@ Per octave, R, 50–150 ms (the chain fitted on 150–300 ms) [§26.2's FIR only
 - **S's whole chain does not carry to M / L** (−30 / −17 dB): the per-channel FIR fitted on S stands in for the difference between S's output (a unit tap) and M / L's Tomkin-fitted 11-tap output kernels (`ml_structure.md` §7.5, §18), which carry part of Tomkin's chain. The FIR is per program; only the low band transfers between programs.
 
 **Verdict.** The claim of NEXT_STEPS §0 item 4 holds for CLA and only half for the Altiverb. On CLA the cross-unit floor (−37…−38 dB) was the chain: a counted 29-number per-unit model fitted on one window removes 10–14 dB, held out, to −51.9 / −48.0 dB at 50–150 / 300–600 ms (R), which is the S model's own accuracy against Tomkin; the rest (+27 / +11 dB over CLA's noise) is not any LTI chain and correlates with the model's Tomkin residual, i.e. it is the algorithm's remaining error, the same one the library shows. The −70 dB stretch target needs that error fixed first, and the library can't show it. On the Altiverb the chain explains the cluster and the low band, but its reverb sits at −39…−41 dB because of an 8 kHz (and, for the compact form, 500 Hz) difference that no LTI chain and no HF setting removes and CLA doesn't share (H: the Altiverb capture's own). M / L's Altiverb first pass behaves the same. **Nothing about the digital model is adopted** (371 numbers). `unit_chain.py` stays as the analysis tool; the CLA chain's 13-number cascade (fitted 150–300 ms) is a candidate for the plugin's TRANSFORMER stage in place of `bq.json` (the third section takes 500 Hz from −36 to −40 dB on CLA, 250 Hz from −38 to −52), not wired in (plugin out of scope).
+
+## 38. S's AP230 damping steps refitted on the current model: the M / L table, but tried, not adopted (`tools/s_brefit.py`, 25 October 2026) **[S: on the §35 baseline S's damped AP230 steps refit to 0.16966 / 0.32975 / 0.50017 (fitted on 0–50 ms, per-step sd 1–4·10⁻⁴, leave-one-LF-column-out within 2·10⁻⁴), 1.4–1.9·10⁻³ below the chain2 table and within 2–6·10⁻⁴ of M / L's refit (`ml_structure.md` §22): S, M and L share one damping table; S: that M / L table (fitted on other programs only) takes S's 35 damped settings from −51.7 to −54.4 dB at 50–150 ms (R median; every damped capture better there) and −47.5 → −48.6 at 150–300; S: but 1.0_1.0_0.2 loses 0.55–0.65 dB at 150–300 / 300–600 ms with every candidate table (its later windows prefer b ≈ 0.173, the old value masking its own HF 0.2 pole residual, §35), so **not adopted** under the strict rule; S: step 0 at b = 0 (from 0.00069) helps 50–300 ms but costs 24 HF 0.2 / long-RT settings 0.5–1.2 dB at 300–1000 ms: the loop cells were fitted around it; `EMT_AP230=ap230_mltable.json` keeps the damped-steps variant as a switch]**
+
+```
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 .venv/bin/python tools/memguard.py --limit-gb 9 -- \
+    .venv/bin/python tools/s_brefit.py --stage fit --workers 8      # 128 settings, 31 min, 4.0 GB -> analysis/s_brefit/<key>.json
+.venv/bin/python tools/s_brefit.py --stage cand                     # -> analysis/s_brefit/cand.{json,log}, b_<candidate>.json
+EMT_AP230=ap230_mltable.json PULSE_OUT=<dir> <pulse env> .venv/bin/python tools/pulse_check.py --stage s --only 1.0_1.0_0.2,1.0_0.8_0.2   # the switch = the grid to 0.002 dB
+```
+
+**Why.** S's AP230 table (`analysis/q2/ap230_g0.7071_chain2.json`) was read on the chain2 IRs with the injection and loops of that time (§16.9, §21); M / L's steps, refitted on their current model, moved by 0.6–3.4·10⁻³ and fell on one table (`ml_structure.md` §22). Its step 0 is b = 0.00069, the kind of undamped offset §18 removed from M / L.
+
+**Method.** Each setting rendered exactly as `pulse_check --stage s` (the fold that left its RT step out, the cells, per capture clock and gain refitted for every b) on a grid of AP230 b: damped settings b0 − 0.006 … b0 + 0.002 in 0.0005 steps (17 renders), undamped 0 / 0.00035 / 0.00069; every window's null (q2.W_COMP, L and R) kept per capture, so candidates are scored offline (cubic in linear energy). Pipeline check: the stored b reproduces `analysis/pulse/s` exactly (max |dev| 0.0000 dB over all windows and captures); the switch's render reproduces the grid to 0.002 dB. Clean captures only (`defects.DEFECTS`; 1.0_0.3_0.4 has none and is left out of the means).
+
+**The steps** (b minimising the 0–50 ms L + R energy of each damped setting's clean captures, where AP230 acts before any loop recirculates):
+
+| | step 1 | step 2 | step 3 | settings |
+|---|---|---|---|---|
+| S stored (chain2, §16.9) | 0.17109 | 0.33160 | 0.50192 | 12 / 12 / 12 |
+| **S refit** | **0.16966** (sd 0.00035) | **0.32975** (sd 0.00013) | **0.50017** (sd 0.00010) | 12 / 12 / 11 |
+| leave one LF column out | 0.16955…0.16982 | 0.32970…0.32980 | 0.50012…0.50021 | |
+| M / L refit (`ml_structure.md` §22) | 0.16986 | 0.32968 | 0.49960 | |
+
+The S − M / L differences (−2.0 / +0.7 / +5.7·10⁻⁴) are a third to a twentieth of the old 1.2–2.3·10⁻³, and the same order as M − L (0.8 / 1.8 / 2.0·10⁻⁴). The one-take optima scatter more than M / L's (take A − take B median +0.0004, MAD 0.0005): S has 50 ms of first pass, not 100–200.
+
+**Candidates on the grids** (491 clean captures, R medians; "> 0.5" = settings worse than 0.5 dB in any window, mean over clean captures, max of L / R):
+
+| candidate | 0–50 ms | 50–150 | 150–300 | 300–600 | 600–1000 | > 0.5 dB |
+|---|---|---|---|---|---|---|
+| stored | −51.21 | −52.32 | −51.31 | −46.74 | −39.59 | |
+| damped on the M / L table, step 0 stored | −51.45 | **−53.00** | −51.36 | −46.74 | −39.59 | 1: 1.0_1.0_0.2 (+0.63 / +0.55 at 150–300 / 300–600) |
+| damped on S's steps, leave-one-LF-out, step 0 stored | −51.44 | −52.98 | −51.34 | −46.74 | −39.59 | 2: 1.0_1.0_0.2, 2.0_1.0_0.2 (+0.56) |
+| per setting, held out by take, step 0 stored | −51.37 | −52.95 | −51.33 | −46.74 | −39.59 | 4 (1.0_0.6_0.6 +1.8 at 150–300) |
+| step tables fitted on 0–300 or 0–600 ms (LF-out) | −51.44 | −53.00 | −51.38 | −46.74 | −39.59 | 1–2: 1.0_1.0_0.2 (+0.53…+0.57) |
+| step 0 at b = 0 alone | −51.07 | −52.76 | −51.72 | −46.47 | −39.46 | 24 (HF 0.2 / RT ≥ 1.4 at 300–1000 ms, up to +1.2) |
+
+- **Damped settings alone, M / L table:** 0–50 ms −51.23 → −51.87, **50–150 ms −51.74 → −54.38 (every one of 125 damped captures better, by 0.46 dB at least)**, 150–300 ms −47.53 → −48.64 (74 better, 10 worse by > 0.3), 300–600 ms −40.97 → −41.11, 600–1000 unchanged. Undamped settings byte-identical.
+- **The one loss.** 1.0_1.0_0.2 (step 1) wants b 0.1691 at 0–50 ms and 0.1701 at 50–150 ms (gaining 0.9 / 1.5 dB), but 0.1725 / 0.1731 at 150–300 / 300–600 ms, where b is no longer acting alone: a once-per-pass spectral term in the diffuser can stand in for a loop error, and this is one of §35's HF 0.2 single settings whose poles sit off the curve with no panel predictor. Its neighbours 2.0_1.0_0.2 / 1.0_0.8_0.4 show the same drift, smaller (0.1713–0.1716). Its shelf cells come from its undamped HF 0.4 / 0.6 / 1.0 neighbours (§32.2, held out by HF step), so `lf_cells --delta` can't move them: the remedy would be that setting's own pole, which §35 found no way to predict.
+- **Step 0.** The 0.00069 offset is real in the sense §18 meant (a kernel-era artefact), but here the loop cells (HF poles, shelf cells, DC floor) were fitted with it in place, and removing it alone unbalances HF 0.2 / long RT late (300–1000 ms). It would need the loop cells refitted on b = 0, which is the §32–35 pipeline again; not done.
+
+**Not adopted** (strict rule: one setting over 0.5 dB). The baseline stays `ap230_g0.7071_chain2.json`; `EMT_AP230=ap230_mltable.json` (`loop_fir.AP230`, read by `pulse_check`, `loop_cv`, `lowband_shelf`) switches the damped steps to the M / L table. Findings kept: **S's damping steps on the current model are the M / L table** (S, M and L agree to ≤ 6·10⁻⁴), so the plugin can use one table for all three programs if the user accepts the trade (H for S until adopted); 0.16986 / 0.32968 / 0.49960 has spacings 0.1598 / 0.1700, unequal as §36.2 said.

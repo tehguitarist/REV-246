@@ -52,7 +52,8 @@ q1 = q2.q1
 FS, PRE = q2.FS, q2.PRE
 KC = int(os.environ.get("LOOP_FIR_KC", 4))          # --kc (via the environment, so the pool's workers see it)
 COMPACT = "diffuser_tied_fix-0.707107_ap230new_chain2"
-AP230 = "ap230_g0.7071_chain2.json"
+AP230 = os.environ.get("EMT_AP230", "ap230_g0.7071_chain2.json")   # S's AP230 table in analysis/q2/; EMT_AP230=ap230_mltable.json: the damped
+                                                                   # steps on the M / L table (model_s_results 38, tried, not adopted)
 OUT = os.path.join(ROOT, "analysis", "loop_fir", q1.ms.KTAG or "library")
 FREQS = [63, 125, 250, 500, 1000, 2000, 4000, 6600, 8000, 10000, 11500]
 
