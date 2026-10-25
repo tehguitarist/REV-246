@@ -8,6 +8,37 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 
 ## 0. Start here (hand-over, updated 25 October 2026)
 
+**Paused 25 October 2026, mid-way through an orchestrated run (resume here).** The user's plan for this run was five accuracy tasks in order, then stop before the plugin, the code review (item 10a), Non-Lin and the EMT 250. Done and pushed:
+1. **cells.json housekeeping** (`d084e23`, `model_s_results.md` §32.10): the dead `hf_dp` / `hf_slope` entries were removed; bench and gate are bit-identical. The S model has 366 numbers.
+2. **M / L damped all-pass steps** (`3b43055`, `ml_structure.md` §19): tried, not adopted. The step depends on RT × HF only, as in S. But L LF 2.0 / RT ≥ 2.6 loses 0.9–1.4 dB on the first pass, and three groups cross −50 dB. `ML_BSTEP=1` / `cv` are kept as switches.
+3. **S DC-floor compaction** (`6fd2da1`, §34): tried, not adopted. The form is one plateau per RT step plus a shared shoulder, 84 → 10 numbers. The gate passes, but 12 LF 0.1 settings lose 0.5–2.9 dB. `EMT_DCFLOOR` is kept as a switch.
+4. **Single settings** (`89931ab`, §35; item 3 below):
+   - The shoulder alone at LF 0.4 / RT ≥ 0.6 was **adopted**. **The new S baseline is `_pshoulder`**, with 371 numbers.
+   - 1.0_0.3_0.4 is a capture defect (`defects.GLITCH`).
+   - HF 0.2 per-setting poles: negative.
+5. **Exact coefficients / fixed point (Q9 / Q10): started, then stopped when usage ran out.** Nothing from it is adopted or written up.
+   - Work in progress is committed as-is: `tools/loop_read/fixedpoint.py`, with stages `coefs`, `lattice` and `snap`. The `consts` stage named in its docstring (scalar constants, the AP230 ff/fb gap) is **not written**.
+   - Outputs are in `analysis/lowband/chain3_fixedpoint_{coefs,lattice}.{json,log}`.
+   - **First read (unverified, H):** the takefit coefficients' precision (mean of two takes) is about 1.4·10⁻⁴ for the poles and 0.7–1·10⁻⁴ for D / N1 / c0. A lattice is therefore testable only to 2⁻¹¹ (poles) and 2⁻¹³ (shelf). No grid stands out at 2⁻⁶…2⁻¹³ against random grids. The one low p, poles at 2⁻⁸ (p 0.007), is matched by the smooth baseline's own values (Z 3.5), so it is an artefact of the curve, not a grid. This agrees with §25.18–25.19.
+   - **Left for task 5:**
+     - check that reading;
+     - the scalar constants and the AP230 ff/fb gap (4.8–5.1·10⁻⁴ ≈ 2⁻¹¹) against 2⁻ⁿ;
+     - the AP steps of all three programs (S 0.17109 / 0.33160 / 0.50192; M and L in `ml_structure.md` §19) and the tap / cluster gains;
+     - a bench snap test (`fixedpoint.py snap <n>`, then `loop_cv.py --retake` on the snapped fold set) to bracket the precision;
+     - Q10: the library tails against float and 16-bit fixed-point renders;
+     - write it up as `model_s_results.md` §36 (and `ml_structure.md` §20 if M / L are involved), and update Q9 / Q10 in §3 and §5 item 7.
+   - Leave `DEFECTS` and `GLITCH` captures out of every take comparison.
+6. **Optional, after 5:** item 4 below (cross-unit floors), only if a compact per-unit chain model is tractable.
+
+Then update this section, commit and push, and stop.
+
+**Also open from this run:**
+- Move `defects.GLITCH` into `DEFECTS`, then rerun the clean references (`q2_injection --stage free --refs --clean`, `nulls`; about 24 min), the bench summary and the gate reference.
+- The M / L per-setting b predate the §18 kernel refit; refitting them might move every step (H, `ml_structure.md` §19).
+- Rules used in this run, beyond §2:
+  - a compaction is adopted only if no setting loses more than 0.5 dB in any window from 50 to 1000 ms and no group median gets worse;
+  - another session shares this tree (UAD 250 / EMT 250 / plugin): never kill its processes, wait for its heavy runs, and push only when every unpushed commit is yours.
+
 Everything below is committed and pushed (`main` after the merge of PR #1). Read this section, then §1–2, then the sections it points to.
 
 **Baselines.**
