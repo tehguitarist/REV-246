@@ -1,0 +1,50 @@
+
+M: unscored (no usable first pass, stored b kept, left out below): ['0.1_0.6_0.7']
+
+## M: 55 damped settings; refit - stored: mean -0.00079, sd 0.00023, range -0.00119 .. -0.00039; pipeline check (R first pass at stored b vs pulse_check) max |dev| 0.000 dB
+| step | n | stored mean +- SEM | refit mean +- SEM | refit sd | refit - stored |
+|---|---|---|---|---|---|
+| 1 | 20 | 0.17092 +- 0.00003 | 0.16989 +- 0.00000 | 0.00002 | -0.00103 |
+| 2 | 11 | 0.33054 +- 0.00004 | 0.32976 +- 0.00001 | 0.00003 | -0.00078 |
+| 3 | 24 | 0.50028 +- 0.00003 | 0.49969 +- 0.00001 | 0.00003 | -0.00059 |
+- per (RT, HF) cell: step, mean(refit - stored), sd over LF of stored / refit:
+  - RT 0.6 HF 0.1: step 3, n 4, move -0.00058, sd stored 0.00018 / refit 0.00003
+  - RT 0.6 HF 0.2: step 3, n 4, move -0.00057, sd stored 0.00015 / refit 0.00002
+  - RT 0.6 HF 0.4: step 3, n 4, move -0.00055, sd stored 0.00018 / refit 0.00004
+  - RT 0.6 HF 0.7: step 2, n 3, move -0.00075, sd stored 0.00018 / refit 0.00004
+  - RT 0.6 HF 0.9: step 1, n 4, move -0.00098, sd stored 0.00016 / refit 0.00003
+  - RT 0.8 HF 0.1: step 3, n 4, move -0.00064, sd stored 0.00014 / refit 0.00002
+  - RT 0.8 HF 0.2: step 3, n 4, move -0.00062, sd stored 0.00014 / refit 0.00003
+  - RT 0.8 HF 0.4: step 2, n 4, move -0.00077, sd stored 0.00014 / refit 0.00002
+  - RT 0.8 HF 0.7: step 1, n 4, move -0.00098, sd stored 0.00015 / refit 0.00003
+  - RT 1.2 HF 0.1: step 3, n 4, move -0.00057, sd stored 0.00014 / refit 0.00002
+  - RT 1.2 HF 0.2: step 2, n 4, move -0.00081, sd stored 0.00010 / refit 0.00002
+  - RT 1.2 HF 0.4: step 1, n 4, move -0.00107, sd stored 0.00003 / refit 0.00001
+  - RT 1.8 HF 0.1: step 1, n 4, move -0.00107, sd stored 0.00005 / refit 0.00001
+  - RT 1.8 HF 0.2: step 1, n 4, move -0.00104, sd stored 0.00005 / refit 0.00001
+- offsets from the step means, stored: LF 0.1: -0.00006 (sd 0.00011, n 13); LF 0.7: +0.00017 (sd 0.00011, n 14); LF 1.2: -0.00005 (sd 0.00010, n 14); LF 2.0: -0.00007 (sd 0.00009, n 14)
+- offsets from the step means, refit: LF 0.1: -0.00000 (sd 0.00002, n 13); LF 0.7: +0.00003 (sd 0.00002, n 14); LF 1.2: -0.00001 (sd 0.00002, n 14); LF 2.0: -0.00002 (sd 0.00002, n 14)
+- other captures' own optimum minus the refit (hi capture): L + R median +0.00002, MAD 0.00001; R alone median +0.00002
+
+L: unscored (no usable first pass, stored b kept, left out below): []
+
+## L: 40 damped settings; refit - stored: mean -0.00274, sd 0.00038, range -0.00338 .. -0.00194; pipeline check (R first pass at stored b vs pulse_check) max |dev| 0.000 dB
+| step | n | stored mean +- SEM | refit mean +- SEM | refit sd | refit - stored |
+|---|---|---|---|---|---|
+| 1 | 12 | 0.17302 +- 0.00009 | 0.16981 +- 0.00001 | 0.00005 | -0.00321 |
+| 2 | 8 | 0.33227 +- 0.00012 | 0.32958 +- 0.00002 | 0.00006 | -0.00269 |
+| 3 | 20 | 0.50197 +- 0.00005 | 0.49948 +- 0.00001 | 0.00004 | -0.00248 |
+- per (RT, HF) cell: step, mean(refit - stored), sd over LF of stored / refit:
+  - RT 2.2 HF 0.1: step 3, n 4, move -0.00253, sd stored 0.00003 / refit 0.00000
+  - RT 2.2 HF 0.3: step 3, n 4, move -0.00253, sd stored 0.00002 / refit 0.00001
+  - RT 2.2 HF 0.5: step 3, n 4, move -0.00253, sd stored 0.00002 / refit 0.00001
+  - RT 2.2 HF 0.8: step 1, n 4, move -0.00328, sd stored 0.00005 / refit 0.00001
+  - RT 2.6 HF 0.1: step 3, n 4, move -0.00242, sd stored 0.00033 / refit 0.00006
+  - RT 2.6 HF 0.3: step 3, n 4, move -0.00240, sd stored 0.00033 / refit 0.00006
+  - RT 2.6 HF 0.5: step 2, n 4, move -0.00268, sd stored 0.00030 / refit 0.00006
+  - RT 3.6 HF 0.1: step 2, n 4, move -0.00269, sd stored 0.00034 / refit 0.00006
+  - RT 3.6 HF 0.3: step 1, n 4, move -0.00319, sd stored 0.00032 / refit 0.00006
+  - RT 4.5 HF 0.1: step 1, n 4, move -0.00317, sd stored 0.00038 / refit 0.00006
+- offsets from the step means, stored: LF 0.1: +0.00012 (sd 0.00006, n 10); LF 0.8: +0.00014 (sd 0.00004, n 10); LF 1.2: +0.00010 (sd 0.00006, n 10); LF 2.0: -0.00036 (sd 0.00032, n 10); LF 2.0, RT 2.2: +0.00003 (sd 0.00002, n 4); LF 2.0, RT >= 2.6: -0.00061 (sd 0.00006, n 6)
+- offsets from the step means, refit: LF 0.1: +0.00002 (sd 0.00001, n 10); LF 0.8: +0.00002 (sd 0.00001, n 10); LF 1.2: +0.00002 (sd 0.00001, n 10); LF 2.0: -0.00006 (sd 0.00006, n 10); LF 2.0, RT 2.2: +0.00000 (sd 0.00001, n 4); LF 2.0, RT >= 2.6: -0.00011 (sd 0.00001, n 6)
+- other captures' own optimum minus the refit (hi capture): L + R median +0.00004, MAD 0.00001; R alone median +0.00009

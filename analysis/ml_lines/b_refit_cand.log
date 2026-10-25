@@ -1,0 +1,214 @@
+shared table (mean of S and the refit M / L step means): [0.17026, 0.33031, 0.50036]
+M / L table (all 96 refits, by step): [0.16986, 0.32968, 0.49959]; steps_cross: each program on the other's step means
+M refit step means [0.16989, 0.32976, 0.49969]; fold max |dev| 0.00001
+L refit step means [0.16981, 0.32958, 0.49948]; fold max |dev| 0.00003
+
+## candidate refit: first pass, damped captures, before (stored b) -> after; dB
+- M R all (146): median -52.08 -> -52.74, mean change -0.548, worst capture +0.03, better > 0.3 dB 96, worse > 0.3 dB 0
+- M R fit capture (55): median -52.30 -> -52.67, mean change -0.560, worst capture -0.08, better > 0.3 dB 38, worse > 0.3 dB 0
+- M R held-out captures (91): median -52.07 -> -52.81, mean change -0.540, worst capture +0.03, better > 0.3 dB 58, worse > 0.3 dB 0
+  - M R settings (mean over captures) worse > 0.5 dB: 0 {}; worst -0.04 (2.0_0.6_0.4); best -2.18
+  - M R by LF: 0.1: -54.41 -> -54.97; 0.7: -53.20 -> -54.18; 1.2: -51.93 -> -52.12; 2.0: -49.18 -> -49.34
+  - M R by RT: 0.6: -53.68 -> -54.08; 0.8: -52.66 -> -53.77; 1.2: -50.78 -> -51.20; 1.8: -49.67 -> -50.21
+  - M R by HF: 0.1: -51.50 -> -51.81; 0.2: -51.25 -> -51.63; 0.4: -52.01 -> -52.45; 0.7: -52.75 -> -53.63; 0.9: -53.53 -> -55.07
+- M L all (146): median -54.79 -> -55.41, mean change -0.526, worst capture +0.10, better > 0.3 dB 92, worse > 0.3 dB 0
+- M L fit capture (55): median -55.39 -> -55.75, mean change -0.371, worst capture -0.08, better > 0.3 dB 31, worse > 0.3 dB 0
+- M L held-out captures (91): median -54.29 -> -55.02, mean change -0.619, worst capture +0.10, better > 0.3 dB 61, worse > 0.3 dB 0
+  - M L settings (mean over captures) worse > 0.5 dB: 0 {}; worst -0.08 (2.0_0.6_0.4); best -1.77
+  - M L by LF: 0.1: -55.77 -> -56.28; 0.7: -55.45 -> -56.30; 1.2: -54.86 -> -55.36; 2.0: -53.12 -> -53.50
+  - M L by RT: 0.6: -55.54 -> -56.05; 0.8: -55.16 -> -55.89; 1.2: -54.28 -> -54.97; 1.8: -53.46 -> -54.12
+  - M L by HF: 0.1: -54.57 -> -55.02; 0.2: -54.53 -> -55.02; 0.4: -54.84 -> -55.43; 0.7: -54.96 -> -55.85; 0.9: -55.25 -> -56.33
+- L R all (80): median -49.96 -> -53.59, mean change -3.830, worst capture -1.58, better > 0.3 dB 80, worse > 0.3 dB 0
+- L R fit capture (40): median -49.93 -> -53.49, mean change -3.846, worst capture -1.58, better > 0.3 dB 40, worse > 0.3 dB 0
+- L R held-out captures (40): median -50.01 -> -53.67, mean change -3.815, worst capture -1.67, better > 0.3 dB 40, worse > 0.3 dB 0
+  - L R settings (mean over captures) worse > 0.5 dB: 0 {}; worst -1.63 (2.0_2.6_0.3); best -6.48
+  - L R by LF: 0.1: -50.33 -> -54.49; 0.8: -50.02 -> -53.66; 1.2: -49.76 -> -53.18; 2.0: -49.85 -> -52.47
+  - L R by RT: 2.2: -50.31 -> -53.67; 2.6: -50.24 -> -53.50; 3.6: -49.19 -> -53.37; 4.5: -48.42 -> -53.02
+  - L R by HF: 0.1: -50.07 -> -53.57; 0.3: -50.02 -> -53.39; 0.5: -50.23 -> -53.67; 0.8: -48.43 -> -53.88
+- L L all (80): median -50.47 -> -53.07, mean change -2.855, worst capture -0.95, better > 0.3 dB 80, worse > 0.3 dB 0
+- L L fit capture (40): median -51.06 -> -52.88, mean change -2.062, worst capture -0.95, better > 0.3 dB 40, worse > 0.3 dB 0
+- L L held-out captures (40): median -50.32 -> -53.62, mean change -3.648, worst capture -1.67, better > 0.3 dB 40, worse > 0.3 dB 0
+  - L L settings (mean over captures) worse > 0.5 dB: 0 {}; worst -1.31 (2.0_2.6_0.3); best -4.50
+  - L L by LF: 0.1: -50.67 -> -53.55; 0.8: -50.47 -> -53.34; 1.2: -50.40 -> -52.96; 2.0: -50.39 -> -52.66
+  - L L by RT: 2.2: -50.53 -> -53.12; 2.6: -50.82 -> -53.04; 3.6: -49.90 -> -53.09; 4.5: -49.57 -> -53.11
+  - L L by HF: 0.1: -50.55 -> -53.08; 0.3: -50.52 -> -53.04; 0.5: -50.79 -> -53.08; 0.8: -49.28 -> -53.24
+
+## candidate steps_all: first pass, damped captures, before (stored b) -> after; dB
+- M R all (146): median -52.08 -> -52.74, mean change -0.547, worst capture +0.03, better > 0.3 dB 96, worse > 0.3 dB 0
+- M R fit capture (55): median -52.30 -> -52.67, mean change -0.559, worst capture -0.08, better > 0.3 dB 38, worse > 0.3 dB 0
+- M R held-out captures (91): median -52.07 -> -52.81, mean change -0.540, worst capture +0.03, better > 0.3 dB 58, worse > 0.3 dB 0
+  - M R settings (mean over captures) worse > 0.5 dB: 0 {}; worst -0.04 (2.0_0.6_0.4); best -2.17
+  - M R by LF: 0.1: -54.41 -> -54.97; 0.7: -53.20 -> -54.18; 1.2: -51.93 -> -52.12; 2.0: -49.18 -> -49.34
+  - M R by RT: 0.6: -53.68 -> -54.08; 0.8: -52.66 -> -53.76; 1.2: -50.78 -> -51.20; 1.8: -49.67 -> -50.21
+  - M R by HF: 0.1: -51.50 -> -51.81; 0.2: -51.25 -> -51.63; 0.4: -52.01 -> -52.45; 0.7: -52.75 -> -53.63; 0.9: -53.53 -> -55.07
+- M L all (146): median -54.79 -> -55.41, mean change -0.525, worst capture +0.10, better > 0.3 dB 92, worse > 0.3 dB 0
+- M L fit capture (55): median -55.39 -> -55.75, mean change -0.371, worst capture -0.08, better > 0.3 dB 31, worse > 0.3 dB 0
+- M L held-out captures (91): median -54.29 -> -55.02, mean change -0.619, worst capture +0.10, better > 0.3 dB 61, worse > 0.3 dB 0
+  - M L settings (mean over captures) worse > 0.5 dB: 0 {}; worst -0.08 (2.0_0.6_0.4); best -1.77
+  - M L by LF: 0.1: -55.77 -> -56.28; 0.7: -55.45 -> -56.30; 1.2: -54.86 -> -55.36; 2.0: -53.12 -> -53.50
+  - M L by RT: 0.6: -55.54 -> -56.05; 0.8: -55.16 -> -55.89; 1.2: -54.28 -> -54.97; 1.8: -53.46 -> -54.12
+  - M L by HF: 0.1: -54.57 -> -55.02; 0.2: -54.53 -> -55.02; 0.4: -54.84 -> -55.43; 0.7: -54.96 -> -55.85; 0.9: -55.25 -> -56.33
+- L R all (80): median -49.96 -> -53.59, mean change -3.828, worst capture -1.57, better > 0.3 dB 80, worse > 0.3 dB 0
+- L R fit capture (40): median -49.93 -> -53.49, mean change -3.844, worst capture -1.57, better > 0.3 dB 40, worse > 0.3 dB 0
+- L R held-out captures (40): median -50.01 -> -53.67, mean change -3.812, worst capture -1.67, better > 0.3 dB 40, worse > 0.3 dB 0
+  - L R settings (mean over captures) worse > 0.5 dB: 0 {}; worst -1.62 (2.0_2.6_0.3); best -6.48
+  - L R by LF: 0.1: -50.33 -> -54.49; 0.8: -50.02 -> -53.66; 1.2: -49.76 -> -53.18; 2.0: -49.85 -> -52.47
+  - L R by RT: 2.2: -50.31 -> -53.67; 2.6: -50.24 -> -53.50; 3.6: -49.19 -> -53.37; 4.5: -48.42 -> -53.02
+  - L R by HF: 0.1: -50.07 -> -53.57; 0.3: -50.02 -> -53.39; 0.5: -50.23 -> -53.67; 0.8: -48.43 -> -53.88
+- L L all (80): median -50.47 -> -53.07, mean change -2.854, worst capture -0.94, better > 0.3 dB 80, worse > 0.3 dB 0
+- L L fit capture (40): median -51.06 -> -52.88, mean change -2.061, worst capture -0.94, better > 0.3 dB 40, worse > 0.3 dB 0
+- L L held-out captures (40): median -50.32 -> -53.63, mean change -3.646, worst capture -1.66, better > 0.3 dB 40, worse > 0.3 dB 0
+  - L L settings (mean over captures) worse > 0.5 dB: 0 {}; worst -1.30 (2.0_2.6_0.3); best -4.50
+  - L L by LF: 0.1: -50.67 -> -53.55; 0.8: -50.47 -> -53.34; 1.2: -50.40 -> -52.96; 2.0: -50.39 -> -52.65
+  - L L by RT: 2.2: -50.53 -> -53.12; 2.6: -50.82 -> -53.03; 3.6: -49.90 -> -53.08; 4.5: -49.57 -> -53.11
+  - L L by HF: 0.1: -50.55 -> -53.07; 0.3: -50.52 -> -53.04; 0.5: -50.79 -> -53.08; 0.8: -49.28 -> -53.24
+
+## candidate steps_cv: first pass, damped captures, before (stored b) -> after; dB
+- M R all (146): median -52.08 -> -52.74, mean change -0.547, worst capture +0.03, better > 0.3 dB 96, worse > 0.3 dB 0
+- M R fit capture (55): median -52.30 -> -52.67, mean change -0.559, worst capture -0.08, better > 0.3 dB 38, worse > 0.3 dB 0
+- M R held-out captures (91): median -52.07 -> -52.81, mean change -0.540, worst capture +0.03, better > 0.3 dB 58, worse > 0.3 dB 0
+  - M R settings (mean over captures) worse > 0.5 dB: 0 {}; worst -0.04 (2.0_0.6_0.4); best -2.17
+  - M R by LF: 0.1: -54.41 -> -54.97; 0.7: -53.20 -> -54.18; 1.2: -51.93 -> -52.12; 2.0: -49.18 -> -49.34
+  - M R by RT: 0.6: -53.68 -> -54.08; 0.8: -52.66 -> -53.76; 1.2: -50.78 -> -51.20; 1.8: -49.67 -> -50.21
+  - M R by HF: 0.1: -51.50 -> -51.81; 0.2: -51.25 -> -51.63; 0.4: -52.01 -> -52.45; 0.7: -52.75 -> -53.63; 0.9: -53.53 -> -55.07
+- M L all (146): median -54.79 -> -55.41, mean change -0.525, worst capture +0.10, better > 0.3 dB 92, worse > 0.3 dB 0
+- M L fit capture (55): median -55.39 -> -55.75, mean change -0.371, worst capture -0.08, better > 0.3 dB 31, worse > 0.3 dB 0
+- M L held-out captures (91): median -54.29 -> -55.02, mean change -0.619, worst capture +0.10, better > 0.3 dB 61, worse > 0.3 dB 0
+  - M L settings (mean over captures) worse > 0.5 dB: 0 {}; worst -0.08 (2.0_0.6_0.4); best -1.77
+  - M L by LF: 0.1: -55.77 -> -56.28; 0.7: -55.45 -> -56.29; 1.2: -54.86 -> -55.36; 2.0: -53.12 -> -53.50
+  - M L by RT: 0.6: -55.54 -> -56.05; 0.8: -55.16 -> -55.89; 1.2: -54.28 -> -54.97; 1.8: -53.46 -> -54.12
+  - M L by HF: 0.1: -54.57 -> -55.02; 0.2: -54.53 -> -55.02; 0.4: -54.84 -> -55.43; 0.7: -54.96 -> -55.85; 0.9: -55.25 -> -56.33
+- L R all (80): median -49.96 -> -53.59, mean change -3.827, worst capture -1.57, better > 0.3 dB 80, worse > 0.3 dB 0
+- L R fit capture (40): median -49.93 -> -53.49, mean change -3.844, worst capture -1.57, better > 0.3 dB 40, worse > 0.3 dB 0
+- L R held-out captures (40): median -50.01 -> -53.67, mean change -3.810, worst capture -1.67, better > 0.3 dB 40, worse > 0.3 dB 0
+  - L R settings (mean over captures) worse > 0.5 dB: 0 {}; worst -1.62 (2.0_2.6_0.3); best -6.47
+  - L R by LF: 0.1: -50.33 -> -54.49; 0.8: -50.02 -> -53.66; 1.2: -49.76 -> -53.18; 2.0: -49.85 -> -52.47
+  - L R by RT: 2.2: -50.31 -> -53.67; 2.6: -50.24 -> -53.50; 3.6: -49.19 -> -53.36; 4.5: -48.42 -> -53.02
+  - L R by HF: 0.1: -50.07 -> -53.57; 0.3: -50.02 -> -53.38; 0.5: -50.23 -> -53.67; 0.8: -48.43 -> -53.88
+- L L all (80): median -50.47 -> -53.07, mean change -2.853, worst capture -0.94, better > 0.3 dB 80, worse > 0.3 dB 0
+- L L fit capture (40): median -51.06 -> -52.88, mean change -2.061, worst capture -0.94, better > 0.3 dB 40, worse > 0.3 dB 0
+- L L held-out captures (40): median -50.32 -> -53.63, mean change -3.645, worst capture -1.66, better > 0.3 dB 40, worse > 0.3 dB 0
+  - L L settings (mean over captures) worse > 0.5 dB: 0 {}; worst -1.30 (2.0_2.6_0.3); best -4.50
+  - L L by LF: 0.1: -50.67 -> -53.55; 0.8: -50.47 -> -53.34; 1.2: -50.40 -> -52.96; 2.0: -50.39 -> -52.65
+  - L L by RT: 2.2: -50.53 -> -53.12; 2.6: -50.82 -> -53.03; 3.6: -49.90 -> -53.08; 4.5: -49.57 -> -53.11
+  - L L by HF: 0.1: -50.55 -> -53.07; 0.3: -50.52 -> -53.04; 0.5: -50.79 -> -53.08; 0.8: -49.28 -> -53.24
+
+## candidate steps_S: first pass, damped captures, before (stored b) -> after; dB
+- M R all (146): median -52.08 -> -50.60, mean change +1.395, worst capture +4.36, better > 0.3 dB 0, worse > 0.3 dB 103
+- M R fit capture (55): median -52.30 -> -50.80, mean change +1.580, worst capture +4.20, better > 0.3 dB 0, worse > 0.3 dB 42
+- M R held-out captures (91): median -52.07 -> -50.42, mean change +1.283, worst capture +4.36, better > 0.3 dB 0, worse > 0.3 dB 61
+  - M R settings (mean over captures) worse > 0.5 dB: 37 {'0.1_0.6_0.1': 4.28, '0.1_0.6_0.2': 4.1, '0.1_0.6_0.4': 3.82, '0.1_0.6_0.9': 1.15, '0.1_0.8_0.1': 3.3, '0.1_0.8_0.2': 3.49, '0.1_0.8_0.4': 2.83, '0.1_0.8_0.7': 0.92, '0.1_1.2_0.1': 3.22, '0.1_1.2_0.2': 2.1, '0.7_0.6_0.1': 3.44, '0.7_0.6_0.2': 3.57, '0.7_0.6_0.4': 3.53, '0.7_0.6_0.7': 2.02, '0.7_0.8_0.1': 2.72, '0.7_0.8_0.2': 2.63, '0.7_0.8_0.4': 1.95, '0.7_1.2_0.1': 1.94, '0.7_1.2_0.2': 1.24, '1.2_0.6_0.1': 3.16, '1.2_0.6_0.2': 2.8, '1.2_0.6_0.4': 3.0, '1.2_0.6_0.7': 1.99, '1.2_0.8_0.1': 2.35, '1.2_0.8_0.2': 2.71, '1.2_0.8_0.4': 1.44, '1.2_1.2_0.1': 1.55, '1.2_1.2_0.2': 1.0, '2.0_0.6_0.1': 1.74, '2.0_0.6_0.2': 1.71, '2.0_0.6_0.4': 1.51, '2.0_0.6_0.7': 0.95, '2.0_0.8_0.1': 1.2, '2.0_0.8_0.2': 1.45, '2.0_0.8_0.4': 0.76, '2.0_1.2_0.1': 0.96, '2.0_1.2_0.2': 0.77}; worst +4.28 (0.1_0.6_0.1); best -0.08
+  - M R by LF: 0.1: -54.41 -> -52.11; 0.7: -53.20 -> -51.50; 1.2: -51.93 -> -50.24; 2.0: -49.18 -> -48.43
+  - M R by RT: 0.6: -53.68 -> -51.36; 0.8: -52.66 -> -50.80; 1.2: -50.78 -> -49.82; 1.8: -49.67 -> -49.53
+  - M R by HF: 0.1: -51.50 -> -49.76; 0.2: -51.25 -> -50.05; 0.4: -52.01 -> -50.71; 0.7: -52.75 -> -51.19; 0.9: -53.53 -> -53.23
+- M L all (146): median -54.79 -> -53.35, mean change +1.260, worst capture +3.76, better > 0.3 dB 0, worse > 0.3 dB 103
+- M L fit capture (55): median -55.39 -> -54.05, mean change +1.096, worst capture +2.08, better > 0.3 dB 0, worse > 0.3 dB 40
+- M L held-out captures (91): median -54.29 -> -52.82, mean change +1.359, worst capture +3.76, better > 0.3 dB 0, worse > 0.3 dB 63
+  - M L settings (mean over captures) worse > 0.5 dB: 38 {'0.1_0.6_0.1': 2.46, '0.1_0.6_0.2': 2.56, '0.1_0.6_0.4': 2.57, '0.1_0.6_0.9': 0.86, '0.1_0.8_0.1': 2.48, '0.1_0.8_0.2': 2.52, '0.1_0.8_0.4': 2.22, '0.1_0.8_0.7': 0.76, '0.1_1.2_0.1': 2.87, '0.1_1.2_0.2': 1.95, '0.7_0.6_0.1': 2.26, '0.7_0.6_0.2': 2.38, '0.7_0.6_0.4': 2.3, '0.7_0.6_0.7': 1.46, '0.7_0.8_0.1': 2.15, '0.7_0.8_0.2': 2.15, '0.7_0.8_0.4': 1.41, '0.7_1.2_0.1': 1.92, '0.7_1.2_0.2': 1.26, '1.2_0.6_0.1': 2.38, '1.2_0.6_0.2': 2.34, '1.2_0.6_0.4': 2.51, '1.2_0.6_0.7': 2.03, '1.2_0.6_0.9': 0.5, '1.2_0.8_0.1': 2.2, '1.2_0.8_0.2': 2.27, '1.2_0.8_0.4': 1.72, '1.2_1.2_0.1': 2.0, '1.2_1.2_0.2': 1.26, '2.0_0.6_0.1': 1.9, '2.0_0.6_0.2': 2.08, '2.0_0.6_0.4': 1.87, '2.0_0.6_0.7': 1.09, '2.0_0.8_0.1': 1.65, '2.0_0.8_0.2': 1.9, '2.0_0.8_0.4': 0.93, '2.0_1.2_0.1': 1.67, '2.0_1.2_0.2': 1.1}; worst +2.87 (0.1_1.2_0.1); best -0.07
+  - M L by LF: 0.1: -55.77 -> -54.06; 0.7: -55.45 -> -53.94; 1.2: -54.86 -> -53.47; 2.0: -53.12 -> -51.41
+  - M L by RT: 0.6: -55.54 -> -53.52; 0.8: -55.16 -> -53.49; 1.2: -54.28 -> -52.97; 1.8: -53.46 -> -53.22
+  - M L by HF: 0.1: -54.57 -> -53.00; 0.2: -54.53 -> -53.24; 0.4: -54.84 -> -53.59; 0.7: -54.96 -> -54.04; 0.9: -55.25 -> -54.78
+- L R all (80): median -49.96 -> -50.96, mean change -1.476, worst capture +0.94, better > 0.3 dB 40, worse > 0.3 dB 4
+- L R fit capture (40): median -49.93 -> -50.87, mean change -1.457, worst capture +0.90, better > 0.3 dB 20, worse > 0.3 dB 2
+- L R held-out captures (40): median -50.01 -> -51.04, mean change -1.495, worst capture +0.94, better > 0.3 dB 20, worse > 0.3 dB 2
+  - L R settings (mean over captures) worse > 0.5 dB: 2 {'2.0_2.6_0.1': 0.92, '2.0_2.6_0.3': 0.92}; worst +0.92 (2.0_2.6_0.1); best -4.87
+  - L R by LF: 0.1: -50.33 -> -51.43; 0.8: -50.02 -> -51.03; 1.2: -49.76 -> -50.81; 2.0: -49.85 -> -50.33
+  - L R by RT: 2.2: -50.31 -> -50.79; 2.6: -50.24 -> -50.72; 3.6: -49.19 -> -51.64; 4.5: -48.42 -> -51.90
+  - L R by HF: 0.1: -50.07 -> -50.92; 0.3: -50.02 -> -50.78; 0.5: -50.23 -> -50.79; 0.8: -48.43 -> -52.52
+- L L all (80): median -50.47 -> -51.40, mean change -1.123, worst capture +0.94, better > 0.3 dB 38, worse > 0.3 dB 4
+- L L fit capture (40): median -51.06 -> -51.45, mean change -0.865, worst capture +0.57, better > 0.3 dB 18, worse > 0.3 dB 2
+- L L held-out captures (40): median -50.32 -> -50.96, mean change -1.381, worst capture +0.94, better > 0.3 dB 20, worse > 0.3 dB 2
+  - L L settings (mean over captures) worse > 0.5 dB: 2 {'2.0_2.6_0.1': 0.74, '2.0_2.6_0.3': 0.73}; worst +0.74 (2.0_2.6_0.1); best -3.49
+  - L L by LF: 0.1: -50.67 -> -51.55; 0.8: -50.47 -> -51.42; 1.2: -50.40 -> -51.33; 2.0: -50.39 -> -51.14
+  - L L by RT: 2.2: -50.53 -> -51.27; 2.6: -50.82 -> -51.13; 3.6: -49.90 -> -51.82; 4.5: -49.57 -> -52.34
+  - L L by HF: 0.1: -50.55 -> -51.35; 0.3: -50.52 -> -51.25; 0.5: -50.79 -> -51.31; 0.8: -49.28 -> -52.52
+
+## candidate steps_shared: first pass, damped captures, before (stored b) -> after; dB
+- M R all (146): median -52.08 -> -52.44, mean change -0.316, worst capture +0.31, better > 0.3 dB 57, worse > 0.3 dB 1
+- M R fit capture (55): median -52.30 -> -52.34, mean change -0.294, worst capture +0.31, better > 0.3 dB 22, worse > 0.3 dB 1
+- M R held-out captures (91): median -52.07 -> -52.54, mean change -0.330, worst capture +0.30, better > 0.3 dB 35, worse > 0.3 dB 0
+  - M R settings (mean over captures) worse > 0.5 dB: 0 {}; worst +0.30 (1.2_0.6_0.1); best -1.97
+  - M R by LF: 0.1: -54.41 -> -54.50; 0.7: -53.20 -> -54.02; 1.2: -51.93 -> -51.94; 2.0: -49.18 -> -49.25
+  - M R by RT: 0.6: -53.68 -> -53.63; 0.8: -52.66 -> -53.43; 1.2: -50.78 -> -51.07; 1.8: -49.67 -> -50.14
+  - M R by HF: 0.1: -51.50 -> -51.58; 0.2: -51.25 -> -51.48; 0.4: -52.01 -> -52.30; 0.7: -52.75 -> -53.33; 0.9: -53.53 -> -54.88
+- M L all (146): median -54.79 -> -55.26, mean change -0.316, worst capture +0.33, better > 0.3 dB 65, worse > 0.3 dB 1
+- M L fit capture (55): median -55.39 -> -55.49, mean change -0.205, worst capture +0.17, better > 0.3 dB 22, worse > 0.3 dB 0
+- M L held-out captures (91): median -54.29 -> -54.88, mean change -0.383, worst capture +0.33, better > 0.3 dB 43, worse > 0.3 dB 1
+  - M L settings (mean over captures) worse > 0.5 dB: 0 {}; worst +0.24 (0.1_1.2_0.1); best -1.60
+  - M L by LF: 0.1: -55.77 -> -56.02; 0.7: -55.45 -> -56.07; 1.2: -54.86 -> -55.13; 2.0: -53.12 -> -53.29
+  - M L by RT: 0.6: -55.54 -> -55.65; 0.8: -55.16 -> -55.70; 1.2: -54.28 -> -54.82; 1.8: -53.46 -> -54.04
+  - M L by HF: 0.1: -54.57 -> -54.82; 0.2: -54.53 -> -54.82; 0.4: -54.84 -> -55.26; 0.7: -54.96 -> -55.62; 0.9: -55.25 -> -56.20
+- L R all (80): median -49.96 -> -53.20, mean change -3.471, worst capture -1.11, better > 0.3 dB 80, worse > 0.3 dB 0
+- L R fit capture (40): median -49.93 -> -53.12, mean change -3.456, worst capture -1.11, better > 0.3 dB 40, worse > 0.3 dB 0
+- L R held-out captures (40): median -50.01 -> -53.44, mean change -3.486, worst capture -1.19, better > 0.3 dB 40, worse > 0.3 dB 0
+  - L R settings (mean over captures) worse > 0.5 dB: 0 {}; worst -1.15 (2.0_2.6_0.3); best -6.30
+  - L R by LF: 0.1: -50.33 -> -54.07; 0.8: -50.02 -> -53.28; 1.2: -49.76 -> -52.74; 2.0: -49.85 -> -52.07
+  - L R by RT: 2.2: -50.31 -> -53.32; 2.6: -50.24 -> -53.04; 3.6: -49.19 -> -53.20; 4.5: -48.42 -> -52.90
+  - L R by HF: 0.1: -50.07 -> -53.23; 0.3: -50.02 -> -53.04; 0.5: -50.23 -> -53.19; 0.8: -48.43 -> -53.71
+- L L all (80): median -50.47 -> -52.79, mean change -2.566, worst capture -0.66, better > 0.3 dB 80, worse > 0.3 dB 0
+- L L fit capture (40): median -51.06 -> -52.67, mean change -1.872, worst capture -0.66, better > 0.3 dB 40, worse > 0.3 dB 0
+- L L held-out captures (40): median -50.32 -> -53.17, mean change -3.260, worst capture -1.15, better > 0.3 dB 40, worse > 0.3 dB 0
+  - L L settings (mean over captures) worse > 0.5 dB: 0 {}; worst -0.90 (2.0_2.6_0.3); best -4.37
+  - L L by LF: 0.1: -50.67 -> -53.25; 0.8: -50.47 -> -53.09; 1.2: -50.40 -> -52.74; 2.0: -50.39 -> -52.38
+  - L L by RT: 2.2: -50.53 -> -52.77; 2.6: -50.82 -> -52.78; 3.6: -49.90 -> -52.94; 4.5: -49.57 -> -53.03
+  - L L by HF: 0.1: -50.55 -> -52.76; 0.3: -50.52 -> -52.79; 0.5: -50.79 -> -52.77; 0.8: -49.28 -> -53.16
+
+## candidate steps_ml: first pass, damped captures, before (stored b) -> after; dB
+- M R all (146): median -52.08 -> -52.73, mean change -0.541, worst capture +0.05, better > 0.3 dB 96, worse > 0.3 dB 0
+- M R fit capture (55): median -52.30 -> -52.66, mean change -0.553, worst capture -0.08, better > 0.3 dB 38, worse > 0.3 dB 0
+- M R held-out captures (91): median -52.07 -> -52.80, mean change -0.534, worst capture +0.05, better > 0.3 dB 58, worse > 0.3 dB 0
+  - M R settings (mean over captures) worse > 0.5 dB: 0 {}; worst -0.04 (2.0_0.6_0.4); best -2.16
+  - M R by LF: 0.1: -54.41 -> -54.97; 0.7: -53.20 -> -54.17; 1.2: -51.93 -> -52.12; 2.0: -49.18 -> -49.33
+  - M R by RT: 0.6: -53.68 -> -54.07; 0.8: -52.66 -> -53.75; 1.2: -50.78 -> -51.19; 1.8: -49.67 -> -50.21
+  - M R by HF: 0.1: -51.50 -> -51.81; 0.2: -51.25 -> -51.62; 0.4: -52.01 -> -52.45; 0.7: -52.75 -> -53.63; 0.9: -53.53 -> -55.06
+- M L all (146): median -54.79 -> -55.40, mean change -0.522, worst capture +0.10, better > 0.3 dB 92, worse > 0.3 dB 0
+- M L fit capture (55): median -55.39 -> -55.75, mean change -0.369, worst capture -0.08, better > 0.3 dB 31, worse > 0.3 dB 0
+- M L held-out captures (91): median -54.29 -> -55.02, mean change -0.614, worst capture +0.10, better > 0.3 dB 61, worse > 0.3 dB 0
+  - M L settings (mean over captures) worse > 0.5 dB: 0 {}; worst -0.08 (2.0_0.6_0.4); best -1.77
+  - M L by LF: 0.1: -55.77 -> -56.28; 0.7: -55.45 -> -56.28; 1.2: -54.86 -> -55.34; 2.0: -53.12 -> -53.50
+  - M L by RT: 0.6: -55.54 -> -56.05; 0.8: -55.16 -> -55.88; 1.2: -54.28 -> -54.97; 1.8: -53.46 -> -54.12
+  - M L by HF: 0.1: -54.57 -> -55.01; 0.2: -54.53 -> -55.02; 0.4: -54.84 -> -55.43; 0.7: -54.96 -> -55.85; 0.9: -55.25 -> -56.33
+- L R all (80): median -49.96 -> -53.58, mean change -3.830, worst capture -1.56, better > 0.3 dB 80, worse > 0.3 dB 0
+- L R fit capture (40): median -49.93 -> -53.49, mean change -3.841, worst capture -1.56, better > 0.3 dB 40, worse > 0.3 dB 0
+- L R held-out captures (40): median -50.01 -> -53.68, mean change -3.819, worst capture -1.66, better > 0.3 dB 40, worse > 0.3 dB 0
+  - L R settings (mean over captures) worse > 0.5 dB: 0 {}; worst -1.61 (2.0_2.6_0.3); best -6.48
+  - L R by LF: 0.1: -50.33 -> -54.50; 0.8: -50.02 -> -53.66; 1.2: -49.76 -> -53.17; 2.0: -49.85 -> -52.47
+  - L R by RT: 2.2: -50.31 -> -53.66; 2.6: -50.24 -> -53.50; 3.6: -49.19 -> -53.38; 4.5: -48.42 -> -53.03
+  - L R by HF: 0.1: -50.07 -> -53.57; 0.3: -50.02 -> -53.39; 0.5: -50.23 -> -53.66; 0.8: -48.43 -> -53.88
+- L L all (80): median -50.47 -> -53.07, mean change -2.847, worst capture -0.92, better > 0.3 dB 80, worse > 0.3 dB 0
+- L L fit capture (40): median -51.06 -> -52.88, mean change -2.056, worst capture -0.92, better > 0.3 dB 40, worse > 0.3 dB 0
+- L L held-out captures (40): median -50.32 -> -53.62, mean change -3.638, worst capture -1.64, better > 0.3 dB 40, worse > 0.3 dB 0
+  - L L settings (mean over captures) worse > 0.5 dB: 0 {}; worst -1.28 (2.0_2.6_0.3); best -4.50
+  - L L by LF: 0.1: -50.67 -> -53.55; 0.8: -50.47 -> -53.34; 1.2: -50.40 -> -52.95; 2.0: -50.39 -> -52.64
+  - L L by RT: 2.2: -50.53 -> -53.12; 2.6: -50.82 -> -53.01; 3.6: -49.90 -> -53.08; 4.5: -49.57 -> -53.11
+  - L L by HF: 0.1: -50.55 -> -53.06; 0.3: -50.52 -> -53.03; 0.5: -50.79 -> -53.07; 0.8: -49.28 -> -53.24
+
+## candidate steps_cross: first pass, damped captures, before (stored b) -> after; dB
+- M R all (146): median -52.08 -> -52.72, mean change -0.521, worst capture +0.07, better > 0.3 dB 90, worse > 0.3 dB 0
+- M R fit capture (55): median -52.30 -> -52.64, mean change -0.532, worst capture -0.06, better > 0.3 dB 36, worse > 0.3 dB 0
+- M R held-out captures (91): median -52.07 -> -52.80, mean change -0.514, worst capture +0.07, better > 0.3 dB 54, worse > 0.3 dB 0
+  - M R settings (mean over captures) worse > 0.5 dB: 0 {}; worst -0.02 (2.0_0.6_0.4); best -2.14
+  - M R by LF: 0.1: -54.41 -> -54.94; 0.7: -53.20 -> -54.16; 1.2: -51.93 -> -52.10; 2.0: -49.18 -> -49.32
+  - M R by RT: 0.6: -53.68 -> -54.04; 0.8: -52.66 -> -53.70; 1.2: -50.78 -> -51.18; 1.8: -49.67 -> -50.21
+  - M R by HF: 0.1: -51.50 -> -51.78; 0.2: -51.25 -> -51.60; 0.4: -52.01 -> -52.44; 0.7: -52.75 -> -53.61; 0.9: -53.53 -> -55.05
+- M L all (146): median -54.79 -> -55.39, mean change -0.507, worst capture +0.10, better > 0.3 dB 88, worse > 0.3 dB 0
+- M L fit capture (55): median -55.39 -> -55.73, mean change -0.358, worst capture -0.07, better > 0.3 dB 30, worse > 0.3 dB 0
+- M L held-out captures (91): median -54.29 -> -54.99, mean change -0.597, worst capture +0.10, better > 0.3 dB 58, worse > 0.3 dB 0
+  - M L settings (mean over captures) worse > 0.5 dB: 0 {}; worst -0.07 (2.0_0.6_0.4); best -1.75
+  - M L by LF: 0.1: -55.77 -> -56.26; 0.7: -55.45 -> -56.26; 1.2: -54.86 -> -55.31; 2.0: -53.12 -> -53.48
+  - M L by RT: 0.6: -55.54 -> -56.04; 0.8: -55.16 -> -55.87; 1.2: -54.28 -> -54.96; 1.8: -53.46 -> -54.12
+  - M L by HF: 0.1: -54.57 -> -55.00; 0.2: -54.53 -> -54.99; 0.4: -54.84 -> -55.42; 0.7: -54.96 -> -55.84; 0.9: -55.25 -> -56.32
+- L R all (80): median -49.96 -> -53.57, mean change -3.821, worst capture -1.53, better > 0.3 dB 80, worse > 0.3 dB 0
+- L R fit capture (40): median -49.93 -> -53.48, mean change -3.829, worst capture -1.53, better > 0.3 dB 40, worse > 0.3 dB 0
+- L R held-out captures (40): median -50.01 -> -53.68, mean change -3.814, worst capture -1.63, better > 0.3 dB 40, worse > 0.3 dB 0
+  - L R settings (mean over captures) worse > 0.5 dB: 0 {}; worst -1.58 (2.0_2.6_0.3); best -6.48
+  - L R by LF: 0.1: -50.33 -> -54.48; 0.8: -50.02 -> -53.64; 1.2: -49.76 -> -53.16; 2.0: -49.85 -> -52.46
+  - L R by RT: 2.2: -50.31 -> -53.65; 2.6: -50.24 -> -53.49; 3.6: -49.19 -> -53.38; 4.5: -48.42 -> -53.03
+  - L R by HF: 0.1: -50.07 -> -53.56; 0.3: -50.02 -> -53.39; 0.5: -50.23 -> -53.65; 0.8: -48.43 -> -53.88
+- L L all (80): median -50.47 -> -53.07, mean change -2.836, worst capture -0.91, better > 0.3 dB 80, worse > 0.3 dB 0
+- L L fit capture (40): median -51.06 -> -52.87, mean change -2.048, worst capture -0.91, better > 0.3 dB 40, worse > 0.3 dB 0
+- L L held-out captures (40): median -50.32 -> -53.61, mean change -3.624, worst capture -1.61, better > 0.3 dB 40, worse > 0.3 dB 0
+  - L L settings (mean over captures) worse > 0.5 dB: 0 {}; worst -1.26 (2.0_2.6_0.3); best -4.50
+  - L L by LF: 0.1: -50.67 -> -53.54; 0.8: -50.47 -> -53.34; 1.2: -50.40 -> -52.95; 2.0: -50.39 -> -52.63
+  - L L by RT: 2.2: -50.53 -> -53.12; 2.6: -50.82 -> -52.99; 3.6: -49.90 -> -53.07; 4.5: -49.57 -> -53.11
+  - L L by HF: 0.1: -50.55 -> -53.04; 0.3: -50.52 -> -53.02; 0.5: -50.79 -> -53.06; 0.8: -49.28 -> -53.24

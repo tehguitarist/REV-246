@@ -62,6 +62,10 @@ B0 = os.environ.get("ML_B0") != "0"                       # undamped settings at
 BSTEP = os.environ.get("ML_BSTEP", "0")                     # the damped steps of the last all-pass as three values per program (ml_structure 19, tried,
 BSTEP = "" if BSTEP == "0" else BSTEP                       # not adopted): "1" the all-data step means, "cv" each setting's LF column held out;
                                                             # "0" (default) the stored per-setting b
+BREFIT = os.environ.get("ML_BREFIT", "steps")               # the damped settings' b refitted on the current kernel (ml_structure 22,
+BREFIT = "" if BREFIT == "0" else BREFIT                    # tools/ml_brefit.py): "steps" (default, adopted) one table for M and L
+                                                            # (b_steps_ml.json) on the (RT, HF) cell's step; "1" the per-setting
+                                                            # refits (b_refit.json); a file {prog: {key: b}}; "0" the stored b
 DROP_BACK = 0.8465                                          # S's HF 0.2 / RT 0.6 pole past the drop-back point (model_s_results 32.4)
 
 
@@ -193,6 +197,17 @@ class Model:
         self.b = {}
         for r in fp["rows"]:                                # the last all-pass's damping step per setting; the undamped
             self.b[r["key"]] = 0.0 if B0 and r["b"] < 0.05 else r["b"]      # step is b = 0, not its stale fit (ml_structure 18)
+        if BREFIT == "steps" and prog in ("M", "L"):        # the damped settings on the shared table (undamped stay b = 0)
+            tab = json.load(open(os.path.join(ROOT, "analysis", "ml_lines", "b_steps_ml.json")))["table"]
+            cells = json.load(open(os.path.join(ROOT, "analysis", "ml_lines", "b_steps.json")))[prog]["cells"]
+            for key in self.b:
+                lf, rt, hf = key.split("_")
+                if cells[f"{rt}_{hf}"] > 0:
+                    self.b[key] = tab[cells[f"{rt}_{hf}"]]
+        elif BREFIT and prog in ("M", "L"):                 # ML_BREFIT: per-setting b from a file (only the keys it lists)
+            bf = os.path.join(ROOT, "analysis", "ml_lines", "b_refit.json") if BREFIT == "1" else BREFIT
+            bf = bf if os.path.isabs(bf) else os.path.join(ROOT, bf)
+            self.b.update({k: float(v) for k, v in json.load(open(bf)).get(prog, {}).items()})
         if BSTEP and prog in ("M", "L"):                    # b from the (RT, HF) cell's step (tools/ml_bsteps.py), not per setting
             bs = json.load(open(os.path.join(ROOT, "analysis", "ml_lines", "b_steps.json")))[prog]
             for key in self.b:

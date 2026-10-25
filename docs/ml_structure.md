@@ -1043,7 +1043,7 @@ Everything else (octave and third-octave decay, late decay, EDC, G6) is unchange
 - + one per (LF, RT) (16 extra): L +1.18 dB (2.0_4.5_0.1, alone in its cell), M +0.39 (1.2_1.2_0.1 crosses).
 - Only an offset for the block LF 2.0 x RT >= 2.6 (one number, -0.0006), with the other cells on the all-data steps, passes (L max +0.18, no crossings). It is a hand-picked block whose edge is read off the very data it would be scored on, it has no structural reason, and it leaves M unfixed. It is not tried further; the full pulse check was not run for any offset variant.
 
-**Not adopted.** `ml_lines` default is `ML_BSTEP=0`, the stored per-setting b (the model of §18, bit-identical: the 96 damped groups of `analysis/pulse/ml/` were rerun and equal the earlier files, `report.log` regenerated and unchanged); `ML_BSTEP=1` (all-data step means) and `cv` (leave-one-LF-column-out) remain as switches, as does `PULSE_OUT` in `pulse_check.py`. Parameter count unchanged: 96 per-setting b. The step structure on RT x HF is a finding and stays. Possible follow-up (**H**): the stored b were fitted before §18's kernel refit and the first-pass null is monotone in b around them, so refitting the three step values per program on the first pass with the current kernel (held out by LF column) could shift all steps; not done.
+**Not adopted.** `ml_lines` default is `ML_BSTEP=0`, the stored per-setting b (the model of §18, bit-identical: the 96 damped groups of `analysis/pulse/ml/` were rerun and equal the earlier files, `report.log` regenerated and unchanged); `ML_BSTEP=1` (all-data step means) and `cv` (leave-one-LF-column-out) remain as switches, as does `PULSE_OUT` in `pulse_check.py`. Parameter count unchanged: 96 per-setting b. The step structure on RT x HF is a finding and stays. Possible follow-up (**H**): the stored b were fitted before §18's kernel refit and the first-pass null is monotone in b around them, so refitting the three step values per program on the first pass with the current kernel (held out by LF column) could shift all steps. **Done in §22: it did, and the refitted table is adopted.**
 
 ## 20. The damped all-pass steps of S, M and L read as one table (`tools/loop_read/fixedpoint.py consts`, October 2026; `model_s_results.md` §36.2) **[S: the three programs' step values disagree beyond their statistics (spread 0.9–1.2·10⁻³ against SEMs ≤ 1.2·10⁻⁴), so each program's read carries a bias of about 10⁻³; S: the spacings are unequal in all three (step 2 − 1 ≈ 0.160, step 3 − 2 ≈ 0.170, the same to 10⁻³), so the table is not in sixths and not equally spaced; S: no step sits on a 2⁻ⁿ grid, a rational with denominator ≤ 12 or a two-term shift-and-add value beyond chance at that precision; nothing adopted]**
 
@@ -1056,10 +1056,71 @@ The per-setting b of §19 (M, L: `firstpass.json`, per-setting means; S: `analys
 | L | 0.17302 ± 0.00009 | 0.33227 ± 0.00012 | 0.50197 ± 0.00005 | 0.15925 | 0.16970 | 0.0040 |
 | mean ± sd | 0.1717 ± 0.0012 | 0.3315 ± 0.0009 | 0.5014 ± 0.0010 | 0.1598 ± 0.0007 | 0.1699 ± 0.0003 | |
 
-- **One table, read three times, agrees to about 10⁻³.** The step values differ between programs by 10–30 times their SEMs (χ² 430–1,220 on 2 dof). The bias is of the size of the undamped offsets (§18: those were the kernel's high-frequency deficit hiding in b, not damping); subtracting each program's offset does not bring the steps together (sd 0.7–1.7·10⁻³), so the bias is not a common additive offset. M / L's b were fitted before §18's kernel refit (§19's open follow-up); a refit could move them by about this much.
+- **One table, read three times, agrees to about 10⁻³.** The step values differ between programs by 10–30 times their SEMs (χ² 430–1,220 on 2 dof). The bias is of the size of the undamped offsets (§18: those were the kernel's high-frequency deficit hiding in b, not damping); subtracting each program's offset does not bring the steps together (sd 0.7–1.7·10⁻³), so the bias is not a common additive offset. M / L's b were fitted before §18's kernel refit (§19's open follow-up); a refit could move them by about this much. **§22: it did; refitted, M and L agree to ≤ 2·10⁻⁴ (one table 0.16986 / 0.32968 / 0.49960), so the M / L part of this bias was the stale fit; S stays 1.2–2.3·10⁻³ higher.**
 - **Not sixths, not equally spaced.** The spacings 0.160 / 0.170 differ by +0.0101 ± 0.0002 over the three programs (S alone +0.0098 ± 0.0001), far beyond the reads' bias in a difference of differences. Step 1 is 4–6·10⁻³ above 1/6 in every program. Step 3 is 1/2 within 1.4·10⁻³, step 2 1/3 within 1.9·10⁻³ (chance 0.06 / 0.10 for a rational with denominator ≤ 12 that close). The mean steps are near 11/64 / – / 1/2 on 2⁻⁶, but step 2 misses 21/64 by 3.8σ; at 10⁻³ nothing finer than 2⁻⁷…2⁻⁸ can be tested, and on those the corrected chance is 0.05–0.64 (`model_s_results.md` §36.2).
 - **Caveat:** b is the parameter of the model's two-tap damping (1 − b) + b z⁻¹; if the firmware stores another form (a pole, a gain in dB), the step values need not be stored constants, and their spacing is a property of the control mapping, not of a coefficient grid (H).
 
 ## 21. The Altiverb MED / LONG first pass with a per-unit chain: see `model_s_results.md` §37
 
 The Altiverb RT 1.6 S preset's 13-number low-band cascade (fitted on that S preset, held out by program) before `altiverb_ml.py`'s fit takes the first pass from −35.2 / −36.2 to −39.4 / −40.5 dB (M / L, R, b = 0 medians; CLA's 10 biquads −38.9 / −39.9), cluster and gap −40.5 / −39.6 → −48.1 / −46.3 (in-sample for the FIR); recirculation 1 unchanged. What is left is 500 Hz and 8 kHz (−34 / −35…−37 dB), the same remainder as the Altiverb S presets (an Altiverb-side reverb difference, H), so M / L's cross-unit first-pass floor is the S floor, not an M / L term. S's whole chain (its per-channel FIR too) does not carry to M / L (−30 / −17 dB): the FIR stands in for the difference between S's unit-tap output and M / L's Tomkin-fitted output kernels. `tools/unit_chain.py --stage ml` → `analysis/unit_chain/ml.json`.
+
+## 22. M / L's damped all-pass steps refitted on the current kernel: one table for both programs, adopted (`tools/ml_brefit.py`, 25 October 2026) **[S: the 96 stored b were stale (fitted before §18's kernel refit) and optimiser-limited (Brent xatol 0.002); refitted per setting with the current kernel they fall on one 3-value table shared by M and L (0.16986 / 0.32968 / 0.49960; per-step sd 2–5·10⁻⁵, M − L 0.8 / 1.8 / 2.0·10⁻⁴); S: that table, held out by capture, by LF column and by program, takes every damped first pass deeper (L by 1.6–6.5 dB, M by 0–2.2) with no capture worse than 0.05 dB in any pulse-check window, gate PASS: **adopted**, 96 numbers → 3; S: §19's L LF 2.0 / RT ≥ 2.6 block (−0.0006) and §20's 10⁻³ M / L bias were the stale fit; H: S's own table (1.2–2.3·10⁻³ higher) is the same table read through S's chain2-era fit]**
+
+```
+.venv/bin/python tools/memguard.py --limit-gb 9 -- .venv/bin/python tools/ml_brefit.py --stage fit --workers 8   # 96 settings, 43 s, 1.4 GB (EMT_KERNEL=chain3 by default)
+.venv/bin/python tools/ml_brefit.py --stage write     # -> analysis/ml_lines/b_refit.{json,log} (per-setting refits; how b moved)
+.venv/bin/python tools/ml_brefit.py --stage cand      # -> analysis/ml_lines/b_refit_cand.{json,log}, b_cand_<name>.json
+ML_BREFIT=analysis/ml_lines/b_cand_steps_ml.json PULSE_OUT=$PWD/analysis/pulse_brefit_ml EMT_KERNEL=chain3 \
+    .venv/bin/python tools/memguard.py --limit-gb 9 -- .venv/bin/python tools/pulse_check.py --stage ml --workers 8   # the 96 damped groups (undamped files copied in first): 67 s, 1.6 GB
+.venv/bin/python tools/ml_bsteps.py score analysis/pulse analysis/pulse_brefit_ml analysis/ml_lines/b_refit_score_ml.json
+ML_BREFIT=analysis/ml_lines/b_cand_steps_ml.json EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0.8475 \
+    .venv/bin/python tools/memguard.py --limit-gb 9 -- .venv/bin/python tools/pulse_check.py --stage gate --tag brefit --workers 8   # PASS, 176 s, 4.0 GB
+# adopted: ml_lines default ML_BREFIT=steps (analysis/ml_lines/b_steps_ml.json); the 96 damped groups of analysis/pulse/ml rerun with it (65 s), report regenerated
+```
+
+`NEXT_STEPS.md` §0 task 7 and audit item 6. The 96 damped settings' b (M 56, L 40) in `firstpass.json` were fitted on 22 October by `ml_carryover.py`'s firstpass stage: per setting on the high-AMPL capture (M AMPL 99, L AMPL 80), summed L + R first-pass residual energy, bounded Brent with xatol 0.002, on the chain2 IRs and the output kernel of that time. §18 then set the undamped step to b = 0 and refitted the 11-tap kernel on the undamped settings only; the damped b were not touched.
+
+**Method.** `ml_brefit.py fit`, per damped setting: `ml_lines.Model` with the current kernel (held fixed: it never saw a damped setting, so it is held out for these; refitting kernel and b alternately would let the kernel absorb damped-setting error), each capture with the law stage's clock and gains (`analysis/ml_lines/law/`, as `ml_lines.fitted` and the pulse check), one gain per window and channel (as `pulse_check._ml_nulls`), the first pass and 3000 samples rendered. b minimises the high-AMPL capture's L + R first-pass residual energy (bounded Brent, xatol 1e-7, within ±0.01 of the stored value). Saved per setting: the first-pass residual energy per capture and channel on a 0.00025 grid over [stored, refit] ± 0.004 (so any candidate is scored without rendering, cubic in the grid), each capture's own optimum, cluster / gap nulls at both b. **Pipeline check:** the R first pass at the stored b reproduces `analysis/pulse/ml` to ≤ 2·10⁻⁷ dB in all 96 settings (the IRs must be `EMT_KERNEL=chain3`, the tool's default: without it the nulls are 7–12 dB off). Cluster / gap moves by ≤ 4·10⁻⁶ dB (b enters only the diffuser). One setting, M 0.1_0.6_0.7, has no usable first pass in any capture (all three end before the window; the pulse check scores none there either): it keeps the stored b in `b_refit.json` and is left out of every mean (95 scored).
+
+**How b moved** (`b_refit.log`; refit − stored, per step: mean; refit sd over the settings of the step):
+
+| | step 1 | step 2 | step 3 | settings |
+|---|---|---|---|---|
+| M stored | 0.17092 | 0.33054 | 0.50028 | 20 / 11 / 24 |
+| M refit | 0.16989 (sd 0.00002) | 0.32976 (sd 0.00003) | 0.49969 (sd 0.00003) | |
+| L stored | 0.17302 | 0.33227 | 0.50197 | 12 / 8 / 20 |
+| L refit | 0.16981 (sd 0.00005) | 0.32958 (sd 0.00006) | 0.49948 (sd 0.00004) | |
+| **M / L table** | **0.169859** | **0.329683** | **0.499595** | 95 |
+| S (§16.9, chain2) | 0.17109 | 0.33160 | 0.50192 | |
+
+- **Every setting moved down** (M −0.0004…−0.0012, L −0.0019…−0.0034) and the scatter collapsed: within a step the refits agree to 2–6·10⁻⁵, against 1–4·10⁻⁴ stored. **The two programs now give the same table** to 0.8 / 1.8 / 2.0·10⁻⁴ (steps 1 / 2 / 3); §20's M / L spread of about 10⁻³ was the stale fit.
+- **No LF dependence left.** Offsets from the step means by LF column: M −0.00000 / +0.00003 / −0.00001 / −0.00002 (sd 2·10⁻⁵); L +0.00002 in LF 0.1 / 0.8 / 1.2 and LF 2.0 × RT ≥ 2.6 −0.00011 (sd 1·10⁻⁵), against −0.0006 stored (§19's block). That residual block is real but small: at §19's slope (1.7 dB per 10⁻³) it is worth 0.2 dB, and the shared table already improves those groups by 1.6–2.0 dB.
+- **Held out by capture.** The other captures' own optimum (M AMPL 10 / 60, L AMPL 0; never used in the fit) lies +0.00002 (M + L, L + R energy, MAD 1·10⁻⁵) from the refit, +0.00009 on R alone. The b is a property of the setting, not of the capture or of θ's phase.
+- **Spacing.** 0.159824 / 0.169912: unequal, as in §20 (difference 0.0101), not sixths.
+
+**Candidates scored on the grids** (`b_refit_cand.log`; first pass, damped captures, stored → candidate, medians; "worst" = the largest increase of any one capture):
+
+| candidate | numbers | M R | M L | L R | L L | worst capture | settings worse > 0.5 dB |
+|---|---|---|---|---|---|---|---|
+| per-setting refit | 95 | −52.08 → −52.74 | −54.79 → −55.41 | −49.96 → −53.59 | −50.47 → −53.07 | +0.10 (M, L channel) | 0 |
+| step means per program, all data | 6 | −52.74 | −55.41 | −53.59 | −53.07 | +0.10 | 0 |
+| step means, leave-one-LF-column-out | 6 | −52.74 | −55.41 | −53.59 | −53.07 | +0.10 | 0 |
+| **M / L table** | **3** | **−52.73** | **−55.40** | **−53.58** | **−53.07** | **+0.10** | **0** |
+| each program on the other's table | 3 + 3 | −52.72 | −55.39 | −53.58 | −53.07 | +0.10 | 0 |
+| mean of S and M / L | 3 | −52.44 | −55.26 | −53.20 | −52.79 | +0.33 | 0 |
+| S's table | 0 | −50.60 | −53.35 | −50.96 | −51.40 | +4.36 | M 37 / 38, L 2 |
+
+Held-out captures alone (the ones no fit saw), M / L table: M R −52.07 → −52.80, L R −50.01 → −53.68, L L −50.32 → −53.62. The cross-program row is the strongest test: M's table predicts L and L's predicts M within 0.02 dB of their own refits. S's table does not carry (M loses up to 4.3 dB): S is 1.2 / 1.9 / 2.3·10⁻³ higher.
+
+**Pulse check (the 96 damped groups rerun; R first pass and recirculations 1–3, L / R mean at 0.3–4 s; `b_refit_score_ml.json`), stored → M / L table:**
+- Per step, first-pass median: M step 1 −51.27 → −52.00, step 2 −51.80 → −52.23, step 3 −53.21 → −53.53 (no capture worse than +0.05 dB); L step 1 −48.39 → −53.43, step 2 −49.78 → −53.60, step 3 −50.45 → −53.61 (every capture better, by 1.56 dB at least). Recirculations 1–3 and every window 0.3–4 s: unchanged (largest change 0.01 dB). The undamped groups are byte-identical.
+- All groups: M first pass −49.68 → −49.83 [capture pairs −48.3], L −52.31 → −52.86 [−51.8]; so the model is now 1.5 / 1.1 dB below the repeat level (it fits each capture better than two captures fit each other; the pairs carry θ's decorrelation twice).
+- Damped captures at or below −50 dB: 143 → 189 of 226. Damped groups above −50 dB (mean over captures): L 20 → 0; M 14 → 11, all at LF 2.0 or RT 1.8 (−48…−50, plus 2.0_0.6_0.7 / 2.0_0.8_0.4 / 2.0_1.2_0.4 at −39…−41, each with its AMPL 60 capture at −19 dB R against −48…−52 for the other two: an open defect question, `NEXT_STEPS.md` §0). M's remaining first-pass gap is LF 2.0 and the undamped settings (step 0 median −48.7), not the damping.
+- Report (`analysis/pulse/report.log`): octave / third-octave decay, late decay, EDC, G6 unchanged to the printed precision except third-octave 1008 Hz +0.2 → +0.3 %, M HF ≤ 0.2 8 kHz +0.1 → +0.2 %, M EDC 2 kHz 0.24 → 0.25 dB; M echo density |difference| 0.008 → 0.007.
+- Gate (`analysis/pulse/gate_brefit/`): PASS; S, CLA and the Altiverb identical; L first pass −52.61 → −52.97, M −49.38 (its four groups are undamped).
+
+**Adopted (strict rule: no setting worse than 0.5 dB in any scored window, R and L; no group median worse; gate PASS).** `ml_lines` default is now `ML_BREFIT=steps`: a damped setting's b is `analysis/ml_lines/b_steps_ml.json`'s table at its (RT, HF) cell's step (`b_steps.json` `cells`, §19's staircase); undamped stay b = 0. `ML_BREFIT=0` restores the stored per-setting b, `1` the per-setting refits (`b_refit.json`), or a file {prog: {key: b}}. Parameter count: 96 per-setting b → 3 numbers (plus the integer staircase, as before). Not refitted: the law files' clocks and gains (fitted with the stored b; the scores fit one gain per window anyway).
+
+**Plugin rule (S at the library's steps, H between them).** b = (0, 0.16986, 0.32968, 0.49960)[step], one table for M and L. The step comes from §19's staircase on (RT, HF): M at RT 0.6 / 0.8 / 1.2 / 1.8 and L at RT 2.2 / 2.6 / 3.6 / 4.5 as tabulated, step 0 at longer RT. The staircase looks like steps that fall by one per RT step and per HF step (an index-sum rule, as S's, H). For RT or HF between the library's steps the boundary is not observable: take the step of the nearest sampled (RT, HF) cell, in program time (H). No smooth interpolation of b: the hardware has a switched step (S's §14.3, S here).
+
+**Open (H).** S's AP230 table was read on chain2 IRs with the kernel of that time (§16.9). Whether it is the same table as M / L's needs an S refit of the same kind on the current S model. Until then the plugin keeps S's own table for S.
