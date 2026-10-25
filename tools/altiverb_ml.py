@@ -12,7 +12,7 @@ to one value per family (MED LF 1.1 / HF 0.7, LONG LF 1.2 / HF 0.4; library_note
 pass (the presets are not library steps), so the first pass is not held out where b > 0; the recirculation nulls and the structural G6 metrics (EDR,
 coloration, echo density, IACC) were not fitted. Each preset is one frozen realisation of a time-variant program (θ ≠ 0), so
 the reverb nulls are expected near the library's model-vs-capture level, not deeper. Usable end: where the R channel's 50 ms
-energy falls 60 dB below its 50-300 ms level, at most 5 s (the files are good to about -74 dB).
+energy falls 60 dB below its 50-300 ms level, at most 13 s (the files are good to about -74 dB, their tails 15 s long).
 """
 import glob, json, os, sys
 
@@ -33,6 +33,7 @@ FS, K0 = mll.FS, mll.K0
 SET = {"M": ("MED RT", 1.1, 0.7), "L": ("LONG RT", 1.2, 0.4)}
 KH = 5                                                       # 11-tap chain FIR per channel
 EPS = 42.8                                                   # the plugin's clock, ppm (altiverb_predict, from S)
+TMAX = 13.0                                                 # s: the files' 15 s tails are clean to -74 dB or better
 B_STEPS = (0.0, 0.17, 0.33, 0.50)                           # AP230-type damping steps (model_s_results §14.3)
 CACHE = os.path.join(ROOT, "analysis", "altiverb", "cache")
 OUT = os.path.join(ROOT, "analysis", "altiverb", "ml_pulse")
@@ -77,7 +78,7 @@ def fit(prog, y, C, R, i1):
 def run_one(prog, name):
     pre, lf, hf = SET[prog]
     rt = float(name.split(" ")[-1][:-1])
-    n = K0 + int(min(5.0, 1.2 * rt + 0.5) * FS)
+    n = K0 + int(min(TMAX, 1.2 * rt + 0.5) * FS)
     y = device_ir(name, n)
     i1 = min(usable(y), n - 1)
     key = f"{lf}_{rt}_{hf}"

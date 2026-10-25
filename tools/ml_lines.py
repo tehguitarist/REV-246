@@ -57,6 +57,8 @@ OUT = os.path.join(ROOT, "analysis", "ml_lines")
 FS, K0 = cc.FS, cc.K0
 LAW = json.load(open(os.path.join(ROOT, "analysis", "q1", "laws.json")))
 P_MAX, DC_MIN, BETA = 0.84, 0.18, 0.019                    # S's coefficient limits (model_s_results §16.15-16.16)
+KFIX = os.environ.get("ML_KFIX") != "0"                   # the output kernel refitted after B0 (ml_structure 18); 0: stored
+B0 = os.environ.get("ML_B0") != "0"                       # undamped settings at b = 0 (ml_structure 18); ML_B0=0: stored b
 DROP_BACK = 0.8465                                          # S's HF 0.2 / RT 0.6 pole past the drop-back point (model_s_results 32.4)
 
 
@@ -181,10 +183,13 @@ class Model:
         if HK_FILE:                                         # ML_HK: S a unit tap, M and L the kernels refitted there
             hk = json.load(open(HK_FILE if os.path.isabs(HK_FILE) else os.path.join(ROOT, HK_FILE)))["output_kernels"]
             self.h = np.array(hk[prog]) if prog in hk else np.array([1.0])
+        kf = os.path.join(ROOT, "analysis", "ml_lines", "kernel_fix.json")
+        if KFIX and prog in ("M", "L") and os.path.exists(kf):  # refitted with the undamped step at b = 0 (ml_structure 18)
+            self.h = np.array(json.load(open(kf))[prog]["kernel"])
         self.kh = (len(self.h) - 1) // 2
         self.b = {}
-        for r in fp["rows"]:
-            self.b[r["key"]] = r["b"]
+        for r in fp["rows"]:                                # the last all-pass's damping step per setting; the undamped
+            self.b[r["key"]] = 0.0 if B0 and r["b"] < 0.05 else r["b"]      # step is b = 0, not its stale fit (ml_structure 18)
         Ls, Rs = cc.s_table()
         self.loop = [np.array([i for _, _, i in Ls]), np.array([i for _, _, i in Rs])]
         self.cl = cc.cluster_taps(prog)
