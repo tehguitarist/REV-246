@@ -1,63 +1,134 @@
-# REV-246 (the plugin)
+# REV-246
 
-The VST3 / AU plugin that will carry the reverb model worked out in `../docs` and `../tools`. This folder is the
-scaffold: the panel, parameters, presets, installers and (switched-off) CI are in place; the reverb itself is a
-placeholder (`src/dsp/ReverbEngine.h` passes the mono input to both outputs).
+![Build](https://github.com/tehguitarist/REV-246/actions/workflows/plugin-ci.yml/badge.svg?branch=main)
+[![License](https://img.shields.io/badge/License-AGPLv3-blue.svg)](https://opensource.org/license/agpl-v3)
+[![Downloads](https://img.shields.io/github/downloads/tehguitarist/REV-246/total)](https://somsubhra.github.io/github-release-stats/?username=tehguitarist&repository=REV-246&page=1&per_page=30)
 
-## Quick start
+![REV-246](docs/images/screenshot.png)
 
-Build the plugin with CMake (JUCE is the submodule `libs/JUCE`):
+REV-246 is a free, open-source reverb plugin (AU, VST3 and standalone) inspired by the classic and relatively rare
+EMT 246 digital reverb, with the EMT 250 algorithm included as a programme of its own. It is just the reverb half of
+the hardware: there is no delay or echo section.
 
-    git submodule update --init --depth 1 plugin/libs/JUCE
-    cmake -S plugin -B plugin/build -DCMAKE_BUILD_TYPE=Release -DRV_STANDALONE=ON
-    cmake --build plugin/build --config Release --parallel 3
+It was built by comparing impulse responses from three separate units, and it has two switches that move it between a
+clean, modern reading and a period one: **16-bit** processing, which reproduces the original's quantisation, and an
+optional **transformer** stage, the factory option the real unit could be ordered with. Switch both off for a cleaner
+sound, or on for the more period-accurate one.
 
-The Standalone app is `plugin/build/REV246_artefacts/Release/Standalone/REV-246.app` (macOS); the VST3 and AU
-bundles sit beside it. Add `-DRV_BUILD_TESTS=ON` and run `ctest --test-dir plugin/build -C Release` for the tests.
+The original's remote joysticks are kept, made a little friendlier for a mouse, and the mix, input and output levels
+borrow the look of the unit's optional fader pack.
 
-## Layout
+> REV-246 is an independent project. It is not affiliated with or endorsed by EMT or any other manufacturer.
 
-| Path | What it is |
+**Status:** pre-release. The panel, presets, installers and plugin plumbing are in place; the reverb engine is still
+being finalised, so there is no download yet. When there is, the latest one will be here:
+**[Download the latest release](https://github.com/tehguitarist/REV-246/releases/latest)**.
+
+## Features
+
+- **Five programmes:** **S** (short, 0.2–2.5 s), **M** (medium, 0.5–5 s), **L** (long, 2–20 s), **E** (the EMT 250
+  algorithm) and **N** (the non-linear programme).
+- **Six joysticks** for the reverb's parameters: low-pass, reflections delay and amplitude, and the decay's low-
+  frequency multiplier, reverberation time and high-frequency multiplier. They step through the same kinds of values as
+  the hardware, and the readouts above them show the value for the programme you are in.
+- **Mix, input and output faders** with a PAN control for the dry signal, and an optional LINK to move input and output
+  together.
+- **Level meter** with an overload light and a calibration button for the reference level.
+- **16-bit mode:** quantises the reverb's internal storage to 16 bits, as the original did, for its faint, signal-
+  dependent noise floor and grit in the decays. Off, the reverb runs at full precision.
+- **Transformer option:** adds the weight in the low end and the gentle low-frequency harmonic distortion of a unit
+  fitted with the optional input and output transformers. Off, the sound is that of the standard unit.
+- **Factory and user presets**, with a bypass (power) button.
+- **Mono in / mono out, mono in / stereo out and stereo in / stereo out.** Like the hardware, the reverb has one mono
+  input and two outputs. With a stereo input it can sum to mono first (**ORIGINAL**, the default) or run a reverb per
+  channel (**TRUE ST**).
+
+## Install
+
+Download the installer for your system from the [latest release](https://github.com/tehguitarist/REV-246/releases/latest):
+
+| System | Installer | Formats |
+|---|---|---|
+| macOS | `.pkg` | AU, VST3 |
+| Windows | `.exe` | VST3 |
+| Linux | `.deb` | VST3 |
+
+Then rescan plugins in your DAW. Logic caches Audio Units, so if REV-246 does not show up, restart Logic or run
+`auval -v aufx Rv24 Lprc`.
+
+## Using it
+
+**Pick a programme** (S, M, L, E or N) and set the six joysticks. Each joystick is the original's lever: press the
+upper half of the round button to step the value up and the lower half to step it down. Hold it to repeat; after a
+second it speeds up. For convenience you can also drag or click the wedge above it, use the mouse wheel for one step per
+notch, and Cmd/Alt-click to return to the default.
+
+| Control | What it does |
 |---|---|
-| `src/PluginProcessor.*` | Parameters, channel handling (mono/mono, mono/stereo, stereo/stereo), power (bypass), pan, mix, gains, input level for the meter |
-| `src/dsp/ReverbEngine.h` | The model's interface (placeholder body) |
-| `src/dsp/Transformer.h`, `CaptureEq.h` | The optional TRANSFORMER stage: low-band EQ and guessed transformer distortion (see below) |
-| `src/params/` | Parameter IDs (permanent), the joystick step tables (placeholders), the fader scales |
-| `src/presets/` | Preset manager: factory presets (one per programme) and user presets as `.r246preset` XML |
-| `src/PluginEditor.*`, `src/ui/` | The panel; `ui/Layout.h` is generated, `ui/Design.h` holds measured constants |
-| `ui-layout.csv` | The cleaned-up positions from `../ui/Asset positioning.csv` (centres, design space 3495 x 1530) |
-| `tools/build_assets.sh` | Resamples `../ui/*.png` (never modified) to `assets/images/` and regenerates `src/ui/Layout.h` |
-| `installer/` | macOS `.pkg`, Windows NSIS `.exe`, Linux `.deb` builders |
-| `../.github/workflows/plugin-*.yml` | CI and release: manual-trigger only for now |
-| `docs/DEVELOPMENT.md` | Rules: cross-platform, assets, CI, parameters |
+| **LOWPASS** (f, kHz) | Low-pass filter on the reverb, 2 to 12 kHz |
+| **REFLECTIONS** (DELAY, AMPL.) | Delay before the early reflections, 0 to 999 ms, and their level, 0 to 100 % |
+| **DECAY** (LF ×, RT, HF ×) | Reverberation time in seconds, with multipliers for how much faster or slower the low and high frequencies decay |
+| **MIX** | Wet/dry balance. PAN places the dry signal |
+| **INPUT / OUTPUT** | Levels, with LINK to move them together |
 
-## Channel modes
+In the non-linear programme (N) the readouts change meaning to match the hardware's own labels (DELAY, SPAN, and early
+and late RT). Hover over any control for a description.
 
-The plugin accepts mono in / mono out, mono in / stereo out and stereo in / stereo out. The unit's own algorithm is mono
-in / stereo out, so:
+The bottom bar holds the preset browser (previous, next, name, **SAVE**, **OVERRIDE**), the routing and accuracy
+buttons (**ORIGINAL / TRUE ST**, **16-BIT**, **TRANSFORMER**), **LINK**, **CAL** for the meter reference and **?** for
+help. ORIGINAL / TRUE ST, TRANSFORMER and LINK are preferences, so presets neither store nor change them.
 
-- **Mono out** uses the left side of the reverb (one read-out is enough; the real output taps can revisit this).
-- **Mono in / stereo out** is the unit's native path.
-- **Stereo in / stereo out** defaults to **ORIGINAL**: the input is summed to the unit's mono input at -6 dB (0.5 x L+R,
-  so correlated channels keep their level rather than gaining 6 dB), then the mono reverb feeds both outputs. The
-  **ORIGINAL / TRUE ST** button in the bottom bar switches to true stereo, which runs one mono engine per input
-  channel (left through engine 0 and right through engine 1). The button is greyed out for the mono layouts. Like LINK
-  and TRANSFORMER it is a routing preference, so presets neither store nor change it.
+## Accuracy options
 
-## TRANSFORMER (optional, off by default)
+<!-- TODO: the 16-bit option is not in the plugin yet (no parameter or button; only TRANSFORMER exists). Add it, or
+     reword this section and the Features / bottom-bar text, before release. -->
 
-The service manual offers the unit with optional balanced input and output transformers ("harmonic distortion
-... increased slightly", pp. 37 and 46). The TRANSFORMER button in the bottom bar (bool parameter `transformer`)
-models such a unit on the wet path:
+Both options are off or on independently, and both only change the reverb path.
 
-- **Low-band EQ (measured, S):** the colour that CLA's and the Altiverb's IRs share but Tomkin's library and the stock
-  unit do not (`../docs/model_s_results.md` §27): about +3 dB at 40–60 Hz, −0.6 dB at 160 Hz, ripple up to 400 Hz,
-  minimum phase, on both outputs. The transformer option is a candidate explanation (H), not a demonstrated one: with the stock coupling capacitor a
-  line transformer's resonance would sit at 2–10 Hz, not 40–60 Hz.
-- **Transformer distortion (guessed, H):** a flux model of an input transformer (mono, before the reverb) and an output
-  transformer per channel. Odd harmonics, mostly 3rd, growing with level and falling steeply with frequency: at
-  0 dBFS (= +12 dBu, the unit's maximum) 0.35 % at 20 Hz, 0.08 % at 40 Hz, 0.01 % at 100 Hz, 0.0001 % at 1 kHz;
-  calibrated against Jensen and Lundahl line-transformer datasheets, not measured on a 246 (IRs can't show it).
+**16-bit.** The original stored the intermediate results in its reverb loops as 16-bit words, and truncating them at
+that depth costs a little noise and grit: its service data put the reverb around 15 dB noisier than the unit's own
+straight-through path. With this option on, REV-246 quantises its loops the same way. Leave it off for a cleaner tail.
 
-Off (the default) the output is exactly the stock unit's, faithful to Tomkin and the schematic. It is a preference
-like LINK, so presets neither store nor change it.
+**Transformer.** The original could be ordered with balanced input and output transformers, which the manual says raise
+the harmonic distortion slightly. With this option on, the wet path gains the low-frequency colour and gentle odd-
+harmonic distortion of that option. The low-frequency colour comes from measurement; the distortion is an informed
+estimate, since measurements of a unit's response cannot show it.
+
+## A/B comparison
+
+<!-- TODO: add before the first release. Audio samples to be supplied by the author; the IR sources stay unnamed.
+     One row per example, each with a plugin render and the matching reference. -->
+
+*Audio examples comparing REV-246 with the reference impulse responses will go here.*
+
+| Example | Settings | REV-246 | Reference |
+|---|---|---|---|
+| *to come* | | | |
+
+## Build
+
+You need CMake 3.15 or newer and a C++17 compiler (Xcode on macOS, Visual Studio 2022 on Windows, GCC or Clang on
+Linux). JUCE is a git submodule.
+
+```bash
+git clone --recurse-submodules https://github.com/tehguitarist/REV-246.git
+cd REV-246
+cmake -S plugin -B plugin/build -DCMAKE_BUILD_TYPE=Release -DRV_STANDALONE=ON
+cmake --build plugin/build --config Release --parallel 3
+```
+
+The plugins land in `plugin/build/REV246_artefacts/Release/{AU,VST3,Standalone}` (AU on macOS only). Add
+`-DRV_BUILD_TESTS=ON` and run `ctest --test-dir plugin/build -C Release` to build and run the tests.
+
+Development rules (cross-platform code, assets, CI) and the source layout are in
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). The plugin is one half of this repository: the other half, in `docs/` and
+`tools/` at the top level, is the research behind the reverb.
+
+## Licence
+
+REV-246 is free software under the [GNU AGPLv3](../LICENSE). It uses [JUCE](https://juce.com) under its AGPLv3 option,
+and the notices for it and the other third-party code are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## Credits
+
+Built by Leigh Pierce, using [JUCE](https://juce.com/) for the plugin framework and interface.
