@@ -155,6 +155,17 @@ def build_cases():
     # how a modulation of period ~1.8 s smears into the deconvolved IR). 4 sweeps per length, 15 s apart.
     for sec in (5.0, 10.0, 20.0, 30.0):
         case("C_sweep", f"ess{int(sec)}s_x4_T4.5", sweeps(r, 4, 15.0, sec=sec), tail=14, params=dict(Time="4.5 s", Noise=0), note=f"ess {sec} s 20 Hz-19.2 kHz -12 dBFS, 4 repeats, gap 15 s, start 0.5 s")
+    # Fit support (E-program fits, run without the plugin afterwards): more sweep repeats at every long Time, and 96 kHz impulses for loop
+    # lengths and early taps at 0.01 ms resolution. Sweep repeats start at different absolute times (the modulation state follows time).
+    for t in ("3.0 s", "3.6 s", "4.0 s", "4.5 s"):
+        for sec in (10.0, 20.0, 30.0):
+            if t == "4.5 s" and sec in (10.0, 20.0, 30.0): n_rep = 8; nm = f"ess{int(sec)}s_x8_T{t.split()[0]}"
+            else: n_rep = 8; nm = f"ess{int(sec)}s_x8_T{t.split()[0]}"
+            case("C_sweep", nm, sweeps(r, n_rep, 15.0, sec=sec), tail=14, params=dict(Time=t, Noise=0), note=f"ess {sec} s 20 Hz-19.2 kHz -12 dBFS, {n_rep} repeats, gap 15 s")
+    for t in ("1.0 s", "2.5 s", "4.5 s"):
+        for lf, hf in (("x 1.5", "x 0.50"), ("x 1.5", "max"), ("x 1.0", "x 0.50")):
+            case("A_static", f"imp96k_T{t.split()[0]}_LF{lf[2:]}_HF{hf.split()[-1]}", impulse(0, 96000, sec=1), r=96000, tail=rt_tail(t),
+                 params=dict(Time=t, LFDecay=lf, HFDecay=hf, Noise=0), note="96 kHz impulse, Noise off")
     # D. other programs and time/rate coverage
     for i, nm in [(0, "I"), (1, "II"), (2, "III"), (3, "IV")]:
         for nz in (1, 0):

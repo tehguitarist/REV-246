@@ -18,6 +18,8 @@ What was learned getting it to work (all **C**, measured here):
 - Parameters (15): Program (Reverb / Delay / Phase / Chorus / Echo / Space), Time (16 steps 0.4–4.5 s), LFDecay (×0.5 / 1 / 1.5 / 2), HFDecay (×0.25 / 0.33 / 0.50 / max), LDelayTime and RDelayTime (0–315 ms in 5 ms steps), Phase (16 steps to 15 ms), ChorusMode (I–IV), Echo (0–315 ms), Predelay (0 / 20 / 40 / 60 ms), Outputs (Rear / Front), Mix, WetSolo, Noise, Power.
 - **Noise is an additive output noise floor, not a modulation switch** (silence: −128 dBFS rms off, −94 dBFS rms on; the "Noise on vs off decorrelates by 2–4 s" seen at bring-up is that floor overtaking the decaying tail). **Corrected 25 October 2026; an earlier version of this note called it the modulation switch.** The algorithm's modulation is always on (§2).
 
+**Offline use (no plugin, no UAD hardware):** all 535 captures (5.45 GB) are archived by `tools/uad250/offline_bundle.py` (`pack` → `analysis/uad250/bundle/*.tar.zst`, 4.96 GB, gitignored; `check --full` verifies sha1 against the committed `analysis/uad250/manifest.json`; `inputs` regenerates the seeded input WAVs bit-identically). Back the bundle up outside the repo; it is a render of a licensed plugin and must not be committed or redistributed. Every `analyze_*.py`, `comb_coherence.py` and `compare_altiverb.py` reads only the captures and the Altiverb caches.
+
 Run it: `.venv/bin/python tools/uad250/uad250_suite.py build | list | run [--only 'C_mod/*'] [--smoke]`. One process at a time under `tools/memguard.py`; finished cases are skipped, so a run can be stopped and resumed.
 
 ## 2. Scope (user, 25 October 2026) and results
