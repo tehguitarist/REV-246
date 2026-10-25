@@ -8,7 +8,7 @@ models against every dataset, on the metrics the nulls can hide. Results: docs/m
     EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/pulse_check.py --stage gate --tag <name>   # ~3 min sanity gate
 
   s       Program S, Tomkin 96 kHz library, all 128 settings held out: each setting rendered with the constants of the
-          loop_cv fold that left its RT step out (the §32.6 baseline, analysis/loop_cv/hfcells_chain3_cap0.8475_pallf with EMT_HFRT_MIN=0.12: fold
+          loop_cv fold that left its RT step out (the §35 baseline, analysis/loop_cv/hfcells_chain3_cap0.8475_pshoulder with EMT_HFRT_MIN=0.12: fold
           constants + cells.json), per capture clock, shift and gain as q2_injection.fit_capture (3 numbers). The capture is
           fade-compensated (/ ramp, up to comp_end). One JSON per setting in analysis/pulse/s/ (resumable).
   units   Program S on other units, nothing refitted: the CLA IR (LF 1.0, RT 1.0, HF 0.9, AMPL 80) and the five Altiverb
@@ -64,7 +64,7 @@ import loop_fir as lf_  # noqa: E402
 q2 = lf_.q2
 q1 = q2.q1
 FS, PRE = q1.FS, q1.PRE
-CV = os.environ.get("PULSE_CV") or os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_pallf")   # model_s_results 32.6
+CV = os.environ.get("PULSE_CV") or os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_pshoulder")   # model_s_results 35 (32.6 + the floor's shoulder at LF 0.4 / RT >= 0.6)
 REF = os.path.join(ROOT, "analysis", "pulse")                   # the full run: the gate's reference
 OUT = os.environ.get("PULSE_OUT") or REF                        # PULSE_OUT: a candidate's per-group files and report beside the full run's
 COMPACT = f"diffuser_tied_fix-0.707107_ap230new_{q1.ms.KTAG}"
@@ -296,6 +296,8 @@ def setting_G(lab, b230, law, fold, fc):
     if fc and "dc_min" in fc:
         law["lf"][0.1]["dc"] = fc["dc"]
         gamma, fl = fc["gamma"], dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
+    elif fc and "floor_form" in fc:                 # the floor's shoulder where no floor cell acts (LF 0.4 / RT >= 0.6, 35)
+        fl = dict(floor_form=fc["floor_form"])
     elif q2.dcfloor_form(lab):                      # EMT_DCFLOOR: the floor's compact form (model_s_results 34)
         fl = dict(floor_form=q2.dcfloor_form(lab))
     if fc and "hf_dp" in fc:

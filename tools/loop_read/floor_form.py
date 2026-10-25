@@ -22,6 +22,13 @@ RT step's other HF steps (leave-one-HF-out, as §25.6 chose the cells). RT steps
 (RT 2.2, 2.5) take the nearest such RT step's plateau. beta / gamma are fitted on LF 0.1's floored loops at RT <= 1.8
 (LF 0.4 / RT 0.3, the only other floored cell, sits at RT <= 0.8, where the shelf cells keep their common gain).
 Also: whether the per-RT plateaus follow a law in RT (constant, linear in RT, in 1 / RT), held out by RT step.
+
+--stage shoulder (model_s_results 35): the shoulder alone where no floor cell acts (LF 0.4 at RT >= 0.6), the floor cells
+kept everywhere else. c, tau and the per-RT plateaus are fitted on the floor-cell settings only (LF 0.1, LF 0.4 / RT 0.3:
+held out by setting, nothing from LF 0.4 / RT >= 0.6) and written to <OUT2>/dcfloor.json for the 28 LF 0.4 / RT >= 0.6
+settings (beta = gamma = 0: no loop there requests under the plateau, so the Nyquist end is the baseline's), and as "floor_form" into <OUT2>/cells.json (read without EMT_DCFLOOR); <OUT2> gets
+_pallf's folds, cells.json (floor cells kept) and RT 0.3's rows (that fold is unchanged). Then takefit on the 28 keys with
+SHELF_PREP_CELLS, lf_cells.py --delta (both halves) on <OUT2>, and loop_cv --retake --tag pshoulder for RT 0.6-2.5.
 """
 import argparse, collections, glob, json, os, shutil, sys
 
@@ -35,6 +42,7 @@ import lowband_shelf as ls  # noqa: E402
 q2, q1 = ls.q2, ls.q1
 SRC = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_pallf")
 OUT = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_pfloor")
+OUT2 = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_pshoulder")      # --stage shoulder (35)
 LOG = os.path.join(ROOT, "analysis", "lowband", "chain3_floor_form")
 TF = os.environ.get("SHELF_TAKEFIT") or os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_takefit_cap0.8475_pallf")
 RTS, HFS = [0.3, 0.6, 0.8, 1.0, 1.4, 1.8, 2.2, 2.5], [0.2, 0.4, 0.6, 1.0]
@@ -214,8 +222,49 @@ def folds_stage():
     print(f"{n} floor cells removed -> {OUT}/cells.json")
 
 
+def shoulder_stage():
+    """--stage shoulder (model_s_results 35): c, tau and the plateaus fitted on the floor-cell settings, applied to LF 0.4 /
+    RT >= 0.6 only; offline scores against the unit's DC ends there and the variant fold set <OUT2>."""
+    D = data()
+    fit = [d for d in D if d["cell"]]                                  # LF 0.1 and LF 0.4 / RT 0.3: the floor-cell settings
+    tst = [d for d in D if d["lf"] == 0.4 and d["rt"] >= 0.6]
+    F, c, tau = fit_shape(fit)
+    pl = lambda rt: 10 ** (F[rt] / 20)
+    log = [f"# The shoulder alone at LF 0.4 / RT >= 0.6 (model_s_results 35); unit = the current model x takefit ({os.path.basename(TF)})",
+           f"Fitted on the {len({d['key'] for d in fit})} floor-cell settings ({len(fit)} loops), held out by setting: c {c:.4f} dB, "
+           f"tau {tau:.4f} dB; plateau per RT step " + " ".join(f"{rt}:{pl(rt):.4f}" for rt in RTS),
+           f"min request at LF 0.4 / RT >= 0.6: {min(d['x'] for d in tst):.2f} dB per pass (plateau {F[0.6]:.2f}): no loop under it", "",
+           "DC end against the unit, dB per pass (LF 0.4, per RT step): rms and mean of form - unit; the baseline's hard floor without "
+           "its shelf cells; _pallf with its shelf cells", f"{'RT':>4s} {'form rms':>9s} {'mean':>8s} {'floor':>7s} {'_pallf':>7s} | unit / form lift over the law, loops 1-4 (HF mean)"]
+    sc = {}
+    for rt in RTS[1:]:
+        s_ = [d for d in tst if d["rt"] == rt]
+        e = [dc_pred(d, F[rt], c, tau) - d["y"] for d in s_]
+        lift = lambda f: " ".join(f"{np.mean([f(d) for d in s_ if d['loop'] == i]):+.3f}" for i in range(4))
+        sc[str(rt)] = dict(form=rms(e), mean=float(np.mean(e)), floor=rms([d["cur_f"] - d["y"] for d in s_]), pallf=rms([d["cur"] - d["y"] for d in s_]))
+        log.append(f"{rt:4.1f} {sc[str(rt)]['form']:9.4f} {sc[str(rt)]['mean']:+8.4f} {sc[str(rt)]['floor']:7.4f} {sc[str(rt)]['pallf']:7.4f} | "
+                   + lift(lambda d: d["y"] - d["lfr"] - d["x"]) + " / " + lift(lambda d: dc_pred(d, F[rt], c, tau) - d["lfr"] - d["x"]))
+    os.makedirs(OUT2, exist_ok=True)
+    for f in glob.glob(os.path.join(SRC, "fold_*.json")):
+        if not f.endswith(("_rows.json", "_lfrt.json", "_hfdp.json")) or os.path.basename(f) == "fold_0.3_rows.json":
+            shutil.copy(f, OUT2)
+    info = q2.q1_tables()[0]
+    tab = {k: dict(F=round(pl(g["rt"]), 6), c=round(c, 5), tau=round(tau, 5), F0=round(pl(g["rt"]), 6), beta=0.0, gamma=0.0)
+           for k, g in info.items() if g["lf"] == 0.4 and g["rt"] >= 0.6}
+    cells = json.load(open(os.path.join(SRC, "cells.json")))        # the form also in cells.json ("floor_form", read by every
+    for k, x in tab.items():                                         # reader where no floor cell acts): no EMT_DCFLOOR needed
+        cells.setdefault(k, {})["floor_form"] = x
+    json.dump(cells, open(os.path.join(OUT2, "cells.json"), "w"), indent=1)
+    json.dump(dict(form="model_s_results 35: the shoulder alone at LF 0.4 / RT >= 0.6", all=dict(F={str(rt): pl(rt) for rt in RTS}, c=c, tau=tau),
+                   settings=tab), open(os.path.join(OUT2, "dcfloor.json"), "w"), indent=1)
+    log.append(f"\n{len(tab)} settings -> {os.path.relpath(OUT2, ROOT)}/dcfloor.json; _pallf's folds and cells.json (floor cells kept) copied")
+    open(LOG.replace("floor_form", "floor_shoulder") + ".log", "w").write("\n".join(log) + "\n")
+    json.dump(dict(c=c, tau=tau, F={str(rt): F[rt] for rt in RTS}, scores=sc), open(LOG.replace("floor_form", "floor_shoulder") + ".json", "w"), indent=1)
+    print("\n".join(log))
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--stage", choices=["fit", "folds"], required=True)
+    ap.add_argument("--stage", choices=["fit", "folds", "shoulder"], required=True)
     a = ap.parse_args()
-    {"fit": fit_stage, "folds": folds_stage}[a.stage]()
+    {"fit": fit_stage, "folds": folds_stage, "shoulder": shoulder_stage}[a.stage]()

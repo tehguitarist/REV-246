@@ -471,6 +471,8 @@ def base_kw(key, table=CELLS_JSON):
         lfdc["0.1"] = fc["dc"]
         t["gamma"] = fc["gamma"]
         kw = dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
+    elif "floor_form" in fc:                            # the floor's shoulder where no floor cell acts (LF 0.4 / RT >= 0.6, 35)
+        kw = dict(floor_form=fc["floor_form"])
     elif q2.dcfloor_form(q2.q1_tables()[0][key]):      # EMT_DCFLOOR: the floor's compact form (model_s_results 34)
         kw = dict(floor_form=q2.dcfloor_form(q2.q1_tables()[0][key]))
     if "hf_dp" in fc:

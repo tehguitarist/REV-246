@@ -1549,6 +1549,8 @@ def _final_setting(a_):
     if fc and "dc_min" in fc:                       # --floorcells: this setting's floor constants (model_s_results 25.6)
         law["lf"][0.1]["dc"] = fc["dc"]
         gamma, fl = fc["gamma"], dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
+    elif fc and "floor_form" in fc:                 # the floor's shoulder where no floor cell acts (LF 0.4 / RT >= 0.6, 35)
+        fl = dict(floor_form=fc["floor_form"])
     elif dcfloor_form(lab):                         # EMT_DCFLOOR: the floor's compact form instead (model_s_results 34)
         fl = dict(floor_form=dcfloor_form(lab))
     if fc and "hf_dp" in fc and not pcurve:         # and its HF pole shift, on every loop (model_s_results 25.7)

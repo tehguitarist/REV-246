@@ -1,0 +1,15 @@
+# The shoulder alone at LF 0.4 / RT >= 0.6 (model_s_results 35); unit = the current model x takefit (chain3_shelf_takefit_cap0.8475_pallf)
+Fitted on the 35 floor-cell settings (140 loops), held out by setting: c 0.5062 dB, tau 1.7399 dB; plateau per RT step 0.3:0.1852 0.6:0.1845 0.8:0.1845 1.0:0.1846 1.4:0.1747 1.8:0.1896 2.2:0.1896 2.5:0.1896
+min request at LF 0.4 / RT >= 0.6: -14.54 dB per pass (plateau -14.68): no loop under it
+
+DC end against the unit, dB per pass (LF 0.4, per RT step): rms and mean of form - unit; the baseline's hard floor without its shelf cells; _pallf with its shelf cells
+  RT  form rms     mean   floor  _pallf | unit / form lift over the law, loops 1-4 (HF mean)
+ 0.6    0.0682  +0.0462  0.1553  0.0374 | +0.076 +0.110 +0.127 +0.242 / +0.086 +0.123 +0.180 +0.350
+ 0.8    0.0097  -0.0005  0.0286  0.0094 | +0.019 +0.028 +0.023 +0.037 / +0.015 +0.020 +0.026 +0.043
+ 1.0    0.0051  -0.0016  0.0108  0.0067 | +0.008 +0.012 +0.006 +0.012 / +0.005 +0.007 +0.008 +0.012
+ 1.4    0.0036  +0.0029  0.0025  0.0048 | -0.002 -0.001 -0.002 +0.000 / +0.001 +0.001 +0.002 +0.002
+ 1.8    0.0081  +0.0080  0.0069  0.0028 | -0.008 -0.006 -0.007 -0.007 / +0.001 +0.001 +0.001 +0.002
+ 2.2    0.0068  +0.0066  0.0060  0.0032 | -0.005 -0.006 -0.007 -0.006 / +0.001 +0.001 +0.001 +0.001
+ 2.5    0.0067  +0.0066  0.0061  0.0033 | -0.005 -0.007 -0.006 -0.006 / +0.000 +0.001 +0.001 +0.001
+
+28 settings -> analysis/loop_cv/hfcells_chain3_cap0.8475_pshoulder/dcfloor.json; _pallf's folds and cells.json (floor cells kept) copied
