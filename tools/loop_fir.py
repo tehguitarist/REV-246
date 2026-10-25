@@ -596,7 +596,7 @@ def interp_stage(workers, only=None):
     def cell(rr, w):
         x = [r["null_comp"][w][1] for r in rr if r["null_comp"].get(w)]
         e = [r["null_comp"][w][1] - rep[(r["key"], r["amp"])]["repeat_comp"][w][1] for r in rr
-             if r["null_comp"].get(w) and rep[(r["key"], r["amp"])]["repeat_comp"].get(w)]
+             if r["null_comp"].get(w) and rep.get((r["key"], r["amp"])) and rep[(r["key"], r["amp"])]["repeat_comp"].get(w)]
         return f"{np.median(x):.1f} [{np.median(e):+.1f}]" if x else "--"
     print(f"\n## Held out by setting (RT {sorted(INTERP)}): corrections interpolated in RT from the neighbouring steps; R, compensated null [excess]")
     print("| settings | loops | " + " | ".join(ws) + " |\n|---|---|" + "---|" * len(ws))

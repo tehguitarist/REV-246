@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 from scipy.signal import sosfiltfilt
 import pulse_check as pc
-from defects import DEFECTS
+from defects import DEFECTS, BAD, SLIPPED
 
 q2, q1 = pc.q2, pc.q2.q1
 FS, PRE = pc.FS, pc.PRE
@@ -80,7 +80,7 @@ def pairs():
     for lf in (0.1, 0.4, 1.0, 2.0):
         k2, k4 = f"{lf}_0.3_0.2", f"{lf}_0.3_0.4"
         G = G_of(c, k4)
-        Y = {(k, a): cap(c, G, k, a) for k in (k2, k4) for a, _ in q2.files_of(c["info"][k]) if (k, a) not in DEFECTS}
+        Y = {(k, a): cap(c, G, k, a) for k in (k2, k4) for a, _ in q2.files_of(c["info"][k]) if (k, a) not in BAD | SLIPPED}   # the GLITCH files stay in: they are what pairs examines
         L.append(f"## LF {lf}")
         L += [f"   {k} AMPL {a:2d} vs model: {nl(y, m, te)}" for (k, a), (y, m, te, _) in Y.items()]
         L += [f"   {k2} vs {k4}, AMPL {a:2d}: {nl(Y[(k2, a)][0], Y[(k4, a)][0], min(Y[(k2, a)][2], Y[(k4, a)][2]))}"

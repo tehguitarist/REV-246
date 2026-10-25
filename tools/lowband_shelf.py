@@ -639,6 +639,9 @@ def hfloop(key, path):
     if CLEAN:                                       # 29: without the slipped files (28) and the bad AMPL-0 captures
         sets = [("clean", [c for c in d["caps"] if (key, c["amp"]) not in CLEAN_OUT])]
     for name, caps in sets:
+        if not caps:                                # a setting with no capture in this set (--clean: 1.0_0.3_0.4 has none)
+            print(f"{key}: no {name} captures, not fitted", flush=True)
+            continue
         res = lambda u: residual(d, Gs_of(u), caps, t0=0.05, sos=SOSB, norm="normB")
         base = float(np.sum(residual(d, None, caps, t0=0.05, sos=SOSB, norm="normB", r=r0) ** 2))
         f = least_squares(res, np.zeros(4), bounds=(-LOOP_B, LOOP_B), x_scale=1e-3, diff_step=1e-4, max_nfev=40)

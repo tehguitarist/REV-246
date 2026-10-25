@@ -368,6 +368,10 @@ def free_stage(workers, iters, only=None, refs=False):
     gdir = os.path.join(OUT, q1.ms.tagged("free") + "_groups")
     os.makedirs(gdir, exist_ok=True)
     keys = [k for k in info if only is None or k in only]
+    empty = [k for k in keys if not files_of(info[k], k)]          # --clean: a setting whose captures are all defects (1.0_0.3_0.4) has nothing to fit
+    if empty:
+        print(f"free: no clean capture, skipped (and dropped from {os.path.basename(free_json())}): {', '.join(empty)}", flush=True)
+    keys = [k for k in keys if k not in empty]
     todo = [k for k in keys if not os.path.exists(os.path.join(gdir, k + ".json"))]
     print(f"free: {len(keys)} settings, {len(keys) - len(todo)} done, {len(todo)} to fit", flush=True)
     jobs = [(k, info[k], fade, law, ap["steps"][ap["settings"][k]["step"]], eps0, iters, refs) for k in todo]
@@ -377,7 +381,7 @@ def free_stage(workers, iters, only=None, refs=False):
             json.dump(r_, open(os.path.join(gdir, r_["key"] + ".json"), "w"), indent=0)
     res = [json.load(open(os.path.join(gdir, k + ".json"))) for k in keys if os.path.exists(os.path.join(gdir, k + ".json"))]
     path = free_json()
-    old = {r["key"]: r for r in json.load(open(path))} if os.path.exists(path) else {}
+    old = {r["key"]: r for r in json.load(open(path)) if r["key"] not in empty} if os.path.exists(path) else {}
     old.update({r["key"]: r for r in res})
     json.dump(list(old.values()), open(path, "w"), indent=0)
     return res
@@ -1735,6 +1739,9 @@ def nulls_stage(source, workers, only=None):
         for r in json.load(open(free_json())):
             k = r["key"]
             caps = [dict(amp=a, file=nm, eps=r["eps"][nm], fade2=fade[nm]) for a, nm in files_of(info[k], k) if nm in r["eps"]]
+            if not caps:                                   # --clean: no clean capture left (free_stage drops such a setting too)
+                print(f"nulls: {k} has no clean capture, skipped", flush=True)
+                continue
             jobs.append((k, dict(lf=r["lf"], rt=r["rt"], hf=r["hf"]), r["b230"], json.loads(json.dumps(law_all)), False,
                          os.path.join(vdir(), k + ".npy"), caps, ends))
     else:
