@@ -27,3 +27,5 @@ analysis/dense_mid/*/score_*/
 analysis/dense_mid/*/x_*.npy
 analysis/ml_fade/curves/
 analysis/ml_fade/rt/
+analysis/uad250/captures/
+analysis/uad250/au_render
