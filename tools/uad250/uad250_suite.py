@@ -54,8 +54,8 @@ def ess(r, sec=10.0, f0=20.0, f1=20000.0, level=-12):
     f1 = min(f1, 0.48 * r); t = np.arange(int(sec * r)) / r; K = sec / np.log(f1 / f0)
     x = np.sin(2 * np.pi * f0 * K * (np.exp(t / K) - 1)) * db(level)
     n = int(0.01 * r); x[:n] *= np.linspace(0, 1, n); x[-n:] *= np.linspace(1, 0, n); return x.astype(np.float32)
-def sweeps(r, n, gap, level=-12):
-    s = ess(r, level=level); x = np.zeros(int(0.5 * r) + n * (len(s) + int(gap * r)), np.float32)
+def sweeps(r, n, gap, level=-12, sec=10.0):
+    s = ess(r, sec=sec, level=level); x = np.zeros(int(0.5 * r) + n * (len(s) + int(gap * r)), np.float32)
     for k in range(n): a = int(0.5 * r) + k * (len(s) + int(gap * r)); x[a:a + len(s)] = s
     return x
 def stereo_one(x, ch): y = np.zeros((len(x), 2), np.float32); y[:, ch] = x; return y
@@ -151,6 +151,10 @@ def build_cases():
     # lag, and tracking that peak in short windows gives each loop's delay versus absolute time. Two seeds at 4.5 s must agree (state follows time).
     for t, sd in (("4.5 s", 11), ("4.5 s", 12), ("2.5 s", 11), ("1.5 s", 11)):
         case("C_loops", f"noise240s_T{t.split()[0]}_seed{sd}", noise_rms(240, r, -18, seed=sd), tail=2, params=dict(Time=t, Noise=0))
+    # C_sweep: sweep captures of the 250 at Time 4.5 for smear comparison with single-capture library IRs (sweep length matters: it sets
+    # how a modulation of period ~1.8 s smears into the deconvolved IR). 4 sweeps per length, 15 s apart.
+    for sec in (5.0, 10.0, 20.0, 30.0):
+        case("C_sweep", f"ess{int(sec)}s_x4_T4.5", sweeps(r, 4, 15.0, sec=sec), tail=14, params=dict(Time="4.5 s", Noise=0), note=f"ess {sec} s 20 Hz-19.2 kHz -12 dBFS, 4 repeats, gap 15 s, start 0.5 s")
     # D. other programs and time/rate coverage
     for i, nm in [(0, "I"), (1, "II"), (2, "III"), (3, "IV")]:
         for nz in (1, 0):
