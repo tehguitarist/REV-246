@@ -192,7 +192,7 @@ def run_stage(rt, workers):
         json.dump(fold[k], open(os.path.join(OUT, f"fold_{rt}_{k}.json"), "w"), indent=1)
     info = json.load(open(os.path.join(q2.Q1, q1.DATA)))
     keys = ",".join(k for k, g in info.items() if g["rt"] == rt)
-    compact = f"diffuser_tied_fix-0.707107_ap230new_{q1.ms.KTAG}" if RETAKE else lf_.COMPACT
+    compact = (os.environ.get("EMT_COMPACT") or f"diffuser_tied_fix-0.707107_ap230new_{q1.ms.KTAG}") if RETAKE else lf_.COMPACT   # EMT_COMPACT: another compact fit (model_s_results 40)
     cmd = [sys.executable, os.path.join(HERE, "q2_injection.py"), "--stage", "final", "--compact", compact,
            "--ap230", os.path.join(q2.OUT, lf_.AP230), "--gamma", str(fold["gamma"]),
            "--lfrt", os.path.join(OUT, f"fold_{rt}_lfrt.json"), "--hfdp", os.path.join(OUT, f"fold_{rt}_hfdp.json"),

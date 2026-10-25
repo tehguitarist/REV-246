@@ -133,12 +133,23 @@ def model(d, c, r):
     return (c["amp"] / 90) * d["clus"][:n] + r[:n]
 
 
-def residual(d, Gs, caps, t0=0.15, sos=SOSF, norm="norm", r=None):
+TAKEFIT_WIN = os.environ.get("TAKEFIT_WIN") == "1"   # takefit: each window of q2.W_COMP from t0 weighted equally (model_s_results 40)
+
+
+def residual(d, Gs, caps, t0=0.15, sos=SOSF, norm="norm", r=None, per_window=False):
     r = reverb(d, Gs) if r is None else r
     out = []
     for c in caps:
         n = len(c["y"])
         i0, i1 = PRE + int(t0 * FS), min(PRE + int(c["te"] * FS), n)
+        if per_window:                              # each window's residual over that window's capture energy (in band)
+            yf = c.setdefault("_yf_" + str(id(sos)), sosfiltfilt(sos, c["y"], axis=0))
+            e = sosfiltfilt(sos, c["y"] - model(d, c, r) * c["g"][:n], axis=0)
+            for a_ms, b_ms in q2.W_COMP:
+                j0, j1 = max(i0, PRE + int(a_ms / 1000 * FS)), min(i1, PRE + int(b_ms / 1000 * FS))
+                if j1 - j0 >= int(0.05 * FS):
+                    out.append(e[j0:j1].ravel() / np.sqrt(np.sum(yf[j0:j1] ** 2)))
+            continue
         e = sosfiltfilt(sos, c["y"] - model(d, c, r) * c["g"][:n], axis=0)[i0:i1]      # g is (n, 2)
         out.append(e.ravel() / c[norm])
     return np.concatenate(out)
@@ -705,7 +716,7 @@ def takefit(key, path):
     for tr, te in (("A", "B"), ("B", "A")):
         if not takes[tr] or not takes[te]:
             continue
-        res = lambda u: residual(d, Gs_of(np.r_[u, np.zeros(12 - nfree)]), takes[tr], t0=0.05, sos=SOSB, norm="normB")
+        res = lambda u: residual(d, Gs_of(np.r_[u, np.zeros(12 - nfree)]), takes[tr], t0=0.05, sos=SOSB, norm="normB", per_window=TAKEFIT_WIN)
         f = least_squares(res, np.zeros(nfree), x_scale=np.r_[np.full(8, 0.01), np.full(nfree - 8, 1e-3)], diff_step=1e-4, max_nfev=40)
         r = reverb(d, Gs_of(np.r_[f.x, np.zeros(12 - nfree)]))
         out["fit"][tr] = f.x.tolist()

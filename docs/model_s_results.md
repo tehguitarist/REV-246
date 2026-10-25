@@ -3737,3 +3737,32 @@ for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_AP230=ap230_mltable_b0.json EM
 - **Without the gain:** HF 0.2 back to its b = 0-alone loss (2.0_2.5_0.2 +0.92 at 300–600 ms, 0.4_2.2_0.2 +0.86 L), and the late medians slip the same way, so the late loss is not only the gain overshooting.
 
 **Why it fails, and what is left (H).** takefit fits from 50 ms with energy weighting, so the late windows hardly constrain the per-pass gain; a per-pass gain error grows with time, and at HF 0.6 / long RT the late windows go the wrong way with or without it. The flat settings' 0–50 ms loss (−0.8 dB) is before any loop recirculates: the compact injection (`diffuser_tied_fix-0.707107_ap230new_chain3`) was fitted with b = 0.00069 at step 0 and would need refitting with it. A second pass would fit the loop change on per-window (or late-weighted) costs and refit the injection — another two to three hours with no assurance of passing; the 50–300 ms gain (≈ 0.5–0.9 dB on the medians) is the prize. Not adopted; the baseline stays `_apml` (`loop_fir.AP230` = `ap230_mltable.json`, step 0 at 0.00069). Kept: `analysis/s_step0/` (the change, the forms, both cells variants and foldcmp logs), `analysis/q2/ap230_mltable_b0.json`; the variant fold set itself is not kept.
+
+## 40. AP230 step 0 at b = 0, second pass: late-weighted loop change and the injection refitted: tried, not adopted (`tools/s_step0.py` with `STEP0_TF=rw`, `TAKEFIT_WIN=1`, `EMT_COMPACT`; 26 October 2026) **[S: with each window weighted equally, the loop change b = 0 needs is one HF pole shift of ≈ −0.7·10⁻⁴ in every loop at every HF < 1 step (sd 0.1–0.2·10⁻⁴); §39's large common gain was the energy-weighted fit trading gain against the early windows (now 0.1 mdB, not predictable held out), and the HF 1.0 DC change is noise (sd 2 mdB); S: the compact injection refitted at b = 0 moves only the tap magnitude (0.06 %); S: with both, the bench still gains 0.9 / 0.4 dB at 50–150 / 150–300 ms (R −53.0 → −53.9 / −51.4 → −51.8) but ≈ 20 HF 0.2 / 0.4 long-RT settings lose 0.5–0.77 dB at 300–600 ms, the late medians slip 0.1–0.2 dB and the flat settings lose 0.7 dB at 0–50 ms; fails the strict rule; S: the flat 0–50 ms loss is specific to the flat settings (63 of 92 undamped settings prefer b ≈ 0 there, median optimum −0.00013); baseline unchanged (`_apml`)]**
+
+```
+EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 6 -- .venv/bin/python tools/q2_injection.py --stage diffuser --gfix -0.70710678 \
+    --ap230 analysis/q2/ap230_mltable_b0.json --workers 4        # 98 s, 2.6 GB; writes the baseline's file name: the baseline's .npy / .json backed up first,
+                                                                 # the new fit renamed diffuser_tied_fix-0.707107_ap230b0_chain3.{npy,json} (+ _q1diff, diffuser_ap230b0_chain3.log),
+                                                                 # the baseline's restored byte-identical (md5)
+for t in 069 0; do TAKEFIT_WIN=1 EMT_AP230=<...> <§39's takefit command> SHELF_TAG=_rw$t; done      # ≈ 6 min each
+STEP0_TF=rw .venv/bin/python tools/s_step0.py --stage shift; STEP0_TF=rw .venv/bin/python tools/s_step0.py --stage cells --form <pole_global | pole_logrt>
+for rt in ...; do EMT_COMPACT=diffuser_tied_fix-0.707107_ap230b0_chain3 EMT_AP230=ap230_mltable_b0.json <bench env> loop_cv.py --retake --tag apml0 --stage run --rt $rt; done
+foldcmp.py <_apml> <_apml0> --per-setting > analysis/s_step0/rw/foldcmp_<form>.log
+```
+
+**What changed from §39.** (1) `TAKEFIT_WIN=1`: takefit's cost is each window of `q2.W_COMP` from 50 ms divided by that window's own capture energy (in band), so 300–1000 ms count as much as 50–150 ms. (2) The compact injection (8 cluster gains and the tap magnitude, fitted on the 6 flat training settings, all undamped) refitted with step 0 at b = 0 (`EMT_COMPACT` in `loop_cv` and `pulse_check` selects it): cluster gains unchanged to 10⁻⁶, tap magnitude +0.06 %; its held-out flat score −51.4 / −49.4 / −45.8 / −35.6 → −51.4 / −49.6 / −46.1 / −35.5 dB.
+
+**The late-weighted change** (`analysis/s_step0/rw/shift.log`): HF poles −0.69 / −0.79 / −0.74 / −0.81·10⁻⁴ (HF 0.2, loops 1–4), −0.69…−0.85 (HF 0.4), −0.54…−0.74 (HF 0.6); gain 0.03–0.16 mdB per pass (held-out error 0.17 of 0.20: not predictable); DC within ±0.2 mdB at HF < 1 and −1.1…−1.9 mdB with sd 1.6–2.1 at HF 1.0 (not predictable, 1.11–1.25 of 1.42). So the compact forms are the poles alone: one held-out shift per loop for all HF < 1 (`pole_global`, 4 numbers, error 0.19 of 0.72·10⁻⁴) or per HF step linear in log RT (`pole_logrt`, 24 numbers, 0.11).
+
+**Bench** (`_apml` → variant with b = 0, the refitted injection and the pole shift; 127 settings, 491 clean captures; the two forms agree to 0.1 dB in every group):
+
+| R median [excess] | 0–50 ms | 50–150 | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|---|
+| All | −51.4 → −51.1 | −53.0 [+3.8] → −53.9 [+3.1] | −51.4 [+3.7] → −51.8 [+3.0] | −46.7 [+0.7] → −46.5 [+0.7] | −39.6 [−0.7] → −39.5 [−0.7] |
+| Flat | −49.8 → −49.1 | −51.7 → −52.0 | −50.0 [+2.4] → −51.1 [+0.7] | −46.8 → −46.9 | −37.4 → −37.6 |
+| RT ≥ 1.4 | −51.2 → −51.0 | −52.9 [+2.4] → −53.9 [+1.3] | −52.1 → −52.4 | −49.1 [+2.6] → −48.7 [+2.7] | −44.1 → −44.1 |
+
+L the same within 0.1–0.2 dB. Per setting (R or L, beyond +0.5 dB): about 20 settings at 300–600 ms, all HF 0.2 / 0.4 at RT ≥ 1.0 (worst 2.0_2.5_0.2 +0.77, 0.4_2.2_0.2 +0.73); none at 50–300 ms beyond +0.40; 600–1000 ms worst +0.47. Better than the first pass late (§39's +0.97 at 600–1000 ms is gone), worse at 300–600 ms than §39's full form, and the flat 0–50 ms loss stays.
+
+**Conclusion.** Three ways of re-adapting S's loops to step 0 at b = 0 (§38.2 probe, §39, here) all keep the 50–150 ms gain (≈ 0.9 dB on the median, about 1 dB at RT ≥ 1.4) and none passes the strict rule: whatever carries the early gain costs HF 0.2 / 0.4 at long RT 0.5–1.0 dB from 300 ms on, and the flat settings lose 0.7–0.8 dB at 0–50 ms where only the cluster, the injection and AP230 act. The flat settings are the injection's training set, fitted with b = 0.00069; refitting its 9 numbers at b = 0 does not release them, so the 0–50 ms preference there is in the cluster / diffuser fit as a whole, not the loops (H). Not adopted. Kept: `analysis/s_step0/rw/` (the change, both cells variants, foldcmp logs), `analysis/q2/diffuser_tied_fix-0.707107_ap230b0_chain3.*`, the `TAKEFIT_WIN` and `EMT_COMPACT` switches (defaults unchanged); the variant fold set is not kept.

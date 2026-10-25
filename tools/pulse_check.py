@@ -67,7 +67,7 @@ FS, PRE = q1.FS, q1.PRE
 CV = os.environ.get("PULSE_CV") or os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_apml")   # model_s_results 38: §35's folds and cells (_pshoulder), AP230 on the M / L table
 REF = os.path.join(ROOT, "analysis", "pulse")                   # the full run: the gate's reference
 OUT = os.environ.get("PULSE_OUT") or REF                        # PULSE_OUT: a candidate's per-group files and report beside the full run's
-COMPACT = f"diffuser_tied_fix-0.707107_ap230new_{q1.ms.KTAG}"
+COMPACT = os.environ.get("EMT_COMPACT") or f"diffuser_tied_fix-0.707107_ap230new_{q1.ms.KTAG}"   # EMT_COMPACT: another compact fit (model_s_results 40)
 BB = butter(4, (100, 10000), btype="band", fs=FS, output="sos")
 OCT = q2.OCT                                                    # 125 Hz-8 kHz
 THIRD = [round(100 * 2 ** (k / 3)) for k in range(19)]           # 100 Hz-6.3 kHz ... 8 kHz

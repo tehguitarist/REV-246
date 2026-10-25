@@ -1,0 +1,9 @@
+  g20 -0.7000 g72 -0.7000 g230 -0.7000 dtap +0.0000: training cost -30.10 dB, a 0.2989
+  g20 -0.7071 g72 -0.7071 g230 -0.7071 dtap +0.0000: training cost -33.17 dB, a 0.2989
+  g20 -0.7000 g72 -0.7000 g230 -0.7000 dtap +0.0000: training cost -30.10 dB, a 0.2989
+[diffuser_tied_fix-0.707107_ap230new_chain3] g20 -0.7071  g72 -0.7071  g230 -0.7071  dtap +0.0000; training cost -30.10 -> -33.17 dB (3 evaluations)
+diffuser_tied_fix-0.707107_ap230new_chain3 (8 held-out captures, 9 params): 50-150: -51.4 [-0.2]; 150-300: -49.4 [+2.3]; 300-600: -45.8 [+0.3]; 600-1000: -35.6 [-0.9]
+   by rt: 0.8: +0.3/+2.2/-0.1; 1.8: -0.7/+2.6/+1.4
+diffuser_tied_fix-0.707107_ap230new_chain3_q1diff (8 held-out captures, 9 params): 50-150: -32.3 [+18.9]; 150-300: -32.1 [+20.9]; 300-600: -31.8 [+16.2]; 600-1000: -30.6 [+4.5]
+   by rt: 0.8: +19.5/+19.4/+11.7; 1.8: +17.6/+22.0/+19.6
+[memguard] peak footprint 2.71 GB, 95 s, exit 0

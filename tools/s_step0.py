@@ -24,7 +24,8 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 TF = os.path.join(ROOT, "analysis", "lowband", "chain3_shelf_takefit_cap0.8475_")
-OUT = os.path.join(ROOT, "analysis", "s_step0")
+TFT = os.environ.get("STEP0_TF", "rb")              # the takefit pair: rb (section 39) or rw (late-weighted, TAKEFIT_WIN=1, section 40)
+OUT = os.path.join(ROOT, "analysis", "s_step0") + ("" if TFT == "rb" else f"/{TFT}")
 BASE = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_apml")
 VAR = os.path.join(ROOT, "analysis", "loop_cv", "hfcells_chain3_cap0.8475_apml0")
 PARTS = (("gain", slice(0, 4)), ("dc", slice(4, 8)), ("pole", slice(8, 12)))
@@ -33,9 +34,9 @@ PARTS = (("gain", slice(0, 4)), ("dc", slice(4, 8)), ("pole", slice(8, 12)))
 def deltas():
     """{key: dict(lf, rt, hf, d (12,), with the pole entries nan at HF 1.0)} from the two takefit runs (mean of the takes)."""
     out = {}
-    for f in sorted(glob.glob(TF + "rb069/*.json")):
+    for f in sorted(glob.glob(TF + f"{TFT}069/*.json")):
         a = json.load(open(f))
-        g = TF + "rb0/" + os.path.basename(f)
+        g = TF + f"{TFT}0/" + os.path.basename(f)
         if not os.path.exists(g) or not a["fit"]:
             continue
         b = json.load(open(g))
@@ -68,6 +69,10 @@ def forms(D):
             pred["hf_logrt"][k] = pred["hf_step"][k]
         pred["zero"][k] = np.zeros(12)
         pred["hf_rt_cell_nogain"][k] = np.r_[np.zeros(4), pred["hf_rt_cell"][k][4:]]      # the common gain left out (it overshoots late)
+        hf_lt1 = [j for j in keys if j != k and D[j]["hf"] < 1.0]      # the poles alone (gain and DC left at the cells'; section 40):
+        pg = np.nanmean([D[j]["d"][8:] for j in hf_lt1], 0) if d["hf"] < 1.0 else np.full(4, np.nan)   # one shift per loop, all HF < 1
+        pred["pole_global"][k] = np.r_[np.zeros(8), pg]
+        pred["pole_logrt"][k] = np.r_[np.zeros(8), pred["hf_logrt"][k][8:]]                         # per HF step, linear in log RT
     return pred
 
 
