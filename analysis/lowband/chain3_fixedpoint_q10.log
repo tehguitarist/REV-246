@@ -13,7 +13,7 @@ Q10 (model_s_results 36): S's four loops, float vs 16-bit fixed point (32-bit ac
       5.00-6.00 s:  -124.2 |   -44.2   -44.2   -15.6 |   -43.7   -43.7
       5-6 s, trunc: output values [-7, -6, -4, -1] (LSB), mean -4.00 LSB, rms about the mean 0.15 LSB, spectral peak 6968 Hz (a limit cycle)
       5-6 s, round: output values [-3, 0, 3] (LSB), mean +0.00 LSB, rms about the mean 0.16 LSB, spectral peak 5650 Hz (a limit cycle)
-   (2) idle noise in, -94 dBFS rms (88 dB below nominal): output S/N re nominal: float 105.3 dB, trunc 69.6, round 2994.0 (the fixed-point part alone: trunc 69.7, round 105.3; trunc output DC -6.3 LSB, removed by the 20 Hz high-pass); spec REVERB 73, DELAY 88
+   (2) idle noise in, -94 dBFS rms (88 dB below nominal): output S/N re nominal: float 105.3 dB, trunc 69.6, round silent (dead band) (the fixed-point part alone: trunc 69.7, round 105.3; trunc output DC -6.3 LSB, removed by the 20 Hz high-pass); spec REVERB 73, DELAY 88
    (3) the sweep's output peak -12.8 dBFS (the headroom a hotter sweep or a hotter internal scaling could use)
    (3) sweep 24.4 s at -6 dBFS peak, deconvolved 25 Hz-11 kHz (tapered), re its 50-300 ms level: input noise alone | trunc: total floor, fixed-point part | round: total, part
       0.05-0.30 s: IR     0.0 |   -98.7 |   -71.0   -71.0 |   -71.2   -71.2
@@ -51,7 +51,7 @@ Q10 (model_s_results 36): S's four loops, float vs 16-bit fixed point (32-bit ac
       5.00-6.00 s:  -304.1 |   -58.2   -58.2   -20.6 |   -58.2   -58.2
       5-6 s, trunc: output values [-5, -4, -3] (LSB), mean -4.00 LSB, rms about the mean 0.05 LSB, spectral peak 5650 Hz (a limit cycle)
       5-6 s, round: output values [-1, 0, 1] (LSB), mean +0.00 LSB, rms about the mean 0.05 LSB, spectral peak 5650 Hz (a limit cycle)
-   (2) idle noise in, -94 dBFS rms (88 dB below nominal): output S/N re nominal: float 101.3 dB, trunc 73.6, round 2994.0 (the fixed-point part alone: trunc 73.7, round 101.3; trunc output DC -3.0 LSB, removed by the 20 Hz high-pass); spec REVERB 73, DELAY 88
+   (2) idle noise in, -94 dBFS rms (88 dB below nominal): output S/N re nominal: float 101.3 dB, trunc 73.6, round silent (dead band) (the fixed-point part alone: trunc 73.7, round 101.3; trunc output DC -3.0 LSB, removed by the 20 Hz high-pass); spec REVERB 73, DELAY 88
    (3) the sweep's output peak -10.0 dBFS (the headroom a hotter sweep or a hotter internal scaling could use)
    (3) sweep 24.4 s at -6 dBFS peak, deconvolved 25 Hz-11 kHz (tapered), re its 50-300 ms level: input noise alone | trunc: total floor, fixed-point part | round: total, part
       0.05-0.30 s: IR     0.0 |   -99.7 |   -75.5   -75.5 |   -75.1   -75.1
@@ -89,7 +89,7 @@ Q10 (model_s_results 36): S's four loops, float vs 16-bit fixed point (32-bit ac
       5.00-6.00 s:  -218.0 |  -218.0  -283.8   -11.3 |  -218.0 -2936.6
       5-6 s, trunc: output values [-6] (LSB), mean -6.00 LSB, rms about the mean 0.00 LSB
       5-6 s, round: output values [0] (LSB), mean +0.00 LSB, rms about the mean 0.00 LSB
-   (2) idle noise in, -94 dBFS rms (88 dB below nominal): output S/N re nominal: float 107.2 dB, trunc 84.3, round 2994.0 (the fixed-point part alone: trunc 84.8, round 107.2; trunc output DC -3.0 LSB, removed by the 20 Hz high-pass); spec REVERB 73, DELAY 88
+   (2) idle noise in, -94 dBFS rms (88 dB below nominal): output S/N re nominal: float 107.2 dB, trunc 84.3, round silent (dead band) (the fixed-point part alone: trunc 84.8, round 107.2; trunc output DC -3.0 LSB, removed by the 20 Hz high-pass); spec REVERB 73, DELAY 88
    (3) the sweep's output peak -15.0 dBFS (the headroom a hotter sweep or a hotter internal scaling could use)
    (3) sweep 24.4 s at -6 dBFS peak, deconvolved 25 Hz-11 kHz (tapered), re its 50-300 ms level: input noise alone | trunc: total floor, fixed-point part | round: total, part
       0.05-0.30 s: IR     0.0 |  -100.3 |   -72.2   -72.2 |   -71.9   -71.9

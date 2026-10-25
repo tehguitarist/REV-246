@@ -611,8 +611,9 @@ def q10(keys=("1.0_2.5_1.0", "1.0_1.0_1.0", "2.0_0.8_0.2")):
                 nom = -6.0
                 sn = {m: nom - db(yn[m][M // 2:]) for m in (0, 1, 2)}
                 add = {m: nom - db((yn[m] - yn[0])[M // 2:]) for m in (1, 2)}
-                log(f"   (2) idle noise in, -94 dBFS rms (88 dB below nominal): output S/N re nominal: float {sn[0]:.1f} dB, trunc {sn[1]:.1f}, round {sn[2]:.1f} "
-                    f"(the fixed-point part alone: trunc {add[1]:.1f}, round {add[2]:.1f}; trunc output DC {np.mean(ynr[1][M // 2:]) * 32768:+.1f} LSB, removed by the 20 Hz high-pass); spec REVERB 73, DELAY 88")
+                fs = lambda x: "silent (dead band)" if x > 200 else f"{x:.1f}"   # db()'s 1e-300 floor: an all-zero output
+                log(f"   (2) idle noise in, -94 dBFS rms (88 dB below nominal): output S/N re nominal: float {fs(sn[0])} dB, trunc {fs(sn[1])}, round {fs(sn[2])} "
+                    f"(the fixed-point part alone: trunc {fs(add[1])}, round {fs(add[2])}; trunc output DC {np.mean(ynr[1][M // 2:]) * 32768:+.1f} LSB, removed by the 20 Hz high-pass); spec REVERB 73, DELAY 88")
                 oo["idle"] = dict(float=sn[0], trunc=sn[1], round=sn[2], trunc_added=add[1], round_added=add[2], trunc_dc_lsb=float(np.mean(ynr[1][M // 2:]) * 32768))
                 # (3) through a sweep, deconvolved
                 Ls, f1, f2 = 3.4, 10.0, 13000.0
