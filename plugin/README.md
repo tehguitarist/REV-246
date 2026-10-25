@@ -19,7 +19,7 @@ bundles sit beside it. Add `-DRV_BUILD_TESTS=ON` and run `ctest --test-dir plugi
 
 | Path | What it is |
 |---|---|
-| `src/PluginProcessor.*` | Parameters, mono-in / stereo-out path, power (bypass), pan, mix, gains, input level for the meter |
+| `src/PluginProcessor.*` | Parameters, channel handling (mono/mono, mono/stereo, stereo/stereo), power (bypass), pan, mix, gains, input level for the meter |
 | `src/dsp/ReverbEngine.h` | The model's interface (placeholder body) |
 | `src/dsp/Transformer.h`, `CaptureEq.h` | The optional TRANSFORMER stage: low-band EQ and guessed transformer distortion (see below) |
 | `src/params/` | Parameter IDs (permanent), the joystick step tables (placeholders), the fader scales |
@@ -30,6 +30,19 @@ bundles sit beside it. Add `-DRV_BUILD_TESTS=ON` and run `ctest --test-dir plugi
 | `installer/` | macOS `.pkg`, Windows NSIS `.exe`, Linux `.deb` builders |
 | `../.github/workflows/plugin-*.yml` | CI and release: manual-trigger only for now |
 | `docs/DEVELOPMENT.md` | Rules: cross-platform, assets, CI, parameters |
+
+## Channel modes
+
+The plugin accepts mono in / mono out, mono in / stereo out and stereo in / stereo out. The unit's own algorithm is mono
+in / stereo out, so:
+
+- **Mono out** uses the left side of the reverb (one read-out is enough; the real output taps can revisit this).
+- **Mono in / stereo out** is the unit's native path.
+- **Stereo in / stereo out** defaults to **ORIGINAL**: the input is summed to the unit's mono input at -6 dB (0.5 x L+R,
+  so correlated channels keep their level rather than gaining 6 dB), then the mono reverb feeds both outputs. The
+  **ORIGINAL / TRUE ST** button in the bottom bar switches to true stereo, which runs one mono engine per input
+  channel (left through engine 0 and right through engine 1). The button is greyed out for the mono layouts. Like LINK
+  and TRANSFORMER it is a routing preference, so presets neither store nor change it.
 
 ## TRANSFORMER (optional, off by default)
 

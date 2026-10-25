@@ -28,6 +28,32 @@ TEST_CASE("tooltips follow the ? button")
     CHECK(editor->tooltipAllowed(*editor));
 }
 
+TEST_CASE("the stereo button offers the original mode by default and only in stereo to stereo")
+{
+    Rev246Processor p;
+    std::unique_ptr<juce::AudioProcessorEditor> base(p.createEditor());
+    auto* editor = dynamic_cast<Rev246Editor*>(base.get());
+    REQUIRE(editor != nullptr);
+    auto& button = editor->getStereoButton();
+    CHECK(button.isEnabled());
+    CHECK_FALSE(button.isOn());
+    CHECK(button.getLabel() == "ORIGINAL");
+    CHECK(button.getTooltip().contains("Original"));
+
+    button.onToggle(true);
+    editor->refreshNow();
+    CHECK(button.isOn());
+    CHECK(button.getLabel() == "TRUE ST");
+    CHECK(p.apvts.getRawParameterValue(rv::params::id::trueStereo)->load() >= 0.5f);
+
+    juce::AudioProcessor::BusesLayout layout;
+    layout.inputBuses.add(juce::AudioChannelSet::mono());
+    layout.outputBuses.add(juce::AudioChannelSet::mono());
+    REQUIRE(p.setBusesLayout(layout));
+    editor->refreshNow();
+    CHECK_FALSE(button.isEnabled());
+}
+
 // Renders the panel to a PNG when REV_SNAPSHOT names a file, for checking the layout against ui/main.png by eye.
 TEST_CASE("snapshot")
 {

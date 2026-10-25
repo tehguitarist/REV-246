@@ -67,6 +67,7 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
       presetBar(p.presets, *this),
       linkButton({0.0f, rv::design::barTop + 35.0f, 220.0f, 80.0f}, "LINK", rv::ui::BarButton::Kind::toggle), // x: see below
       transformerButton({0.0f, rv::design::barTop + 35.0f, 440.0f, 80.0f}, "TRANSFORMER", rv::ui::BarButton::Kind::toggle),
+      stereoButton({0.0f, rv::design::barTop + 35.0f, 300.0f, 80.0f}, "ORIGINAL", rv::ui::BarButton::Kind::toggle),
       calButton({0.0f, rv::design::barTop + 35.0f, 220.0f, 80.0f}, "CAL -18", rv::ui::BarButton::Kind::momentary),
       helpButton({0.0f, rv::design::barTop + 35.0f, 90.0f, 80.0f}),
       // The product name in the middle of the bar; the plugin's version (JUCE's, from the CMake project) at the right.
@@ -78,7 +79,7 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
 
     // The right end of the bar, laid out from the version number's width (fonts differ by platform): the version sits
     // barEdgePad from the panel's right edge, the "?" the same distance to its left, LINK just left of the "?" and
-    // TRANSFORMER left of LINK.
+    // TRANSFORMER left of LINK. The stereo mode button and CAL sit to the left of the transformer.
     {
         const auto versionText = juce::String("v") + JucePlugin_VersionString;
         const auto textW = rv::ui::textWidth(rv::ui::labelFont(30.0f), versionText) + 2.0f;
@@ -90,7 +91,9 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
         const auto linkX = helpRight - 90.0f - 12.0f - 220.0f;
         linkButton.setDesignBounds({linkX, y, 220.0f, 80.0f});
         transformerButton.setDesignBounds({linkX - 12.0f - 440.0f, y, 440.0f, 80.0f});
-        calButton.setDesignBounds({linkX - 12.0f - 440.0f - 12.0f - 220.0f, y, 220.0f, 80.0f});
+        const auto calX = linkX - 12.0f - 440.0f - 12.0f - 220.0f;
+        calButton.setDesignBounds({calX, y, 220.0f, 80.0f});
+        stereoButton.setDesignBounds({calX - 12.0f - 300.0f, y, 300.0f, 80.0f});
     }
 
     // Programme buttons and lamps.
@@ -178,6 +181,16 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
         pr.endChangeGesture();
     };
 
+    stereoButton.setTooltip("Original: the stereo input is summed to the unit's mono input at -6 dB, then panned. "
+                            "TRUE ST: left and right each go through a separate reverb. The original unit is mono in, "
+                            "stereo out, so Original is the default. Only applies with a stereo input and stereo output.");
+    stereoButton.onToggle = [this](bool on) {
+        auto& pr = param(P::id::trueStereo);
+        pr.beginChangeGesture();
+        pr.setValueNotifyingHost(on ? 1.0f : 0.0f);
+        pr.endChangeGesture();
+    };
+
     meterCalIndex = juce::jlimit(0, rv::design::numMeterCal - 1,
                                  (int)proc.uiState().getProperty(Rev246Processor::UiProps::meterCal, rv::design::defaultMeterCal));
     calButton.setTooltip("Meter calibration: what 0 VU reads, in dBFS. Click to cycle. -18 dBFS is the default "
@@ -212,7 +225,7 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
     for (auto& l : leds) designComponents.push_back(l.get());
     for (auto* c : std::initializer_list<rv::ui::DesignComponent*>{&powerButton, &programDisplay, &lowpassDisplay, &reflectionsDisplay,
                                                                   &decayDisplay, &levelMeter, &panKnob, &mixFader, &inputFader,
-                                                                  &outputFader, &linkButton, &transformerButton, &calButton, &helpButton,
+                                                                  &outputFader, &linkButton, &transformerButton, &stereoButton, &calButton, &helpButton,
                                                                   &titleLabel, &versionLabel})
         designComponents.push_back(c);
     presetBar.addTo(designComponents);
@@ -221,7 +234,7 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
             addAndMakeVisible(*c);
     addChildComponent(bubble);
 
-    for (const auto* id : {P::id::program, P::id::mix, P::id::pan, P::id::inputGain, P::id::outputGain, P::id::power, P::id::link, P::id::transformer})
+    for (const auto* id : {P::id::program, P::id::mix, P::id::pan, P::id::inputGain, P::id::outputGain, P::id::power, P::id::link, P::id::transformer, P::id::trueStereo})
         proc.apvts.addParameterListener(id, this);
     for (int i = 0; i < joyCount; ++i)
         proc.apvts.addParameterListener(P::joyId((Joy)i), this);
@@ -248,7 +261,7 @@ Rev246Editor::~Rev246Editor()
 {
     stopTimer();
     proc.presets.onChange = nullptr;
-    for (const auto* id : {P::id::program, P::id::mix, P::id::pan, P::id::inputGain, P::id::outputGain, P::id::power, P::id::link, P::id::transformer})
+    for (const auto* id : {P::id::program, P::id::mix, P::id::pan, P::id::inputGain, P::id::outputGain, P::id::power, P::id::link, P::id::transformer, P::id::trueStereo})
         proc.apvts.removeParameterListener(id, this);
     for (int i = 0; i < joyCount; ++i)
         proc.apvts.removeParameterListener(P::joyId((Joy)i), this);
@@ -329,6 +342,12 @@ juce::String Rev246Editor::calLabel() const
 void Rev246Editor::timerCallback()
 {
     levelMeter.setLevel(proc.getInputVu(), proc.takeInputClip(), rv::design::meterCalDbFs[meterCalIndex]);
+    // The host may change the bus layout while the editor is open; the stereo button follows it.
+    if (proc.isStereoToStereo() != stereoAvailable)
+    {
+        stereoAvailable = proc.isStereoToStereo();
+        needsRefresh = true;
+    }
     if (needsRefresh.exchange(false))
         refreshAll();
 }
@@ -345,6 +364,11 @@ void Rev246Editor::refreshAll()
     powerButton.setOn(param(P::id::power).getValue() >= 0.5f);
     linkButton.setOn(param(P::id::link).getValue() >= 0.5f);
     transformerButton.setOn(param(P::id::transformer).getValue() >= 0.5f);
+    stereoAvailable = proc.isStereoToStereo();
+    stereoButton.setEnabled(stereoAvailable);
+    const bool useTrueStereo = param(P::id::trueStereo).getValue() >= 0.5f;
+    stereoButton.setOn(useTrueStereo);
+    stereoButton.setLabel(useTrueStereo ? "TRUE ST" : "ORIGINAL");
 
     std::array<P::JoyValue, joyCount> values;
     for (int i = 0; i < joyCount; ++i)

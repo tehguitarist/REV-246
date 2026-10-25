@@ -26,6 +26,7 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     bool tooltipAllowed(const juce::Component& c) const { return tooltipWindow.allows(c); }
     void refreshNow() { refreshAll(); }
     rv::ui::LevelMeter& getLevelMeter() { return levelMeter; }
+    rv::ui::BarButton& getStereoButton() { return stereoButton; }
 
   private:
     using Joy = rv::params::Joy;
@@ -65,6 +66,7 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     rv::ui::PresetBar presetBar;
     rv::ui::BarButton linkButton;
     rv::ui::BarButton transformerButton;
+    rv::ui::BarButton stereoButton;
     rv::ui::BarButton calButton;
     rv::ui::HelpButton helpButton;
     rv::ui::BarLabel titleLabel, versionLabel;
@@ -87,6 +89,7 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     std::vector<rv::ui::DesignComponent*> designComponents;
     std::atomic<bool> needsRefresh{true};
     bool linkedGestureOpen = false;
+    bool stereoAvailable = false; // a stereo in / stereo out bus layout (the stereo button's enable state)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Rev246Editor)
 };

@@ -8,6 +8,8 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
 
+#include <array>
+
 class Rev246Processor : public juce::AudioProcessor
 {
   public:
@@ -54,19 +56,28 @@ class Rev246Processor : public juce::AudioProcessor
     float getInputVu() const { return inputVu.load(std::memory_order_relaxed); }
     bool takeInputClip() { return inputClip.exchange(false, std::memory_order_relaxed); }
 
+    // True only for a stereo in / stereo out bus layout: the original / true-stereo choice has no meaning otherwise.
+    bool isStereoToStereo() const
+    {
+        return getTotalNumInputChannels() > 1 && getTotalNumOutputChannels() > 1;
+    }
+
     juce::ValueTree uiState() { return apvts.state.getOrCreateChildWithName(UiProps::node, nullptr); }
 
   private:
-    rv::dsp::ReverbEngine engine;
-    rv::dsp::Transformer transformer;
+    // The unit's algorithm is mono in / stereo out. The second engine and transformer make the optional true-stereo
+    // mode (one mono path per input channel); otherwise engine 0 carries the (possibly summed) mono input.
+    std::array<rv::dsp::ReverbEngine, 2> engines;
+    std::array<rv::dsp::Transformer, 2> transformers;
     juce::LinearSmoothedValue<float> inGain, outGain, mixAmount, panLeft, panRight, wetOn, transformerOn;
     juce::AudioBuffer<float> scratch;
     std::atomic<float> inputVu{0.0f};
     std::atomic<bool> inputClip{false};
     float vu = 0.0f;         // the VU integrator's state (linear RMS), audio thread only
     double vuTauSamples = 0.0; // VU time constant in samples (tau * sample rate), set in prepareToPlay
+    bool lastTrueStereo = false; // engine 1's state is reset when the routing turns true stereo on or off
 
-    std::atomic<float>*pProgram, *pMix, *pPan, *pIn, *pOut, *pPower, *pTransformer;
+    std::atomic<float>*pProgram, *pMix, *pPan, *pIn, *pOut, *pPower, *pTransformer, *pTrueStereo;
     std::array<std::atomic<float>*, rv::params::numJoys> pJoy;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Rev246Processor)

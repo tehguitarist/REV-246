@@ -36,6 +36,10 @@
 ## Parameters
 - IDs in `src/params/Parameters.h` are permanent. The joystick step tables are placeholders (H) until the unit's exact
   step tables are known; only step counts and ranges are from the data sheet (`../docs/EMT246_unit_facts.md`).
+- The buses allow mono in / mono out, mono in / stereo out and stereo in / stereo out. The reverb engine is mono in /
+  stereo out, so a mono output takes its left side. For stereo in / stereo out, `trueStereo` (default off, the
+  ORIGINAL / TRUE ST button) selects between the original summed path (0.5 x L+R into one engine) and two engines,
+  one per input channel. Presets skip it, like `power`, `link` and `transformer`.
 - `transformer` (default off, the TRANSFORMER button) switches on `src/dsp/Transformer.h`: an input transformer core
   on the mono input, then per output the low-band EQ (`src/dsp/CaptureEq.h`) and an output transformer core. Presets
   skip it, like `power` and `link`. The stage always runs (warm state, a 20 ms crossfade when toggled); off, its

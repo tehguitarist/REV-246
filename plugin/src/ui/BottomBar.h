@@ -16,6 +16,7 @@ class BarButton : public DesignComponent
     void setOn(bool);
     bool isOn() const { return on; }
     void setLabel(const juce::String&);
+    juce::String getLabel() const { return label; }
     std::function<void()> onClick;
     std::function<void(bool)> onToggle; // toggles: the requested state
 

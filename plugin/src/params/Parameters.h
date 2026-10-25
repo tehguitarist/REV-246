@@ -30,6 +30,9 @@ inline constexpr const char* link = "link";   // input and output faders move to
 // The transformer-fitted unit (dsp/Transformer.h): the commercial captures' low band and guessed transformer
 // distortion on the wet path; off = faithful to Tomkin and the stock unit.
 inline constexpr const char* transformer = "transformer";
+// Stereo in / stereo out only: false (default) sums the input to the unit's mono input ("ORIGINAL"), true processes
+// left and right through separate reverbs. A routing preference, so presets leave it alone like link and transformer.
+inline constexpr const char* trueStereo = "trueStereo";
 } // namespace id
 
 enum class Program

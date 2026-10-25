@@ -27,3 +27,14 @@ TEST_CASE("factory presets load and are not user-overwritable")
     p.apvts.getParameter(rv::params::id::mix)->setValueNotifyingHost(0.9f);
     CHECK(p.presets.isModified());
 }
+
+TEST_CASE("presets leave the stereo mode alone")
+{
+    Rev246Processor p;
+    auto* mode = p.apvts.getParameter(rv::params::id::trueStereo);
+    CHECK(p.presets.load("Init S"));
+    mode->setValueNotifyingHost(1.0f);
+    CHECK_FALSE(p.presets.isModified()); // a routing preference, not a setting
+    CHECK(p.presets.load("Init M"));
+    CHECK(mode->getValue() >= 0.5f);
+}
