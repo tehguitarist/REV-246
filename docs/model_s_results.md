@@ -3213,6 +3213,35 @@ EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 EMT_CV_FOLDS=$PWD/analysis/l
 
 **Reading.** S's loop coefficients are now a compact law (the length-scaled Jot law, the shelf with its DC floor and LF 0.4 constant, one HF pole curve with a drop-back, per-(LF, RT) shelf cells at the sampled steps), held out by setting. The remaining lead of a free per-setting refit is ≈ 1.5–2 dB, concentrated in single HF 0.2 settings. With the 50–150 ms floor (§32.7) and the repeat-level late windows, this is close to what the library can show for S without per-setting tables.
 
+### 32.10 Housekeeping: `cells.json`'s dead pole entries; the S model's parameter count **[C: `hf_dp` and `hf_slope` never reach the rendered model on the baseline; removing them leaves the bench and the gate bit-identical; S: the model's real parameter count is about 370, 320 of them the two cell tables]**
+
+```
+.venv/bin/python <drop hf_dp / hf_slope from analysis/loop_cv/hfcells_chain3_cap0.8475_pallf/cells.json>      # 176 entries (96 hf_dp, 80 hf_slope); backup kept outside the repo
+for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do <as §32.6> --tag pallfhk --stage run --rt $rt --workers 8; done  # variant fold set: _pallf's folds + the trimmed cells.json; 36-115 s per fold, 3.5-4.1 GB
+PULSE_CV=…_pallfhk EMT_HFRT_MIN=0.12 EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/pulse_check.py --stage gate --tag pallfhk   # 173 s, 3.5 GB
+```
+
+**Dead and live.** Every setting with an `hf_dp` also has `hf_poles` (96 settings, HF < 1); the 32 HF 1.0 settings have neither, and the pole code in `G_capped` runs only for HF < 1, so no `hf_dp` ever reaches them. Where both exist, `G_capped` takes `hf_dp["poles"][i]` before the `hf_dp[<hf>]` + slope branch, and the three readers (`q2_injection._final_setting`, `pulse_check.setting_G`, `lowband_shelf.base_kw`) hand it the `{"poles": …}` dict last, so `hf_dp` and `hf_slope` are dead in the bench, the gate and `takefit`. The same goes for the per-fold `hfdp` and `pramp` (`fold_<rt>.json`): the bench's poles come only from `cells.json` `hf_poles` (the LF-held-out curve is baked into it by `pole_cells.py --by-lf`), not from the fold files, and `P_MAX` no longer limits any S pole. **The HF 0.2 / RT 0.6 drop-back was already explicit**: `pole_cells.py` wrote the baseline's pole (the 0.8475 ceiling + the cell's old shift) into `hf_poles` for each dropped loop, 0.8465 at LF 0.1 / 0.4 / 2.0 (loops 2–4 at LF 0.1 / 0.4, all four at LF 2.0) and 0.847 at LF 1.0 (all four). Nothing needed adding, and no reader changed (older fold sets still carry `hf_dp`). `lf_gain`, `lf_dc`, `dc`, `dc_min`, `beta`, `gamma`, `gamma_dc` and `hf_poles` are live.
+
+**Same model.** All 128 settings, eight RT folds: every capture's row (512 captures, nulls, octave nulls and comparison metrics) is byte-identical to `_pallf`'s, so max |Δ| is 0 dB in every window (0–50 … 1500–2500 ms), R and L; `foldcmp.py` shows 0 settings better or worse. Held out by LF step, as §32.6: R −52.3 / −51.3 / −46.6 / −39.6 dB at 50–150 / 150–300 / 300–600 / 600–1000 ms, excess +4.2 / +3.8 / +0.8 / −0.8 dB. The gate (`PULSE_CV=…_pallfhk`) **PASS**: S medians −52.12 / −51.41 / −46.90 dB, worst decay errors and EDC as §32.6; its S, CLA, Altiverb, M and L result files are identical to the full run's. Logs: `analysis/pulse/gate_pallfhk/gate.log`, `bench_compare.log`.
+
+**The parameter count** (distinct numbers, counted from the files as they stand; the injection side is not in `cells.json`):
+
+| Part | Numbers | Source |
+|---|---|---|
+| HF pole curve | 12 knot values (knots fixed at 0, 0.15, 0.25, 0.35, 0.45, 0.55, 0.62, 0.68, 0.74, 0.78, 0.81, 0.837) | §32.5–32.6 |
+| drop-back | 2 values (0.8465, 0.847) + the 0.856 threshold = 3 | §32.4 |
+| shelf cells `lf_gain` / `lf_dc` | 236: 20 (LF, RT) cells at RT ≥ 1.0 × (3 gain, as the loop mean is removed, + 4 DC) = 140, 12 cells at RT ≤ 0.8 × 8 = 96 | §32.2–32.3 |
+| DC-floor cells (36 settings) | 84 = 21 distinct (`dc`, `dc_min`, `beta`, `gamma`) sets × 4; as distinct scalars 26 (`dc` 16, `dc_min` 4, `beta` 2, `gamma` 4) | §25.6, §32 |
+| Jot law | 13: (hi, dc, k) per LF step with dc at LF 1.0 fixed = 11, the shelf pole, `f_ref`; LF 0.4's DC ratio (0.414) is its `dc` | `q1.fit_laws` |
+| LF–RT slopes and the floor gamma | 4: LF 0.4 `a` (knee at RT 1.8 fixed), LF 2.0 `a`, `b`; the fold's default gamma (−0.02 / −0.03) | §22 |
+| HF floor | 1 (0.12 s) | §29 |
+| **Loop side** | **353** | |
+| injection | 9 (8 cluster gains, one tap magnitude) + the AP230 table, 4 step values with a 2-bit step per setting | §16, §25 |
+| **Total** | **366**, plus per capture a clock, a shift and a gain (not model) | |
+
+The 320 cell numbers dominate, and §32.8 shows the shelf cells cannot be carried to uncaptured steps. Fixed constants, not counted: the all-pass gains (−1/√2), the delays, `FINAL_DIFF`, the 1.8 knee. The file does not hold the 236 / 84 tables as such: `lf_gain` / `lf_dc` are each setting's own leave-one-HF-out means (128 × 8 = 1,024 entries, 867 distinct values), and `hf_poles` is the held-out curve at each loop's law pole (96 × 4 = 384 entries, 308 distinct values), so the table and curve counts come from §32.2–32.6 and the code, not from counting the file's entries. `P_MAX` (0.8475) and `DC_MIN` (0.18) are no longer independent numbers: `P_MAX` only gave the drop-back values, and the floor cells carry their own `dc_min`.
+
 ## 33. Reverb-specific metrics (G6) and fine-resolution decay (`pulse_check.py`, G6, October 2026) **[S: S matches the library in every energy-ratio, tonal, density, coloration and stereo metric far below audibility; S: no narrow-band ringing errors (§33.1); S: the other units differ from the model in the low band only, as the known unit transfer predicts]**
 
 ```
