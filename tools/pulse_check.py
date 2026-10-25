@@ -524,6 +524,9 @@ def ml_report():
     def med(rr, k, f=lambda x: x):
         x = [f(s[k]) for s in rr if s.get(k) is not None and np.isfinite(s[k])]
         return np.median(x) if x else np.nan
+    from defects import ML_SLIPPED                  # slipped captures and their pairs left out (ml_structure 23)
+    D = [dict(d, rows=[r for r in d["rows"] if (d["prog"], d["key"], r["amp"]) not in ML_SLIPPED],
+              pairs=[p for p in d["pairs"] if not any((d["prog"], d["key"], a) in ML_SLIPPED for a in p["pair"])]) for d in D]
     for prog in ("M", "L"):
         G = [d for d in D if d["prog"] == prog]
         if not G:
