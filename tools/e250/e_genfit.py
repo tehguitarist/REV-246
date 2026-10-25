@@ -1,6 +1,6 @@
 """Fit the moving-read generator of e_sim to the random part's statistics, held out by RT step (docs/EMT250_program.md §12).
 
-    .venv/bin/python tools/memguard.py --limit-gb 3 -- .venv/bin/python tools/e250/e_genfit.py [--law tri|walk] [--M 6] [--tsw 10]   (or --sinegrid)
+    .venv/bin/python tools/memguard.py --limit-gb 3 -- .venv/bin/python tools/e250/e_genfit.py [--law tri|lfo_tri|lfo_sine] [--M 6] [--tsw 10]   (or --sinegrid)
 
 Fitted on the statistics of RT 1.0 / 2.0 / 3.0 / 4.0, scored on 1.5 / 2.5 / 3.6 / 4.5 (and the reverse split). Free: b, lo, hi,
 v (up), vdn (down), vsd, share (7 numbers); M, the motion law and the sweep length are fixed per run (the sweep length is the Altiverb capture's,
@@ -14,8 +14,12 @@ HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 import e_model as E  # noqa: E402
 import e_sim as S  # noqa: E402
 
-NAMES = ("b", "lo", "hi", "v", "vdn", "vsd", "share")
-X0 = (0.8, 400.0, 3600.0, 60.0, 80.0, 0.3, 0.5)
+LAWS = {   # free parameters and start per motion law
+    "tri": (("b", "lo", "hi", "v", "vdn", "vsd", "share"), (0.8, 400.0, 3600.0, 60.0, 80.0, 0.3, 0.5)),
+    "lfo_tri": (("b", "lo", "hi", "A", "fsd", "share"), (0.81, 405.0, 3600.0, 32.0, 0.3, 0.5)),    # the UAD plugin's law (§13)
+    "lfo_sine": (("b", "lo", "hi", "A", "fsd", "share"), (0.81, 405.0, 3600.0, 25.0, 0.1, 0.5)),
+}
+NAMES, X0 = LAWS["tri"]
 SPLITS = (((1.0, 2.0, 3.0, 4.0), (1.5, 2.5, 3.6, 4.5)), ((1.5, 2.5, 3.6, 4.5), (1.0, 2.0, 3.0, 4.0)))
 
 
@@ -26,7 +30,9 @@ def data_ref(rts):
 
 def prm_of(x, fixed):
     p = dict(S.DEF) | fixed | dict(zip(NAMES, x))
-    p["vsd"] = float(np.clip(p["vsd"], 0, 0.95)); p["share"] = float(np.clip(p["share"], 0, 1))
+    for k in ("vsd", "fsd"):
+        p[k] = float(np.clip(p.get(k, 0.0), 0, 0.95))
+    p["share"] = float(np.clip(p["share"], 0, 1))
     return p
 
 
@@ -53,11 +59,15 @@ def main():
     a = ap.parse_args()
     if a.sinegrid:
         return sinegrid()
+    global NAMES, X0
+    NAMES, X0 = LAWS[a.law]
     fixed = dict(law=a.law, M=a.M, tsw=a.tsw, seed=7)
+    if a.law.startswith("lfo_"):
+        fixed |= dict(law="lfo", wave=a.law[4:], f=0.553, groups=0)
     out = dict(fixed=fixed, splits=[])
     for tr, te in SPLITS:
         ref_tr, ref_te = data_ref(list(tr)), data_ref(list(te))
-        f = lambda x: S.cost(S.sim_stats(prm_of(x, fixed), list(tr)), ref_tr) if x[1] < x[2] - 200 and x[0] > 0 and x[3] > 0 and x[4] > 0 else 1e9
+        f = lambda x: S.cost(S.sim_stats(prm_of(x, fixed), list(tr)), ref_tr) if x[1] < x[2] - 200 and x[0] > 0 and x[3] > 0 else 1e9
         res = minimize(f, X0, method="Nelder-Mead", options=dict(maxfev=a.iters, xatol=1e-2, fatol=0.5, initial_simplex=None))
         p = prm_of(res.x, fixed)
         st_te = S.sim_stats(p | dict(seed=11), list(te)); c_te = S.cost(st_te, ref_te)
@@ -69,7 +79,7 @@ def main():
         print(f"{a.law} M {a.M} tsw {a.tsw}: train {tr} cost {res.fun:.1f} -> test {te} cost {c_te:.1f} (data half vs half {c_dd:.1f}) | "
               + " ".join(f"{k} {p[k]:.3g}" for k in NAMES), flush=True)
         S.show(st_te, "   sim  test"); S.show(ref_te, "   data test")
-    tag = a.tag or f"{a.law}_M{a.M}_t{a.tsw:g}"
+    tag = a.tag or f"{a.law}_M{a.M}_t{a.tsw:g}_loo"
     json.dump(out, open(os.path.join(E.OUT, f"genfit_{tag}.json"), "w"), indent=1)
 
 

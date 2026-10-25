@@ -218,7 +218,7 @@ if __name__ == "__main__":
     ap.add_argument("--tfit", type=float, default=2.0)
     ap.add_argument("--held", default="all")
     ap.add_argument("--rtmin", type=float, default=1.0)
-    ap.add_argument("--ppm", type=float, default=42.8)
+    ap.add_argument("--ppm", type=float, default=42.8)    # the S presets' clock; the direct taps confirm it (§13.7: +55.1 is worse by 4-5 dB)
     ap.add_argument("--tag", default="base")
     a = ap.parse_args()
     if a.law == "246":

@@ -2,6 +2,7 @@
 
     .venv/bin/python tools/memguard.py --limit-gb 3 -- .venv/bin/python tools/e250/e_sim.py --stage data      # statistics of the presets
     .venv/bin/python tools/memguard.py --limit-gb 3 -- .venv/bin/python tools/e250/e_sim.py --stage sim [--json params]
+    .venv/bin/python tools/e250/e_sim.py --stage render --json '{"rt": 2.5, "fs": 48000, "out": "e_2.5.wav"}'   # reference IR
 
 The static network is e_model's (§11.2, the 246 law at LF 1.44 / HF 0.72). The time-variant part (§11.3) is M reads per loop,
 each at an integer output delay o(t) (as the 250's addresses: no interpolation) moving between lo and hi, up at v and down at vdn samples per second, a gain +-b (relative to the loop's static read), added to R and, with probability 'share', to L with the opposite sign
@@ -11,8 +12,8 @@ captures, a nuisance) deconvolved by its inverse filter, as the library captures
 
 Statistics (stats()): the random part r = capture - static model, against the static part s:
   e_ratio  random / static energy (dB) in 300-805 / 805-2215 / 2215-4400 / 4400-9000 samples after R's tap 1 (R)
-  lobes    r's decay-normalised autocorrelation at P_k + (-12..12), mean over the three loops (R)
-  lr       correlation of R's and L's random parts at the static alignment (315) and +-1, +-2
+  lobes    the leave-one-out residual's decay-normalised autocorrelation at P_k + (-12..12), mean over the three loops (R)
+  lr       correlation of R's and L's leave-one-out residuals at the static alignment (315) and +-1, +-2
   frac     static fraction per octave, 805-9000 samples: rho^2 of the capture against the static model (R)
 """
 import argparse, json, os, sys
@@ -25,8 +26,36 @@ import e_model as E  # noqa: E402
 
 FS, K0 = E.FS, E.K0
 X_STATIC = None                      # e_model parameters (246 law), set by static_params()
-DEF = dict(M=6, b=0.45, lo=600, hi=3600, v=60.0, vsd=0.0, vdn=None, f=0.55, A=17.0, fsd=0.0, law="tri", tdir=1.0, share=0.5, tsw=10.0, seed=0, mdel=314)
+DEF = dict(M=6, b=0.45, lo=600, hi=3600, v=60.0, vsd=0.0, vdn=None, f=0.55, A=17.0, fsd=0.0, wave="tri", groups=0, law="tri", tdir=1.0, share=0.5, tsw=10.0, seed=0, mdel=314)
 OCTS = [250, 500, 1000, 2000, 4000]
+
+
+# The adopted moving-read generator (EMT250_program §13): the UAD plugin's law, consistent with the E's own statistics
+ADOPTED = dict(law="lfo", wave="tri", f=0.553, A=32.0, fsd=0.3, groups=0, b=0.81, lo=410, hi=3600, share=0.5, M=6, mdel=314)
+
+
+def render_ir(rt, lf=None, hf=None, seed=0, secs=None, fs_out=None):
+    """Reference impulse response of Program E (n, 2) = (L, R), the adopted parameters; lf / hf default to the Altiverb
+    family's fit. Device rate, or resampled to fs_out. The chain kernel is the Altiverb capture's (replace by the 246's
+    analogue chain in the plugin)."""
+    global X_STATIC
+    static_params(); q = X_STATIC.copy()
+    if lf is not None: q[9] = lf
+    if hf is not None: q[10] = hf
+    kern = E.kernels([r for r in E.RTS if r >= 1.0])
+    secs = secs or min(3 * rt + 1, 15); n = int(secs * FS) + 4096
+    x = np.zeros(n); x[1000] = 1.0
+    keep = X_STATIC; X_STATIC = q
+    try:
+        y, _ = render(x, rt, dict(DEF) | ADOPTED, kern, np.random.default_rng(seed))
+    finally:
+        X_STATIC = keep
+    y = y[1000 + 16 - K0:1000 + 16 - K0 + int(secs * FS)]
+    if fs_out:
+        from scipy.signal import resample_poly
+        from fractions import Fraction
+        fr = Fraction(fs_out / FS).limit_denominator(2000); y = resample_poly(y, fr.numerator, fr.denominator, axis=0)
+    return y
 
 
 def static_params():
@@ -53,12 +82,20 @@ def trajectories(n, prm, rng):
     """Integer output delays (n_reads, n) for each loop's M moving reads, and their gains / L signs."""
     M, lo, hi = prm["M"], prm["lo"], prm["hi"]
     t = np.arange(n) / FS; out = []
+    PH = rng.uniform(0, 1, 8)
     for _ in range(3 * M):
         o0 = rng.uniform(lo, hi); d = rng.choice([-1, 1]); v = prm["v"] * rng.uniform(1 - prm["vsd"], 1 + prm["vsd"])
         if prm["law"] == "tri":         # up at v, down at vdn (asymmetric triangle; vdn None: symmetric)
             span = hi - lo; vd = v * (prm["vdn"] / prm["v"]) if prm["vdn"] else v
             Tu, Td = span / v, span / vd; ph = (rng.uniform(0, Tu + Td) + t) % (Tu + Td)
             o = np.where(ph < Tu, lo + v * ph, hi - vd * (ph - Tu))
+        elif prm["law"] == "lfo":        # the UAD plugin's law (EMT250_program §13): triangle (or sine) LFO, depth A, rate f,
+            #                              phase common to all reads ('groups' phase groups, reads assigned in turn) or independent
+            g = (len(out) % prm["groups"]) if prm["groups"] else None
+            ph = PH[g] if g is not None else rng.uniform(0, 1)
+            x = (prm["f"] * rng.uniform(1 - prm["fsd"], 1 + prm["fsd"]) * t + ph) % 1    # fsd: per-read rate (speed) spread
+            wav = (4 * np.abs(x - 0.5) - 1) if prm["wave"] == "tri" else np.cos(2 * np.pi * x)
+            o = o0 + prm["A"] * wav
         elif prm["law"] == "sine":       # the UAD 250's law (UAD250_test_plan §2): centre uniform in [lo, hi], depth A, rate f (+- fsd)
             f = prm["f"] * rng.uniform(1 - prm["fsd"], 1 + prm["fsd"])
             o = o0 + prm["A"] * np.sin(2 * np.pi * f * t + rng.uniform(0, 2 * np.pi))
@@ -138,16 +175,20 @@ def capture(rt, prm, kern, tail=2.5):
 def stats(Ys, Ss):
     """Statistics of a set of captures Ys (list of (n, 2)) against their static parts Ss (same shapes)."""
     out = {"e_ratio": [], "lobes": [], "lr": [], "frac": []}
-    for y, s in zip(Ys, Ss):
-        r = y - s; R = r[:, 1]
-        out["e_ratio"].append([10 * np.log10(np.sum(R[K0 + a:K0 + b] ** 2) / np.sum(s[K0 + a:K0 + b, 1] ** 2))
+    Ya = np.array(Ys)
+    for i, (y, s) in enumerate(zip(Ys, Ss)):
+        r = y - s
+        # lobes and L / R from the leave-one-out residual: a static-model error recirculates at exactly P and would fill
+        # the lobes' centre in the data but not in a simulation (whose static model is exact); the LOO mean removes it in both
+        rl = y - np.delete(Ya, i, 0).mean(0); R = rl[:, 1]
+        out["e_ratio"].append([10 * np.log10(np.sum(r[K0 + a:K0 + b, 1] ** 2) / np.sum(s[K0 + a:K0 + b, 1] ** 2))
                                for a, b in ((300, 805), (805, 2215), (2215, 4400), (4400, 9000))])
         env = np.sqrt(np.convolve(R ** 2, np.ones(801) / 801, "same")) + 1e-15; rn = R / env
         a = rn[K0 + 400:K0 + 6000]
         out["lobes"].append(np.mean([[np.dot(a, rn[K0 + 400 + Pk + d:K0 + 6000 + Pk + d]) / len(a) for d in range(-12, 13)] for Pk in E.P], 0))
-        rr = r[K0 + 700:K0 + 6000, 1]
-        out["lr"].append([np.dot(rr, r[K0 + 700 + E.LREV + d:K0 + 6000 + E.LREV + d, 0])
-                          / np.sqrt(np.dot(rr, rr) * np.dot(r[K0 + 700 + E.LREV + d:K0 + 6000 + E.LREV + d, 0] ** 2, np.ones(5300))) for d in (-2, -1, 0, 1, 2)])
+        rr = rl[K0 + 700:K0 + 6000, 1]
+        out["lr"].append([np.dot(rr, rl[K0 + 700 + E.LREV + d:K0 + 6000 + E.LREV + d, 0])
+                          / np.sqrt(np.dot(rr, rr) * np.dot(rl[K0 + 700 + E.LREV + d:K0 + 6000 + E.LREV + d, 0] ** 2, np.ones(5300))) for d in (-2, -1, 0, 1, 2)])
         fr = []
         for f in OCTS:
             sos = butter(4, [f / 1.414, f * 1.414], btype="band", fs=FS, output="sos")
@@ -195,6 +236,11 @@ if __name__ == "__main__":
     a = ap.parse_args()
     if a.stage == "data":
         show(data_stats(), "data")
+    elif a.stage == "render":                   # --json '{"rt": 2.5, "lf": 1.4, "hf": 0.7, "seed": 0, "fs": 48000, "out": "e.wav"}'
+        o = json.loads(a.json); y = render_ir(o["rt"], o.get("lf"), o.get("hf"), o.get("seed", 0), o.get("secs"), o.get("fs"))
+        import soundfile as sf
+        sf.write(o.get("out", "e_render.wav"), (y / np.abs(y).max() * 0.5).astype(np.float32), int(o.get("fs") or round(FS)))
+        print(f"wrote {o.get('out', 'e_render.wav')}: {y.shape}")
     elif a.stage == "sim":
         prm = DEF | json.loads(a.json)
         show(sim_stats(prm, [float(v) for v in a.rts.split(",")] if a.rts else None), "sim " + json.dumps(json.loads(a.json)))
