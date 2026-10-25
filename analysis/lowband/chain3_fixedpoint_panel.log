@@ -1,0 +1,13 @@
+Panel table or computed (model_s_results 36): held-out R^2 = 1 - sum (r_test - pred)^2 / sum r_test^2, pred from other settings' other take;
+'repeat' = the setting's own other take (the reproducible share); r = unit - baseline's smooth part
+
+HF pole - curve: 260 loops (|A - B| < 3e-4, no drop-back, no DEFECTS setting), rms 3.83e-04
+   (HF, RT) table -0.59; (LF, RT) table -0.09; (LF, HF) table -0.14; smooth +0.00; repeat +0.83
+
+Shelf D (dB per pass) - law without cells: 360 loops (no floor, no pole-limited HF step), rms 0.0171 dB
+   (LF, RT) table +0.92; (HF, RT) table -0.55; (LF, HF) table +0.07; smooth +0.23; repeat +0.98
+   loop structure (A fitted, B scored; share of the reproducible sum A.B): common dB/pass 0.81; proportional to P 0.85
+
+Shelf N1 (dB per pass) - law without cells: 360 loops (no floor, no pole-limited HF step), rms 0.0146 dB
+   (LF, RT) table +0.90; (HF, RT) table -1.02; (LF, HF) table -0.12; smooth -0.05; repeat +0.99
+   loop structure (A fitted, B scored; share of the reproducible sum A.B): common dB/pass 0.78; proportional to P 0.81

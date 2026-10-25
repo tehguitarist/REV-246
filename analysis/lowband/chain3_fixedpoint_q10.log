@@ -1,0 +1,115 @@
+Q10 (model_s_results 36): S's four loops, float vs 16-bit fixed point (32-bit accumulator, Q15 coefficients), truncation vs rounding
+
+1.0_2.5_1.0: loops (c0, c1, p) (0.8706, -0.7982, 0.0000); (0.8646, -0.7928, 0.0000); (0.8580, -0.7867, 0.0000); (0.8469, -0.7766, 0.0000); input gain A (no overflow) 0.0349, B (unit-energy IR) 0.2547: B is +17.3 dB hotter
+  scaling A:
+   (1) impulse -6 dBFS peak, outputs high-passed at 20 Hz; 50-300 ms level -62.7 dBFS; per window, dB re that: float | trunc: error, fixed tail, tail DC before the high-pass | round: error, fixed tail
+      0.05-0.30 s:     0.0 |   -29.9     0.0   -23.6 |   -64.2     0.0
+      0.30-0.60 s:    -6.7 |   -24.7    -6.6    -6.6 |   -56.6    -6.7
+      0.60-1.00 s:   -14.7 |   -29.6   -14.5    -4.0 |   -58.2   -14.7
+      1.00-2.00 s:   -28.0 |   -39.7   -27.6    -4.6 |   -60.4   -27.9
+      2.00-3.00 s:   -52.1 |   -42.2   -41.1   -12.0 |   -46.4   -43.7
+      3.00-4.00 s:   -75.9 |   -44.4   -44.2   -15.6 |   -43.8   -43.6
+      4.00-5.00 s:  -100.0 |   -44.2   -44.2   -15.6 |   -43.6   -43.6
+      5.00-6.00 s:  -124.2 |   -44.2   -44.2   -15.6 |   -43.7   -43.7
+      5-6 s, trunc: output values [-7, -6, -4, -1] (LSB), mean -4.00 LSB, rms about the mean 0.15 LSB, spectral peak 6968 Hz (a limit cycle)
+      5-6 s, round: output values [-3, 0, 3] (LSB), mean +0.00 LSB, rms about the mean 0.16 LSB, spectral peak 5650 Hz (a limit cycle)
+   (2) idle noise in, -94 dBFS rms (88 dB below nominal): output S/N re nominal: float 105.3 dB, trunc 69.6, round 2994.0 (the fixed-point part alone: trunc 69.7, round 105.3; trunc output DC -6.3 LSB, removed by the 20 Hz high-pass); spec REVERB 73, DELAY 88
+   (3) the sweep's output peak -12.8 dBFS (the headroom a hotter sweep or a hotter internal scaling could use)
+   (3) sweep 24.4 s at -6 dBFS peak, deconvolved 25 Hz-11 kHz (tapered), re its 50-300 ms level: input noise alone | trunc: total floor, fixed-point part | round: total, part
+      0.05-0.30 s: IR     0.0 |   -98.7 |   -71.0   -71.0 |   -71.2   -71.2
+      0.30-0.60 s: IR    -6.7 |   -98.6 |   -70.6   -70.6 |   -70.7   -70.7
+      0.60-1.00 s: IR   -14.7 |   -98.6 |   -70.7   -70.8 |   -71.4   -71.4
+      1.00-2.00 s: IR   -28.0 |   -98.6 |   -71.5   -71.7 |   -73.7   -73.7
+      2.00-3.00 s: IR   -52.1 |   -98.5 |   -71.2   -71.4 |   -74.4   -74.4
+      3.00-4.00 s: IR   -75.9 |   -98.7 |   -70.4   -70.6 |   -71.8   -71.8
+      4.00-5.00 s: IR  -100.0 |   -98.7 |   -69.4   -69.6 |   -70.9   -70.9
+      5.00-6.00 s: IR  -124.2 |   -98.6 |   -68.5   -68.7 |   -71.0   -71.0
+  scaling B:
+   (1) impulse -6 dBFS peak, outputs high-passed at 20 Hz; 50-300 ms level -45.4 dBFS; per window, dB re that: float | trunc: error, fixed tail, tail DC before the high-pass | round: error, fixed tail
+      0.05-0.30 s:     0.0 |   -47.0    -0.0   -41.1 |   -59.5     0.0
+      0.30-0.60 s:    -6.7 |   -42.1    -6.7   -35.1 |   -58.9    -6.7
+      0.60-1.00 s:   -14.7 |   -47.0   -14.7   -37.7 |   -59.1   -14.7
+      1.00-2.00 s:   -28.0 |   -52.6   -28.0   -49.4 |   -75.8   -28.0
+      2.00-3.00 s:   -52.1 |   -73.2   -52.1   -38.9 |   -72.6   -51.7
+      3.00-4.00 s:   -75.9 |   -62.1   -60.9   -38.9 |   -62.1   -60.9
+      4.00-5.00 s:  -100.0 |   -61.0   -60.9   -38.9 |   -61.0   -60.9
+      5.00-6.00 s:  -124.2 |   -60.9   -60.9   -38.9 |   -60.9   -60.9
+      5-6 s, trunc: output values [-5, -2, 1] (LSB), mean -2.00 LSB, rms about the mean 0.16 LSB, spectral peak 5650 Hz (a limit cycle)
+      5-6 s, round: output values [-1, 2, 5] (LSB), mean +2.00 LSB, rms about the mean 0.16 LSB, spectral peak 5650 Hz (a limit cycle)
+   (2) idle noise in, -94 dBFS rms (88 dB below nominal): output S/N re nominal: float 88.0 dB, trunc 69.9, round 71.2 (the fixed-point part alone: trunc 70.2, round 71.2; trunc output DC -5.8 LSB, removed by the 20 Hz high-pass); spec REVERB 73, DELAY 88
+
+1.0_1.0_1.0: loops (c0, c1, p) (0.7073, -0.6485, 0.0000); (0.6950, -0.6372, 0.0000); (0.6820, -0.6253, 0.0000); (0.6600, -0.6051, 0.0000); input gain A (no overflow) 0.0782, B (unit-energy IR) 0.3633: B is +13.3 dB hotter
+  scaling A:
+   (1) impulse -6 dBFS peak, outputs high-passed at 20 Hz; 50-300 ms level -57.7 dBFS; per window, dB re that: float | trunc: error, fixed tail, tail DC before the high-pass | round: error, fixed tail
+      0.05-0.30 s:     0.0 |   -35.6    -0.0   -49.0 |   -66.8     0.0
+      0.30-0.60 s:   -16.1 |   -34.8   -16.1   -19.4 |   -67.7   -16.1
+      0.60-1.00 s:   -35.3 |   -42.8   -34.5   -18.4 |   -67.8   -35.2
+      1.00-2.00 s:   -63.6 |   -57.9   -56.6   -20.6 |   -59.8   -57.7
+      2.00-3.00 s:  -124.0 |   -58.2   -58.2   -20.6 |   -58.2   -58.2
+      3.00-4.00 s:  -183.5 |   -58.2   -58.2   -20.6 |   -58.2   -58.2
+      4.00-5.00 s:  -243.8 |   -58.2   -58.2   -20.6 |   -58.2   -58.2
+      5.00-6.00 s:  -304.1 |   -58.2   -58.2   -20.6 |   -58.2   -58.2
+      5-6 s, trunc: output values [-5, -4, -3] (LSB), mean -4.00 LSB, rms about the mean 0.05 LSB, spectral peak 5650 Hz (a limit cycle)
+      5-6 s, round: output values [-1, 0, 1] (LSB), mean +0.00 LSB, rms about the mean 0.05 LSB, spectral peak 5650 Hz (a limit cycle)
+   (2) idle noise in, -94 dBFS rms (88 dB below nominal): output S/N re nominal: float 101.3 dB, trunc 73.6, round 2994.0 (the fixed-point part alone: trunc 73.7, round 101.3; trunc output DC -3.0 LSB, removed by the 20 Hz high-pass); spec REVERB 73, DELAY 88
+   (3) the sweep's output peak -10.0 dBFS (the headroom a hotter sweep or a hotter internal scaling could use)
+   (3) sweep 24.4 s at -6 dBFS peak, deconvolved 25 Hz-11 kHz (tapered), re its 50-300 ms level: input noise alone | trunc: total floor, fixed-point part | round: total, part
+      0.05-0.30 s: IR     0.0 |   -99.7 |   -75.5   -75.5 |   -75.1   -75.1
+      0.30-0.60 s: IR   -16.1 |   -99.6 |   -79.9   -80.0 |   -79.8   -79.9
+      0.60-1.00 s: IR   -35.3 |   -99.8 |   -80.9   -81.1 |   -81.6   -81.7
+      1.00-2.00 s: IR   -63.6 |   -99.7 |   -79.8   -80.1 |   -82.3   -82.3
+      2.00-3.00 s: IR  -124.0 |   -99.7 |   -79.1   -79.6 |   -82.5   -82.5
+      3.00-4.00 s: IR  -159.7 |   -99.8 |   -78.8   -79.2 |   -83.2   -83.1
+      4.00-5.00 s: IR  -166.6 |   -99.8 |   -78.5   -79.0 |   -83.7   -83.6
+      5.00-6.00 s: IR  -172.0 |   -99.8 |   -78.4   -78.8 |   -83.9   -83.8
+  scaling B:
+   (1) impulse -6 dBFS peak, outputs high-passed at 20 Hz; 50-300 ms level -44.3 dBFS; per window, dB re that: float | trunc: error, fixed tail, tail DC before the high-pass | round: error, fixed tail
+      0.05-0.30 s:     0.0 |   -49.6    -0.0   -58.9 |   -81.3    -0.0
+      0.30-0.60 s:   -16.1 |   -49.7   -16.1   -43.0 |   -79.5   -16.1
+      0.60-1.00 s:   -35.3 |   -53.6   -35.2   -37.0 |   -75.5   -35.3
+      1.00-2.00 s:   -63.6 |   -65.0   -61.2   -36.0 |   -74.4   -63.3
+      2.00-3.00 s:  -124.0 |   -71.6   -71.6   -36.4 |   -71.6   -71.6
+      3.00-4.00 s:  -183.5 |   -71.5   -71.5   -36.4 |   -71.5   -71.5
+      4.00-5.00 s:  -243.8 |   -71.5   -71.5   -36.4 |   -71.5   -71.5
+      5.00-6.00 s:  -304.1 |   -71.6   -71.6   -36.4 |   -71.6   -71.6
+      5-6 s, trunc: output values [2, 3, 4] (LSB), mean +3.00 LSB, rms about the mean 0.05 LSB, spectral peak 5650 Hz (a limit cycle)
+      5-6 s, round: output values [-1, 0, 1] (LSB), mean +0.00 LSB, rms about the mean 0.05 LSB, spectral peak 5650 Hz (a limit cycle)
+   (2) idle noise in, -94 dBFS rms (88 dB below nominal): output S/N re nominal: float 88.0 dB, trunc 73.5, round 72.6 (the fixed-point part alone: trunc 73.9, round 72.6; trunc output DC -2.9 LSB, removed by the 20 Hz high-pass); spec REVERB 73, DELAY 88
+
+2.0_0.8_0.2: loops (c0, c1, p) (0.6441, -0.5774, 0.7991); (0.6298, -0.5639, 0.8175); (0.6148, -0.5497, 0.8348); (0.5896, -0.5257, 0.8513); input gain A (no overflow) 0.0530, B (unit-energy IR) 0.4839: B is +19.2 dB hotter
+  scaling A:
+   (1) impulse -6 dBFS peak, outputs high-passed at 20 Hz; 50-300 ms level -63.4 dBFS; per window, dB re that: float | trunc: error, fixed tail, tail DC before the high-pass | round: error, fixed tail
+      0.05-0.30 s:     0.0 |   -18.8    -0.0   -27.2 |   -19.7    -0.0
+      0.30-0.60 s:   -26.4 |   -20.5   -23.1   -18.1 |   -25.7   -35.4
+      0.60-1.00 s:   -40.9 |   -34.1   -37.1   -12.3 |   -40.9  -119.0
+      1.00-2.00 s:   -62.2 |   -62.2  -200.3   -11.3 |   -62.2  -438.1
+      2.00-3.00 s:  -102.2 |  -102.2  -283.8   -11.3 |  -102.2 -1205.6
+      3.00-4.00 s:  -141.6 |  -141.6  -283.9   -11.3 |  -141.6 -1974.6
+      4.00-5.00 s:  -180.0 |  -180.0  -283.8   -11.3 |  -180.0 -2749.8
+      5.00-6.00 s:  -218.0 |  -218.0  -283.8   -11.3 |  -218.0 -2936.6
+      5-6 s, trunc: output values [-6] (LSB), mean -6.00 LSB, rms about the mean 0.00 LSB
+      5-6 s, round: output values [0] (LSB), mean +0.00 LSB, rms about the mean 0.00 LSB
+   (2) idle noise in, -94 dBFS rms (88 dB below nominal): output S/N re nominal: float 107.2 dB, trunc 84.3, round 2994.0 (the fixed-point part alone: trunc 84.8, round 107.2; trunc output DC -3.0 LSB, removed by the 20 Hz high-pass); spec REVERB 73, DELAY 88
+   (3) the sweep's output peak -15.0 dBFS (the headroom a hotter sweep or a hotter internal scaling could use)
+   (3) sweep 24.4 s at -6 dBFS peak, deconvolved 25 Hz-11 kHz (tapered), re its 50-300 ms level: input noise alone | trunc: total floor, fixed-point part | round: total, part
+      0.05-0.30 s: IR     0.0 |  -100.3 |   -72.2   -72.2 |   -71.9   -71.9
+      0.30-0.60 s: IR   -26.2 |  -100.1 |   -73.8   -73.8 |   -74.0   -74.0
+      0.60-1.00 s: IR   -40.5 |  -100.0 |   -75.9   -76.0 |   -76.5   -76.6
+      1.00-2.00 s: IR   -61.9 |  -100.1 |   -76.5   -76.7 |   -78.8   -78.8
+      2.00-3.00 s: IR  -102.1 |  -100.1 |   -76.2   -76.4 |   -79.8   -79.8
+      3.00-4.00 s: IR  -141.6 |  -100.2 |   -76.0   -76.3 |   -80.5   -80.4
+      4.00-5.00 s: IR  -164.1 |  -100.2 |   -75.9   -76.3 |   -81.1   -81.0
+      5.00-6.00 s: IR  -169.5 |  -100.1 |   -75.9   -76.3 |   -81.9   -81.9
+  scaling B:
+   (1) impulse -6 dBFS peak, outputs high-passed at 20 Hz; 50-300 ms level -44.2 dBFS; per window, dB re that: float | trunc: error, fixed tail, tail DC before the high-pass | round: error, fixed tail
+      0.05-0.30 s:     0.0 |   -33.1    -0.0   -56.2 |   -33.9    -0.0
+      0.30-0.60 s:   -26.4 |   -30.2   -30.6   -41.9 |   -31.8   -30.4
+      0.60-1.00 s:   -40.9 |   -39.7   -50.5   -33.8 |   -40.7   -55.5
+      1.00-2.00 s:   -62.2 |   -62.2  -105.7   -30.5 |   -62.2  -259.2
+      2.00-3.00 s:  -102.2 |  -102.2  -279.1   -30.5 |  -102.2 -1036.2
+      3.00-4.00 s:  -141.6 |  -141.6  -279.1   -30.5 |  -141.6 -1801.8
+      4.00-5.00 s:  -180.0 |  -180.0  -279.1   -30.5 |  -180.0 -2572.7
+      5.00-6.00 s:  -218.0 |  -218.0  -279.1   -30.5 |  -218.0 -2955.8
+      5-6 s, trunc: output values [-6] (LSB), mean -6.00 LSB, rms about the mean 0.00 LSB
+      5-6 s, round: output values [0] (LSB), mean +0.00 LSB, rms about the mean 0.00 LSB
+   (2) idle noise in, -94 dBFS rms (88 dB below nominal): output S/N re nominal: float 88.0 dB, trunc 84.3, round 94.9 (the fixed-point part alone: trunc 88.1, round 88.6; trunc output DC -7.0 LSB, removed by the 20 Hz high-pass); spec REVERB 73, DELAY 88
