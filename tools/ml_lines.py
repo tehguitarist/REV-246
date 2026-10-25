@@ -59,6 +59,9 @@ LAW = json.load(open(os.path.join(ROOT, "analysis", "q1", "laws.json")))
 P_MAX, DC_MIN, BETA = 0.84, 0.18, 0.019                    # S's coefficient limits (model_s_results §16.15-16.16)
 KFIX = os.environ.get("ML_KFIX") != "0"                   # the output kernel refitted after B0 (ml_structure 18); 0: stored
 B0 = os.environ.get("ML_B0") != "0"                       # undamped settings at b = 0 (ml_structure 18); ML_B0=0: stored b
+BSTEP = os.environ.get("ML_BSTEP", "1")                     # the damped steps of the last all-pass as three values per program (ml_structure 19):
+BSTEP = "" if BSTEP == "0" else BSTEP                       # "1" the all-data step means (default), "cv" each setting's LF column held out,
+                                                            # "0" the stored per-setting b
 DROP_BACK = 0.8465                                          # S's HF 0.2 / RT 0.6 pole past the drop-back point (model_s_results 32.4)
 
 
@@ -190,6 +193,11 @@ class Model:
         self.b = {}
         for r in fp["rows"]:                                # the last all-pass's damping step per setting; the undamped
             self.b[r["key"]] = 0.0 if B0 and r["b"] < 0.05 else r["b"]      # step is b = 0, not its stale fit (ml_structure 18)
+        if BSTEP and prog in ("M", "L"):                    # b from the (RT, HF) cell's step (tools/ml_bsteps.py), not per setting
+            bs = json.load(open(os.path.join(ROOT, "analysis", "ml_lines", "b_steps.json")))[prog]
+            for key in self.b:
+                lf, rt, hf = key.split("_")
+                self.b[key] = (bs["fold"][lf] if BSTEP == "cv" else bs["steps"])[bs["cells"][f"{rt}_{hf}"]]
         Ls, Rs = cc.s_table()
         self.loop = [np.array([i for _, _, i in Ls]), np.array([i for _, _, i in Rs])]
         self.cl = cc.cluster_taps(prog)

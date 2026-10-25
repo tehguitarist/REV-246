@@ -984,3 +984,55 @@ EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 8 -- .venv/bin/p
 
 Octave decay, late decay, EDC and echo density unchanged or slightly better (L late decay 8 kHz 0.63 → 0.57 %; late level at 4–6.4 kHz 0.018–0.022 → 0.013–0.014 dB). L's first pass now meets the −50 dB target and beats the capture pairs. M's is 1.4 dB past its pairs, and −50 dB cannot be shown against this library there. The Altiverb MED / LONG first pass stays at −35…−36 dB: each preset's own chain FIR absorbs the kernel change, and that floor is the unit difference (§17).
 
+
+## 19. M / L's damped all-pass steps: three values per program instead of 96 fitted b (`tools/ml_bsteps.py`, October 2026) **[S: the last all-pass's damping step is set by the RT and HF controls, never by LF, in M and L as in S; S: three step values per program (6 numbers) replace the 96 per-setting fits with no loss, held out by LF column; H: the cell rule itself]**
+
+```
+.venv/bin/python tools/ml_bsteps.py                                                  # -> analysis/ml_lines/b_steps.json (step means, leave-one-LF-out means, cell -> step table)
+ML_BSTEP=cv PULSE_OUT=$PWD/analysis/pulse_bstep_cv EMT_KERNEL=chain3 .venv/bin/python tools/memguard.py --limit-gb 9 -- .venv/bin/python tools/pulse_check.py --stage ml --workers 8   # 655 s, 4.9 GB
+ML_BSTEP=1  PULSE_OUT=$PWD/analysis/pulse_bstep_all ... (same)                       # 631 s, 5.0 GB
+.venv/bin/python tools/ml_bsteps.py score <old analysis/pulse> <candidate dir> <out.json>   # -> analysis/ml_lines/b_steps_score_{cv,all}.json
+```
+
+`NEXT_STEPS.md` audit item 6 (compaction rule). After §18 the undamped settings are b = 0; the 96 damped settings (M 56, L 40) still carried each its own fitted b (`firstpass.json`), in three tight clusters.
+
+**The step is a function of RT and HF, not LF.** In every (RT, HF) cell the step is the same in all four LF columns (checked for all 160 M and 180 L settings; `ml_bsteps.py` asserts it), as for S's AP230 (`model_s_results.md` §14.3). The staircase, step 0 / 1 / 2 / 3 (b = 0 / ≈0.17 / ≈0.33 / ≈0.50):
+
+| M, RT \ HF | 0.1 | 0.2 | 0.4 | 0.7 | 0.9 | | L, RT \ HF | 0.1 | 0.3 | 0.5 | 0.8 | 1.0 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 0.6 | 3 | 3 | 3 | 2 | 1 | | 2.2 | 3 | 3 | 3 | 1 | 0 |
+| 0.8 | 3 | 3 | 2 | 1 | 0 | | 2.6 | 3 | 3 | 2 | 0 | 0 |
+| 1.2 | 3 | 2 | 1 | 0 | 0 | | 3.6 | 2 | 1 | 0 | 0 | 0 |
+| 1.8 | 1 | 1 | 0 | 0 | 0 | | 4.5 | 1 | 0 | 0 | 0 | 0 |
+| ≥ 2.6 | 0 | 0 | 0 | 0 | 0 | | ≥ 6.0 | 0 | 0 | 0 | 0 | 0 |
+
+So the step follows the RT and HF panel controls (the same kind of table as S's; no LF dependence, **S**). A closed-form rule, as in S, is not shown (**H**).
+
+**Step values, each program's own means over its damped settings** (S's AP230 table for comparison; M's first pass is sensitive at the 10⁻³ level: §18 found S's values cost it 0.5–1 dB):
+
+| | step 1 | step 2 | step 3 | settings per step |
+|---|---|---|---|---|
+| M | 0.17092 | 0.33052 | 0.50028 | 20 / 12 / 24 |
+| L | 0.17302 | 0.33227 | 0.50197 | 12 / 8 / 20 |
+| S (§16.9) | 0.17109 | 0.33160 | 0.50192 | |
+
+The stored per-setting values scatter around their means by sd 0.0001–0.0002 (M, max |b − mean| 0.0003) and 0.0002–0.0003 (L, max 0.0007).
+
+**Held out (leave one LF column out).** Each LF column's settings are scored with step means computed from the other three LF columns' b (`ML_BSTEP=cv`). The fold means differ from the all-data means by at most **8·10⁻⁵ in M and 1.8·10⁻⁴ in L** (L's LF 2.0 column is the outlier: its stored b sit 0.0005 below the others). Scoring the two variants against each other over the 146 + 80 damped captures: first pass mean +0.001 (M) / +0.007 dB (L), largest single capture 0.14 / 0.32 dB, recirculation 1 at most 0.002 dB. The all-data means are therefore as good as the held-out ones and are the adopted default; `ML_BSTEP=cv` keeps the held-out run reproducible. The stored per-setting b were themselves fitted in-sample on these captures (`b_fitted_on`), so the step values are the held-out side of the comparison.
+
+**Result (full M / L pulse check, all groups, R, before → after [capture pairs]; held-out `cv` values, the all-data run is within 0.01 dB of them):**
+
+| | first pass | recirc 1 | recirc 2 | recirc 3 | 0.3–0.6 s | 0.6–1.0 s | 1.0–2.0 s |
+|---|---|---|---|---|---|---|---|
+| M | −49.68 → −49.71 [−48.3] | −20.68 → −20.68 [−19.0] | −16.06 → −16.06 [−13.4] | −12.68 → −12.68 [−9.9] | −12.79 → −12.79 [−10.1] | −9.76 → −9.76 [−7.7] | −7.26 → −7.26 [−6.2] |
+| L | −52.31 → −52.31 [−51.8] | −19.09 → −19.09 [−17.6] | −15.95 → −15.95 [−13.4] | −12.77 → −12.77 [−10.2] | −17.78 → −17.78 [−15.8] | −13.03 → −13.03 [−10.4] | −8.95 → −8.95 [−6.7] |
+
+(All-data run: M first pass −49.71, L −52.31; every later window ≤ 0.001 dB from the baseline; 340 groups.) Noise is counted as ±0.05 dB on medians.
+- **Damped settings only** (146 M, 80 L captures, held out): first pass median M −52.08 → −52.03, L −49.96 → −50.02 dB; power mean unchanged (M −35.66 → −35.66, L −49.56 → −49.57; these are dominated by the worst groups); captures at or below −50 dB: M 104 → 103 of 146, L 39 → 40 of 80. Per step, first-pass median (steps 1 / 2 / 3): M −51.27 → −51.23, −51.80 → −51.90, −53.21 → −53.19; L −48.39 → −48.41, −49.78 → −50.09, −50.45 → −50.53 dB. Recirculation 1 changes by at most 0.013 dB in any group, 0.3–0.6 s by 0.009, later windows by 0.002.
+- **Per-group first-pass regressions > 0.3 dB (reported as required; held-out run, mean over the group's captures):** M 0.1_0.6_0.9 +0.69, 0.1_0.8_0.7 +0.51, 0.1_0.8_0.4 +0.30 (all LF 0.1; all-data run +0.65 / +0.47 / below 0.3); L 2.0_4.5_0.1 +1.44, 2.0_3.6_0.3 +1.28, 2.0_2.6_0.5 +1.23, 2.0_2.6_0.1 +1.13, 2.0_3.6_0.1 +1.10, 2.0_2.6_0.3 +1.12 (all LF 2.0; all-data run +0.83…+1.21). Against them, 9 M and 15 L damped groups improve by more than 0.3 dB (L at LF 0.1 / 0.8 / 1.2 by 0.24–0.34 dB on average). The L regressions are one LF column whose stored b sit 0.0005 below their step mean (the first pass moves about 2 dB per 10⁻³ in b, so a 5·10⁻⁴ offset is visible); the other L columns improve, and the M ones scatter both ways (mean change by LF column +0.14 / −0.35 / +0.05 / +0.04 dB). They are the price of removing 90 free numbers, not a lost effect on the medians.
+- **Everything else unchanged to the printed precision:** octave and third-octave decay, late decay, EDC, G6 (C80, tonal balance, EDR, mixing time, IACC) identical; the only line of the report that moves is L's echo density |difference| 0.008 → 0.007.
+- **Gate (`analysis/pulse/gate_mlbstep/gate.log`, switch on): PASS**, every line equal to its reference: M first pass −49.38 (ref −49.38), recirc 1 −20.69; L first pass −52.61, recirc 1 −18.75; early octave decay M 1.11 %, L 0.59 %; S, CLA and the Altiverb RT 1.6 lines unchanged (the gate's 8 M / L groups hold one damped L group, 2.0_2.6_0.5, which moves by the +1.2 dB above without moving the median).
+
+**Parameter count.** M / L's last-all-pass damping: 96 fitted per-setting values (M 56, L 40; the other 244 settings at b = 0) → **6 values** (3 per program) plus the RT × HF step table (M 40 cells, L 45 cells, 2 bits each; the per-setting values carried the same information implicitly). Nothing else changes (the 11-tap kernels, line law and HF pole map are as in §18).
+
+**Adopted.** `ml_lines`: `BSTEP` (`ML_BSTEP=1` default: the all-data step means from `analysis/ml_lines/b_steps.json`; `cv`: leave-one-LF-column-out means; `0`: the stored per-setting b); `pulse_check.py` takes `PULSE_OUT` (write a candidate beside the full run). `analysis/pulse/ml/` (all 340 groups, 96 damped files changed) and `report.log` regenerated; `analysis/ml_lines/b_steps_score_{cv,all}.json` hold the per-capture before / after values and `b_steps_run_*.log` the run logs. The altiverb MED / LONG presets choose b from S's four values per preset (§17) and are unaffected. **Not adopted:** nothing; S's table values for M / L stay rejected (§18).
