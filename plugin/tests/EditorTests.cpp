@@ -22,6 +22,7 @@ TEST_CASE("tooltips follow the ? button")
     REQUIRE(editor != nullptr);
     auto& help = editor->getHelpButton();
     CHECK_FALSE(help.isOn());
+    CHECK_FALSE(help.isAlwaysLit());
     CHECK(editor->tooltipAllowed(help));
     CHECK_FALSE(editor->tooltipAllowed(*editor));
     help.setOn(true);
@@ -36,6 +37,7 @@ TEST_CASE("the stereo button offers the original mode by default and only in ste
     REQUIRE(editor != nullptr);
     auto& button = editor->getStereoButton();
     CHECK(button.isEnabled());
+    CHECK(button.isAlwaysLit());
     CHECK_FALSE(button.isOn());
     CHECK(button.getLabel() == "ORIGINAL");
     CHECK(button.getTooltip().contains("Original"));
@@ -52,6 +54,46 @@ TEST_CASE("the stereo button offers the original mode by default and only in ste
     REQUIRE(p.setBusesLayout(layout));
     editor->refreshNow();
     CHECK_FALSE(button.isEnabled());
+}
+
+TEST_CASE("the format button selects float or 16-bit processing")
+{
+    Rev246Processor p;
+    std::unique_ptr<juce::AudioProcessorEditor> base(p.createEditor());
+    auto* editor = dynamic_cast<Rev246Editor*>(base.get());
+    REQUIRE(editor != nullptr);
+    auto& button = editor->getFormatButton();
+    CHECK(button.isAlwaysLit());
+    CHECK_FALSE(button.isOn());
+    CHECK(button.getLabel() == "FLOAT");
+    CHECK(button.getTooltip().contains("16-BIT"));
+
+    button.onToggle(true);
+    editor->refreshNow();
+    CHECK(button.isOn());
+    CHECK(button.getLabel() == "16-BIT");
+    CHECK(p.apvts.getRawParameterValue(rv::params::id::sixteenBit)->load() >= 0.5f);
+}
+
+TEST_CASE("a modified preset name is italic with a star")
+{
+    Rev246Processor p;
+    std::unique_ptr<juce::AudioProcessorEditor> base(p.createEditor());
+    auto* editor = dynamic_cast<Rev246Editor*>(base.get());
+    REQUIRE(editor != nullptr);
+    auto& name = editor->getPresetBar().getNameButton();
+    CHECK_FALSE(name.isItalic());
+    CHECK_FALSE(name.getLabel().endsWithChar('*'));
+
+    p.apvts.getParameter(rv::params::id::mix)->setValueNotifyingHost(0.9f);
+    editor->refreshNow();
+    CHECK(name.isItalic());
+    CHECK(name.getLabel().endsWith(" *"));
+
+    p.presets.load("Init S");
+    editor->refreshNow();
+    CHECK_FALSE(name.isItalic());
+    CHECK_FALSE(name.getLabel().endsWithChar('*'));
 }
 
 // Renders the panel to a PNG when REV_SNAPSHOT names a file, for checking the layout against ui/main.png by eye.

@@ -77,7 +77,7 @@ class Rev246Processor : public juce::AudioProcessor
     double vuTauSamples = 0.0; // VU time constant in samples (tau * sample rate), set in prepareToPlay
     bool lastTrueStereo = false; // engine 1's state is reset when the routing turns true stereo on or off
 
-    std::atomic<float>*pProgram, *pMix, *pPan, *pIn, *pOut, *pPower, *pTransformer, *pTrueStereo;
+    std::atomic<float>*pProgram, *pMix, *pPan, *pIn, *pOut, *pPower, *pTransformer, *pTrueStereo, *pSixteenBit;
     std::array<std::atomic<float>*, rv::params::numJoys> pJoy;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Rev246Processor)

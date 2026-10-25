@@ -218,6 +218,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
     layout.add(std::make_unique<AudioParameterBool>(pid(id::link), "Link input/output", false));
     layout.add(std::make_unique<AudioParameterBool>(pid(id::transformer), "Transformer", false));
     layout.add(std::make_unique<AudioParameterBool>(pid(id::trueStereo), "True stereo", false));
+    layout.add(std::make_unique<AudioParameterBool>(pid(id::sixteenBit), "16-bit processing", false));
     return layout;
 }
 } // namespace rv::params

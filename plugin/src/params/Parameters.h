@@ -33,6 +33,9 @@ inline constexpr const char* transformer = "transformer";
 // Stereo in / stereo out only: false (default) sums the input to the unit's mono input ("ORIGINAL"), true processes
 // left and right through separate reverbs. A routing preference, so presets leave it alone like link and transformer.
 inline constexpr const char* trueStereo = "trueStereo";
+// False (default) = full-precision (float) processing; true = the original's 16-bit storage of the reverb loops. A
+// sound setting, so unlike the transformer it is part of a preset.
+inline constexpr const char* sixteenBit = "sixteenBit";
 } // namespace id
 
 enum class Program

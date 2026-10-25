@@ -20,6 +20,10 @@ PresetManager::PresetManager(juce::AudioProcessorValueTreeState& s) : apvts(s)
 #endif
                        .getChildFile("Leigh Pierce")
                        .getChildFile("REV-246");
+
+    // A fresh instance shows "Init S"; treat the default state as that preset's saved state, so the first edit marks
+    // the name as modified even before a preset has been explicitly loaded.
+    saved = stateFor(current);
 }
 
 juce::StringArray PresetManager::factoryNames() const

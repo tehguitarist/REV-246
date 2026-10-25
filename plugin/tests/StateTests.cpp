@@ -7,6 +7,7 @@ TEST_CASE("state round-trips")
     Rev246Processor a;
     a.apvts.getParameter(rv::params::id::program)->setValueNotifyingHost(a.apvts.getParameter(rv::params::id::program)->convertTo0to1(2.0f));
     a.apvts.getParameter(rv::params::id::delay)->setValueNotifyingHost(a.apvts.getParameter(rv::params::id::delay)->convertTo0to1(123.0f));
+    a.apvts.getParameter(rv::params::id::sixteenBit)->setValueNotifyingHost(1.0f);
     juce::MemoryBlock block;
     a.getStateInformation(block);
 
@@ -14,6 +15,7 @@ TEST_CASE("state round-trips")
     b.setStateInformation(block.getData(), (int)block.getSize());
     CHECK(juce::roundToInt(b.apvts.getRawParameterValue(rv::params::id::program)->load()) == 2);
     CHECK(juce::roundToInt(b.apvts.getRawParameterValue(rv::params::id::delay)->load()) == 123);
+    CHECK(b.apvts.getRawParameterValue(rv::params::id::sixteenBit)->load() >= 0.5f);
 }
 
 TEST_CASE("factory presets load and are not user-overwritable")
@@ -37,4 +39,13 @@ TEST_CASE("presets leave the stereo mode alone")
     CHECK_FALSE(p.presets.isModified()); // a routing preference, not a setting
     CHECK(p.presets.load("Init M"));
     CHECK(mode->getValue() >= 0.5f);
+}
+
+TEST_CASE("the 16-bit mode is part of a preset")
+{
+    Rev246Processor p;
+    CHECK(p.presets.load("Init S"));
+    CHECK_FALSE(p.presets.isModified());
+    p.apvts.getParameter(rv::params::id::sixteenBit)->setValueNotifyingHost(1.0f);
+    CHECK(p.presets.isModified()); // an accuracy setting, unlike the transformer
 }

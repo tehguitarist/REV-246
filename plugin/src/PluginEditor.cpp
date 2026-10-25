@@ -66,7 +66,8 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
                   *p.apvts.getParameter(P::id::outputGain), bubble, [](float v) { return P::gainText(v); }),
       presetBar(p.presets, *this),
       linkButton({0.0f, rv::design::barTop + 35.0f, 220.0f, 80.0f}, "LINK", rv::ui::BarButton::Kind::toggle), // x: see below
-      transformerButton({0.0f, rv::design::barTop + 35.0f, 440.0f, 80.0f}, "TRANSFORMER", rv::ui::BarButton::Kind::toggle),
+      transformerButton({0.0f, rv::design::barTop + 35.0f, 200.0f, 80.0f}, "XFMR", rv::ui::BarButton::Kind::toggle),
+      formatButton({0.0f, rv::design::barTop + 35.0f, 240.0f, 80.0f}, "FLOAT", rv::ui::BarButton::Kind::toggle),
       stereoButton({0.0f, rv::design::barTop + 35.0f, 300.0f, 80.0f}, "ORIGINAL", rv::ui::BarButton::Kind::toggle),
       calButton({0.0f, rv::design::barTop + 35.0f, 220.0f, 80.0f}, "CAL -18", rv::ui::BarButton::Kind::momentary),
       helpButton({0.0f, rv::design::barTop + 35.0f, 90.0f, 80.0f}),
@@ -79,7 +80,8 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
 
     // The right end of the bar, laid out from the version number's width (fonts differ by platform): the version sits
     // barEdgePad from the panel's right edge, the "?" the same distance to its left, LINK just left of the "?" and
-    // TRANSFORMER left of LINK. The stereo mode button and CAL sit to the left of the transformer.
+    // XFMR left of LINK. The stereo mode and format buttons sit to the left of the transformer. CAL sits at the
+    // left end of the bar, after SAVE.
     {
         const auto versionText = juce::String("v") + JucePlugin_VersionString;
         const auto textW = rv::ui::textWidth(rv::ui::labelFont(30.0f), versionText) + 2.0f;
@@ -90,10 +92,12 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
         helpButton.setDesignBounds({helpRight - 90.0f, y, 90.0f, 80.0f});
         const auto linkX = helpRight - 90.0f - 12.0f - 220.0f;
         linkButton.setDesignBounds({linkX, y, 220.0f, 80.0f});
-        transformerButton.setDesignBounds({linkX - 12.0f - 440.0f, y, 440.0f, 80.0f});
-        const auto calX = linkX - 12.0f - 440.0f - 12.0f - 220.0f;
-        calButton.setDesignBounds({calX, y, 220.0f, 80.0f});
-        stereoButton.setDesignBounds({calX - 12.0f - 300.0f, y, 300.0f, 80.0f});
+        const auto xformerX = linkX - 12.0f - 200.0f;
+        transformerButton.setDesignBounds({xformerX, y, 200.0f, 80.0f});
+        const auto formatX = xformerX - 12.0f - 240.0f;
+        formatButton.setDesignBounds({formatX, y, 240.0f, 80.0f});
+        stereoButton.setDesignBounds({formatX - 12.0f - 300.0f, y, 300.0f, 80.0f});
+        calButton.setDesignBounds({1224.0f, y, 220.0f, 80.0f});
     }
 
     // Programme buttons and lamps.
@@ -158,7 +162,10 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
         pr.endChangeGesture();
     });
 
-    // The "?" and the link.
+    // ORIGINAL / TRUE ST and FLOAT / 16-BIT always show the active choice, so keep them lit. The "?" and LINK are
+    // ordinary toggles.
+    stereoButton.setAlwaysLit(true);
+    formatButton.setAlwaysLit(true);
     helpButton.setOn(proc.uiState().getProperty(Rev246Processor::UiProps::tooltipsOn, false));
     helpButton.onToggle = [this](bool on) {
         proc.uiState().setProperty(Rev246Processor::UiProps::tooltipsOn, on, nullptr);
@@ -176,6 +183,16 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
                                  "transformer distortion, mostly 3rd harmonic at low frequencies and high levels. Off: the stock unit.");
     transformerButton.onToggle = [this](bool on) {
         auto& pr = param(P::id::transformer);
+        pr.beginChangeGesture();
+        pr.setValueNotifyingHost(on ? 1.0f : 0.0f);
+        pr.endChangeGesture();
+    };
+
+    formatButton.setTooltip("Float: full-precision processing (default). 16-BIT: quantises the reverb's internal storage "
+                            "to 16 bits, as the original did, for its faint signal-dependent noise floor and grit in the "
+                            "decays. Only affects the reverb path.");
+    formatButton.onToggle = [this](bool on) {
+        auto& pr = param(P::id::sixteenBit);
         pr.beginChangeGesture();
         pr.setValueNotifyingHost(on ? 1.0f : 0.0f);
         pr.endChangeGesture();
@@ -225,7 +242,7 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
     for (auto& l : leds) designComponents.push_back(l.get());
     for (auto* c : std::initializer_list<rv::ui::DesignComponent*>{&powerButton, &programDisplay, &lowpassDisplay, &reflectionsDisplay,
                                                                   &decayDisplay, &levelMeter, &panKnob, &mixFader, &inputFader,
-                                                                  &outputFader, &linkButton, &transformerButton, &stereoButton, &calButton, &helpButton,
+                                                                  &outputFader, &linkButton, &transformerButton, &formatButton, &stereoButton, &calButton, &helpButton,
                                                                   &titleLabel, &versionLabel})
         designComponents.push_back(c);
     presetBar.addTo(designComponents);
@@ -234,7 +251,7 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
             addAndMakeVisible(*c);
     addChildComponent(bubble);
 
-    for (const auto* id : {P::id::program, P::id::mix, P::id::pan, P::id::inputGain, P::id::outputGain, P::id::power, P::id::link, P::id::transformer, P::id::trueStereo})
+    for (const auto* id : {P::id::program, P::id::mix, P::id::pan, P::id::inputGain, P::id::outputGain, P::id::power, P::id::link, P::id::transformer, P::id::trueStereo, P::id::sixteenBit})
         proc.apvts.addParameterListener(id, this);
     for (int i = 0; i < joyCount; ++i)
         proc.apvts.addParameterListener(P::joyId((Joy)i), this);
@@ -261,7 +278,7 @@ Rev246Editor::~Rev246Editor()
 {
     stopTimer();
     proc.presets.onChange = nullptr;
-    for (const auto* id : {P::id::program, P::id::mix, P::id::pan, P::id::inputGain, P::id::outputGain, P::id::power, P::id::link, P::id::transformer, P::id::trueStereo})
+    for (const auto* id : {P::id::program, P::id::mix, P::id::pan, P::id::inputGain, P::id::outputGain, P::id::power, P::id::link, P::id::transformer, P::id::trueStereo, P::id::sixteenBit})
         proc.apvts.removeParameterListener(id, this);
     for (int i = 0; i < joyCount; ++i)
         proc.apvts.removeParameterListener(P::joyId((Joy)i), this);
@@ -364,6 +381,9 @@ void Rev246Editor::refreshAll()
     powerButton.setOn(param(P::id::power).getValue() >= 0.5f);
     linkButton.setOn(param(P::id::link).getValue() >= 0.5f);
     transformerButton.setOn(param(P::id::transformer).getValue() >= 0.5f);
+    const bool sixteenBit = param(P::id::sixteenBit).getValue() >= 0.5f;
+    formatButton.setOn(sixteenBit);
+    formatButton.setLabel(sixteenBit ? "16-BIT" : "FLOAT");
     stereoAvailable = proc.isStereoToStereo();
     stereoButton.setEnabled(stereoAvailable);
     const bool useTrueStereo = param(P::id::trueStereo).getValue() >= 0.5f;

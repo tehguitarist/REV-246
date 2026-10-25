@@ -35,8 +35,8 @@ being finalised, so there is no download yet. When there is, the latest one will
   together.
 - **Level meter** with an overload light and a calibration button for the reference level.
 - **16-bit mode:** quantises the reverb's internal storage to 16 bits, as the original did, for its faint, signal-
-  dependent noise floor and grit in the decays. Off, the reverb runs at full precision.
-- **Transformer option:** adds the weight in the low end and the gentle low-frequency harmonic distortion of a unit
+  dependent noise floor and grit in the decays. Set it to FLOAT for full precision.
+- **XFMR:** adds the weight in the low end and the gentle low-frequency harmonic distortion of a unit
   fitted with the optional input and output transformers. Off, the sound is that of the standard unit.
 - **Factory and user presets**, with a bypass (power) button.
 - **Mono in / mono out, mono in / stereo out and stereo in / stereo out.** Like the hardware, the reverb has one mono
@@ -74,23 +74,26 @@ notch, and Cmd/Alt-click to return to the default.
 In the non-linear programme (N) the readouts change meaning to match the hardware's own labels (DELAY, SPAN, and early
 and late RT). Hover over any control for a description.
 
-The bottom bar holds the preset browser (previous, next, name, **SAVE**, **OVERRIDE**), the routing and accuracy
-buttons (**ORIGINAL / TRUE ST**, **16-BIT**, **TRANSFORMER**), **LINK**, **CAL** for the meter reference and **?** for
-help. ORIGINAL / TRUE ST, TRANSFORMER and LINK are preferences, so presets neither store nor change them.
+The bottom bar holds the preset browser (previous, next, name, **SAVE**) and **CAL** for the meter reference on the
+left, then the routing and accuracy buttons (**ORIGINAL / TRUE ST**, **FLOAT / 16-BIT**, **XFMR**), **LINK** and
+**?** on the right. A changed preset's name turns italic with a `*`. Saving under an existing user-preset name asks
+before replacing it; factory names are read-only. ORIGINAL / TRUE ST, XFMR and LINK are preferences, so presets
+neither store nor change them.
 
 ## Accuracy options
 
-<!-- TODO: the 16-bit option is not in the plugin yet (no parameter or button; only TRANSFORMER exists). Add it, or
-     reword this section and the Features / bottom-bar text, before release. -->
+<!-- TODO: the FLOAT / 16-BIT button and parameter exist, but the placeholder engine has no loops to quantise yet;
+     the real algorithm applies the setting when it lands. -->
 
 Both options are off or on independently, and both only change the reverb path.
 
 **16-bit.** The original stored the intermediate results in its reverb loops as 16-bit words, and truncating them at
 that depth costs a little noise and grit: its service data put the reverb around 15 dB noisier than the unit's own
-straight-through path. With this option on, REV-246 quantises its loops the same way. Leave it off for a cleaner tail.
+straight-through path. With **16-BIT** selected, REV-246 will quantise its loops the same way (the placeholder engine
+has no loops yet). Leave it on **FLOAT** for a cleaner tail.
 
-**Transformer.** The original could be ordered with balanced input and output transformers, which the manual says raise
-the harmonic distortion slightly. With this option on, the wet path gains the low-frequency colour and gentle odd-
+**XFMR.** The original could be ordered with balanced input and output transformers, which the manual says raise the
+harmonic distortion slightly. With this option on, the wet path gains the low-frequency colour and gentle odd-
 harmonic distortion of that option. The low-frequency colour comes from measurement; the distortion is an informed
 estimate, since measurements of a unit's response cannot show it.
 

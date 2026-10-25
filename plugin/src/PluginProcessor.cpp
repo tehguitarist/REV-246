@@ -29,6 +29,7 @@ Rev246Processor::Rev246Processor()
     pPower = apvts.getRawParameterValue(id::power);
     pTransformer = apvts.getRawParameterValue(id::transformer);
     pTrueStereo = apvts.getRawParameterValue(id::trueStereo);
+    pSixteenBit = apvts.getRawParameterValue(id::sixteenBit);
     for (int i = 0; i < rv::params::numJoys; ++i)
         pJoy[(size_t)i] = apvts.getRawParameterValue(rv::params::joyId((rv::params::Joy)i));
 }
@@ -100,6 +101,7 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     s.lfX = joyValue(s.program, Joy::lf, s.steps[3]).value;
     s.rt = joyValue(s.program, Joy::rt, s.steps[4]).value;
     s.hfX = joyValue(s.program, Joy::hf, s.steps[5]).value;
+    s.sixteenBit = *pSixteenBit >= 0.5f;
     for (auto& e : engines)
         e.setSettings(s);
 

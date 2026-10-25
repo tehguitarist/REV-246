@@ -16,6 +16,7 @@ struct Settings
     double lfX = 1.0;
     double rt = 1.0;
     double hfX = 0.9;
+    bool sixteenBit = false; // quantise the loop storage to 16 bits (the real algorithm); no-op in the placeholder
     std::array<int, params::numJoys> steps{}; // the raw step indices, for engines that want the table index
 };
 

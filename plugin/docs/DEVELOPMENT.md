@@ -40,7 +40,7 @@
   stereo out, so a mono output takes its left side. For stereo in / stereo out, `trueStereo` (default off, the
   ORIGINAL / TRUE ST button) selects between the original summed path (0.5 x L+R into one engine) and two engines,
   one per input channel. Presets skip it, like `power`, `link` and `transformer`.
-- `transformer` (default off, the TRANSFORMER button) switches on `src/dsp/Transformer.h`: an input transformer core
+- `transformer` (default off, the XFMR button) switches on `src/dsp/Transformer.h`: an input transformer core
   on the mono input, then per output the low-band EQ (`src/dsp/CaptureEq.h`) and an output transformer core. Presets
   skip it, like `power` and `link`. The stage always runs (warm state, a 20 ms crossfade when toggled); off, its
   weight is exactly 0 and the signal is unchanged.
@@ -50,6 +50,12 @@
   the host rate from the same parameters, which matches `bq_resp` within 0.001 dB at 50 Hz–2 kHz from 22.05 to
   192 kHz (no prewarping needed; the fit is undefined below ~50 Hz). If `bq.json` is refitted, update
   `CaptureEq::cla` and the reference table in `tests/TransformerTests.cpp` together.
+- `sixteenBit` (default off, the FLOAT / 16-BIT button) is a sound setting and part of presets. It is passed to the
+  engine as `Settings::sixteenBit`; the placeholder has no loops yet, so the real algorithm applies the 16-bit storage
+  quantisation when it lands.
+- Preset saving: SAVE always opens the Save As dialog prefilled with the current name. Factory names are rejected
+  with a message; a chosen name that matches an existing user preset asks Yes/No before overwriting. No returns to the
+  name dialog. A modified preset's name is shown italic with a trailing `*`.
 - The transformer cores are a guess (H): flux = a leaky integral of the signal (5 Hz corner, normalised at 40 Hz),
   distortion voltage = a·φ|φ| + b·φ³ subtracted from the signal (the nonlinear magnetising current across the source
   resistance). a and b are set for 0.08 % THD at 40 Hz and 0 dBFS (= +12 dBu), three quarters from the a term; the
@@ -88,12 +94,12 @@ in / stereo out, so:
   so correlated channels keep their level rather than gaining 6 dB), then the mono reverb feeds both outputs. The
   **ORIGINAL / TRUE ST** button in the bottom bar switches to true stereo, which runs one mono engine per input
   channel (left through engine 0 and right through engine 1). The button is greyed out for the mono layouts. Like LINK
-  and TRANSFORMER it is a routing preference, so presets neither store nor change it.
+  and XFMR it is a routing preference, so presets neither store nor change it.
 
 ### TRANSFORMER (optional, off by default)
 
 The service manual offers the unit with optional balanced input and output transformers ("harmonic distortion
-... increased slightly", pp. 37 and 46). The TRANSFORMER button in the bottom bar (bool parameter `transformer`)
+... increased slightly", pp. 37 and 46). The XFMR button in the bottom bar (bool parameter `transformer`)
 models such a unit on the wet path:
 
 - **Low-band EQ (measured, S):** the colour that CLA's and the Altiverb's IRs share but Tomkin's library and the stock

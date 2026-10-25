@@ -27,6 +27,8 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     void refreshNow() { refreshAll(); }
     rv::ui::LevelMeter& getLevelMeter() { return levelMeter; }
     rv::ui::BarButton& getStereoButton() { return stereoButton; }
+    rv::ui::BarButton& getFormatButton() { return formatButton; }
+    rv::ui::PresetBar& getPresetBar() { return presetBar; }
 
   private:
     using Joy = rv::params::Joy;
@@ -66,6 +68,7 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     rv::ui::PresetBar presetBar;
     rv::ui::BarButton linkButton;
     rv::ui::BarButton transformerButton;
+    rv::ui::BarButton formatButton;
     rv::ui::BarButton stereoButton;
     rv::ui::BarButton calButton;
     rv::ui::HelpButton helpButton;

@@ -17,6 +17,10 @@ class BarButton : public DesignComponent
     bool isOn() const { return on; }
     void setLabel(const juce::String&);
     juce::String getLabel() const { return label; }
+    void setItalic(bool);
+    bool isItalic() const { return italic; }
+    void setAlwaysLit(bool);
+    bool isAlwaysLit() const { return alwaysLit; }
     std::function<void()> onClick;
     std::function<void(bool)> onToggle; // toggles: the requested state
 
@@ -28,7 +32,7 @@ class BarButton : public DesignComponent
   private:
     juce::String label;
     Kind kind;
-    bool on = false, held = false;
+    bool on = false, held = false, italic = false, alwaysLit = false;
 };
 
 // Static text in the bottom bar (the product name, the version).
@@ -55,22 +59,23 @@ class HelpButton : public BarButton
     juce::String getTooltip() override { return isOn() ? "Disable tooltips" : "Enable tooltips"; }
 };
 
-// Preset name with previous / next (a click on the name opens the preset menu), SAVE (always asks for a name) and
-// OVERRIDE (overwrites the current user preset; greyed out while a built-in preset is loaded).
+// Preset name with previous / next (a click on the name opens the preset menu) and SAVE (asks for a name, then asks
+// before replacing an existing user preset).
 class PresetBar
 {
   public:
     PresetBar(rv::PresetManager&, juce::Component& parent);
     void layoutForScale(float s);
-    void refresh(); // the name, with a "*" while modified
+    void refresh(); // the name, italic with a "*" while modified
     void addTo(std::vector<DesignComponent*>&);
+    const BarButton& getNameButton() const { return name; }
 
   private:
     void showMenu();
-    void promptSaveAs();
+    void promptSaveAs(juce::String initial = {});
 
     rv::PresetManager& presets;
     juce::Component& parent;
-    BarButton prev, next, name, save, override;
+    BarButton prev, next, name, save;
 };
 } // namespace rv::ui
