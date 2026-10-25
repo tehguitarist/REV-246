@@ -102,3 +102,20 @@ A re-read of the patent PDF and a search for newer sources turned up several det
 **9.6 Smaller corrections to `algorithm_research.md` §1.1.** Feedback is from "an output of the delay circuit" (drawn as the end), not provably the end; the t_B notation (the PDF OCR showed "t5"); the tapped-loop idea is Kuttruff 1962 [C: R42], with Blesser's contribution the non-harmonic placement + energy e-function + the parallel unreverberated path; the instruction timing is 100 ns (one OCR instance read "100 µs"); claim 5's "300 ns/µs" is garbled — the description's "300 ms" is authoritative.
 
 **Sources checked online:** the patent (Google Patents, full text + claims + citations) [R1]; Morrin's teardown [R44]; DuckDuckGo result set (UA product page — marketing only, no algorithm detail; vintagedigital — 403). No other independent algorithmic analysis of the 250 was found beyond the patent, Dattorro/Blesser and Morrin.
+
+## 10. UAD bench and best-guess specification (25 October 2026)
+
+Detail and methods: `UAD250_test_plan.md` §2 (the plugin is a commercial emulation and a *prior*, not the E; the fits below are to the Altiverb REV-250 captures). Labels: **C**/**S**/**H** as elsewhere.
+
+| Item | Best guess for the 246's Program E | Label | Source |
+|---|---|---|---|
+| Structure | three parallel combs, no coupling; loop lengths 4430 / 5014 / 5552 device samples | S | §3; plugin has the same design at 24 kHz (4018 / 4560 / 5046) |
+| Early taps | 0 / 429 / 718 device samples, gains +1 / −0.709 / +0.59, same in L and R, fixed in RT, LF, HF | S | `UAD250_test_plan.md` §2.9 (fitted integers ±0.1) |
+| L/R | R leads L by 314 device samples (11.9 ms) at onset; the tails are decorrelated | S | §2 |
+| Decay | T60 = RT × m_b with m_b = 1.40 / 1.26 / 1.11 / 1.00 / 0.92 / 0.82 / 0.67 (125 Hz … 8 kHz), RT ≥ 1.0 s; held-out error 0.5–3 %; RT 0.4 departs | S | §2.9 |
+| Modulation type | delay modulation of the combs (not M/L's frequency-flat rotation); early taps and direct path static | H (weak) | plugin; §2.7 comb coherence |
+| Modulation rate | slow, ≲ 0.55 Hz (the plugin: 0.552 Hz common to all loops, ≈ 0.74 Hz extra on the longest loop); rates ≥ 0.74 Hz fit worse | H | §2.8 |
+| Modulation depth | ≈ ±0.03 ms, ±1 device sample (range 0.01–0.06 ms) on the common line; the plugin's is 10–15× larger | H | §2.8 |
+| Not available | read taps and positions per comb, loop-filter shape beyond the per-band multipliers, output discorrelator, the modulation's waveform (sinusoid / drift / random), whether its rate follows the sample clock (0.552 Hz at 24 kHz would be 0.607 Hz at 26,373.6 Hz) | open | needs E repeat captures, which do not exist |
+
+Offline: all UAD captures are archived (`tools/uad250/offline_bundle.py`); the fits here read only the Altiverb caches and synthetic simulation.
