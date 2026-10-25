@@ -46,6 +46,8 @@ def tone(f, sec, r, level=-20, fade=1.0):
     n = int(fade * r); x[:n] *= np.linspace(0, 1, n); return x.astype(np.float32)
 def two_tone(f1, f2, sec, r, level=-26):
     return (tone(f1, sec, r, level) + tone(f2, sec, r, level)).astype(np.float32)
+def noise_rms(sec, r, rms_db=-18, seed=2):
+    x = np.random.default_rng(seed).standard_normal(int(sec * r)); return (x / x.std() * db(rms_db)).astype(np.float32)
 def noise(sec, r, level=-20, seed=1):
     return (np.random.default_rng(seed).standard_normal(int(sec * r)) * db(level) / 3).astype(np.float32)
 def ess(r, sec=10.0, f0=20.0, f1=20000.0, level=-12):
@@ -90,6 +92,31 @@ def build_cases():
             case("B_level", f"silence_noise{nz}_power{pw}", silence(20, r), tail=0, params=dict(Noise=nz, Power=pw, Time="4.5 s"))
     for pw, mx in [(0, 1), (1, 0), (1, 1)]:
         case("B_level", f"whitenoise_-20dB_power{pw}_mix{mx}", noise(20, r), tail=2, params=dict(Time="4.5 s", Power=pw, Mix=mx, WetSolo=0, Noise=0))
+    # Ghost: below about -66 dBFS an impulse gives a level-independent response (~ -100 dBFS). Polarity, depth, density, channel.
+    for lv in (-60, -66, -72, -90, -110, -130, -150):
+        for sg, sn in ((1, "pos"), (-1, "neg")):
+            case("B_ghost", f"imp_{lv}dB_{sn}", sg * impulse(lv, r), tail=3, params=dict(Time="0.4 s", Noise=0))
+    case("B_ghost", "imp_zero", impulse(-300, r), tail=3, params=dict(Time="0.4 s", Noise=0))
+    case("B_ghost", "imp_-90dB_Lonly", stereo_one(impulse(-90, r), 0), tail=3, params=dict(Time="0.4 s", Noise=0))
+    case("B_ghost", "imp_-90dB_Ronly", stereo_one(impulse(-90, r), 1), tail=3, params=dict(Time="0.4 s", Noise=0))
+    case("B_ghost", "imp_-90dB_x2", (impulse(-90, r) + impulse(-90, r, at=2000)).astype(np.float32), tail=3, params=dict(Time="0.4 s", Noise=0))
+    for lv in (-60, -80, -100):
+        case("B_ghost", f"noise_{lv}rms_10s", noise_rms(10, r, lv), tail=2, params=dict(Time="0.4 s", Noise=0))
+    for t in ("0.4 s", "4.5 s"):
+        case("B_ghost", f"zero_input_T{t.split()[0]}", impulse(-300, r, n=int(0.5 * r)), tail=rt_tail(t, 6), params=dict(Time=t, Noise=0), note="start-up ghost, subtract from other captures at the same setting")
+    for lv in (-17, -16, -15, -14, -13):
+        case("B_ghost", f"imp_{lv}dB_T4.5", impulse(lv, r), tail=14, params=dict(Time="4.5 s", Noise=0))
+    case("B_ghost", "zero_input_T2.5", impulse(-300, r, n=int(0.5 * r)), tail=10, params=dict(Time="2.5 s", Noise=0))
+    for lv in (-36, -30, -24, -18, -12, -6):
+        case("B_ghost", f"noise_{lv}rms_30s_T2.5", noise_rms(30, r, lv), tail=10, params=dict(Time="2.5 s", Noise=0))
+    case("B_ghost", "imp_-90dB_T4.5", impulse(-90, r), tail=14, params=dict(Time="4.5 s", Noise=0))
+    # Calibration: 0 VU = -18 dBFS RMS (user, unit calibration). Sine peak -15 dBFS = -18 dBFS RMS; noise below is exactly -18 RMS.
+    for lv, nm in [(-15, "0VU"), (-9, "+6VU"), (-3, "+12VU")]:
+        for f in (250, 1000, 4000):
+            case("B_level", f"cal_sine{f}_{nm}", tone(f, 8, r, lv), tail=1.5, params=dict(Time="0.4 s", Noise=0))
+    for t in ("0.4 s", "2.5 s", "4.5 s"):
+        case("B_level", f"cal_noise_-18rms_T{t.split()[0]}", noise_rms(30, r), tail=rt_tail(t, 2), params=dict(Time=t, Noise=0))
+        case("B_level", f"cal_noise_-18rms_T{t.split()[0]}_noise1", noise_rms(30, r), tail=rt_tail(t, 2), params=dict(Time=t, Noise=1))
     # C. modulation / time variance (Noise on unless noted)
     for t in ["1.0 s", "2.5 s", "4.5 s"]:
         case("C_mod", f"train12s_T{t.split()[0]}_noise1", train(r, 24, 12.0), tail=12, params=dict(Time=t, Noise=1))
@@ -99,6 +126,8 @@ def build_cases():
     for f in [250, 1000, 4000]:
         for nz in (1, 0):
             case("C_mod", f"tone{f}_60s_T2.5_noise{nz}", tone(f, 60, r), tail=4, params=dict(Time="2.5 s", Noise=nz))
+    for lv, nm in [(-15, "0VU"), (-3, "+12VU")]:
+        case("C_mod", f"tone1000_60s_T2.5_{nm}_noise1", tone(1000, 60, r, lv), tail=4, params=dict(Time="2.5 s"))
     case("C_mod", "tone1000_60s_T4.5_noise1", tone(1000, 60, r), tail=4, params=dict(Time="4.5 s"))
     case("C_mod", "tone1000_60s_T0.4_noise1", tone(1000, 60, r), tail=4, params=dict(Time="0.4 s"))
     for k, at in enumerate([0, 1, 2, 3, 100, 511, 512, 513, 1000, 24000, 48000, 96000, 177600]):

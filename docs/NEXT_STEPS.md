@@ -262,6 +262,8 @@ Consequence for the working rules (§2): do not rely on tail levels or noise flo
 
 ## 10. Optional: UAD EMT 250 plugin as a modulation test bench
 
+**Update (25 October 2026): done headlessly, no DAW needed.** Harness and results: `docs/UAD250_test_plan.md` (§2: the algorithm modulates continuously with sidebands ∝ f and an absolute-time-keyed state; three loops 167.42 / 190.00 / 210.25 ms = 4018 / 4560 / 5046 samples at 24 kHz; early taps fixed; no word-length effects). The table below is the original plan.
+
 The aim is to validate modulation detectors on a reverb that is known to be modulated, and to get a "250-style" fingerprint to compare with any 246 residual. It is **not** a template for 246 S/M/L: their harmonic loops rule out 250-style delay modulation.
 
 | Test signal (to generate) | Render through the plugin (100 % wet, offline) | Reveals |
