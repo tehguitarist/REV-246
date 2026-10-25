@@ -147,6 +147,10 @@ def build_cases():
         case("C_dense", f"dense_T0.4_off{k * 250:03d}ms", train(r, 240, 1.0, lead=0.1 + 0.25 * k), tail=2, params=dict(Time="0.4 s", Noise=0))
     for k in range(2):
         case("C_dense", f"dense_T2.5_sp3_off{k * 1500:04d}ms", train(r, 80, 3.0, lead=0.1 + 1.5 * k), tail=4, params=dict(Time="2.5 s", Noise=0))
+    # C_loops: per-loop delay tracking. White noise at 0 VU (-18 dBFS RMS) for 240 s; the output correlates with itself at each loop's
+    # lag, and tracking that peak in short windows gives each loop's delay versus absolute time. Two seeds at 4.5 s must agree (state follows time).
+    for t, sd in (("4.5 s", 11), ("4.5 s", 12), ("2.5 s", 11), ("1.5 s", 11)):
+        case("C_loops", f"noise240s_T{t.split()[0]}_seed{sd}", noise_rms(240, r, -18, seed=sd), tail=2, params=dict(Time=t, Noise=0))
     # D. other programs and time/rate coverage
     for i, nm in [(0, "I"), (1, "II"), (2, "III"), (3, "IV")]:
         for nz in (1, 0):
