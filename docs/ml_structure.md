@@ -1149,3 +1149,14 @@ EMT_KERNEL=chain3 ... pulse_check.py --stage ml (the 96 damped groups, PULSE_OUT
 ```
 
 §22 refitted b with each capture's clock, shift and gains held at the law stage's values, which had been fitted (on the cluster and first pass) with the stored b in the model. Rerunning the law stage for the damped groups on the adopted table is the same per-capture nuisance fit, not a model term. Clocks move by −0.0004…−0.0017 samples in shift and ±0.1 ppm, gains by ≈ 0.001 dB. Pulse check against §22 (slipped captures left out): L first pass −53.58 → −54.44 dB (worst capture −0.35, i.e. better), M −52.85 → −52.95 (worst +0.06); recirculations 1–3 and 0.3–4 s unchanged to 0.01 dB. Report: L first pass −52.9 → −53.0 dB over all groups, everything else within the last printed digit. b itself was not refitted again on the new clocks (the clock moves are 10⁻³ samples; a second pass would move b by far less than its 2–5·10⁻⁵ scatter, H).
+
+## 24. The −50 dB cluster / gap target in M and L, audited (law files, 25 October 2026) **[S: the model's own cluster / gap error (capture noise removed, repeat = 2 v, model = v + e) is −59.6 dB median in M (90th percentile −54.4) and −57.5 dB in L (−55.5), so the target holds wherever the library can show it; S: the 107 M and 7 L channel-nulls above −50 dB are the captures' noise floor (AMPL 10 in M, where the cluster is 18 dB weaker; LF 2.0 at long RT in L), the repeat capture nulling no deeper; H: five M channel-nulls (2.0_2.6_0.7, 2.0_3.0_0.9, 2.0_4.0_0.7 at AMPL 10) keep −44…−46 dB of own error, inside the noise estimate's uncertainty there (noise −42 dB)]**
+
+The hard constraint for M / L (CLAUDE.md, `NEXT_STEPS.md` §2) is −50 dB on the cluster and the gap before the reverb starts. The pulse check does not score that window (§14), the law stage does (`analysis/ml_lines/law/`, `law` and `repeat` per capture: the model, and another capture of the group with the cluster's level difference modelled, `fit_repeat`). Slipped captures (§23) left out.
+
+| | captures | model, median L / R | worst | channel-nulls above −50 | of those with own error above −50 |
+|---|---|---|---|---|---|
+| M | 452 | −54.0 / −53.7 dB | −38.9 / −40.4 | 107 (AMPL 10 median −50.5; AMPL 60 / 99 −53.6 / −53.7) | 5 |
+| L | 179 (AMPL 80; AMPL 0 has no cluster) | −52.9 / −52.6 | −48.6 / −48.2 | 7 (all LF 2.0, RT ≥ 8) | 0 |
+
+By LF and HF step the medians are flat (M −53.5…−53.8, L −52.5…−52.6): no control-dependent model error. The failures sit at the lowest cluster level (M AMPL 10) and the longest RT (where the deconvolution noise of a long tail spreads into the gap: M AMPL 10 repeats −34.3…−35.2 dB at RT 5 against −38.8…−40.5 at RT 2.6–4). In all of them the repeat nulls no deeper than the model, so the model is at the capture's noise floor; the split gives the model's own error −59.6 / −57.5 dB (M / L median). Nothing to change in the model; the remaining five M channel-nulls are noted (H).
