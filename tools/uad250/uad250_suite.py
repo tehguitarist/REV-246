@@ -141,6 +141,12 @@ def build_cases():
          events=[dict(t=2.0, param="Noise", value=0)])
     for n_ in (1, 0):
         case("C_mod", f"sweep_x6_gap8s_T2.5_noise{n_}", sweeps(r, 6, 8.0), tail=6, params=dict(Time="2.5 s", Noise=n_))
+    # C_dense: the time-varying response h(t_onset, tau) sampled densely. The state follows absolute stream time, tails must not
+    # overlap, so Time 0.4 s with a 1 s train at four 0.25 s offsets = 0.25 s sampling over 240 s; Time 2.5 s at 3 s spacing.
+    for k in range(4):
+        case("C_dense", f"dense_T0.4_off{k * 250:03d}ms", train(r, 240, 1.0, lead=0.1 + 0.25 * k), tail=2, params=dict(Time="0.4 s", Noise=0))
+    for k in range(2):
+        case("C_dense", f"dense_T2.5_sp3_off{k * 1500:04d}ms", train(r, 80, 3.0, lead=0.1 + 1.5 * k), tail=4, params=dict(Time="2.5 s", Noise=0))
     # D. other programs and time/rate coverage
     for i, nm in [(0, "I"), (1, "II"), (2, "III"), (3, "IV")]:
         for nz in (1, 0):
