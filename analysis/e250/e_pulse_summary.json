@@ -1,0 +1,3525 @@
+{
+ "v1_first_audit": {
+  "meta": {
+   "rts": [
+    0.4,
+    1.0,
+    1.5,
+    2.0,
+    2.5,
+    3.0,
+    3.6,
+    4.0,
+    4.5
+   ],
+   "seeds": 5,
+   "k_sd": 2.5,
+   "gains": {
+    "0.4": {
+     "imp": 3.8746391443904016,
+     "sweep": 3.8677213226439617
+    },
+    "1.0": {
+     "imp": 1.456253731066443,
+     "sweep": 1.4464729890516732
+    },
+    "1.5": {
+     "imp": 1.1890668160588462,
+     "sweep": 1.1803063981844713
+    },
+    "2.0": {
+     "imp": 1.0943424551958212,
+     "sweep": 1.0863932340204232
+    },
+    "2.5": {
+     "imp": 1.0548584081665715,
+     "sweep": 1.0475411165787378
+    },
+    "3.0": {
+     "imp": 0.980403366524818,
+     "sweep": 0.9739812386427583
+    },
+    "3.6": {
+     "imp": 0.9747202658805532,
+     "sweep": 0.9687822831325975
+    },
+    "4.0": {
+     "imp": 0.9466947856278332,
+     "sweep": 0.9411970888976614
+    },
+    "4.5": {
+     "imp": 0.9370664722571502,
+     "sweep": 0.9319301687402288
+    }
+   }
+  },
+  "by_family": {
+   "imp": {
+    "c50 L": {
+     "n": 56,
+     "inside": 23
+    },
+    "c50 L [ext]": {
+     "n": 32,
+     "inside": 21
+    },
+    "c80 L": {
+     "n": 56,
+     "inside": 26
+    },
+    "c80 L [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "d50 L": {
+     "n": 56,
+     "inside": 23
+    },
+    "d50 L [ext]": {
+     "n": 32,
+     "inside": 21
+    },
+    "edr_ring L": {
+     "n": 8,
+     "inside": 7
+    },
+    "edr_rough L": {
+     "n": 8,
+     "inside": 7
+    },
+    "lev_e L": {
+     "n": 152,
+     "inside": 103
+    },
+    "lev_e L [ext]": {
+     "n": 56,
+     "inside": 35
+    },
+    "lev_l L": {
+     "n": 152,
+     "inside": 71
+    },
+    "lev_l L [ext]": {
+     "n": 56,
+     "inside": 31
+    },
+    "levs_e L": {
+     "n": 152,
+     "inside": 123
+    },
+    "levs_e L [ext]": {
+     "n": 56,
+     "inside": 39
+    },
+    "levs_l L": {
+     "n": 152,
+     "inside": 133
+    },
+    "levs_l L [ext]": {
+     "n": 56,
+     "inside": 37
+    },
+    "mix_ms L": {
+     "n": 2,
+     "inside": 0
+    },
+    "ned_a L": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_b L": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_c L": {
+     "n": 8,
+     "inside": 0
+    },
+    "ts L": {
+     "n": 56,
+     "inside": 19
+    },
+    "ts L [ext]": {
+     "n": 32,
+     "inside": 14
+    },
+    "bb_edt_L": {
+     "n": 8,
+     "inside": 7
+    },
+    "bb_edt_R": {
+     "n": 8,
+     "inside": 7
+    },
+    "bb_t_L": {
+     "n": 8,
+     "inside": 7
+    },
+    "bb_t_R": {
+     "n": 8,
+     "inside": 7
+    },
+    "c50 R": {
+     "n": 56,
+     "inside": 32
+    },
+    "c50 R [ext]": {
+     "n": 32,
+     "inside": 13
+    },
+    "c80 R": {
+     "n": 56,
+     "inside": 34
+    },
+    "c80 R [ext]": {
+     "n": 32,
+     "inside": 17
+    },
+    "coh": {
+     "n": 152,
+     "inside": 138
+    },
+    "coh [ext]": {
+     "n": 56,
+     "inside": 54
+    },
+    "cohl": {
+     "n": 152,
+     "inside": 147
+    },
+    "cohl [ext]": {
+     "n": 56,
+     "inside": 53
+    },
+    "d50 R": {
+     "n": 56,
+     "inside": 33
+    },
+    "d50 R [ext]": {
+     "n": 32,
+     "inside": 13
+    },
+    "edr_ring": {
+     "n": 8,
+     "inside": 7
+    },
+    "edr_rough": {
+     "n": 8,
+     "inside": 7
+    },
+    "ew L": {
+     "n": 32,
+     "inside": 10
+    },
+    "ew R": {
+     "n": 32,
+     "inside": 8
+    },
+    "fsd_100-1000_R": {
+     "n": 8,
+     "inside": 6
+    },
+    "fsd_1000-4000_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "fsd_4000-10000_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "fsde L": {
+     "n": 24,
+     "inside": 24
+    },
+    "fsde R": {
+     "n": 24,
+     "inside": 22
+    },
+    "fsdl L": {
+     "n": 24,
+     "inside": 20
+    },
+    "fsdl R": {
+     "n": 24,
+     "inside": 20
+    },
+    "iacc_e": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_1000": {
+     "n": 8,
+     "inside": 1
+    },
+    "iacc_e_2000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_4000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_500": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_1000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_2000": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_l_4000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_500": {
+     "n": 8,
+     "inside": 6
+    },
+    "iaccb e": {
+     "n": 56,
+     "inside": 48
+    },
+    "iaccb e [ext]": {
+     "n": 32,
+     "inside": 29
+    },
+    "iaccb l": {
+     "n": 56,
+     "inside": 53
+    },
+    "iaccb l [ext]": {
+     "n": 32,
+     "inside": 29
+    },
+    "iacct": {
+     "n": 48,
+     "inside": 48
+    },
+    "lev_e R": {
+     "n": 152,
+     "inside": 126
+    },
+    "lev_e R [ext]": {
+     "n": 56,
+     "inside": 35
+    },
+    "lev_l R": {
+     "n": 152,
+     "inside": 104
+    },
+    "lev_l R [ext]": {
+     "n": 56,
+     "inside": 40
+    },
+    "levs_e R": {
+     "n": 152,
+     "inside": 132
+    },
+    "levs_e R [ext]": {
+     "n": 56,
+     "inside": 41
+    },
+    "levs_l R": {
+     "n": 152,
+     "inside": 135
+    },
+    "levs_l R [ext]": {
+     "n": 56,
+     "inside": 38
+    },
+    "lr_e": {
+     "n": 8,
+     "inside": 2
+    },
+    "lr_l": {
+     "n": 8,
+     "inside": 0
+    },
+    "lrb e": {
+     "n": 56,
+     "inside": 52
+    },
+    "lrb e [ext]": {
+     "n": 32,
+     "inside": 12
+    },
+    "lrb l": {
+     "n": 56,
+     "inside": 35
+    },
+    "lrb l [ext]": {
+     "n": 32,
+     "inside": 22
+    },
+    "mix_ms": {
+     "n": 3,
+     "inside": 0
+    },
+    "ned_a": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_b": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_c": {
+     "n": 8,
+     "inside": 1
+    },
+    "oct EDT L": {
+     "n": 56,
+     "inside": 45
+    },
+    "oct EDT R": {
+     "n": 56,
+     "inside": 46
+    },
+    "oct EDT L [ext]": {
+     "n": 32,
+     "inside": 28
+    },
+    "oct EDT R [ext]": {
+     "n": 32,
+     "inside": 29
+    },
+    "oct LATE L": {
+     "n": 56,
+     "inside": 52
+    },
+    "oct LATE R": {
+     "n": 56,
+     "inside": 52
+    },
+    "oct LATE L [ext]": {
+     "n": 32,
+     "inside": 25
+    },
+    "oct LATE R [ext]": {
+     "n": 32,
+     "inside": 27
+    },
+    "oct T60 L": {
+     "n": 56,
+     "inside": 40
+    },
+    "oct T60 R": {
+     "n": 56,
+     "inside": 39
+    },
+    "oct T60 L [ext]": {
+     "n": 32,
+     "inside": 23
+    },
+    "oct T60 R [ext]": {
+     "n": 32,
+     "inside": 22
+    },
+    "third EDT L [ext]": {
+     "n": 56,
+     "inside": 48
+    },
+    "third EDT R [ext]": {
+     "n": 56,
+     "inside": 42
+    },
+    "third EDT L": {
+     "n": 152,
+     "inside": 131
+    },
+    "third EDT R": {
+     "n": 152,
+     "inside": 132
+    },
+    "third LATE L [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third LATE R [ext]": {
+     "n": 56,
+     "inside": 46
+    },
+    "third LATE L": {
+     "n": 152,
+     "inside": 139
+    },
+    "third LATE R": {
+     "n": 152,
+     "inside": 144
+    },
+    "third T60 L [ext]": {
+     "n": 56,
+     "inside": 39
+    },
+    "third T60 R [ext]": {
+     "n": 56,
+     "inside": 42
+    },
+    "third T60 L": {
+     "n": 152,
+     "inside": 129
+    },
+    "third T60 R": {
+     "n": 152,
+     "inside": 117
+    },
+    "ts R": {
+     "n": 56,
+     "inside": 28
+    },
+    "ts R [ext]": {
+     "n": 32,
+     "inside": 15
+    }
+   },
+   "imp_g": {
+    "c50 L": {
+     "n": 56,
+     "inside": 27
+    },
+    "c50 L [ext]": {
+     "n": 32,
+     "inside": 23
+    },
+    "c80 L": {
+     "n": 56,
+     "inside": 33
+    },
+    "c80 L [ext]": {
+     "n": 32,
+     "inside": 23
+    },
+    "d50 L": {
+     "n": 56,
+     "inside": 27
+    },
+    "d50 L [ext]": {
+     "n": 32,
+     "inside": 23
+    },
+    "edr_ring L": {
+     "n": 8,
+     "inside": 7
+    },
+    "edr_rough L": {
+     "n": 8,
+     "inside": 7
+    },
+    "lev_e L": {
+     "n": 152,
+     "inside": 117
+    },
+    "lev_e L [ext]": {
+     "n": 56,
+     "inside": 42
+    },
+    "lev_l L": {
+     "n": 152,
+     "inside": 86
+    },
+    "lev_l L [ext]": {
+     "n": 56,
+     "inside": 41
+    },
+    "levs_e L": {
+     "n": 152,
+     "inside": 128
+    },
+    "levs_e L [ext]": {
+     "n": 56,
+     "inside": 43
+    },
+    "levs_l L": {
+     "n": 152,
+     "inside": 133
+    },
+    "levs_l L [ext]": {
+     "n": 56,
+     "inside": 41
+    },
+    "mix_ms L": {
+     "n": 2,
+     "inside": 0
+    },
+    "ned_a L": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_b L": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_c L": {
+     "n": 8,
+     "inside": 0
+    },
+    "ts L": {
+     "n": 56,
+     "inside": 21
+    },
+    "ts L [ext]": {
+     "n": 32,
+     "inside": 13
+    },
+    "bb_edt_L": {
+     "n": 8,
+     "inside": 7
+    },
+    "bb_edt_R": {
+     "n": 8,
+     "inside": 7
+    },
+    "bb_t_L": {
+     "n": 8,
+     "inside": 7
+    },
+    "bb_t_R": {
+     "n": 8,
+     "inside": 7
+    },
+    "c50 R": {
+     "n": 56,
+     "inside": 41
+    },
+    "c50 R [ext]": {
+     "n": 32,
+     "inside": 12
+    },
+    "c80 R": {
+     "n": 56,
+     "inside": 44
+    },
+    "c80 R [ext]": {
+     "n": 32,
+     "inside": 14
+    },
+    "coh": {
+     "n": 152,
+     "inside": 138
+    },
+    "coh [ext]": {
+     "n": 56,
+     "inside": 53
+    },
+    "cohl": {
+     "n": 152,
+     "inside": 147
+    },
+    "cohl [ext]": {
+     "n": 56,
+     "inside": 53
+    },
+    "d50 R": {
+     "n": 56,
+     "inside": 40
+    },
+    "d50 R [ext]": {
+     "n": 32,
+     "inside": 12
+    },
+    "edr_ring": {
+     "n": 8,
+     "inside": 7
+    },
+    "edr_rough": {
+     "n": 8,
+     "inside": 7
+    },
+    "ew L": {
+     "n": 32,
+     "inside": 2
+    },
+    "ew R": {
+     "n": 32,
+     "inside": 24
+    },
+    "fsd_100-1000_R": {
+     "n": 8,
+     "inside": 5
+    },
+    "fsd_1000-4000_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "fsd_4000-10000_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "fsde L": {
+     "n": 24,
+     "inside": 24
+    },
+    "fsde R": {
+     "n": 24,
+     "inside": 21
+    },
+    "fsdl L": {
+     "n": 24,
+     "inside": 20
+    },
+    "fsdl R": {
+     "n": 24,
+     "inside": 20
+    },
+    "iacc_e": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_1000": {
+     "n": 8,
+     "inside": 4
+    },
+    "iacc_e_2000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_4000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_500": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_1000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_2000": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_l_4000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_500": {
+     "n": 8,
+     "inside": 6
+    },
+    "iaccb e": {
+     "n": 56,
+     "inside": 51
+    },
+    "iaccb e [ext]": {
+     "n": 32,
+     "inside": 29
+    },
+    "iaccb l": {
+     "n": 56,
+     "inside": 53
+    },
+    "iaccb l [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "iacct": {
+     "n": 48,
+     "inside": 48
+    },
+    "lev_e R": {
+     "n": 152,
+     "inside": 137
+    },
+    "lev_e R [ext]": {
+     "n": 56,
+     "inside": 42
+    },
+    "lev_l R": {
+     "n": 152,
+     "inside": 137
+    },
+    "lev_l R [ext]": {
+     "n": 56,
+     "inside": 40
+    },
+    "levs_e R": {
+     "n": 152,
+     "inside": 138
+    },
+    "levs_e R [ext]": {
+     "n": 56,
+     "inside": 41
+    },
+    "levs_l R": {
+     "n": 152,
+     "inside": 135
+    },
+    "levs_l R [ext]": {
+     "n": 56,
+     "inside": 40
+    },
+    "lr_e": {
+     "n": 8,
+     "inside": 3
+    },
+    "lr_l": {
+     "n": 8,
+     "inside": 0
+    },
+    "lrb e": {
+     "n": 56,
+     "inside": 55
+    },
+    "lrb e [ext]": {
+     "n": 32,
+     "inside": 11
+    },
+    "lrb l": {
+     "n": 56,
+     "inside": 35
+    },
+    "lrb l [ext]": {
+     "n": 32,
+     "inside": 22
+    },
+    "mix_ms": {
+     "n": 3,
+     "inside": 0
+    },
+    "ned_a": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_b": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_c": {
+     "n": 8,
+     "inside": 1
+    },
+    "oct EDT L": {
+     "n": 56,
+     "inside": 45
+    },
+    "oct EDT R": {
+     "n": 56,
+     "inside": 46
+    },
+    "oct EDT L [ext]": {
+     "n": 32,
+     "inside": 27
+    },
+    "oct EDT R [ext]": {
+     "n": 32,
+     "inside": 29
+    },
+    "oct LATE L": {
+     "n": 56,
+     "inside": 52
+    },
+    "oct LATE R": {
+     "n": 56,
+     "inside": 52
+    },
+    "oct LATE L [ext]": {
+     "n": 32,
+     "inside": 25
+    },
+    "oct LATE R [ext]": {
+     "n": 32,
+     "inside": 27
+    },
+    "oct T60 L": {
+     "n": 56,
+     "inside": 40
+    },
+    "oct T60 R": {
+     "n": 56,
+     "inside": 39
+    },
+    "oct T60 L [ext]": {
+     "n": 32,
+     "inside": 23
+    },
+    "oct T60 R [ext]": {
+     "n": 32,
+     "inside": 22
+    },
+    "third EDT L [ext]": {
+     "n": 56,
+     "inside": 49
+    },
+    "third EDT R [ext]": {
+     "n": 56,
+     "inside": 44
+    },
+    "third EDT L": {
+     "n": 152,
+     "inside": 131
+    },
+    "third EDT R": {
+     "n": 152,
+     "inside": 132
+    },
+    "third LATE L [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third LATE R [ext]": {
+     "n": 56,
+     "inside": 45
+    },
+    "third LATE L": {
+     "n": 152,
+     "inside": 139
+    },
+    "third LATE R": {
+     "n": 152,
+     "inside": 144
+    },
+    "third T60 L [ext]": {
+     "n": 56,
+     "inside": 38
+    },
+    "third T60 R [ext]": {
+     "n": 56,
+     "inside": 41
+    },
+    "third T60 L": {
+     "n": 152,
+     "inside": 129
+    },
+    "third T60 R": {
+     "n": 152,
+     "inside": 117
+    },
+    "ts R": {
+     "n": 56,
+     "inside": 41
+    },
+    "ts R [ext]": {
+     "n": 32,
+     "inside": 13
+    }
+   },
+   "sweep": {
+    "c50 L": {
+     "n": 56,
+     "inside": 24
+    },
+    "c50 L [ext]": {
+     "n": 32,
+     "inside": 21
+    },
+    "c80 L": {
+     "n": 56,
+     "inside": 26
+    },
+    "c80 L [ext]": {
+     "n": 32,
+     "inside": 18
+    },
+    "d50 L": {
+     "n": 56,
+     "inside": 24
+    },
+    "d50 L [ext]": {
+     "n": 32,
+     "inside": 20
+    },
+    "edr_ring L": {
+     "n": 8,
+     "inside": 5
+    },
+    "edr_rough L": {
+     "n": 8,
+     "inside": 7
+    },
+    "lev_e L": {
+     "n": 152,
+     "inside": 106
+    },
+    "lev_e L [ext]": {
+     "n": 56,
+     "inside": 41
+    },
+    "lev_l L": {
+     "n": 152,
+     "inside": 82
+    },
+    "lev_l L [ext]": {
+     "n": 56,
+     "inside": 29
+    },
+    "levs_e L": {
+     "n": 152,
+     "inside": 134
+    },
+    "levs_e L [ext]": {
+     "n": 56,
+     "inside": 39
+    },
+    "levs_l L": {
+     "n": 152,
+     "inside": 141
+    },
+    "levs_l L [ext]": {
+     "n": 56,
+     "inside": 36
+    },
+    "mix_ms L": {
+     "n": 8,
+     "inside": 7
+    },
+    "ned_a L": {
+     "n": 8,
+     "inside": 4
+    },
+    "ned_b L": {
+     "n": 8,
+     "inside": 8
+    },
+    "ned_c L": {
+     "n": 8,
+     "inside": 5
+    },
+    "ts L": {
+     "n": 56,
+     "inside": 23
+    },
+    "ts L [ext]": {
+     "n": 32,
+     "inside": 18
+    },
+    "bb_edt_L": {
+     "n": 8,
+     "inside": 7
+    },
+    "bb_edt_R": {
+     "n": 8,
+     "inside": 7
+    },
+    "bb_t_L": {
+     "n": 8,
+     "inside": 5
+    },
+    "bb_t_R": {
+     "n": 8,
+     "inside": 3
+    },
+    "c50 R": {
+     "n": 56,
+     "inside": 20
+    },
+    "c50 R [ext]": {
+     "n": 32,
+     "inside": 21
+    },
+    "c80 R": {
+     "n": 56,
+     "inside": 33
+    },
+    "c80 R [ext]": {
+     "n": 32,
+     "inside": 22
+    },
+    "coh": {
+     "n": 152,
+     "inside": 146
+    },
+    "coh [ext]": {
+     "n": 56,
+     "inside": 54
+    },
+    "cohl": {
+     "n": 152,
+     "inside": 152
+    },
+    "cohl [ext]": {
+     "n": 56,
+     "inside": 54
+    },
+    "d50 R": {
+     "n": 56,
+     "inside": 20
+    },
+    "d50 R [ext]": {
+     "n": 32,
+     "inside": 20
+    },
+    "edr_ring": {
+     "n": 8,
+     "inside": 8
+    },
+    "edr_rough": {
+     "n": 8,
+     "inside": 7
+    },
+    "ew L": {
+     "n": 32,
+     "inside": 10
+    },
+    "ew R": {
+     "n": 32,
+     "inside": 7
+    },
+    "fsd_100-1000_R": {
+     "n": 8,
+     "inside": 7
+    },
+    "fsd_1000-4000_R": {
+     "n": 8,
+     "inside": 3
+    },
+    "fsd_4000-10000_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "fsde L": {
+     "n": 24,
+     "inside": 22
+    },
+    "fsde R": {
+     "n": 24,
+     "inside": 18
+    },
+    "fsdl L": {
+     "n": 24,
+     "inside": 16
+    },
+    "fsdl R": {
+     "n": 24,
+     "inside": 17
+    },
+    "iacc_e": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_1000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_2000": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_e_4000": {
+     "n": 8,
+     "inside": 6
+    },
+    "iacc_e_500": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_l": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_1000": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_l_2000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_4000": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_l_500": {
+     "n": 8,
+     "inside": 5
+    },
+    "iaccb e": {
+     "n": 56,
+     "inside": 51
+    },
+    "iaccb e [ext]": {
+     "n": 32,
+     "inside": 32
+    },
+    "iaccb l": {
+     "n": 56,
+     "inside": 50
+    },
+    "iaccb l [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "iacct": {
+     "n": 48,
+     "inside": 45
+    },
+    "lev_e R": {
+     "n": 152,
+     "inside": 128
+    },
+    "lev_e R [ext]": {
+     "n": 56,
+     "inside": 52
+    },
+    "lev_l R": {
+     "n": 152,
+     "inside": 106
+    },
+    "lev_l R [ext]": {
+     "n": 56,
+     "inside": 36
+    },
+    "levs_e R": {
+     "n": 152,
+     "inside": 141
+    },
+    "levs_e R [ext]": {
+     "n": 56,
+     "inside": 46
+    },
+    "levs_l R": {
+     "n": 152,
+     "inside": 132
+    },
+    "levs_l R [ext]": {
+     "n": 56,
+     "inside": 37
+    },
+    "lr_e": {
+     "n": 8,
+     "inside": 3
+    },
+    "lr_l": {
+     "n": 8,
+     "inside": 0
+    },
+    "lrb e": {
+     "n": 56,
+     "inside": 49
+    },
+    "lrb e [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "lrb l": {
+     "n": 56,
+     "inside": 32
+    },
+    "lrb l [ext]": {
+     "n": 32,
+     "inside": 7
+    },
+    "mix_ms": {
+     "n": 8,
+     "inside": 7
+    },
+    "ned_a": {
+     "n": 8,
+     "inside": 5
+    },
+    "ned_b": {
+     "n": 8,
+     "inside": 7
+    },
+    "ned_c": {
+     "n": 8,
+     "inside": 6
+    },
+    "oct EDT L": {
+     "n": 56,
+     "inside": 45
+    },
+    "oct EDT R": {
+     "n": 56,
+     "inside": 44
+    },
+    "oct EDT L [ext]": {
+     "n": 32,
+     "inside": 27
+    },
+    "oct EDT R [ext]": {
+     "n": 32,
+     "inside": 28
+    },
+    "oct LATE L": {
+     "n": 56,
+     "inside": 23
+    },
+    "oct LATE R": {
+     "n": 56,
+     "inside": 23
+    },
+    "oct LATE L [ext]": {
+     "n": 32,
+     "inside": 26
+    },
+    "oct LATE R [ext]": {
+     "n": 32,
+     "inside": 28
+    },
+    "oct T60 L": {
+     "n": 56,
+     "inside": 31
+    },
+    "oct T60 R": {
+     "n": 56,
+     "inside": 29
+    },
+    "oct T60 L [ext]": {
+     "n": 32,
+     "inside": 23
+    },
+    "oct T60 R [ext]": {
+     "n": 32,
+     "inside": 25
+    },
+    "third EDT L [ext]": {
+     "n": 56,
+     "inside": 45
+    },
+    "third EDT R [ext]": {
+     "n": 56,
+     "inside": 46
+    },
+    "third EDT L": {
+     "n": 152,
+     "inside": 136
+    },
+    "third EDT R": {
+     "n": 152,
+     "inside": 130
+    },
+    "third LATE L [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third LATE R [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third LATE L": {
+     "n": 152,
+     "inside": 72
+    },
+    "third LATE R": {
+     "n": 152,
+     "inside": 68
+    },
+    "third T60 L [ext]": {
+     "n": 56,
+     "inside": 42
+    },
+    "third T60 R [ext]": {
+     "n": 56,
+     "inside": 41
+    },
+    "third T60 L": {
+     "n": 152,
+     "inside": 107
+    },
+    "third T60 R": {
+     "n": 152,
+     "inside": 108
+    },
+    "ts R": {
+     "n": 56,
+     "inside": 24
+    },
+    "ts R [ext]": {
+     "n": 32,
+     "inside": 19
+    }
+   },
+   "sweep_g": {
+    "c50 L": {
+     "n": 56,
+     "inside": 26
+    },
+    "c50 L [ext]": {
+     "n": 32,
+     "inside": 19
+    },
+    "c80 L": {
+     "n": 56,
+     "inside": 31
+    },
+    "c80 L [ext]": {
+     "n": 32,
+     "inside": 19
+    },
+    "d50 L": {
+     "n": 56,
+     "inside": 26
+    },
+    "d50 L [ext]": {
+     "n": 32,
+     "inside": 20
+    },
+    "edr_ring L": {
+     "n": 8,
+     "inside": 5
+    },
+    "edr_rough L": {
+     "n": 8,
+     "inside": 7
+    },
+    "lev_e L": {
+     "n": 152,
+     "inside": 122
+    },
+    "lev_e L [ext]": {
+     "n": 56,
+     "inside": 48
+    },
+    "lev_l L": {
+     "n": 152,
+     "inside": 96
+    },
+    "lev_l L [ext]": {
+     "n": 56,
+     "inside": 34
+    },
+    "levs_e L": {
+     "n": 152,
+     "inside": 135
+    },
+    "levs_e L [ext]": {
+     "n": 56,
+     "inside": 43
+    },
+    "levs_l L": {
+     "n": 152,
+     "inside": 141
+    },
+    "levs_l L [ext]": {
+     "n": 56,
+     "inside": 39
+    },
+    "mix_ms L": {
+     "n": 8,
+     "inside": 7
+    },
+    "ned_a L": {
+     "n": 8,
+     "inside": 4
+    },
+    "ned_b L": {
+     "n": 8,
+     "inside": 8
+    },
+    "ned_c L": {
+     "n": 8,
+     "inside": 5
+    },
+    "ts L": {
+     "n": 56,
+     "inside": 27
+    },
+    "ts L [ext]": {
+     "n": 32,
+     "inside": 22
+    },
+    "bb_edt_L": {
+     "n": 8,
+     "inside": 7
+    },
+    "bb_edt_R": {
+     "n": 8,
+     "inside": 7
+    },
+    "bb_t_L": {
+     "n": 8,
+     "inside": 5
+    },
+    "bb_t_R": {
+     "n": 8,
+     "inside": 3
+    },
+    "c50 R": {
+     "n": 56,
+     "inside": 37
+    },
+    "c50 R [ext]": {
+     "n": 32,
+     "inside": 21
+    },
+    "c80 R": {
+     "n": 56,
+     "inside": 45
+    },
+    "c80 R [ext]": {
+     "n": 32,
+     "inside": 18
+    },
+    "coh": {
+     "n": 152,
+     "inside": 146
+    },
+    "coh [ext]": {
+     "n": 56,
+     "inside": 54
+    },
+    "cohl": {
+     "n": 152,
+     "inside": 152
+    },
+    "cohl [ext]": {
+     "n": 56,
+     "inside": 54
+    },
+    "d50 R": {
+     "n": 56,
+     "inside": 36
+    },
+    "d50 R [ext]": {
+     "n": 32,
+     "inside": 21
+    },
+    "edr_ring": {
+     "n": 8,
+     "inside": 8
+    },
+    "edr_rough": {
+     "n": 8,
+     "inside": 7
+    },
+    "ew L": {
+     "n": 32,
+     "inside": 5
+    },
+    "ew R": {
+     "n": 32,
+     "inside": 23
+    },
+    "fsd_100-1000_R": {
+     "n": 8,
+     "inside": 7
+    },
+    "fsd_1000-4000_R": {
+     "n": 8,
+     "inside": 3
+    },
+    "fsd_4000-10000_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "fsde L": {
+     "n": 24,
+     "inside": 22
+    },
+    "fsde R": {
+     "n": 24,
+     "inside": 18
+    },
+    "fsdl L": {
+     "n": 24,
+     "inside": 16
+    },
+    "fsdl R": {
+     "n": 24,
+     "inside": 17
+    },
+    "iacc_e": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_1000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_2000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_4000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_500": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_l": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_1000": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_l_2000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_4000": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_l_500": {
+     "n": 8,
+     "inside": 5
+    },
+    "iaccb e": {
+     "n": 56,
+     "inside": 54
+    },
+    "iaccb e [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "iaccb l": {
+     "n": 56,
+     "inside": 50
+    },
+    "iaccb l [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "iacct": {
+     "n": 48,
+     "inside": 45
+    },
+    "lev_e R": {
+     "n": 152,
+     "inside": 141
+    },
+    "lev_e R [ext]": {
+     "n": 56,
+     "inside": 53
+    },
+    "lev_l R": {
+     "n": 152,
+     "inside": 139
+    },
+    "lev_l R [ext]": {
+     "n": 56,
+     "inside": 35
+    },
+    "levs_e R": {
+     "n": 152,
+     "inside": 144
+    },
+    "levs_e R [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "levs_l R": {
+     "n": 152,
+     "inside": 132
+    },
+    "levs_l R [ext]": {
+     "n": 56,
+     "inside": 37
+    },
+    "lr_e": {
+     "n": 8,
+     "inside": 4
+    },
+    "lr_l": {
+     "n": 8,
+     "inside": 0
+    },
+    "lrb e": {
+     "n": 56,
+     "inside": 52
+    },
+    "lrb e [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "lrb l": {
+     "n": 56,
+     "inside": 32
+    },
+    "lrb l [ext]": {
+     "n": 32,
+     "inside": 7
+    },
+    "mix_ms": {
+     "n": 8,
+     "inside": 7
+    },
+    "ned_a": {
+     "n": 8,
+     "inside": 5
+    },
+    "ned_b": {
+     "n": 8,
+     "inside": 7
+    },
+    "ned_c": {
+     "n": 8,
+     "inside": 6
+    },
+    "oct EDT L": {
+     "n": 56,
+     "inside": 45
+    },
+    "oct EDT R": {
+     "n": 56,
+     "inside": 44
+    },
+    "oct EDT L [ext]": {
+     "n": 32,
+     "inside": 26
+    },
+    "oct EDT R [ext]": {
+     "n": 32,
+     "inside": 28
+    },
+    "oct LATE L": {
+     "n": 56,
+     "inside": 23
+    },
+    "oct LATE R": {
+     "n": 56,
+     "inside": 23
+    },
+    "oct LATE L [ext]": {
+     "n": 32,
+     "inside": 26
+    },
+    "oct LATE R [ext]": {
+     "n": 32,
+     "inside": 28
+    },
+    "oct T60 L": {
+     "n": 56,
+     "inside": 31
+    },
+    "oct T60 R": {
+     "n": 56,
+     "inside": 29
+    },
+    "oct T60 L [ext]": {
+     "n": 32,
+     "inside": 23
+    },
+    "oct T60 R [ext]": {
+     "n": 32,
+     "inside": 25
+    },
+    "third EDT L [ext]": {
+     "n": 56,
+     "inside": 45
+    },
+    "third EDT R [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third EDT L": {
+     "n": 152,
+     "inside": 136
+    },
+    "third EDT R": {
+     "n": 152,
+     "inside": 130
+    },
+    "third LATE L [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third LATE R [ext]": {
+     "n": 56,
+     "inside": 48
+    },
+    "third LATE L": {
+     "n": 152,
+     "inside": 72
+    },
+    "third LATE R": {
+     "n": 152,
+     "inside": 68
+    },
+    "third T60 L [ext]": {
+     "n": 56,
+     "inside": 41
+    },
+    "third T60 R [ext]": {
+     "n": 56,
+     "inside": 42
+    },
+    "third T60 L": {
+     "n": 152,
+     "inside": 107
+    },
+    "third T60 R": {
+     "n": 152,
+     "inside": 108
+    },
+    "ts R": {
+     "n": 56,
+     "inside": 37
+    },
+    "ts R [ext]": {
+     "n": 32,
+     "inside": 23
+    }
+   }
+  }
+ },
+ "v4_after_fixes": {
+  "meta": {
+   "rts": [
+    0.4,
+    1.0,
+    1.5,
+    2.0,
+    2.5,
+    3.0,
+    3.6,
+    4.0,
+    4.5
+   ],
+   "seeds": 5,
+   "k_sd": 2.5,
+   "gains": {
+    "0.4": {
+     "imp": 0.9559094241578353,
+     "sweep": 0.9474209035565935
+    },
+    "1.0": {
+     "imp": 0.9853205163171931,
+     "sweep": 0.9736444962641296
+    },
+    "1.5": {
+     "imp": 0.9922853779277393,
+     "sweep": 0.980357622651963
+    },
+    "2.0": {
+     "imp": 1.0075099322553327,
+     "sweep": 0.9961487107713963
+    },
+    "2.5": {
+     "imp": 1.0272992937057035,
+     "sweep": 1.0166362971841016
+    },
+    "3.0": {
+     "imp": 0.9898758277807946,
+     "sweep": 0.9804265460555274
+    },
+    "3.6": {
+     "imp": 1.0131983221376049,
+     "sweep": 1.0043923457546513
+    },
+    "4.0": {
+     "imp": 0.9981156300958695,
+     "sweep": 0.9899234661481208
+    },
+    "4.5": {
+     "imp": 1.0017892292611228,
+     "sweep": 0.9940887391891879
+    }
+   }
+  },
+  "by_family": {
+   "imp": {
+    "c50 L": {
+     "n": 56,
+     "inside": 41
+    },
+    "c50 L [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "c80 L": {
+     "n": 56,
+     "inside": 45
+    },
+    "c80 L [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "d50 L": {
+     "n": 56,
+     "inside": 41
+    },
+    "d50 L [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "edr_ring L": {
+     "n": 8,
+     "inside": 6
+    },
+    "edr_rough L": {
+     "n": 8,
+     "inside": 7
+    },
+    "lev_e L": {
+     "n": 152,
+     "inside": 131
+    },
+    "lev_e L [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "lev_l L": {
+     "n": 152,
+     "inside": 126
+    },
+    "lev_l L [ext]": {
+     "n": 56,
+     "inside": 39
+    },
+    "levs_e L": {
+     "n": 152,
+     "inside": 129
+    },
+    "levs_e L [ext]": {
+     "n": 56,
+     "inside": 50
+    },
+    "levs_l L": {
+     "n": 152,
+     "inside": 124
+    },
+    "levs_l L [ext]": {
+     "n": 56,
+     "inside": 40
+    },
+    "mix_ms L": {
+     "n": 2,
+     "inside": 0
+    },
+    "ned_a L": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_b L": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_c L": {
+     "n": 8,
+     "inside": 0
+    },
+    "ts L": {
+     "n": 56,
+     "inside": 44
+    },
+    "ts L [ext]": {
+     "n": 32,
+     "inside": 22
+    },
+    "bb_edt_L": {
+     "n": 8,
+     "inside": 8
+    },
+    "bb_edt_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "bb_t_L": {
+     "n": 8,
+     "inside": 8
+    },
+    "bb_t_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "c50 R": {
+     "n": 56,
+     "inside": 41
+    },
+    "c50 R [ext]": {
+     "n": 32,
+     "inside": 9
+    },
+    "c80 R": {
+     "n": 56,
+     "inside": 43
+    },
+    "c80 R [ext]": {
+     "n": 32,
+     "inside": 11
+    },
+    "coh": {
+     "n": 152,
+     "inside": 137
+    },
+    "coh [ext]": {
+     "n": 56,
+     "inside": 54
+    },
+    "cohl": {
+     "n": 152,
+     "inside": 147
+    },
+    "cohl [ext]": {
+     "n": 56,
+     "inside": 51
+    },
+    "d50 R": {
+     "n": 56,
+     "inside": 41
+    },
+    "d50 R [ext]": {
+     "n": 32,
+     "inside": 9
+    },
+    "edr_ring": {
+     "n": 8,
+     "inside": 8
+    },
+    "edr_rough": {
+     "n": 8,
+     "inside": 7
+    },
+    "ew L": {
+     "n": 32,
+     "inside": 26
+    },
+    "ew R": {
+     "n": 32,
+     "inside": 28
+    },
+    "fsd_100-1000_R": {
+     "n": 8,
+     "inside": 4
+    },
+    "fsd_1000-4000_R": {
+     "n": 8,
+     "inside": 7
+    },
+    "fsd_4000-10000_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "fsde L": {
+     "n": 24,
+     "inside": 24
+    },
+    "fsde R": {
+     "n": 24,
+     "inside": 19
+    },
+    "fsdl L": {
+     "n": 24,
+     "inside": 19
+    },
+    "fsdl R": {
+     "n": 24,
+     "inside": 21
+    },
+    "iacc_e": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_1000": {
+     "n": 8,
+     "inside": 4
+    },
+    "iacc_e_2000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_4000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_500": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_1000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_2000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_4000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_500": {
+     "n": 8,
+     "inside": 6
+    },
+    "iaccb e": {
+     "n": 56,
+     "inside": 51
+    },
+    "iaccb e [ext]": {
+     "n": 32,
+     "inside": 31
+    },
+    "iaccb l": {
+     "n": 56,
+     "inside": 53
+    },
+    "iaccb l [ext]": {
+     "n": 32,
+     "inside": 29
+    },
+    "iacct": {
+     "n": 48,
+     "inside": 48
+    },
+    "lev_e R": {
+     "n": 152,
+     "inside": 140
+    },
+    "lev_e R [ext]": {
+     "n": 56,
+     "inside": 38
+    },
+    "lev_l R": {
+     "n": 152,
+     "inside": 133
+    },
+    "lev_l R [ext]": {
+     "n": 56,
+     "inside": 34
+    },
+    "levs_e R": {
+     "n": 152,
+     "inside": 140
+    },
+    "levs_e R [ext]": {
+     "n": 56,
+     "inside": 44
+    },
+    "levs_l R": {
+     "n": 152,
+     "inside": 132
+    },
+    "levs_l R [ext]": {
+     "n": 56,
+     "inside": 37
+    },
+    "lr_e": {
+     "n": 8,
+     "inside": 8
+    },
+    "lr_l": {
+     "n": 8,
+     "inside": 5
+    },
+    "lrb e": {
+     "n": 56,
+     "inside": 55
+    },
+    "lrb e [ext]": {
+     "n": 32,
+     "inside": 18
+    },
+    "lrb l": {
+     "n": 56,
+     "inside": 55
+    },
+    "lrb l [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "mix_ms": {
+     "n": 4,
+     "inside": 0
+    },
+    "ned_a": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_b": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_c": {
+     "n": 8,
+     "inside": 0
+    },
+    "oct EDT L": {
+     "n": 56,
+     "inside": 49
+    },
+    "oct EDT R": {
+     "n": 56,
+     "inside": 53
+    },
+    "oct EDT L [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "oct EDT R [ext]": {
+     "n": 32,
+     "inside": 28
+    },
+    "oct LATE L": {
+     "n": 56,
+     "inside": 55
+    },
+    "oct LATE R": {
+     "n": 56,
+     "inside": 56
+    },
+    "oct LATE L [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "oct LATE R [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "oct T60 L": {
+     "n": 56,
+     "inside": 53
+    },
+    "oct T60 R": {
+     "n": 56,
+     "inside": 53
+    },
+    "oct T60 L [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "oct T60 R [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "third EDT L [ext]": {
+     "n": 56,
+     "inside": 50
+    },
+    "third EDT R [ext]": {
+     "n": 56,
+     "inside": 46
+    },
+    "third EDT L": {
+     "n": 152,
+     "inside": 135
+    },
+    "third EDT R": {
+     "n": 152,
+     "inside": 138
+    },
+    "third LATE L [ext]": {
+     "n": 56,
+     "inside": 51
+    },
+    "third LATE R [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third LATE L": {
+     "n": 152,
+     "inside": 145
+    },
+    "third LATE R": {
+     "n": 152,
+     "inside": 143
+    },
+    "third T60 L [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third T60 R [ext]": {
+     "n": 56,
+     "inside": 48
+    },
+    "third T60 L": {
+     "n": 152,
+     "inside": 141
+    },
+    "third T60 R": {
+     "n": 152,
+     "inside": 138
+    },
+    "ts R": {
+     "n": 56,
+     "inside": 43
+    },
+    "ts R [ext]": {
+     "n": 32,
+     "inside": 10
+    }
+   },
+   "imp_g": {
+    "c50 L": {
+     "n": 56,
+     "inside": 43
+    },
+    "c50 L [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "c80 L": {
+     "n": 56,
+     "inside": 44
+    },
+    "c80 L [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "d50 L": {
+     "n": 56,
+     "inside": 42
+    },
+    "d50 L [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "edr_ring L": {
+     "n": 8,
+     "inside": 6
+    },
+    "edr_rough L": {
+     "n": 8,
+     "inside": 7
+    },
+    "lev_e L": {
+     "n": 152,
+     "inside": 133
+    },
+    "lev_e L [ext]": {
+     "n": 56,
+     "inside": 46
+    },
+    "lev_l L": {
+     "n": 152,
+     "inside": 127
+    },
+    "lev_l L [ext]": {
+     "n": 56,
+     "inside": 40
+    },
+    "levs_e L": {
+     "n": 152,
+     "inside": 127
+    },
+    "levs_e L [ext]": {
+     "n": 56,
+     "inside": 50
+    },
+    "levs_l L": {
+     "n": 152,
+     "inside": 124
+    },
+    "levs_l L [ext]": {
+     "n": 56,
+     "inside": 40
+    },
+    "mix_ms L": {
+     "n": 2,
+     "inside": 0
+    },
+    "ned_a L": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_b L": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_c L": {
+     "n": 8,
+     "inside": 0
+    },
+    "ts L": {
+     "n": 56,
+     "inside": 44
+    },
+    "ts L [ext]": {
+     "n": 32,
+     "inside": 22
+    },
+    "bb_edt_L": {
+     "n": 8,
+     "inside": 8
+    },
+    "bb_edt_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "bb_t_L": {
+     "n": 8,
+     "inside": 8
+    },
+    "bb_t_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "c50 R": {
+     "n": 56,
+     "inside": 42
+    },
+    "c50 R [ext]": {
+     "n": 32,
+     "inside": 8
+    },
+    "c80 R": {
+     "n": 56,
+     "inside": 43
+    },
+    "c80 R [ext]": {
+     "n": 32,
+     "inside": 10
+    },
+    "coh": {
+     "n": 152,
+     "inside": 137
+    },
+    "coh [ext]": {
+     "n": 56,
+     "inside": 54
+    },
+    "cohl": {
+     "n": 152,
+     "inside": 147
+    },
+    "cohl [ext]": {
+     "n": 56,
+     "inside": 51
+    },
+    "d50 R": {
+     "n": 56,
+     "inside": 42
+    },
+    "d50 R [ext]": {
+     "n": 32,
+     "inside": 8
+    },
+    "edr_ring": {
+     "n": 8,
+     "inside": 8
+    },
+    "edr_rough": {
+     "n": 8,
+     "inside": 7
+    },
+    "ew L": {
+     "n": 32,
+     "inside": 26
+    },
+    "ew R": {
+     "n": 32,
+     "inside": 30
+    },
+    "fsd_100-1000_R": {
+     "n": 8,
+     "inside": 4
+    },
+    "fsd_1000-4000_R": {
+     "n": 8,
+     "inside": 7
+    },
+    "fsd_4000-10000_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "fsde L": {
+     "n": 24,
+     "inside": 24
+    },
+    "fsde R": {
+     "n": 24,
+     "inside": 19
+    },
+    "fsdl L": {
+     "n": 24,
+     "inside": 19
+    },
+    "fsdl R": {
+     "n": 24,
+     "inside": 21
+    },
+    "iacc_e": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_1000": {
+     "n": 8,
+     "inside": 4
+    },
+    "iacc_e_2000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_4000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_500": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_1000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_2000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_4000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_500": {
+     "n": 8,
+     "inside": 6
+    },
+    "iaccb e": {
+     "n": 56,
+     "inside": 51
+    },
+    "iaccb e [ext]": {
+     "n": 32,
+     "inside": 31
+    },
+    "iaccb l": {
+     "n": 56,
+     "inside": 53
+    },
+    "iaccb l [ext]": {
+     "n": 32,
+     "inside": 29
+    },
+    "iacct": {
+     "n": 48,
+     "inside": 48
+    },
+    "lev_e R": {
+     "n": 152,
+     "inside": 139
+    },
+    "lev_e R [ext]": {
+     "n": 56,
+     "inside": 37
+    },
+    "lev_l R": {
+     "n": 152,
+     "inside": 131
+    },
+    "lev_l R [ext]": {
+     "n": 56,
+     "inside": 36
+    },
+    "levs_e R": {
+     "n": 152,
+     "inside": 140
+    },
+    "levs_e R [ext]": {
+     "n": 56,
+     "inside": 44
+    },
+    "levs_l R": {
+     "n": 152,
+     "inside": 132
+    },
+    "levs_l R [ext]": {
+     "n": 56,
+     "inside": 37
+    },
+    "lr_e": {
+     "n": 8,
+     "inside": 8
+    },
+    "lr_l": {
+     "n": 8,
+     "inside": 5
+    },
+    "lrb e": {
+     "n": 56,
+     "inside": 54
+    },
+    "lrb e [ext]": {
+     "n": 32,
+     "inside": 18
+    },
+    "lrb l": {
+     "n": 56,
+     "inside": 55
+    },
+    "lrb l [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "mix_ms": {
+     "n": 4,
+     "inside": 0
+    },
+    "ned_a": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_b": {
+     "n": 8,
+     "inside": 0
+    },
+    "ned_c": {
+     "n": 8,
+     "inside": 0
+    },
+    "oct EDT L": {
+     "n": 56,
+     "inside": 49
+    },
+    "oct EDT R": {
+     "n": 56,
+     "inside": 53
+    },
+    "oct EDT L [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "oct EDT R [ext]": {
+     "n": 32,
+     "inside": 28
+    },
+    "oct LATE L": {
+     "n": 56,
+     "inside": 55
+    },
+    "oct LATE R": {
+     "n": 56,
+     "inside": 56
+    },
+    "oct LATE L [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "oct LATE R [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "oct T60 L": {
+     "n": 56,
+     "inside": 53
+    },
+    "oct T60 R": {
+     "n": 56,
+     "inside": 53
+    },
+    "oct T60 L [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "oct T60 R [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "third EDT L [ext]": {
+     "n": 56,
+     "inside": 50
+    },
+    "third EDT R [ext]": {
+     "n": 56,
+     "inside": 46
+    },
+    "third EDT L": {
+     "n": 152,
+     "inside": 135
+    },
+    "third EDT R": {
+     "n": 152,
+     "inside": 138
+    },
+    "third LATE L [ext]": {
+     "n": 56,
+     "inside": 51
+    },
+    "third LATE R [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third LATE L": {
+     "n": 152,
+     "inside": 145
+    },
+    "third LATE R": {
+     "n": 152,
+     "inside": 143
+    },
+    "third T60 L [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third T60 R [ext]": {
+     "n": 56,
+     "inside": 48
+    },
+    "third T60 L": {
+     "n": 152,
+     "inside": 141
+    },
+    "third T60 R": {
+     "n": 152,
+     "inside": 138
+    },
+    "ts R": {
+     "n": 56,
+     "inside": 42
+    },
+    "ts R [ext]": {
+     "n": 32,
+     "inside": 12
+    }
+   },
+   "sweep": {
+    "c50 L": {
+     "n": 56,
+     "inside": 40
+    },
+    "c50 L [ext]": {
+     "n": 32,
+     "inside": 20
+    },
+    "c80 L": {
+     "n": 56,
+     "inside": 39
+    },
+    "c80 L [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "d50 L": {
+     "n": 56,
+     "inside": 42
+    },
+    "d50 L [ext]": {
+     "n": 32,
+     "inside": 20
+    },
+    "edr_ring L": {
+     "n": 8,
+     "inside": 4
+    },
+    "edr_rough L": {
+     "n": 8,
+     "inside": 6
+    },
+    "lev_e L": {
+     "n": 152,
+     "inside": 138
+    },
+    "lev_e L [ext]": {
+     "n": 56,
+     "inside": 46
+    },
+    "lev_l L": {
+     "n": 152,
+     "inside": 126
+    },
+    "lev_l L [ext]": {
+     "n": 56,
+     "inside": 38
+    },
+    "levs_e L": {
+     "n": 152,
+     "inside": 143
+    },
+    "levs_e L [ext]": {
+     "n": 56,
+     "inside": 45
+    },
+    "levs_l L": {
+     "n": 152,
+     "inside": 128
+    },
+    "levs_l L [ext]": {
+     "n": 56,
+     "inside": 36
+    },
+    "mix_ms L": {
+     "n": 8,
+     "inside": 5
+    },
+    "ned_a L": {
+     "n": 8,
+     "inside": 3
+    },
+    "ned_b L": {
+     "n": 8,
+     "inside": 7
+    },
+    "ned_c L": {
+     "n": 8,
+     "inside": 1
+    },
+    "ts L": {
+     "n": 56,
+     "inside": 44
+    },
+    "ts L [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "bb_edt_L": {
+     "n": 8,
+     "inside": 8
+    },
+    "bb_edt_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "bb_t_L": {
+     "n": 8,
+     "inside": 7
+    },
+    "bb_t_R": {
+     "n": 8,
+     "inside": 6
+    },
+    "c50 R": {
+     "n": 56,
+     "inside": 36
+    },
+    "c50 R [ext]": {
+     "n": 32,
+     "inside": 18
+    },
+    "c80 R": {
+     "n": 56,
+     "inside": 42
+    },
+    "c80 R [ext]": {
+     "n": 32,
+     "inside": 20
+    },
+    "coh": {
+     "n": 152,
+     "inside": 142
+    },
+    "coh [ext]": {
+     "n": 56,
+     "inside": 54
+    },
+    "cohl": {
+     "n": 152,
+     "inside": 151
+    },
+    "cohl [ext]": {
+     "n": 56,
+     "inside": 55
+    },
+    "d50 R": {
+     "n": 56,
+     "inside": 34
+    },
+    "d50 R [ext]": {
+     "n": 32,
+     "inside": 18
+    },
+    "edr_ring": {
+     "n": 8,
+     "inside": 8
+    },
+    "edr_rough": {
+     "n": 8,
+     "inside": 8
+    },
+    "ew L": {
+     "n": 32,
+     "inside": 30
+    },
+    "ew R": {
+     "n": 32,
+     "inside": 24
+    },
+    "fsd_100-1000_R": {
+     "n": 8,
+     "inside": 7
+    },
+    "fsd_1000-4000_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "fsd_4000-10000_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "fsde L": {
+     "n": 24,
+     "inside": 23
+    },
+    "fsde R": {
+     "n": 24,
+     "inside": 23
+    },
+    "fsdl L": {
+     "n": 24,
+     "inside": 18
+    },
+    "fsdl R": {
+     "n": 24,
+     "inside": 20
+    },
+    "iacc_e": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_1000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_2000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_4000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_500": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_l": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_1000": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_l_2000": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_l_4000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_500": {
+     "n": 8,
+     "inside": 6
+    },
+    "iaccb e": {
+     "n": 56,
+     "inside": 54
+    },
+    "iaccb e [ext]": {
+     "n": 32,
+     "inside": 31
+    },
+    "iaccb l": {
+     "n": 56,
+     "inside": 50
+    },
+    "iaccb l [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "iacct": {
+     "n": 48,
+     "inside": 45
+    },
+    "lev_e R": {
+     "n": 152,
+     "inside": 136
+    },
+    "lev_e R [ext]": {
+     "n": 56,
+     "inside": 48
+    },
+    "lev_l R": {
+     "n": 152,
+     "inside": 127
+    },
+    "lev_l R [ext]": {
+     "n": 56,
+     "inside": 42
+    },
+    "levs_e R": {
+     "n": 152,
+     "inside": 138
+    },
+    "levs_e R [ext]": {
+     "n": 56,
+     "inside": 40
+    },
+    "levs_l R": {
+     "n": 152,
+     "inside": 129
+    },
+    "levs_l R [ext]": {
+     "n": 56,
+     "inside": 44
+    },
+    "lr_e": {
+     "n": 8,
+     "inside": 6
+    },
+    "lr_l": {
+     "n": 8,
+     "inside": 8
+    },
+    "lrb e": {
+     "n": 56,
+     "inside": 52
+    },
+    "lrb e [ext]": {
+     "n": 32,
+     "inside": 28
+    },
+    "lrb l": {
+     "n": 56,
+     "inside": 50
+    },
+    "lrb l [ext]": {
+     "n": 32,
+     "inside": 26
+    },
+    "mix_ms": {
+     "n": 8,
+     "inside": 4
+    },
+    "ned_a": {
+     "n": 8,
+     "inside": 6
+    },
+    "ned_b": {
+     "n": 8,
+     "inside": 8
+    },
+    "ned_c": {
+     "n": 8,
+     "inside": 4
+    },
+    "oct EDT L": {
+     "n": 56,
+     "inside": 49
+    },
+    "oct EDT R": {
+     "n": 56,
+     "inside": 50
+    },
+    "oct EDT L [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "oct EDT R [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "oct LATE L": {
+     "n": 56,
+     "inside": 26
+    },
+    "oct LATE R": {
+     "n": 56,
+     "inside": 22
+    },
+    "oct LATE L [ext]": {
+     "n": 32,
+     "inside": 29
+    },
+    "oct LATE R [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "oct T60 L": {
+     "n": 56,
+     "inside": 46
+    },
+    "oct T60 R": {
+     "n": 56,
+     "inside": 41
+    },
+    "oct T60 L [ext]": {
+     "n": 32,
+     "inside": 28
+    },
+    "oct T60 R [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "third EDT L [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third EDT R [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third EDT L": {
+     "n": 152,
+     "inside": 137
+    },
+    "third EDT R": {
+     "n": 152,
+     "inside": 144
+    },
+    "third LATE L [ext]": {
+     "n": 56,
+     "inside": 49
+    },
+    "third LATE R [ext]": {
+     "n": 56,
+     "inside": 48
+    },
+    "third LATE L": {
+     "n": 152,
+     "inside": 76
+    },
+    "third LATE R": {
+     "n": 152,
+     "inside": 68
+    },
+    "third T60 L [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third T60 R [ext]": {
+     "n": 56,
+     "inside": 48
+    },
+    "third T60 L": {
+     "n": 152,
+     "inside": 128
+    },
+    "third T60 R": {
+     "n": 152,
+     "inside": 128
+    },
+    "ts R": {
+     "n": 56,
+     "inside": 41
+    },
+    "ts R [ext]": {
+     "n": 32,
+     "inside": 21
+    }
+   },
+   "sweep_g": {
+    "c50 L": {
+     "n": 56,
+     "inside": 41
+    },
+    "c50 L [ext]": {
+     "n": 32,
+     "inside": 20
+    },
+    "c80 L": {
+     "n": 56,
+     "inside": 40
+    },
+    "c80 L [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "d50 L": {
+     "n": 56,
+     "inside": 41
+    },
+    "d50 L [ext]": {
+     "n": 32,
+     "inside": 20
+    },
+    "edr_ring L": {
+     "n": 8,
+     "inside": 4
+    },
+    "edr_rough L": {
+     "n": 8,
+     "inside": 6
+    },
+    "lev_e L": {
+     "n": 152,
+     "inside": 137
+    },
+    "lev_e L [ext]": {
+     "n": 56,
+     "inside": 46
+    },
+    "lev_l L": {
+     "n": 152,
+     "inside": 128
+    },
+    "lev_l L [ext]": {
+     "n": 56,
+     "inside": 35
+    },
+    "levs_e L": {
+     "n": 152,
+     "inside": 142
+    },
+    "levs_e L [ext]": {
+     "n": 56,
+     "inside": 44
+    },
+    "levs_l L": {
+     "n": 152,
+     "inside": 128
+    },
+    "levs_l L [ext]": {
+     "n": 56,
+     "inside": 36
+    },
+    "mix_ms L": {
+     "n": 8,
+     "inside": 5
+    },
+    "ned_a L": {
+     "n": 8,
+     "inside": 3
+    },
+    "ned_b L": {
+     "n": 8,
+     "inside": 7
+    },
+    "ned_c L": {
+     "n": 8,
+     "inside": 1
+    },
+    "ts L": {
+     "n": 56,
+     "inside": 42
+    },
+    "ts L [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "bb_edt_L": {
+     "n": 8,
+     "inside": 8
+    },
+    "bb_edt_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "bb_t_L": {
+     "n": 8,
+     "inside": 7
+    },
+    "bb_t_R": {
+     "n": 8,
+     "inside": 6
+    },
+    "c50 R": {
+     "n": 56,
+     "inside": 31
+    },
+    "c50 R [ext]": {
+     "n": 32,
+     "inside": 17
+    },
+    "c80 R": {
+     "n": 56,
+     "inside": 43
+    },
+    "c80 R [ext]": {
+     "n": 32,
+     "inside": 19
+    },
+    "coh": {
+     "n": 152,
+     "inside": 142
+    },
+    "coh [ext]": {
+     "n": 56,
+     "inside": 54
+    },
+    "cohl": {
+     "n": 152,
+     "inside": 151
+    },
+    "cohl [ext]": {
+     "n": 56,
+     "inside": 55
+    },
+    "d50 R": {
+     "n": 56,
+     "inside": 31
+    },
+    "d50 R [ext]": {
+     "n": 32,
+     "inside": 17
+    },
+    "edr_ring": {
+     "n": 8,
+     "inside": 8
+    },
+    "edr_rough": {
+     "n": 8,
+     "inside": 8
+    },
+    "ew L": {
+     "n": 32,
+     "inside": 26
+    },
+    "ew R": {
+     "n": 32,
+     "inside": 25
+    },
+    "fsd_100-1000_R": {
+     "n": 8,
+     "inside": 7
+    },
+    "fsd_1000-4000_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "fsd_4000-10000_R": {
+     "n": 8,
+     "inside": 8
+    },
+    "fsde L": {
+     "n": 24,
+     "inside": 23
+    },
+    "fsde R": {
+     "n": 24,
+     "inside": 23
+    },
+    "fsdl L": {
+     "n": 24,
+     "inside": 18
+    },
+    "fsdl R": {
+     "n": 24,
+     "inside": 20
+    },
+    "iacc_e": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_1000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_2000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_4000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_e_500": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_l": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_1000": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_l_2000": {
+     "n": 8,
+     "inside": 7
+    },
+    "iacc_l_4000": {
+     "n": 8,
+     "inside": 8
+    },
+    "iacc_l_500": {
+     "n": 8,
+     "inside": 6
+    },
+    "iaccb e": {
+     "n": 56,
+     "inside": 54
+    },
+    "iaccb e [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "iaccb l": {
+     "n": 56,
+     "inside": 50
+    },
+    "iaccb l [ext]": {
+     "n": 32,
+     "inside": 24
+    },
+    "iacct": {
+     "n": 48,
+     "inside": 45
+    },
+    "lev_e R": {
+     "n": 152,
+     "inside": 138
+    },
+    "lev_e R [ext]": {
+     "n": 56,
+     "inside": 49
+    },
+    "lev_l R": {
+     "n": 152,
+     "inside": 131
+    },
+    "lev_l R [ext]": {
+     "n": 56,
+     "inside": 42
+    },
+    "levs_e R": {
+     "n": 152,
+     "inside": 138
+    },
+    "levs_e R [ext]": {
+     "n": 56,
+     "inside": 40
+    },
+    "levs_l R": {
+     "n": 152,
+     "inside": 129
+    },
+    "levs_l R [ext]": {
+     "n": 56,
+     "inside": 45
+    },
+    "lr_e": {
+     "n": 8,
+     "inside": 6
+    },
+    "lr_l": {
+     "n": 8,
+     "inside": 8
+    },
+    "lrb e": {
+     "n": 56,
+     "inside": 51
+    },
+    "lrb e [ext]": {
+     "n": 32,
+     "inside": 28
+    },
+    "lrb l": {
+     "n": 56,
+     "inside": 50
+    },
+    "lrb l [ext]": {
+     "n": 32,
+     "inside": 26
+    },
+    "mix_ms": {
+     "n": 8,
+     "inside": 4
+    },
+    "ned_a": {
+     "n": 8,
+     "inside": 6
+    },
+    "ned_b": {
+     "n": 8,
+     "inside": 8
+    },
+    "ned_c": {
+     "n": 8,
+     "inside": 4
+    },
+    "oct EDT L": {
+     "n": 56,
+     "inside": 49
+    },
+    "oct EDT R": {
+     "n": 56,
+     "inside": 50
+    },
+    "oct EDT L [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "oct EDT R [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "oct LATE L": {
+     "n": 56,
+     "inside": 26
+    },
+    "oct LATE R": {
+     "n": 56,
+     "inside": 22
+    },
+    "oct LATE L [ext]": {
+     "n": 32,
+     "inside": 29
+    },
+    "oct LATE R [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "oct T60 L": {
+     "n": 56,
+     "inside": 46
+    },
+    "oct T60 R": {
+     "n": 56,
+     "inside": 41
+    },
+    "oct T60 L [ext]": {
+     "n": 32,
+     "inside": 28
+    },
+    "oct T60 R [ext]": {
+     "n": 32,
+     "inside": 30
+    },
+    "third EDT L [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third EDT R [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third EDT L": {
+     "n": 152,
+     "inside": 137
+    },
+    "third EDT R": {
+     "n": 152,
+     "inside": 144
+    },
+    "third LATE L [ext]": {
+     "n": 56,
+     "inside": 49
+    },
+    "third LATE R [ext]": {
+     "n": 56,
+     "inside": 48
+    },
+    "third LATE L": {
+     "n": 152,
+     "inside": 76
+    },
+    "third LATE R": {
+     "n": 152,
+     "inside": 68
+    },
+    "third T60 L [ext]": {
+     "n": 56,
+     "inside": 47
+    },
+    "third T60 R [ext]": {
+     "n": 56,
+     "inside": 48
+    },
+    "third T60 L": {
+     "n": 152,
+     "inside": 128
+    },
+    "third T60 R": {
+     "n": 152,
+     "inside": 128
+    },
+    "ts R": {
+     "n": 56,
+     "inside": 38
+    },
+    "ts R [ext]": {
+     "n": 32,
+     "inside": 18
+    }
+   }
+  }
+ },
+ "note": "EMT250_program 17: tools/e250/e_pulse.py summaries (inside / n per metric family and render kind); full per-key JSONs and per-RT parts are local only (13 MB each)"
+}

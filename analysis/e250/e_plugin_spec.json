@@ -47,16 +47,16 @@
     2507,
     2776
    ],
-   "feedback": "negative: line[t] = G{u[t] - line[t - P]}",
+   "feedback": "negative: v[t] = u[t] - line[t - P], line = G{v}",
    "static_read_delay": [
     2223,
     805,
     1802
    ],
    "static_read_gain": [
-    0.31436194430636644,
-    0.3866476616653242,
-    -0.3848518310578072
+    0.32728791256503786,
+    0.4025458818299916,
+    -0.4006762100662814
    ],
    "read": "after the loop filter (reads the line)",
    "L": {
@@ -73,13 +73,13 @@
    "law": "the 246's own: tools/ml_lines.line_coefs(P, rt, lf, hf) / line_resp (shelf + HF pole, HF floor)",
    "altiverb_family": {
     "lf": 1.49,
-    "hf": 0.7361446779362695,
-    "lf_note": "LF from the 63-500 Hz decay (\u00a716)"
+    "hf": 0.69,
+    "note": "LF from the 63-500 Hz decay (\u00a716), HF from the 2-12.4 kHz decay (\u00a717), held out"
    },
-   "high_band_uncertainty": "+-10 % (original capture method unknown, \u00a713.6)"
+   "decay_error_held_out": "0.6-2.1 % per octave, 63 Hz-12.4 kHz (\u00a717)"
   },
   "label": "S",
-  "source": "\u00a711.2, \u00a713.5-13.6"
+  "source": "\u00a711.2, \u00a716-17"
  },
  "moving_reads": {
   "value": {
@@ -90,65 +90,66 @@
     "fsd": 0.5,
     "common": false,
     "mdel": 314,
-    "dl_same": 1
+    "dl_same": 1,
+    "mlp": 0.07
    },
    "reads": [
     {
      "centre": 641,
      "loop": "A",
-     "R": 0.34787651278646686,
-     "L": -0.3588001722961049
+     "R": 0.2786822912634223,
+     "L": -0.32185755988463666
     },
     {
      "centre": 1205,
      "loop": "C",
-     "R": 0.41818937153145097,
-     "L": -0.3475880459106986
+     "R": 0.3163954098162404,
+     "L": -0.2940061946548417
     },
     {
-     "centre": 1415,
+     "centre": 1416,
      "loop": "B",
-     "R": -0.38335266401235063,
-     "L": -0.38751755502826374
+     "R": -0.2992710405094532,
+     "L": -0.3383786718164868
     },
     {
      "centre": 1462,
      "loop": "A",
-     "R": -0.3398573275951204,
-     "L": 0.37270371209132447
+     "R": -0.2671304944225203,
+     "L": 0.3260242015921826
     },
     {
-     "centre": 1883,
+     "centre": 1879,
      "loop": "A",
-     "R": 0.37321496888285405,
-     "L": 0.3699434779989184
+     "R": 0.2972903859691633,
+     "L": 0.3189746873011544
     },
     {
      "centre": 2086,
      "loop": "B",
-     "R": -0.3832728563065578,
-     "L": 0.38070442055446707
+     "R": -0.30000515733433825,
+     "L": 0.3319552270538238
     },
     {
      "centre": 2392,
      "loop": "C",
-     "R": 0.41052456381032076,
-     "L": 0.39447021388886905
+     "R": 0.31823088382825,
+     "L": 0.34024682288084845
     },
     {
      "centre": 2550,
      "loop": "B",
-     "R": -0.30076123616888295,
-     "L": 0.3070054585241074
+     "R": -0.22973003302033818,
+     "L": 0.2619153618927959
     },
     {
      "centre": 2814,
      "loop": "C",
-     "R": 0.3462009148117441,
-     "L": -0.33682796044678576
+     "R": 0.2638252585477218,
+     "L": -0.2838852924754136
     }
    ],
-   "meaning": "nine fixed reads on the loop lines (centre = output delay after R's direct tap, loop, signed R and L amplitudes, direct tap = 1), each read at centre + A x triangle(f_j t + phase_j), triangle in [-1, 1], phase independent per read and realisation, rate f_j = f x (1 +- fsd) per read; L reads the same address with its own amplitude, mdel samples later, or mdel + dl_same for the reads whose L and R signs agree (\u00a716.7); integer addresses, no interpolation",
+   "meaning": "nine fixed reads on the loop lines, taken BEFORE the loop filter (v[t] = u[t] - line[t - P], line = G{v}; the static reads take line, after G; \u00a717) (centre = output delay after R's direct tap, loop, signed R and L amplitudes, direct tap = 1), each read at centre + A x triangle(f_j t + phase_j), triangle in [-1, 1], phase independent per read and realisation, rate f_j = f x (1 +- fsd) per read; L reads the same address with its own amplitude, mdel samples later, or mdel + dl_same for the reads whose L and R signs agree (\u00a716.7); integer addresses, no interpolation",
    "superseded_random_reads": {
     "law": "lfo",
     "wave": "tri",
@@ -296,6 +297,16 @@
    "label": "H",
    "source": "\u00a715, operation card"
   },
+  "onset": {
+   "value": "at DELAY 0 E's R direct tap arrives with M's first cluster tap (Altiverb: S 10.17 / M 20.33 / L 40.42 / E 20.33 ms, one capture chain)",
+   "label": "S",
+   "source": "\u00a717.8"
+  },
+  "level": {
+   "value": "E's direct tap 1 at the level of an S / M / L cluster tap at the same AMPL (the Altiverb normalised every preset to equal total energy, 64.3-64.6 dB, so the absolute program levels are not in the data)",
+   "label": "H (calibration guess)",
+   "source": "\u00a717.8"
+  },
   "LOW_PASS": {
    "value": {
     "steps_khz": [
@@ -321,8 +332,7 @@
   "source": "\u00a716.7"
  },
  "not_resolved": [
-  "E's LFO rate (0.553 or 0.608 Hz) and triangle shape, from the UAD plugin (needs E repeat captures)",
-  "the decay law's high bands +-10 % (the original capture method)",
+  "E's LFO rate within 0.5-0.65 Hz (E's own statistics; 0.553 = the 250's in seconds, adopted, or 0.608 = in samples) and the triangle shape (the UAD plugin; E cannot tell triangle from sine)",
   "the LP lever's response",
   "AMPL / DELAY in E"
  ],
@@ -336,10 +346,10 @@
   "static_ir_note": "render_ir(rt, moving=False, chain='device'), lf / hf the family's, AMPL 80, DELAY 0, LP open; device rate, (L, R)",
   "targets": {
    "e_ratio": [
-    -15.66329144838615,
-    4.783197546579601,
-    5.821258769900704,
-    5.132407971182489
+    -15.713817614494861,
+    4.475342213892699,
+    5.5918549246237825,
+    4.935717273634146
    ],
    "lobes": [
     -0.0033066900401874295,
@@ -376,17 +386,17 @@
     0.0257679276756002
    ],
    "frac": [
-    0.25395336795832957,
-    0.23803780441459063,
-    0.2324830164247001,
-    0.25375531566206716,
-    0.27775321909808104
+    0.2535304775039935,
+    0.23721209599257226,
+    0.231827082309553,
+    0.25281399846886327,
+    0.2753281768144262
    ],
    "e_ratio_sd": [
-    0.30791092060313235,
-    1.8521378276366771,
-    1.2871161073709452,
-    1.3364310394320384
+    0.3111197097868106,
+    1.8700927483354188,
+    1.324811469539985,
+    1.3530524918725282
    ],
    "lobes_sd": [
     0.017119575539335512,
@@ -423,11 +433,11 @@
     0.03009501514798088
    ],
    "frac_sd": [
-    0.040746194854438374,
-    0.031678071194942876,
-    0.026530659564201864,
-    0.026599583632399698,
-    0.016436534457625388
+    0.04010659967177299,
+    0.032792189256774476,
+    0.02693414808107214,
+    0.02742489393358008,
+    0.01707571841314184
    ]
   },
   "targets_note": "e_sim.stats of the eight RT >= 1.0 Altiverb presets (leave-one-out residuals); a plugin's E, rendered at those RTs through e_sim.capture's sweep method and the same function, should land within ~1.3-2 x the data's own half-vs-half cost (100)"

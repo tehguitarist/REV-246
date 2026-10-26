@@ -31,7 +31,7 @@ OCTS = [250, 500, 1000, 2000, 4000]
 
 
 # The adopted moving-read generator (EMT250_program §16): E's own fixed reads (from its low band), triangle glide, independent phases
-ADOPTED = dict(law="fixed", f=0.553, A=32.0, fsd=0.5, common=False, mdel=314, dl_same=1)   # §16: E's nine fixed reads; same-sign reads reach L at 315
+ADOPTED = dict(law="fixed", f=0.553, A=32.0, fsd=0.5, common=False, mdel=314, dl_same=1, mlp=0.07)   # §16: E's nine fixed reads; same-sign reads reach L at 315
 ADOPTED_13 = dict(law="lfo", wave="tri", f=0.553, A=32.0, fsd=0.3, groups=0, b=0.81, lo=410, hi=3600, share=0.5, M=6, mdel=314)  # §13.4, superseded
 
 
@@ -185,14 +185,17 @@ def e_reads(n, prm, rng, lines, idx):
     for r in fixed_reads():
         f = prm["f"] * (rng.uniform(1 - prm["fsd"], 1 + prm["fsd"]) if prm["fsd"] else 1.0)
         x = (f * t + (ph0 if prm["common"] else rng.uniform())) % 1
-        o = np.round(r["centre"] + prm["A"] * (4 * np.abs(x - 0.5) - 1)).astype(int)
+        wav = np.cos(2 * np.pi * x) if prm.get("wave") == "sine" else (4 * np.abs(x - 0.5) - 1)
+        o = np.round(r["centre"] + prm["A"] * wav).astype(int)
         j = idx - o; v = np.where(j >= 0, lines["ABC".index(r["loop"])][np.maximum(j, 0)], 0)
         ms = prm.get("mscale", 1.0)              # 0 = moving reads off (render_ir moving=False)
-        movR += ms * r["R"] * v
+        movR += ms * r["R"] * v; msL = ms * prm.get("mscale_L", 1.0)
         dl = prm.get("dl_same", 0) if r["L"] * r["R"] > 0 else prm.get("dl_opp", 0)   # extra L delay per sign group (§16.7)
         if dl:
             jl = j - dl; v = np.where(jl >= 0, lines["ABC".index(r["loop"])][np.maximum(jl, 0)], 0)
-        movL += ms * r["L"] * v / X_STATIC[2]     # L amplitudes include L's gain (applied again to all of L below)
+        movL += msL * r["L"] * v / X_STATIC[2]     # L amplitudes include L's gain (applied again to all of L below)
+    if prm.get("mlp"):                            # a one-pole low-pass on the moving reads (§17: low band exact, top trimmed)
+        p_ = prm["mlp"]; movR = lfilter([1 - p_], [1, -p_], movR); movL = lfilter([1 - p_], [1, -p_], movL)
     return movR, movL
 
 
@@ -207,23 +210,25 @@ def render(x, rt, prm, kern, rng):
     for D, g in zip(E.AP_D, q["g"]):
         bb = np.zeros(D + 1); bb[0] = -g; bb[D] = 1; aa = np.zeros(D + 1); aa[0] = 1; aa[D] = -g
         u = lfilter(bb, aa, u)
-    # loops: line[t] = G{ u[t] - line[t - P] }, block-wise (block < P)
-    lines = []
+    # loops: v[t] = u[t] - line[t - P], line = G{v}, block-wise (block < P); static reads read line (after the loop filter),
+    # E's fixed moving reads read v (before it, §17)
+    lines = []; vlines = []
     for Pk, (lf_, hf_) in zip(E.P, [tuple(q["m"])] * 3):
-        bG, aG = loop_iir(rt, Pk, lf_, hf_); line = np.zeros(n); zi = np.zeros(max(len(aG), len(bG)) - 1); B = 2048
+        bG, aG = loop_iir(rt, Pk, lf_, hf_); line = np.zeros(n); v = np.zeros(n); zi = np.zeros(max(len(aG), len(bG)) - 1); B = 2048
         for t0 in range(0, n, B):
             t1 = min(n, t0 + B); fb = np.zeros(t1 - t0)
             s0 = t0 - Pk
             if t1 - Pk > 0:
                 a0 = max(s0, 0); fb[a0 - s0:] = line[a0:t1 - Pk]
-            line[t0:t1], zi = lfilter(bG, aG, u[t0:t1] - fb, zi=zi)
-        lines.append(line)
+            v[t0:t1] = u[t0:t1] - fb
+            line[t0:t1], zi = lfilter(bG, aG, v[t0:t1], zi=zi)
+        lines.append(line); vlines.append(v)
     stat = np.zeros(n)
     for line, dk, ck in zip(lines, E.DK, q["c"]):
         stat[dk:] += ck * line[:-dk]
     # moving reads
     if prm["law"] == "fixed":
-        idx = np.arange(n); movR, movL = e_reads(n, prm, rng, lines, idx)
+        idx = np.arange(n); movR, movL = e_reads(n, prm, rng, vlines if prm.get("pre", True) else lines, idx)
     elif prm["law"] == "plugin":
         idx = np.arange(n); movR, movL = plugin_reads(n, prm, rng, lines, idx)
     else:

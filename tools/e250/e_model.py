@@ -206,10 +206,11 @@ def pretap(x, rts, kern, ch_lp=150.0, secs=1.0):
     return out
 
 
-def render_mean(x, rt, kern, n, reads=None, box=70, pre=None):
+def render_mean(x, rt, kern, n, reads=None, box=70, pre=None, prefilter=True):
     """E's expected response (§16): the static network plus each fixed moving read averaged over its glide (a centred boxcar of
     `box` samples = the triangle's full excursion), with its own R / L amplitude (L 314 samples later). The deterministic part
-    of every capture; what a single capture can be nulled against."""
+    of every capture; what a single capture can be nulled against. prefilter: the moving reads read the loop line before
+    the loop filter (§17: their amplitudes follow 1 / |G| per RT when fitted after it), the static reads after it."""
     if reads is None:
         reads = json.load(open(os.path.join(OUT, "fixed_reads.json")))["reads"]
     q = unpack(x); z = lambda d: np.exp(-2j * np.pi * W * d)
@@ -223,7 +224,7 @@ def render_mean(x, rt, kern, n, reads=None, box=70, pre=None):
         Hk = np.fft.rfft(kern[ch], NFS) * z(o - 16 + K0)
         acc = 0
         for r in reads:
-            k = "ABC".index(r["loop"]); acc = acc + r[key] * G[k] / (1 + G[k] * z(P[k])) * z(r["centre"])
+            k = "ABC".index(r["loop"]); acc = acc + r[key] * (1 if prefilter else G[k]) / (1 + G[k] * z(P[k])) * z(r["centre"])
         out[:, ch] += np.fft.irfft(Hk * ap * bx * acc, NFS)[:n]
     if pre is not None:                                  # the capture-chain pre-tap term (pretap), for comparisons with captures
         out[:len(pre)] += pre[:n]
@@ -252,6 +253,8 @@ def fitstatic(rts, tfit, x0=None):
     free = np.arange(3, len(x0))
     if LAWMODE == "246" and os.environ.get("E_LF"):
         x0[9] = float(os.environ["E_LF"]); free = free[free != 9]
+    if LAWMODE == "246" and os.environ.get("E_HF"):
+        x0[10] = float(os.environ["E_HF"]); free = free[free != 10]
     def rrev(v):
         xx = x0.copy(); xx[free] = v
         return resid(xx, rts, kern, n, w)

@@ -30,14 +30,15 @@ def spec():
                                 L=dict(delay=E.LDEL, sign=-1, gain=float(q["gL"]))), "S", "§11.2, held out by RT"),
         "allpasses": lab(dict(form="H(z) = (-g + z^-D) / (1 - g z^-D), in series, before the loops", D=list(E.AP_D),
                               g=[float(v) for v in q["g"]]), "S", "§11.2"),
-        "loops": lab(dict(P=list(E.P), feedback="negative: line[t] = G{u[t] - line[t - P]}", static_read_delay=list(E.DK),
+        "loops": lab(dict(P=list(E.P), feedback="negative: v[t] = u[t] - line[t - P], line = G{v}", static_read_delay=list(E.DK),
                           static_read_gain=[float(v) for v in q["c"]], read="after the loop filter (reads the line)",
                           L=dict(delay=E.LREV, sign=+1, gain="as the direct path's L gain")), "S", "§11.2"),
         "loop_filter": lab(dict(law="the 246's own: tools/ml_lines.line_coefs(P, rt, lf, hf) / line_resp (shelf + HF pole, HF floor)",
-                                altiverb_family=dict(lf=float(q["m"][0]), hf=float(q["m"][1]), lf_note="LF from the 63-500 Hz decay (§16)"),
-                                high_band_uncertainty="+-10 % (original capture method unknown, §13.6)"), "S", "§11.2, §13.5-13.6"),
+                                altiverb_family=dict(lf=float(q["m"][0]), hf=float(q["m"][1]), note="LF from the 63-500 Hz decay (§16), HF from the 2-12.4 kHz decay (§17), held out"),
+                                decay_error_held_out="0.6-2.1 % per octave, 63 Hz-12.4 kHz (§17)"), "S", "§11.2, §16-17"),
         "moving_reads": lab(dict(adopted={k: v for k, v in S.ADOPTED.items()}, reads=S.fixed_reads(),
-                                 meaning="nine fixed reads on the loop lines (centre = output delay after R's direct tap, loop, signed R and L "
+                                 meaning="nine fixed reads on the loop lines, taken BEFORE the loop filter (v[t] = u[t] - line[t - P], "
+                                         "line = G{v}; the static reads take line, after G; §17) (centre = output delay after R's direct tap, loop, signed R and L "
                                          "amplitudes, direct tap = 1), each read at centre + A x triangle(f_j t + phase_j), triangle in [-1, 1], "
                                          "phase independent per read and realisation, rate f_j = f x (1 +- fsd) per read; L reads the same "
                                          "address with its own amplitude, mdel samples later, or mdel + dl_same for the reads whose L and R signs agree (§16.7); "
@@ -56,10 +57,12 @@ def spec():
             "LF_HF": lab("the 246's LF x / HF x controls through the loop law", "S", "§11.2"),
             "AMPL": lab(dict(law="direct taps x AMPL / 80", reference="the Altiverb family taken as AMPL 80"), "H", "§15 (S's linear cluster law, model_s_results)"),
             "DELAY": lab("a pure delay of the whole output, 0-999 ms, device samples; the Altiverb family at 0", "H", "§15, operation card"),
+            "onset": lab("at DELAY 0 E's R direct tap arrives with M's first cluster tap (Altiverb: S 10.17 / M 20.33 / L 40.42 / E 20.33 ms, one capture chain)", "S", "§17.8"),
+            "level": lab("E's direct tap 1 at the level of an S / M / L cluster tap at the same AMPL (the Altiverb normalised every preset to equal total energy, 64.3-64.6 dB, so the absolute program levels are not in the data)", "H (calibration guess)", "§17.8"),
             "LOW_PASS": lab(dict(steps_khz=[2, 3, 4, 5, 6, 8, 10, 12], open=12, guess="2nd-order Butterworth at the device rate below 12 kHz"), "H", "§14.1, §15"),
         },
         "capture_pretap": lab("the Altiverb captures carry a deterministic, non-causal low-band component before the direct tap (deconvolution): e_model.pretap, for comparisons with captures only", "S", "§16.7"),
-        "not_resolved": ["E's LFO rate (0.553 or 0.608 Hz) and triangle shape, from the UAD plugin (needs E repeat captures)", "the decay law's high bands +-10 % (the original capture method)",
+        "not_resolved": ["E's LFO rate within 0.5-0.65 Hz (E's own statistics; 0.553 = the 250's in seconds, adopted, or 0.608 = in samples) and the triangle shape (the UAD plugin; E cannot tell triangle from sine)",
                          "the LP lever's response", "AMPL / DELAY in E"],
         "references": dict(static_ir=[f"analysis/e250/ref/e_static_rt{r}.wav" for r in REF_RTS],
                            static_ir_note="render_ir(rt, moving=False, chain='device'), lf / hf the family's, AMPL 80, DELAY 0, LP open; device rate, (L, R)",

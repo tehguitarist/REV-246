@@ -32,3 +32,9 @@ analysis/uad250/au_render
 analysis/uad250/bundle/
 tools/e250/libmodcomb.dylib
 analysis/nl/cache_*
+
+# Program E audit (tools/e250/e_pulse.py): per-RT parts and full summaries are large; the compact summary is committed
+analysis/e250/e_pulse_parts*/
+analysis/e250/e_pulse*.json
+!analysis/e250/e_pulse_summary.json
+analysis/e250/uad/

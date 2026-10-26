@@ -263,3 +263,50 @@ About 3 + 3 + 3 + 3 + 18 multiply-adds per sample per channel plus the loop filt
 - **R's direct path below 100 Hz** was the captures' **non-causal low-band content before the tap** (low-passed, −60…0 samples: model error −62 dB against the leave-one-out mean's −87; after the tap within ~3 dB of the data's level): deterministic across presets, the capture's deconvolution, not the unit's causal chain. As a capture-chain term (`e_model.pretap`, the other presets' mean minus the expected response, low-passed below 150 Hz, kept before the kernel starts; for comparisons with captures only, never part of E or the plugin), held out by RT, the **direct path (to 19 ms) is L / R −32.9 / −32.3 dB at 20–100 Hz, −54.0 / −53.1 at 100 Hz–10 kHz, −49.1 / −50.3 at 10–12.4 kHz and −52.8 / −51.6 dB at 20 Hz–12.4 kHz** (floors −38.0 / −37.4, −54.1 / −53.5, −55.1 / −54.8, −54.6 / −53.1); R full band per fold −48.3…−52.6 dB (6 of 8 at −50 or deeper).
 
 **16.8 Still open (not resolvable from existing data).** The LFO rate (0.553 / 0.608 Hz) and the triangle shape (from the UAD plugin, H); the decay law's high bands ± 10 % (Audio Ease's capture method); AMPL / DELAY / LP for E; the direct path's remaining 5–6 dB excess at 20–100 Hz and 10–12.4 kHz (capture chain; small).
+
+## 17. The reverb-metric audit (G1–G6) and its fixes (27 October 2026)
+
+*Tools: `tools/e250/e_pulse.py` (written by a sub-agent: pulse_check's metric functions on Program E — the model's realisations (5 seeds, impulse renders and 10 s sweep captures) against each Altiverb preset, inside if within 2.5 × the realisations' spread or an estimator floor; both channels, extended bands 20–100 Hz and 10–12.4 kHz), summaries `analysis/e250/e_pulse*.json` (v1 before the fixes, v3 after). Supersedes §16.3's amplitudes and §16.5 / §11.2's HF.*
+
+**17.1 What the first audit found.** Inside the spread: decay shapes 125 Hz–2 kHz, EDT, coherence / IACC, fine structure, ringing. Outside: (1) **the reverb level against the direct path fell with RT in the model** (the capture's early reverb / tap ratio is RT-independent, §11.1 / the first-day check, −33.5 ± 0.4 dB; the model needed +3.3 dB at RT 1.0 … −0.6 at 4.5, +11.8 at 0.4), which the earlier optimal-gain scores (ρ²) could not see; (2) high bands decaying 5–7.5 % too long at 8–12.4 kHz; (3) L's late level 0.5–0.7 dB low; (4) echo density and mixing time fail for impulse renders but pass for sweep captures (the captures are sweep-deconvolved: judge density on sweep captures); a 10 s capture sweep lengthens the late high-band decay far beyond the data, a ~2 s sweep matches it (Audio Ease's capture smeared little, §13.6).
+
+**17.2 The moving reads read the loop line before the loop filter. [S]** Fitted per RT with after-filter atoms, the nine reads' amplitudes rise at short RT exactly as 1 / |G| of the loop filter in the low band (normalised, RT 1.0 … 4.5: fitted 1.22 / 1.04 / 0.98 / 1.00 / 0.97 / 0.91 / 0.91 / 0.97; 1 / |G(125 Hz)| 1.28 / 1.10 / 1.01 / 0.97 / 0.94 / 0.91 / 0.90 / 0.89). So in each loop **v[t] = u[t] − line[t − P], line = G{v}; the static reads take line (after G, their first output ∝ G, §11.2), the moving reads take v (before G)**. With that the gain the data needs over the model's early reverb (30–165 ms, R) is −0.2…−0.6 dB at every RT (was +3.3…−0.6), and the audit's per-RT level gains are 0.995–1.07 (≤ 0.6 dB) including RT 0.4. Both forms fit the low band equally (a normalised measure cannot see a per-RT scale); the level decides.
+
+**17.3 HF from the decay statistics: 0.69. [S]** Octave T60 of impulse renders (two seeds) against the data, fitted on four RT steps and scored on the other four: HF 0.69 in both splits; held out the T60 error is **0.6–2.1 % in every octave from 63 Hz to 8 kHz and in 10–12.4 kHz** (at the IR-fit 0.736: +4.7 / +7.0 % at 8 / 10–12.4 kHz). LF 1.49 confirmed in the same run. As for RT (§13.5) and LF (§16.5), the IR least-squares value was biased by the random part.
+
+**17.4 The moving reads' broadband levels.** The low-band amplitude fit sets R about 1 dB high broadband: a ×0.89 scale puts the moving / static energy ratios on the data (−16.0 / +4.2 / +5.7 / +4.7 against −15.5 / +4.4 / +5.6 / +5.0 dB) and the held-out statistics cost at 91 (data against itself 100); a one-pole low-pass instead is no better (98–134). L's moving reads need ×1.12 relative to that (the L / R energy balance over time, held out by RT: within ± 0.25 dB in every window to 1.6 s; a small early-high / late-low residual remains), i.e. L at its low-band value. The low band stays within 0.3 dB of the data (63–500 Hz: +0.3…−0.1 dB). Per-channel decay slopes already agreed (T60 L / R within 0.02 of the data's).
+
+**17.5 After the fixes** (impulse renders, inside / total, before → after): 
+
+| Family (impulse renders, all nine RTs, both channels) | First audit (v1) | After 17.2–17.6 (v4) |
+|---|---|---|
+| Octave T60 L / R | 40 / 39 of 56 | **53 / 53** |
+| Third-octave T60 L / R | 129 / 117 of 152 | **141 / 138** |
+| Octave EDT L / R | 45 / 46 of 56 | **49 / 53** |
+| Octave late decay L / R | 52 / 52 of 56 | **55 / 56** |
+| C50 L / R | 23 / 32 of 56 | **41 / 41** |
+| D50 L / R | 23 / 33 of 56 | **41 / 41** |
+| Ts L / R | 19 / 28 of 56 | **44 / 43** |
+| Early-window level L / R | 10 / 8 of 32 | **26 / 28** |
+| Early level L / R | 103 / 126 of 152 | **131 / 140** |
+| Late level L / R | 71 / 104 of 152 | **126 / 133** |
+| L / R balance early / late (broadband) | 2 / 0 of 8 | **8 / 5** |
+| L / R balance late (per band) | 35 of 56 | **55** |
+| IACC (time-resolved) | 48 of 48 | 48 |
+| Broadband T60 / EDT | 7 of 8 | **8 of 8** |
+| **All families** (echo density and mixing time excluded: judged on sweep captures, ned_b 8 / 8, ned_a 6 / 8, mixing time 4 / 8) | **2986 / 3832 (78 %)** | **3402 / 3832 (89 %)** |
+
+The level gain the model needs per RT went from +3.3 dB (RT 1.0) / +11.8 dB (RT 0.4) to 0.956–1.027 (≤ ± 0.4 dB) at every RT, RT 0.4 included.
+
+**17.6 The reverb's level against the direct tap: +0.35 dB. [S]** After 17.2–17.4 every window after 30 ms sat 0.3–0.45 dB low against the (exactly matched) direct tap, which read as C50 +0.4–0.8 dB and Ts 4–7 ms short; the audit's level gains said the same (1.03–1.07 at every RT). One gain on the whole reverb (the static reads and the moving reads together, `rev_gain` in both files) leaves the energy ratios, the direct path and the decay untouched; on three RTs it took C50 R / L +0.44 / +0.47 → +0.27 / +0.07 dB and Ts R / L −4.4 / −6.8 → −0.1 / −1.4 ms (v4 above includes it). So §17.4's ×0.89 on the moving reads was half the story: part of the moving / static excess was the static part being low against the direct path.
+
+**17.7 A gentle low-pass on the moving reads (one pole, 0.07). [H]** v4's remaining outlier was the top band: early level right (6.4 / 10 kHz −0.08 / +0.24 dB) but late level high (+0.65…0.87 / +1.6…1.8 dB) with the 8 kHz decay slope right, i.e. C50 8 kHz −1.05 dB and Ts +8–9 ms in both channels: the moving reads (before the loop filter, §17.2) carry a little too much top end. Same three RTs, like for like: no low-pass / pole 0.07 / 0.15: late 6.4 kHz +0.80 / +0.35 / −0.22 dB, 10 kHz +1.78 / +0.99 / +0.10; C50 8 kHz −1.08 / −0.46 / +0.35 dB; Ts 8 kHz +9.3 / +3.6 / −3.1 ms; all checks 1254 / 1248 / 1226 of 1437; statistics cost 90.9 / 89.9 / 94.1. Adopted 0.07 (`ADOPTED["mlp"]`; the kind of roll-off interpolation or address stepping gives; below 1 kHz < 0.05 dB, so the low-band fit is untouched). Left: late 10 kHz about +1 dB (the band limit's edge).
+
+**17.8 The rate and shape of the glide, E's onset and level. [S / H]**
+- **Rate from E's own data.** With the depth now E's own (the low band, §16.2), the lobes' speed fixes the rate: held-out cost 104 / 102 / 91 / 98 / 120 at 0.45 / 0.50 / 0.553 / 0.608 / 0.70 Hz (seed scatter ± 15): **E's LFO is at 0.5–0.65 Hz** (S), the plugin's 0.553 Hz applies. 0.553 against 0.608 (the 250's rate kept in seconds or in samples) does not separate (8 seeds: 94.4 ± 5.2 / 97.8 ± 7.0); 0.553 stays the default (the delays were re-timed in milliseconds, H).
+- **Shape.** Triangle and sine at equal depth score alike (91 / 92); the plugin's snapshots (constant speed) decide for the triangle (H for E).
+- **Onset.** First arrivals in the Altiverb captures (one capture chain): S 10.17, M 20.33, L 40.42 ms (×1 / ×2 / ×4) and **E 20.33 ms (R), with M's**, L 32.25. At DELAY 0 E's direct tap arrives with M's first cluster tap. [S]
+- **Level.** The Altiverb normalised every preset to the same total energy (64.33–64.63 dB over all 32 S / M / L / E presets), so the programs' absolute levels are not in the data. Calibration (the spec's `controls.level`): **E's direct tap 1 at the level of an S / M / L cluster tap at the same AMPL** (one converter and headroom for every program). [H]
+
+**17.9 Status.** Everything the existing data constrains is fitted and held out, and the G1–G6 audit is at 89 % inside the model's own realisation spread (S / M / L's pulse check is the precedent). Left, not resolvable from existing data: AMPL / DELAY / LP for E, the absolute level (calibrated by rule), 0.553 vs 0.608 Hz, the glide's shape in E, the 16-bit mode for E (a plugin item, modelled as S's), and small residuals: the direct path 5–6 dB over the data's floor at 20–100 Hz and 10–12.4 kHz (capture chain), the late 10 kHz level (+1 dB), L / R over time ± 0.25 dB.
+
