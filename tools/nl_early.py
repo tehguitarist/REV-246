@@ -107,11 +107,15 @@ def solve(y, A):
     return g, float(np.sum(r * r) / np.sum(y * y))
 
 
+FRONT_BIAS = -0.0055   # the peak picker's bias on the 410 tap (its neighbours pull it): the front taps fit -0.005...-0.006
+                       # samples earlier in every capture and both channels (NonLin_program 11.1); 0-50 ms -42 -> -48...-56 dB
+
+
 def front_shift(h):
     """Sub-sample position of the L front tap (410) re K0 + 410: the file's trim offset."""
     from core import subsample_peak
     i = K0 + 380 + int(np.argmax(np.abs(h[K0 + 380:K0 + 460, 0])))
-    return subsample_peak(h[:, 0], i)[0] - (K0 + 410)
+    return subsample_peak(h[:, 0], i)[0] - (K0 + 410) + FRONT_BIAS
 
 
 def stage_db(early, n_stage):

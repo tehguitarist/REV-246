@@ -38,7 +38,7 @@ LATE_AMP = 0.5                                  # read taps in main-tap units (0
 WINDOWS = [(0.0, 0.05), (0.05, 0.15), (0.15, 0.3), (0.3, 0.6), (0.6, 1.0), (1.0, 2.0)]
 FADE_GUARD = 0.75                               # s before the file's end (S's 0.70 s fade ramp + a guard)
 NOISE = os.path.join(nl.OUT, "noise.json")
-BENCH = os.path.join(nl.OUT, "bench")
+BENCH = os.path.join(nl.OUT, "bench" + ("_bk" if os.environ.get("NL_BK") == "1" else ""))
 
 
 def late_db(span, early):
@@ -47,6 +47,14 @@ def late_db(span, early):
         return 0.0
     j = min(ne.N_STAGES[span], len(ne.STAGES) - 1)
     return -60 * (4 + 9 * j) * ne.TICK / early
+
+
+BK_FILE = os.path.join(nl.OUT, "branch_kernel.json")
+BK_H = 6
+BK_TRAIN = [(sp, e, 0.0) for sp in (0.2, 0.4) for e in (10.0, 3.0, 1.0, -1.0, -3.0)]
+BK = None
+if os.environ.get("NL_BK") == "1" and os.path.exists(BK_FILE):          # the branch kernel (NonLin_program 11.2): a switch
+    BK = {int(c): np.array(v) for c, v in json.load(open(BK_FILE)).items()}
 
 
 @functools.lru_cache(maxsize=8)
@@ -79,6 +87,8 @@ def spectra(key, ch, N):
             V = np.fft.rfft(lfilter([1.0], np.r_[1.0, np.zeros(P - 1), -nlt.loop_gain(P, late)], v))
             taps = sum(s * np.exp(ph * (base + q)) for s, q in zip(nlt.READ_SIGNS[ch][P], qs))
             branch += gl * U * V * taps
+    if BK is not None:                          # a short kernel on the whole AP(124) branch, centred
+        branch = branch * np.fft.rfft(np.roll(np.r_[BK[ch], np.zeros(N - len(BK[ch]))], -BK_H))
     return front, branch
 
 
@@ -188,6 +198,35 @@ def bench_file(key):
     return key, res
 
 
+def bkernel_stage():
+    """The branch kernel (2 BK_H + 1 taps per channel), fitted on BK_TRAIN with each capture's bench alignment and
+    gains: y = g (front + sum_j k_j branch shifted by j), least squares over all BK_TRAIN windows from the first front
+    tap to the end of the early section."""
+    out = {}
+    for ch in (0, 1):
+        X, Y = [], []
+        for key in BK_TRAIN:
+            b = json.load(open(os.path.join(BENCH, "_".join(str(v) for v in key) + ".json")))
+            raw = nl.ir(nl.table()[key])
+            fr, o = b["front_shift"], b["o"]
+            n = K0 + int(fr) + ne.taps(0, ne.N_STAGES[key[0]])[-1][0] + 5500
+            raw = np.vstack([raw[:n + 64], np.zeros((max(0, n + 64 - len(raw)), 2))])
+            y = sosfiltfilt(ne.BAND, nlt.unwarp(raw, b["ppm"])[:n], axis=0)[:, ch]
+            N = 1 << int(np.ceil(np.log2(n + 2 * ne.TAPS[-1] + 4096)))
+            ph = -2j * np.pi * np.fft.rfftfreq(N)
+            F, B = spectra(key, ch, N)
+            f = sosfiltfilt(ne.BAND, np.fft.irfft(F * np.exp(ph * (K0 + fr)), N)[:n])
+            bb = np.fft.irfft(B * np.exp(ph * (K0 + fr + o)), N)[:n]
+            cols = np.array([sosfiltfilt(ne.BAND, np.roll(bb, j)) for j in range(-BK_H, BK_H + 1)]).T
+            a, e = K0 + int(fr) + 21, n - 2500
+            X.append(b["gain"][ch] * np.c_[f, cols][a:e])
+            Y.append(y[a:e])
+        sol = np.linalg.lstsq(np.vstack(X), np.concatenate(Y), rcond=None)[0]
+        out[ch] = (sol[1:] / sol[0]).tolist()
+        print(ch, np.round(out[ch], 5))
+    json.dump(out, open(BK_FILE, "w"), indent=1)
+
+
 def bench_stage(workers, only):
     keys = sorted(k for k in nl.table() if k not in defects.NL_DEFECTS)
     if only:
@@ -201,9 +240,11 @@ def bench_stage(workers, only):
 
 def report_stage():
     rows = []
+    print("bench:", BENCH)
     for f in sorted(os.listdir(BENCH)):
         k = tuple(float(v) for v in f[:-5].split("_"))
-        rows.append((k, json.load(open(os.path.join(BENCH, f)))))
+        if k not in defects.NL_DEFECTS:
+            rows.append((k, json.load(open(os.path.join(BENCH, f)))))
     print(f"{len(rows)} captures (NL_DEFECTS left out)")
     print("window      n    null L / R (median)   floor L     excess L / R (median, windows above the floor)")
     for t0, t1 in WINDOWS:
@@ -234,7 +275,7 @@ def main():
     ap_.add_argument("--workers", type=int, default=6)
     ap_.add_argument("--only", type=int, default=0)
     a = ap_.parse_args()
-    {"noise": noise_stage, "report": report_stage}.get(a.stage, lambda: bench_stage(a.workers, a.only))()
+    {"noise": noise_stage, "report": report_stage, "bkernel": bkernel_stage}.get(a.stage, lambda: bench_stage(a.workers, a.only))()
 
 
 if __name__ == "__main__":
