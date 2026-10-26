@@ -1,0 +1,2 @@
+## Full-band gate 'compactkernel' against gate_ref (BANDS 20 Hz-12.3 kHz; median null per band and window, L / R; allowed +0.5 dB)
+**PASS** (no band-window median worse by more than 0.5 dB)
