@@ -103,12 +103,57 @@ W = np.fft.rfftfreq(NFS)
 FK = np.fft.rfftfreq(2048, 1 / FS)
 
 
-def kernels(rts):
-    """Per channel, tap 1's response (chain), from the mean of the given presets; normalised to 1 at the tap."""
+KLONG = 540                               # §16: the kernel past tap 2 (tap 2's copy removed recursively) up to the first moving read
+
+
+def kernels(rts, a2=-0.709):
+    """Per channel, tap 1's response (chain), from the mean of the given presets; normalised to 1 at the tap. Up to KL
+    samples it is the data itself; from tap 2 (429) on, tap 2's own copy of the kernel is subtracted recursively,
+    k[n] = d[n] - a2 k[n - 429], which extends it to KLONG (the first moving reads start ~540; §16)."""
     m = np.mean([dev(r) for r in rts], 0); out = []
     for ch, o in ((0, LDEL), (1, 0)):
-        k = m[K0 + o - 16:K0 + o + KL, ch].copy(); out.append(k / k[16])
+        d = m[K0 + o - 16:K0 + o + KLONG, ch].copy(); d /= d[16]; k = d.copy()
+        for i in range(TAPS[1], len(k)):        # tap 2's copy starts 16 samples before it (index 16 = the tap)
+            k[i] = d[i] - a2 * k[i - TAPS[1]]
+        out.append(k)
+    if TAIL and os.path.exists(TAIL_FILE):              # §16: the chain's slow tail, a cubic B-spline from KLONG to 4000
+        tl = json.load(open(TAIL_FILE)); lags = np.arange(tl["lo"], tl["hi"])
+        for ch, key in ((0, "L"), (1, "R")):
+            tail = np.sum([b * _bspl(tl, j)(lags) for j, b in enumerate(tl[key])], 0)
+            out[ch] = np.r_[out[ch], np.zeros(16 + tl["hi"] - len(out[ch]))]; out[ch][16 + tl["lo"]:16 + tl["hi"]] += tail
     return out
+
+
+TAIL = os.environ.get("E_TAIL", "1") == "1"
+TAIL_FILE = os.path.join(OUT, "kernel_tail.json")
+
+
+def _bspl(tl, j):
+    from scipy.interpolate import BSpline
+    t = np.r_[[tl["lo"]] * 3, np.linspace(tl["lo"], tl["hi"], tl["nb"] - 2), [tl["hi"]] * 3]
+    return BSpline(t, np.eye(tl["nb"])[j], 3)
+
+
+def fit_tail(x, rts, lo=540, hi=4000, nb=16, secs=1.0):
+    """The kernel's slow tail (§16): per channel, nb cubic B-spline coefficients on lags lo..hi, fitted by least squares
+    below 250 Hz on E's expected response (render_mean) over the first `secs`, with the kernel without its tail."""
+    global TAIL
+    from scipy.signal import butter, sosfiltfilt
+    keep = TAIL; TAIL = False
+    try:
+        kern = kernels(rts); n = K0 + int(secs * FS); lp = butter(4, 250, fs=FS, output="sos"); lags = np.arange(lo, hi)
+        tl = dict(lo=lo, hi=hi, nb=nb); Bm = np.array([_bspl(tl, j)(lags) for j in range(nb)])
+        for ch, key in ((0, "L"), (1, "R")):
+            A, b = [], []
+            for rt in rts:
+                d = np.zeros(KLONG + 16); d[16] = 1.0
+                u = render_mean(x, rt, [d, d.copy()], n)[:, ch]; y = dev(rt)[:n, ch]; m = render_mean(x, rt, kern, n)[:, ch]
+                A.append(np.array([sosfiltfilt(lp, np.convolve(u, np.r_[np.zeros(lo), Bm[j]])[:n])[K0 - 20:] for j in range(nb)]).T)
+                b.append(sosfiltfilt(lp, y - m)[K0 - 20:])
+            tl[key] = np.linalg.lstsq(np.vstack(A), np.concatenate(b), rcond=None)[0].tolist()
+    finally:
+        TAIL = keep
+    return tl
 
 
 LAWMODE = "mb"                            # "mb": T60(f) = RT m(f), 7 knots; "246": the 246's loop law (ml_lines.line_coefs) at panel LF / HF
@@ -148,6 +193,28 @@ def render(x, rt, kern, n):
     return out
 
 
+def render_mean(x, rt, kern, n, reads=None, box=70):
+    """E's expected response (§16): the static network plus each fixed moving read averaged over its glide (a centred boxcar of
+    `box` samples = the triangle's full excursion), with its own R / L amplitude (L 314 samples later). The deterministic part
+    of every capture; what a single capture can be nulled against."""
+    if reads is None:
+        reads = json.load(open(os.path.join(OUT, "fixed_reads.json")))["reads"]
+    q = unpack(x); z = lambda d: np.exp(-2j * np.pi * W * d)
+    ap = np.ones_like(W, dtype=complex)
+    for D, g in zip(AP_D, q["g"]):
+        ap *= (-g + z(D)) / (1 - g * z(D))
+    bx = np.fft.rfft(np.ones(box) / box, NFS) * z(-(box - 1) / 2)
+    out = render(x, rt, kern, n)
+    G = {k: loop_G(rt, P[k], q["m"]) for k in range(3)}
+    for ch, o, key in ((0, LDEL, "L"), (1, 0, "R")):
+        Hk = np.fft.rfft(kern[ch], NFS) * z(o - 16 + K0)
+        acc = 0
+        for r in reads:
+            k = "ABC".index(r["loop"]); acc = acc + r[key] * G[k] / (1 + G[k] * z(P[k])) * z(r["centre"])
+        out[:, ch] += np.fft.irfft(Hk * ap * bx * acc, NFS)[:n]
+    return out
+
+
 def resid(x, rts, kern, n, w):
     return np.concatenate([((render(x, rt, kern, n) - dev(rt)[:n]) * w[:, None]).ravel() for rt in rts])
 
@@ -166,8 +233,10 @@ def fitstatic(rts, tfit, x0=None):
         xx = x0.copy(); xx[0:3] = v
         return np.concatenate([((render(xx, rt, kern, nd) - dev(rt)[:nd]) * wd).ravel() for rt in rts])
     x0 = x0.copy(); x0[0:3] = least_squares(rdir, x0[0:3], diff_step=1e-5).x
-    # 2. the reverb (c, g, m) with the direct path fixed
+    # 2. the reverb (c, g, m) with the direct path fixed (LF held at E_LF when set: §16, LF from the decay statistics)
     free = np.arange(3, len(x0))
+    if LAWMODE == "246" and os.environ.get("E_LF"):
+        x0[9] = float(os.environ["E_LF"]); free = free[free != 9]
     def rrev(v):
         xx = x0.copy(); xx[free] = v
         return resid(xx, rts, kern, n, w)
@@ -176,8 +245,9 @@ def fitstatic(rts, tfit, x0=None):
     return x, kern, sol
 
 
-def wnull(y, m, i0, i1):
-    yb, mb = sosfiltfilt(BAND, y), sosfiltfilt(BAND, m)
+def wnull(y, m, i0, i1, band=None):
+    band = BAND if band is None else band
+    yb, mb = sosfiltfilt(band, y), sosfiltfilt(band, m)
     return float(10 * np.log10(np.sum((yb[i0:i1] - mb[i0:i1]) ** 2) / np.sum(yb[i0:i1] ** 2)))
 
 
@@ -194,17 +264,19 @@ def stage_static(args):
     for rh in held:
         tr = [r for r in rts if r != rh]
         x, kern, sol = fitstatic(tr, args.tfit)
-        n = K0 + int(2.0 * FS); y = dev(rh)[:n]; m = render(x, rh, kern, n)
+        n = K0 + int(2.0 * FS); y = dev(rh)[:n]; m = render_mean(x, rh, kern, n) if os.path.exists(os.path.join(OUT, "fixed_reads.json")) else render(x, rh, kern, n)
         loo = np.mean([dev(r)[:n] for r in tr], 0)
         r = dict(x=x.tolist(), nfev=int(sol.nfev))
         r["direct_null"] = [wnull(y[:, 0], m[:, 0], K0 + LDEL - 20, K0 + LDEL + 500), wnull(y[:, 1], m[:, 1], K0 - 20, K0 + 500)]   # to 19 ms: random reads start ~20 ms
+        fb = butter(4, [20, 12400], btype="band", fs=FS, output="sos")
+        r["direct_null_fullband"] = [wnull(y[:, 0], m[:, 0], K0 + LDEL - 20, K0 + LDEL + 500, fb), wnull(y[:, 1], m[:, 1], K0 - 20, K0 + 500, fb)]
         for a, b in ((0.03, 0.165), (0.17, 0.5), (0.5, 1.5)):
             i0, i1 = K0 + int(a * FS), K0 + int(b * FS)
             r[f"rho2_{int(a*1e3)}-{int(b*1e3)}"] = dict(model=[expl(y[:, c], m[:, c], i0, i1) for c in (0, 1)],
                                                          loo_mean=[expl(y[:, c], loo[:, c], i0, i1) for c in (0, 1)])
         res[str(rh)] = r
         q = unpack(x)
-        print(f"held {rh}: direct null L/R {r['direct_null'][0]:.1f} / {r['direct_null'][1]:.1f} dB | rho2 model vs LOO-mean (L,R) "
+        print(f"held {rh}: direct null L/R {r['direct_null'][0]:.1f} / {r['direct_null'][1]:.1f} dB (20 Hz-12.4 kHz {r['direct_null_fullband'][0]:.1f} / {r['direct_null_fullband'][1]:.1f}) | rho2 model vs LOO-mean (L,R) "
               + " | ".join(f"{k[5:]} {v['model'][0]:.2f},{v['model'][1]:.2f} vs {v['loo_mean'][0]:.2f},{v['loo_mean'][1]:.2f}" for k, v in r.items() if k.startswith("rho2"))
               + f" | a {q['a'].round(3)} gL {q['gL']:.4f} c {q['c'].round(3)} g {q['g'].round(3)} m {q['m'].round(2)}", flush=True)
     os.makedirs(OUT, exist_ok=True)
@@ -227,3 +299,6 @@ if __name__ == "__main__":
         stage_prep(a.ppm)
     elif a.stage == "static":
         stage_static(a)
+    elif a.stage == "tail":                      # all-data kernel tail on the 246-law static fit (held-out evidence: §16)
+        sys.path.insert(0, os.path.join(ROOT, "tools")); LAWMODE = "246"; x = np.array(json.load(open(os.path.join(OUT, "static_all_246.json")))["x"])
+        json.dump(fit_tail(x, [r for r in RTS if r >= 1.0]), open(TAIL_FILE, "w"), indent=1); print("wrote", TAIL_FILE)

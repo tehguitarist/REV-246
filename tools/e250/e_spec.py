@@ -34,20 +34,22 @@ def spec():
                           static_read_gain=[float(v) for v in q["c"]], read="after the loop filter (reads the line)",
                           L=dict(delay=E.LREV, sign=+1, gain="as the direct path's L gain")), "S", "§11.2"),
         "loop_filter": lab(dict(law="the 246's own: tools/ml_lines.line_coefs(P, rt, lf, hf) / line_resp (shelf + HF pole, HF floor)",
-                                altiverb_family=dict(lf=float(q["m"][0]), hf=float(q["m"][1])),
+                                altiverb_family=dict(lf=float(q["m"][0]), hf=float(q["m"][1]), lf_note="LF from the 63-500 Hz decay (§16)"),
                                 high_band_uncertainty="+-10 % (original capture method unknown, §13.6)"), "S", "§11.2, §13.5-13.6"),
-        "moving_reads": lab(dict(adopted={k: v for k, v in S.ADOPTED.items()},
-                                 meaning="per loop M reads on the loop line, gain +-b x |static_read_gain|, centre uniform in [lo, hi] "
-                                         "samples, offset A x triangle(f t + phase), phase independent per read, rate x (1 +- fsd) per read; "
-                                         "a fraction 'share' also added to L with the opposite sign (L delay mdel), the rest independent in L; "
-                                         "integer addresses, no interpolation",
+        "moving_reads": lab(dict(adopted={k: v for k, v in S.ADOPTED.items()}, reads=S.fixed_reads(),
+                                 meaning="nine fixed reads on the loop lines (centre = output delay after R's direct tap, loop, signed R and L "
+                                         "amplitudes, direct tap = 1), each read at centre + A x triangle(f_j t + phase_j), triangle in [-1, 1], "
+                                         "phase independent per read and realisation, rate f_j = f x (1 +- fsd) per read; L reads the same "
+                                         "address with its own amplitude, mdel samples later; integer addresses, no interpolation",
+                                 superseded_random_reads={k: v for k, v in S.ADOPTED_13.items()},
                                  lfo_rate_hz=S.LFO_RATE,
                                  plugin_faithful=dict(reads=[dict(centre=c, loop="ABC"[k], R_sign=sr, L_sign=sl, set=st) for c, k, sr, sl, st in S.PLUGIN_READS],
                                                       set_probability=S.SETS, common_triangle=dict(f=0.5535, A=35.2), gain=0.17,
                                                       weak=dict(per_loop=6, gain=0.28, lo=300, hi=3600), dwell_s=0.1,
                                                       note="§14.4-14.5: the UAD plugin's structure; fits E's statistics worse (250 vs 182), a listening alternative")),
-                             "S (energy, range, speed, L/R share: E's statistics) / H (triangle and rate: from the UAD plugin)", "§12-14"),
+                             "S (reads, amplitudes, depth: E's low band, held out; speed spread: E's statistics) / H (triangle shape and rate: the UAD plugin)", "§16"),
         "output_kernel": lab(dict(fir=list(S.L_KERNEL), rate="device", note="L's output kernel; E has it, the LP lever does not cause it"), "S", "§14.1"),
+        "capture_chain_tail": lab("the Altiverb captures' chain has a slow tail (analysis/e250/kernel_tail.json, B-spline 540-4000 samples); a property of the capture chain, not of E: the plugin's own analogue chain replaces it", "S", "§16"),
         "controls": {
             "RT": lab(dict(measured_steps=[0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.6, 4.0, 4.5], note="the Altiverb family's steps; the 246's E table itself is unknown"), "C (these values exist) / H (full table)", "§0"),
             "LF_HF": lab("the 246's LF x / HF x controls through the loop law", "S", "§11.2"),
@@ -55,7 +57,7 @@ def spec():
             "DELAY": lab("a pure delay of the whole output, 0-999 ms, device samples; the Altiverb family at 0", "H", "§15, operation card"),
             "LOW_PASS": lab(dict(steps_khz=[2, 3, 4, 5, 6, 8, 10, 12], open=12, guess="2nd-order Butterworth at the device rate below 12 kHz"), "H", "§14.1, §15"),
         },
-        "not_resolved": ["the L-only detail of E's moving reads (§14.3)", "E's own LFO rate and phase grouping (needs E repeat captures)",
+        "not_resolved": ["R's direct-path low band (20-100 Hz -29 dB against a -37 dB floor, §16)", "the L/R correlation of the moving part (-0.22 against the data's -0.44, §16)", "E's own LFO rate and phase grouping (needs E repeat captures)",
                          "the LP lever's response", "AMPL / DELAY in E"],
         "references": dict(static_ir=[f"analysis/e250/ref/e_static_rt{r}.wav" for r in REF_RTS],
                            static_ir_note="render_ir(rt, moving=False, chain='device'), lf / hf the family's, AMPL 80, DELAY 0, LP open; device rate, (L, R)",

@@ -26,12 +26,13 @@ import e_model as E  # noqa: E402
 
 FS, K0 = E.FS, E.K0
 X_STATIC = None                      # e_model parameters (246 law), set by static_params()
-DEF = dict(M=6, b=0.45, lo=600, hi=3600, v=60.0, vsd=0.0, vdn=None, f=0.55, A=17.0, fsd=0.0, wave="tri", groups=0, gs=0.17, gw=0.1, Mw=6, dwell=0.1, sets=True, law="tri", tdir=1.0, share=0.5, tsw=10.0, seed=0, mdel=314)
+DEF = dict(M=6, b=0.45, lo=600, hi=3600, v=60.0, vsd=0.0, vdn=None, f=0.55, A=17.0, fsd=0.0, wave="tri", groups=0, gs=0.17, gw=0.1, Mw=6, dwell=0.1, sets=True, common=False, law="tri", tdir=1.0, share=0.5, tsw=10.0, seed=0, mdel=314)
 OCTS = [250, 500, 1000, 2000, 4000]
 
 
-# The adopted moving-read generator (EMT250_program §13): the UAD plugin's law, consistent with the E's own statistics
-ADOPTED = dict(law="lfo", wave="tri", f=0.553, A=32.0, fsd=0.3, groups=0, b=0.81, lo=410, hi=3600, share=0.5, M=6, mdel=314)
+# The adopted moving-read generator (EMT250_program §16): E's own fixed reads (from its low band), triangle glide, independent phases
+ADOPTED = dict(law="fixed", f=0.553, A=32.0, fsd=0.5, common=False, mdel=314)     # §16: E's nine fixed reads (fixed_reads.json)
+ADOPTED_13 = dict(law="lfo", wave="tri", f=0.553, A=32.0, fsd=0.3, groups=0, b=0.81, lo=410, hi=3600, share=0.5, M=6, mdel=314)  # §13.4, superseded
 
 
 LFO_RATE = {"time": 0.553, "samples": 0.553 * 26373.6 / 24000}   # §14.6: the 250's 0.553 Hz kept in seconds (default) or in samples
@@ -57,7 +58,7 @@ def render_ir(rt, lf=None, hf=None, seed=0, secs=None, fs_out=None, ampl=AMPL_RE
       lfo         'time' (0.553 Hz, default) or 'samples' (0.608 Hz): the moving reads' triangle rate (H)
       chain       'altiverb': the measured chain kernel of the E presets (the capture's chain x L's output kernel; validated
                   against them); 'device': L's output kernel [0.77, 0.23] only, for a host that adds the 246's analogue chain
-      law         the moving-read law (None: ADOPTED, §13.4; 'plugin': §14.4's plugin-faithful structure)
+      law         the moving-read law (None: ADOPTED, §16; 'random': §13.4's random reads; 'plugin': §14.4's plugin-faithful structure)
       moving      False: the static network only (deterministic; the plugin's reference for a sample-exact null)
     Device rate, or resampled to fs_out."""
     global X_STATIC
@@ -68,10 +69,12 @@ def render_ir(rt, lf=None, hf=None, seed=0, secs=None, fs_out=None, ampl=AMPL_RE
     if chain == "device":
         k = np.zeros(len(kern[0])); k[16:18] = L_KERNEL; kern = [k, k.copy()]
     prm = dict(DEF) | ADOPTED | dict(f=LFO_RATE[lfo], ampl_scale=ampl / AMPL_REF)
+    if law == "random":
+        prm = dict(DEF) | ADOPTED_13 | dict(f=LFO_RATE[lfo], ampl_scale=ampl / AMPL_REF)
     if law == "plugin":
         prm |= dict(law="plugin", f=LFO_RATE[lfo] + 0.0005, A=35.2, gs=0.17, gw=0.28, Mw=6, lo=300, dwell=0.1, sets=True)
     if not moving:
-        prm |= dict(b=0.0, gs=0.0, gw=0.0)
+        prm |= dict(b=0.0, gs=0.0, gw=0.0, mscale=0.0)
     secs = secs or min(3 * rt + 1, 15); n = int(secs * FS) + 4096
     x = np.zeros(n); x[1000] = 1.0
     keep = X_STATIC; X_STATIC = q
@@ -170,6 +173,25 @@ def plugin_reads(n, prm, rng, lines, idx):
     return movR, movL
 
 
+def fixed_reads():
+    """§16: E's own moving reads (fixed centres, loops, R and L amplitudes; analysis/e250/fixed_reads.json, from the low band)."""
+    return json.load(open(os.path.join(E.OUT, "fixed_reads.json")))["reads"]
+
+
+def e_reads(n, prm, rng, lines, idx):
+    """§16's law: E's fixed reads, each at centre + A tri(f_j t + phase_j); one phase for all reads (common=True) or
+    independent ones, rates f (1 +- fsd); L reads the same address with its own signed amplitude."""
+    t = np.arange(n) / FS; movR = np.zeros(n); movL = np.zeros(n); ph0 = rng.uniform()
+    for r in fixed_reads():
+        f = prm["f"] * (rng.uniform(1 - prm["fsd"], 1 + prm["fsd"]) if prm["fsd"] else 1.0)
+        x = (f * t + (ph0 if prm["common"] else rng.uniform())) % 1
+        o = np.round(r["centre"] + prm["A"] * (4 * np.abs(x - 0.5) - 1)).astype(int)
+        j = idx - o; v = np.where(j >= 0, lines["ABC".index(r["loop"])][np.maximum(j, 0)], 0)
+        ms = prm.get("mscale", 1.0)              # 0 = moving reads off (render_ir moving=False)
+        movR += ms * r["R"] * v; movL += ms * r["L"] * v / X_STATIC[2]     # L amplitudes include L's gain (applied again to all of L below)
+    return movR, movL
+
+
 def render(x, rt, prm, kern, rng):
     """(n, 2) device-rate output of E for a mono input x (R's tap 1 at the input's own time + K0 - 16)."""
     q = E.unpack(X_STATIC); n = len(x)
@@ -196,7 +218,9 @@ def render(x, rt, prm, kern, rng):
     for line, dk, ck in zip(lines, E.DK, q["c"]):
         stat[dk:] += ck * line[:-dk]
     # moving reads
-    if prm["law"] == "plugin":
+    if prm["law"] == "fixed":
+        idx = np.arange(n); movR, movL = e_reads(n, prm, rng, lines, idx)
+    elif prm["law"] == "plugin":
         idx = np.arange(n); movR, movL = plugin_reads(n, prm, rng, lines, idx)
     else:
         movR, movL = generic_reads(n, prm, rng, lines, q)

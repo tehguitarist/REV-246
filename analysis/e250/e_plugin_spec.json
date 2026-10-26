@@ -72,8 +72,9 @@
   "value": {
    "law": "the 246's own: tools/ml_lines.line_coefs(P, rt, lf, hf) / line_resp (shelf + HF pole, HF floor)",
    "altiverb_family": {
-    "lf": 1.3833446362074198,
-    "hf": 0.7361446779362695
+    "lf": 1.49,
+    "hf": 0.7361446779362695,
+    "lf_note": "LF from the 63-500 Hz decay (\u00a716)"
    },
    "high_band_uncertainty": "+-10 % (original capture method unknown, \u00a713.6)"
   },
@@ -83,6 +84,71 @@
  "moving_reads": {
   "value": {
    "adopted": {
+    "law": "fixed",
+    "f": 0.553,
+    "A": 32.0,
+    "fsd": 0.5,
+    "common": false,
+    "mdel": 314
+   },
+   "reads": [
+    {
+     "centre": 641,
+     "loop": "A",
+     "R": 0.34787651278646686,
+     "L": -0.3588001722961049
+    },
+    {
+     "centre": 1205,
+     "loop": "C",
+     "R": 0.41818937153145097,
+     "L": -0.3475880459106986
+    },
+    {
+     "centre": 1415,
+     "loop": "B",
+     "R": -0.38335266401235063,
+     "L": -0.38751755502826374
+    },
+    {
+     "centre": 1462,
+     "loop": "A",
+     "R": -0.3398573275951204,
+     "L": 0.37270371209132447
+    },
+    {
+     "centre": 1883,
+     "loop": "A",
+     "R": 0.37321496888285405,
+     "L": 0.3699434779989184
+    },
+    {
+     "centre": 2086,
+     "loop": "B",
+     "R": -0.3832728563065578,
+     "L": 0.38070442055446707
+    },
+    {
+     "centre": 2392,
+     "loop": "C",
+     "R": 0.41052456381032076,
+     "L": 0.39447021388886905
+    },
+    {
+     "centre": 2550,
+     "loop": "B",
+     "R": -0.30076123616888295,
+     "L": 0.3070054585241074
+    },
+    {
+     "centre": 2814,
+     "loop": "C",
+     "R": 0.3462009148117441,
+     "L": -0.33682796044678576
+    }
+   ],
+   "meaning": "nine fixed reads on the loop lines (centre = output delay after R's direct tap, loop, signed R and L amplitudes, direct tap = 1), each read at centre + A x triangle(f_j t + phase_j), triangle in [-1, 1], phase independent per read and realisation, rate f_j = f x (1 +- fsd) per read; L reads the same address with its own amplitude, mdel samples later; integer addresses, no interpolation",
+   "superseded_random_reads": {
     "law": "lfo",
     "wave": "tri",
     "f": 0.553,
@@ -96,7 +162,6 @@
     "M": 6,
     "mdel": 314
    },
-   "meaning": "per loop M reads on the loop line, gain +-b x |static_read_gain|, centre uniform in [lo, hi] samples, offset A x triangle(f t + phase), phase independent per read, rate x (1 +- fsd) per read; a fraction 'share' also added to L with the opposite sign (L delay mdel), the rest independent in L; integer addresses, no interpolation",
    "lfo_rate_hz": {
     "time": 0.553,
     "samples": 0.6076917000000001
@@ -173,8 +238,8 @@
     "note": "\u00a714.4-14.5: the UAD plugin's structure; fits E's statistics worse (250 vs 182), a listening alternative"
    }
   },
-  "label": "S (energy, range, speed, L/R share: E's statistics) / H (triangle and rate: from the UAD plugin)",
-  "source": "\u00a712-14"
+  "label": "S (reads, amplitudes, depth: E's low band, held out; speed spread: E's statistics) / H (triangle shape and rate: the UAD plugin)",
+  "source": "\u00a716"
  },
  "output_kernel": {
   "value": {
@@ -187,6 +252,11 @@
   },
   "label": "S",
   "source": "\u00a714.1"
+ },
+ "capture_chain_tail": {
+  "value": "the Altiverb captures' chain has a slow tail (analysis/e250/kernel_tail.json, B-spline 540-4000 samples); a property of the capture chain, not of E: the plugin's own analogue chain replaces it",
+  "label": "S",
+  "source": "\u00a716"
  },
  "controls": {
   "RT": {
@@ -245,7 +315,8 @@
   }
  },
  "not_resolved": [
-  "the L-only detail of E's moving reads (\u00a714.3)",
+  "R's direct-path low band (20-100 Hz -29 dB against a -37 dB floor, \u00a716)",
+  "the L/R correlation of the moving part (-0.22 against the data's -0.44, \u00a716)",
   "E's own LFO rate and phase grouping (needs E repeat captures)",
   "the LP lever's response",
   "AMPL / DELAY in E"
