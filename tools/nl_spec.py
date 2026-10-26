@@ -108,6 +108,14 @@ def spec():
                                    "the same early and late, L and R: most likely the LOW PASS at its 12 kHz step; the plugin's LP should "
                                    "reproduce it at 12 kHz rather than add it on top"),
                          "S (measured) / H (cause)", "§11.3"),
+        "branch_read_kernel": lab(dict(taps={("L", "R")[int(c)]: v for c, v in json.load(open(nm.BK_FILE)).items()},
+                                       centre=nm.BK_PAD, band_limit_hz=nm.BK_LP,
+                                       applies_to="the whole AP(124) branch (main taps, R's first-tap direct term, late section); not the front taps",
+                                       status="tried, not adopted by the strict rule (0.05-0.15 s median -54.8 -> -59.5 dB, but up to +0.96 dB on "
+                                              "~40 steep-ramp captures); a user decision (NonLin_program 11.5)",
+                                       note="deviations from a unit tap are <= 0.0007 (-63 dB): inaudible, only for null-level fidelity; centred, "
+                                            "so a plugin needs BK_PAD samples of look-ahead or the same delay on the front taps"),
+                                  "S (measured, held out) / H (cause: the main taps' read)", "§11.5"),
         "controls": {
             "DELAY": lab("a pure delay ahead of everything (card: DELAY precedes the early section); the library is all DELAY 0",
                          "H", "card, §0"),

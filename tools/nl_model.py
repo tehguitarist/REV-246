@@ -53,12 +53,13 @@ def late_db(span, early):
 
 
 BK_FILE = os.path.join(nl.OUT, "branch_kernel.json")
-BK_H = 14                                    # +-14: the per-tap shape spans -13...+12 (NonLin_program 11.2)
-BK_TRAIN = [(sp, e, 0.0) for sp in (0.2, 0.4) for e in (10.0, 3.0, 1.0, -1.0, -3.0)]
+BK_H = 14                                    # +-14: the per-tap shape spans -13...+12 (NonLin_program 11.5)
+BK_PAD = 40                                  # the stored kernel's half-length (the low-pass spreads it)
+BK_LP = float(os.environ.get("NL_BK_LP", 11000))   # the kernel's band limit (Hz)
+BK_TRAIN = [(sp, e, 0.0) for sp in (0.2, 0.4) for e in (10.0, 3.0, 1.0, 0.5, 0.3, -0.5, -0.7, -1.0, -3.0)]
 BK = None
 if os.environ.get("NL_BK") == "1" and os.path.exists(BK_FILE):          # the branch kernel (NonLin_program 11.2): a switch.
-    # A CAPTURE-CHAIN term, not the device: it is flat below 11 kHz and fits the deconvolution's band edge (L and R
-    # disagree above 12 kHz); never part of the plugin
+    # The main taps' read shape (device side: the front taps do not carry it), band-limited below 11 kHz
     BK = {int(c): np.array(v) for c, v in json.load(open(BK_FILE)).items()}
 
 
@@ -73,11 +74,12 @@ def spectra(key, ch, N):
     d = ne.diffuser(ch, N // 2)
     Df = np.fft.rfft(d, N)
     branch = np.zeros(len(ph), complex)
+    rdirect = np.zeros(len(ph), complex)
     for t, s, i in ne.taps(ch, ns):
         g = s * 10 ** (sdb[[j for j, st in enumerate(ne.STAGES) if i in st][0]] / 20)
         if ch == 1 and i == 0:                  # R's first tap: direct term in the front frame
             branch += g * (Df - d[0]) * np.exp(ph * t)
-            front = front + g * d[0] * np.exp(ph * ne.R_FIRST_DIRECT)
+            rdirect = rdirect + g * d[0] * np.exp(ph * ne.R_FIRST_DIRECT)
         else:
             branch += g * Df * np.exp(ph * t)
     if late > 0:
@@ -92,9 +94,11 @@ def spectra(key, ch, N):
             V = np.fft.rfft(lfilter([1.0], np.r_[1.0, np.zeros(P - 1), -nlt.loop_gain(P, late)], v))
             taps = sum(s * np.exp(ph * (base + q)) for s, q in zip(nlt.READ_SIGNS[ch][P], qs))
             branch += gl * U * V * taps
-    if BK is not None:                          # a short kernel on the whole AP(124) branch, centred
-        branch = branch * np.fft.rfft(np.roll(np.r_[BK[ch], np.zeros(N - len(BK[ch]))], -BK_H))
-    return front, branch
+    if BK is not None:                          # the main taps' read shape: the whole AP(124) branch and R's first-tap
+        h = (len(BK[ch]) - 1) // 2              # direct term (a main tap's), centred
+        K = np.fft.rfft(np.roll(np.r_[BK[ch], np.zeros(N - len(BK[ch]))], -h))
+        branch, rdirect = branch * K, rdirect * K
+    return front + rdirect, branch
 
 
 EQ_FILE = os.path.join(nl.OUT, "out_eq.json")
@@ -251,31 +255,41 @@ def bench_file(key):
 
 
 def bkernel_stage():
-    """The branch kernel (2 BK_H + 1 taps per channel), fitted on BK_TRAIN with each capture's bench alignment and
-    gains: y = g (front + sum_j k_j branch shifted by j), least squares over all BK_TRAIN windows from the first front
-    tap to the end of the early section."""
+    """The branch read kernel (NonLin_program 11.5): every main tap carries the same small shape (echoes at -13...+12
+    samples, 59-73 dB down), the front taps do not. Fitted on BK_TRAIN (LATE 0) with each capture's bench alignment and
+    gain, the model through the captures' processing response and EQ: y - g (front + branch) = g sum_j d_j LP(branch
+    shifted by j), j = -BK_H...BK_H, LP a zero-phase 11 kHz low-pass, so the kernel cannot act above the band the
+    captures resolve. Stored as k = delta + LP(d), BK_PAD samples either side."""
+    lp = butter(8, BK_LP, fs=FS, output="sos")
     out = {}
     for ch in (0, 1):
         X, Y = [], []
         for key in BK_TRAIN:
             b = json.load(open(os.path.join(BENCH, "_".join(str(v) for v in key) + ".json")))
             raw = nl.ir(nl.table()[key])
-            fr, o = b["front_shift"], b["o"]
+            fr, o, g = b["front_shift"], b["o"], b["gain"][ch]
             n = K0 + int(fr) + ne.taps(0, ne.N_STAGES[key[0]])[-1][0] + 5500
             raw = np.vstack([raw[:n + 64], np.zeros((max(0, n + 64 - len(raw)), 2))])
             y = sosfiltfilt(ne.BAND, nlt.unwarp(raw, b["ppm"])[:n], axis=0)[:, ch]
             N = 1 << int(np.ceil(np.log2(n + 2 * ne.TAPS[-1] + 4096)))
             ph = -2j * np.pi * np.fft.rfftfreq(N)
             F, B = spectra(key, ch, N)
-            f = sosfiltfilt(ne.BAND, np.fft.irfft(F * np.exp(ph * (K0 + fr)), N)[:n])
-            bb = np.fft.irfft(B * np.exp(ph * (K0 + fr + o)), N)[:n]
-            cols = np.array([sosfiltfilt(ne.BAND, np.roll(bb, j)) for j in range(-BK_H, BK_H + 1)]).T
+            R = _proc(N)[:, ch]
+            f = np.fft.irfft(F * R * np.exp(ph * (K0 + fr)), N)[:n]
+            bb = np.fft.irfft(B * R * np.exp(ph * (K0 + fr + o)), N)[:n]
+            base = sosfiltfilt(ne.BAND, f + bb)
+            cols = np.array([sosfiltfilt(ne.BAND, sosfiltfilt(lp, np.roll(bb, j))) for j in range(-BK_H, BK_H + 1)]).T
             a, e = K0 + int(fr) + 21, n - 2500
-            X.append(b["gain"][ch] * np.c_[f, cols][a:e])
-            Y.append(y[a:e])
-        sol = np.linalg.lstsq(np.vstack(X), np.concatenate(Y), rcond=None)[0]
-        out[ch] = (sol[1:] / sol[0]).tolist()   # flat to +-0.03 dB below 11 kHz; acts at 11.5-13 kHz only
-        print(ch, np.round(out[ch], 5))
+            X.append(g * cols[a:e])
+            Y.append(y[a:e] - g * base[a:e])
+        d = np.linalg.lstsq(np.vstack(X), np.concatenate(Y), rcond=None)[0]
+        dev = np.zeros(2 * BK_PAD + 1)
+        dev[BK_PAD - BK_H:BK_PAD + BK_H + 1] = d
+        k = sosfiltfilt(lp, dev)
+        k[BK_PAD] += 1.0
+        out[ch] = k.tolist()
+        print(ch, "largest deviations:", sorted(((round(float(v), 5), i - BK_PAD) for i, v in enumerate(k - (np.arange(len(k)) == BK_PAD))),
+                                                key=lambda x: -abs(x[0]))[:6])
     json.dump(out, open(BK_FILE, "w"), indent=1)
 
 

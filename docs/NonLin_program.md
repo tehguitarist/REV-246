@@ -103,7 +103,7 @@ SPAN 0.5, EARLY −1.0, the full 0–500 ms envelope is **identical to the displ
 - **Inverse:** negative EARLY (rising early to a peak at SPAN), as in §2. **[measured]**
 - **Short SPAN** starts the late section earlier and at a higher level, so the whole tail is longer; **long SPAN** hands the late section a low level and the file is short. **[measured]**
 
-## 8. Open questions and discovery plan
+## 8. Open questions and discovery plan (October 2026; answered in §9–11)
 
 - **Is the early section a reverb or a shaped FIR?** The card's dashed tail past SPAN hints at a process that keeps running. In the 0–SPAN window I find **no robust loop structure** at the late-loop lags (ACF ≈ 0.00 at 1108/1254/1386), even when the early is nearly flat (EARLY +10). Either the 0.5 s window is too short for the ACF, or the early section is a shaped multi-tap FIR (the `algorithm_research.md` §6 **N-A** option: "a gain-shaped sparse multi-tap FIR … up to t = SPAN"). **This is the first thing to settle.** Test: device-domain tap counting and EDC cut sharpness at SPAN (the doc's Q for §6).
 - **Which loop set does the late section use, and does it switch with LATE?** {1108,1254,1386} vs {628} — map the crossover LATE and compare with S/M/L's "adapted density".
@@ -140,6 +140,7 @@ Law time τ in 4 ms ticks: front taps at L 0 / 4 / 12 ms, R 0 / 8 / 12 ms; one s
 
 ### 9.5 Held-out score (`nl_early.py --stage law`, `analysis/nl/early_law.json`)
 Per capture only the alignment (front shift, o, clock) and one gain per channel; every structural number is shared and no setting's gains are fitted. On the 96 LATE 0 captures, 100 Hz–10 kHz, from 20 samples before the first front tap to 3000 samples past the last main tap: **median L −45.3, R −45.1 dB** (the free per-tap fit, ≈ 31 gains per channel per file, in-sample: −44.2 / −44.4). Clock ratios +1…+14 ppm.
+- *Superseded by §11 (final bench):* the "dense residual" below was mostly two things found later: the deconvolution's own response near the band edge, which the model did not carry (§11.3), and a small read shape on every main tap (§11.5). The paragraph is kept for the record.
 - **Floor:** captures that share their early section (settings differing only in LATE) agree to −52…−62 dB, so ≈ 10 dB of model error is left. The residual is dense, HF-heavy (70 % of it at 6–10 kHz while the data is white), follows the signal's envelope, repeats across captures (correlation 0.99 in L) and is not a linear function of the main taps (a shared 63-tap output kernel, per-tap 5-tap shapes, all-pass damping or gain changes each gain ≤ 1 dB; a 1,300-tap shared kernel 3–4 dB held out). Local timing errors of ±0.003 samples would explain its size and spectrum (H: sample-level timing in the unit's output); open.
 - Steep negative EARLY at long SPAN puts the front taps below the noise (−60 dB re the ramp's end), so their windows are noise-only.
 
@@ -147,7 +148,9 @@ Per capture only the alignment (front shift, o, clock) and one gain per channel;
 Structure: 27 tap positions, 2 × 27 signs, 3 front positions per channel with 1 : 2 : 1 amplitudes, R's offset (−221) and first-tap direct position (465), three all-pass delays at one gain, 14 stages and the SPAN → stage table; law: 4 ms tick, 36 ms stage, front ticks, the 16 ms / 12 ms offsets. Per sample: 3 + 27 taps per channel and 3 all-passes (≈ 36 multiplies per channel), within the 2 × TMS32010 budget.
 
 ### 9.7 Defects
-`defects.NL_DEFECTS`: (SPAN 0, EARLY −0.5, LATE 0) carries a 0.27-sample slip between the front taps 410 and 463 (−15.7 dB against the model; every other file with visible front taps holds 369.00 / 53.00 samples to ±0.2).
+`defects.NL_DEFECTS`:
+- (SPAN 0, EARLY −0.5, LATE 0): a 0.27-sample slip between the front taps 410 and 463 (−15.7 dB against the model; every other file with visible front taps holds 369.00 / 53.00 samples to ±0.2);
+- (SPAN 0.1, EARLY −1.0, LATE 0): a foreign tail, a −52 dB plateau (re the early section) decaying about 17 dB over 5 s with an ACF peak at 537 samples, in a gated capture whose neighbours end at 0.55 s (§11.1).
 
 ## 10. The late section, decoded (26 October 2026)
 
@@ -167,22 +170,59 @@ Structure: 27 tap positions, 2 × 27 signs, 3 front positions per channel with 1
 ### 10.3 What is left in the late section
 With the session clock (11.6 ppm) fixed, the late model nulls SPAN 0 captures at −47…−55 dB at 50–300 ms; captures sharing a setting agree to −57…−64 / −50…−57 dB there. Free per-loop gain corrections are −11…−15 millidB per pass (an ≈ 1 % RT shortfall, as in M / L) and gain 0.3 dB. The later windows are noise-limited.
 
-## 11. Bench: the whole program held out on the library (26 October 2026)
+## 11. Bench: the whole program held out on the library (26–27 October 2026)
 
-`tools/nl_model.py --stage bench` / `report`, results in `analysis/nl/bench/` (one JSON per capture). 1,045 captures (`NL_DEFECTS` left out), 96 kHz set only. **Per capture only:** the front taps' trim shift (measured), the branch offset o, the clock ratio (held within 11.6 ± 3 ppm) and one gain per channel; every structural number and law is shared, no setting's gains are fitted. Nulls 100 Hz–10 kHz per window from the input, each up to the fade guard; windows within 10 dB of the noise are not scored. Floor = the capture noise (median of the LATE 0 tails, `analysis/nl/noise.json`) over the window's energy; excess = null − floor.
+`tools/nl_model.py --stage noise | bench | report` → `analysis/nl/bench/` (default) and `analysis/nl/bench_bk/` (`NL_BK=1`). 1,044 captures (`NL_DEFECTS` out), 96 kHz set only. **Per capture only:** the front taps' trim shift (measured, bias-corrected), the branch offset o, the clock ratio (11.6 ± 3 ppm) and one gain per channel; every structural number and law is shared, no setting's gains are fitted. The model goes through the captures' own processing response and the top-end EQ (§11.3). Nulls per window from the input, each window from where the capture's content starts (§11.4) to the fade guard; windows within 10 dB of the noise are not scored. Floor = the capture noise (median of the LATE 0 tails) over the window's energy. Also per band over 0.05–0.6 s from the full-band capture and model, and an in-band (< 9.5 kHz) null.
 
-| Window (s) | n | Null L / R (median, dB) | Noise floor (median) | Excess (median) |
-|---|---|---|---|---|
-| 0–0.05 | 1045 | −42.3 / −42.3 | −78.7 | 36.3 |
-| 0.05–0.15 | 1027 | **−54.7 / −54.6** | −70.6 | 15.8 |
-| 0.15–0.3 | 984 | **−54.1 / −53.7** | −67.8 | 14.3 |
-| 0.3–0.6 | 905 | **−50.8 / −50.8** | −60.4 | 12.3 |
-| 0.6–1.0 | 646 | −40.4 / −40.6 | −48.4 | 7.6 |
-| 1.0–2.0 | 344 | −30.3 / −30.2 | −36.5 | 5.5 |
+### 11.1 Results
 
-By group (L, median): EARLY > 0 (584): −42.4 / −54.4 / −53.2 / −44.7 / −36.2 / −25.8; EARLY < 0 (395): −41.7 / −54.9 / −54.6 / −53.4 / −45.6 / −31.8; EARLY 10 (66): −42.3 / −55.2 / −54.4 / −52.6 / −41.6 / −27.3.
+| Window (s) | n | Null L / R | In-band L | Noise floor | Excess | With the branch kernel (`NL_BK=1`, §11.5) |
+|---|---|---|---|---|---|---|
+| 0–0.05 | 1036 | **−52.6 / −52.8** | −53.2 | −78.8 | 24.9 | −52.8 / −53.0 |
+| 0.05–0.15 | 1026 | **−54.8 / −54.7** | −55.1 | −70.7 | 15.7 | **−59.2 / −59.8** |
+| 0.15–0.3 | 983 | **−54.2 / −53.8** | −54.5 | −67.9 | 14.3 | **−58.0 / −58.3** |
+| 0.3–0.6 | 904 | **−50.9 / −50.9** | −51.0 | −60.5 | 12.3 | −52.4 / −52.2 |
+| 0.6–1.0 | 645 | −41.8 / −41.6 | −41.9 | −48.6 | 7.3 | −42.0 / −41.8 |
+| 1.0–2.0 | 344 | −31.2 / −31.0 | −31.2 | −36.6 | 5.6 | −31.3 / −31.0 |
 
-- **The −50 dB target is met at 0.05–0.6 s** (median, both channels), against repeat captures that agree to −57…−64 dB at 0.05–0.15 s (§10.3): the model is 3–9 dB above the repeat level there.
-- **0–50 ms misses it (−42 dB):** the trimmed start (Tomkin's trim cuts the first tap's pre-ringing), the strong front / first main taps and the dense HF-heavy residual of §9.5 (H). Open.
-- **After 0.6 s** the excess shrinks to 5–8 dB and the windows approach the noise; EARLY > 0 is worst there (the late's level from the law at −40…−75 dB, and §10.1's deviation below −55 dB).
-- **Parameters:** per capture 5 (o, clock, two gains; the front shift measured). Shared model: 27 tap positions, 54 signs, 6 front positions and 1 : 2 : 1, R offsets (−221 / −220), 4 all-pass delays at one gain, 14-stage table and SPAN → stage / feed tables (6 + 6), law constants (tick, stage, front ticks, 16 / 12 ms offsets), 3 loops, 12 read positions + 24 signs, read amplitude. No per-setting numbers.
+Per band, 0.05–0.6 s (L / R): 20–100 Hz −40.2 / −39.0; 100 Hz–1 kHz −54.5 / −56.4; 1–5 kHz −56.0 / −55.9; 5–10 kHz −52.8 / −52.1; 10–12 kHz −34.5 / −34.1 (with the kernel: −55.2 / −56.8, **−59.6 / −59.6, −57.4 / −57.5**, −34.7 / −34.3). By group (L, 0.05–0.15 / 0.15–0.3 / 0.3–0.6 s, without the kernel): EARLY > 0 −54.5 / −53.3 / −44.7; EARLY < 0 −55.1 / −54.8 / −53.5; EARLY 10 −55.3 / −54.5 / −52.6. Trimmed-start captures (202) score like the rest.
+
+- **The −50 dB target is met in every window up to 0.6 s** (median, both channels), held out, with 5 numbers per capture.
+- **Repeat-capture level (the ceiling), per band**, from captures that differ only in LATE (identical early section, SPAN 0.5, 0.05–0.45 s, alignment fitted in band): 100 Hz–1 kHz −66.5, 1–5 kHz −60.6, 5–10 kHz −59.4, 10–12 kHz −58.9 dB; the model on the same captures −57.9 / −56.3 / −53.6 / −33.7, **with the kernel −58.4 / −61.3 / −59.2 / −33.8**. So with the kernel 1–10 kHz is at the repeat level; 100 Hz–1 kHz is 8 dB above it and 10–12 kHz 25 dB.
+- **Positive EARLY at 0.3–0.6 s (−44.7 dB)** is data-limited: there the window is dominated by the late section at the law's −40…−75 dB, 9–20 dB above the noise; the late's shape is right (correlation 0.83–1.00) and its level matches the law within 0.5 dB wherever the late is ≥ 25 dB above the noise (§10.1).
+- **After 0.6 s** the excess is 5–7 dB with the late section's timing and level exact (local shift 0.000 samples, gain within 0.02 dB): noise and Tomkin's fade.
+- **Defects:** two captures (§9.7), one found here: (0.1, −1.0, 0.0) carries a foreign −52 dB tail (ACF 537) in a gated capture.
+
+### 11.2 What the first bench (§11 of 26 October) got wrong, and the fixes (measurement side, not the model)
+- **0–50 ms (−42 → −52.6 dB):** the front-tap position from the peak picker is biased by −0.0055 samples (its neighbours pull it), the same in every capture and channel, in both analysis bands; corrected as a constant (`nl_early.FRONT_BIAS`). A free per-capture front shift adds only 0.3 dB (median) and is not used.
+- **10–12 kHz (−8 → −34.5 dB):** the deconvolution's band window (11.0–12.3 kHz raised cosine in the harness) and its regularised inverse shape every cached IR; the model now carries the same zero-phase response (`nl_structure.processing_response`, high and low band edges). The band window is widened to 12.0–12.8 kHz for N (`NL_WIDE`, default; own cache), since the unit's chain is only 4 dB down at 12 kHz and 26 dB at 12.5 kHz.
+- **Low end:** with the deconvolution's 3–12 Hz edge matched, level and phase agree within ≈ 0.5 dB / a few degrees from 2 to 100 Hz; no extra corner is needed.
+
+### 11.3 The top-end EQ (adopted; S measured / H cause)
+Pooled over captures, early and late, L and R alike, the captures roll off beyond the S / M / L chain kernel by −0.24 / −1.03 / −1.85 / −3.0 dB at 11.5 / 12 / 12.3 / 12.6 kHz, nearly zero phase (`analysis/nl/out_eq.json`, a zero-phase gain in the model, 0 dB below 11 kHz). Paired bench (141 captures): 10–12 kHz −5.7 dB better (median), nothing else moves (worst +0.03 dB): adopted. **H:** the LOW PASS at its 12 kHz step, which the S / M / L kernel already contains for those programs.
+
+### 11.4 Trimmed starts (S)
+The large "branch offsets" of steep negative EARLY at long SPAN are Tomkin's trim (§9.4): their files start mid-response. Every tap inside the file is at its law gain with the full diffuser, the trimmed taps' tails are present after the cut, and before the content starts the file is silent. Scoring therefore starts where the capture's content starts (within 45 dB of its peak, less 20 samples) plus a 40-sample guard where a file is loud from its first sample; 202 captures are flagged `trimmed` and reported apart (they score like the rest).
+
+### 11.5 The main taps' read shape (S measured / H cause; tried, not adopted)
+- Averaging the residual of captures that share an early section (correlation 0.98 across captures) shows **the same small shape on every main tap**: arrivals at −13…+12 samples around each tap, 59–73 dB down (largest at −3, ±1, +3, ±11), in both channels; the front taps do not have it.
+- As a kernel on the whole branch (29 taps, deviations ≤ 0.0007, band-limited below 11 kHz so it cannot touch the band edge; fitted on 18 LATE 0 captures at SPAN 0.2 / 0.4, `nl_model --stage bkernel`; the bench used the first fit on 10 of them, which agrees to 1·10⁻⁵), held out: 0.05–0.15 s −54.8 → −59.5 dB, 0.15–0.3 s −54.0 → −58.1, 0.3–0.6 s −50.9 → −52.2 (medians), 1–5 kHz +3.7 dB, 5–10 kHz +4.8 dB, at the repeat-capture level.
+- **But it fails the strict rule:** 41 of 2,052 channel-windows at 0.05–0.15 s and 3 at 0.15–0.3 s get worse by more than 0.5 dB (worst +0.96 dB), all steep ramps (EARLY ±0.1…0.7) at SPAN > 0, mostly R. Training on steep settings too gives the same kernel; giving R's first-tap direct term the kernel changes nothing. **Tried, not adopted;** `NL_BK=1` and the spec's `branch_read_kernel` keep it. Accepting the trade is a user decision (as `model_s_results.md` §38.1 was). Inaudible either way (−63 dB deviations).
+
+### 11.6 Open, with what is known
+- **11–12.3 kHz:** a deterministic timing drift grows through the response there only (0.01–0.15 samples, as if that band ran 2–7 ppm slow; 10–11 kHz and below drift < 0.002 samples), the same in repeat captures and in early and late. Not a fixed filter (that would give a constant shift), not aliasing (the raw captures hold −72…−85 dB above 13.2 kHz; folded energy ≈ −108 dB). H: capture or processing near the band edge. This is what keeps 10–12 kHz at −34 dB against a −59 dB repeat level; the unit's chain is 1–26 dB down there.
+- **100 Hz–1 kHz, first 30 ms:** the SPAN 0.3 / 0.5 capture sessions (front shift ≈ 0) null at −49 dB there against −57…−58.5 for the others; after 30 ms all sessions are alike (−55 dB). Not the trim (a simulation of the cut through the chain and its inverse changes nothing), not a front / branch path difference (separate gains and low-frequency terms gain ≤ 0.7 dB), not timing or level per window (≤ 2 dB). H: capture-session-specific low-band behaviour at the file start. The low band stays 8 dB above the repeat level.
+- **Late levels below about −55 dB** (steep positive EARLY): 3–5 dB below the law, at 9–20 dB SNR; a 16-bit recursive gain computation explains only ≈ 0.1 dB there. Not resolvable from the library.
+- **Nothing in this library tests:** SPAN steps between 0.1 multiples (H rule §9.2), LATE beyond 2.0, DELAY, the LOW PASS below 12 kHz.
+
+### 11.7 Second capture: the Altiverb N presets (held out)
+The Altiverb set (a third-party capture of the same design) holds two N presets; its `NON-LIN SHORT RT` files are S (S's cluster, no N taps). **NON-LIN = SPAN 0.3, EARLY 10, LATE 0.4; PRESET54 GATED = SPAN 0.2, EARLY −3, LATE 0.8** (stage count, stage-gain slope and tail, best fit over the library steps). Front taps at 41 / 410 / 463 (R 278) with 1 : 2 : 1 and every main tap at the table position + 36 (the Altiverb onset), clock +43 ppm (its own, as for E). Nulls with alignment, clock, gain and a 7-tap chain FIR per channel fitted on 0.05–0.15 s, held out on the rest: L −32…−34, R −29…−31 dB, by band −43…−46 dB at 1–6 kHz and −18 dB at 100–250 Hz / −36 dB at 8 kHz: the Altiverb chain's known weak spots (S reached −39…−41 there with a 29-number chain model, `model_s_results.md` §37). **The structure is confirmed on a second unit's capture.**
+
+## 12. For the plugin
+
+`tools/nl_spec.py` → `analysis/nl/nl_plugin_spec.json` (every constant with label and section) and `analysis/nl/ref/nl_<SPAN>_<EARLY>_<LATE>.wav` (device rate, float32, input impulse at sample 0, main-tap units). `simulate()` is the sample-by-sample reference (delay lines, all-passes, loops); it equals the bench model (device only, `render(proc=False)`) to −136 dB or better.
+
+- **Signal flow (per channel):** front taps on the input; the input through AP(124) into a delay line read by the main taps (stage gains from the EARLY law), summed into AP(180) L / AP(188) R; the same AP(124) line at FEED[SPAN] (R 220 earlier) through AP(314) into three flat loops (Jot gain for RT = LATE) read by four equal taps each, at the late gain; LATE 0 drops the late. The branch sits **one sample** after the table positions (the captures' modal offset; then R's first tap needs no special case).
+- **Cost:** per channel 3 front + up to 27 main taps, 4 all-passes (AP124 shared), 3 loops with 12 reads: well inside 2 × TMS32010.
+- **Controls (N's panel slots):** DELAY (H: a pure pre-delay); SPAN in the AMPL slot, library values 0–0.5 in 0.1 (finer steps H by the stage rule); EARLY in the LF slot, **16 values −3, −2, −1, −0.7, −0.5, −0.2, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 10 (flat)** = the LF column's 16 steps; RT slot blank; LATE in the HF slot, **0–2.0 in 0.2 (11 values), 0 = gated**; LOW PASS as the other programs (its 12 kHz step most likely the §11.3 EQ). The plugin's current N tables (`plugin/src/params/Parameters.cpp`) are guesses and differ: to be changed in the plugin session.
+- **Optional:** the top-end EQ (H) and the branch read kernel (not adopted; −63 dB, inaudible).

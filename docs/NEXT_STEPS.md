@@ -8,8 +8,16 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 
 ## 0. Start here (hand-over, updated 26 October 2026)
 
-### Non-Lin done (26 October 2026, later)
-**Program N is decoded** (`NonLin_program.md` §9–12, unit facts §5d): front taps; AP124 → 27 main taps in 14 stages → AP180 / AP188; SPAN switches stages; an exact EARLY law; the late section fed from the main-tap line → AP314 → three flat loops 1108 / 1254 / 1386 (RT = LATE) → four equal read taps per loop. **Bench** (§11, 1,045 captures held out, 5 numbers per capture): −54.7 / −54.1 / −50.8 dB at 0.05–0.15 / 0.15–0.3 / 0.3–0.6 s (excess over noise 16 / 14 / 12 dB); 0–50 ms −42 dB (open). Plugin: `tools/nl_spec.py` (sample-by-sample reference = model to −136 dB), `analysis/nl/nl_plugin_spec.json`, reference IRs; **the plugin's N step tables are wrong** (EARLY = the 16 library values, 10 = flat; LATE 0–2.0 in 0.2 = 11 values; SPAN 0–0.5) — for the plugin session, not edited here. Open: the 0–50 ms residual, late gains below −55 dB, steps between the library's, DELAY / LP. **Next: the plugin phase.**
+### Non-Lin finished (27 October 2026): read this block first
+**Program N is decoded and benched** (`NonLin_program.md` §9–12, unit facts §5d). Structure: front taps 41 / 410 (R 278) / 463 at 1 : 2 : 1; AP124 → 27 main taps in 14 stages → AP180 (L) / AP188 (R); SPAN switches stages; an exact EARLY law (4 ms ticks, 36 ms stages; negative EARLY rises over SPAN; 10 = flat); the late section fed from the main-tap line → AP314 → three flat loops 1108 / 1254 / 1386 at RT = LATE → four equal read taps per loop; LATE 0 gates. Confirmed on a second capture (the Altiverb's NON-LIN and GATED presets, §11.7).
+
+**Bench (§11.1, held out, 1,044 captures, 5 numbers per capture):** −52.6 / −54.8 / −54.2 / −50.9 dB at 0–0.05 / 0.05–0.15 / 0.15–0.3 / 0.3–0.6 s (L median, R alike), 12–25 dB above the noise; later windows near the noise. Per band 1–5 kHz −56, 5–10 kHz −52.5, 100 Hz–1 kHz −55, 20–100 Hz −40, 10–12 kHz −34.5. Fixes along the way were measurement-side: the front-tap peak-picker bias (0–50 ms −42 → −52.6), the deconvolution's own response matched in the model with a wider band window (`NL_WIDE`, 10–12 kHz −8 → −34.5), content-start windows for 202 trim-cut captures; adopted: a top-end EQ (−1 dB at 12 kHz, H: LOW PASS 12).
+
+**One user decision open:** the main taps' read kernel (§11.5): with it 0.05–0.15 / 0.15–0.3 / 0.3–0.6 s go to −59.2 / −58.0 / −52.4 dB and 1–10 kHz reach the repeat-capture level, but ~40 steep-ramp captures lose up to 0.96 dB (strict rule fails). Switch `NL_BK=1`; spec field `branch_read_kernel`.
+
+**Open, documented (§11.6), none resolvable from this library as far as tried:** an 11–12.3 kHz timing drift (2–7 ppm-like, deterministic; 10–12 kHz stays at −34 against a −59 repeat level), a session-specific low-band error in the first 30 ms of the SPAN 0.3 / 0.5 captures (100 Hz–1 kHz 8 dB above repeat), late levels below −55 dB, and the untested settings (SPAN between 0.1 steps, LATE > 2.0, DELAY, LP < 12 kHz).
+
+**For the plugin session:** `tools/nl_spec.py` / `analysis/nl/nl_plugin_spec.json` / reference IRs; the N step tables in `plugin/src/params/Parameters.cpp` are guesses and must change (EARLY 16 values = the LF column's steps; LATE 11 values 0–2.0; SPAN 0–0.5). **Next: the plugin phase.**
 
 ### Paused 26 October 2026: read this block first
 
