@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 
 #include "PluginEditor.h"
+#include "ui/Design.h"
 
 #include <cmath>
 
@@ -32,6 +33,20 @@ Rev246Processor::Rev246Processor()
     pSixteenBit = apvts.getRawParameterValue(id::sixteenBit);
     for (int i = 0; i < rv::params::numJoys; ++i)
         pJoy[(size_t)i] = apvts.getRawParameterValue(rv::params::joyId((rv::params::Joy)i));
+    applyMeterCal(rv::design::defaultMeterCal);
+}
+
+void Rev246Processor::applyMeterCal(int index)
+{
+    index = juce::jlimit(0, rv::design::numMeterCal - 1, index);
+    meterCal.store(index, std::memory_order_relaxed);
+    adcFullScale.store(rv::dsp::AdcClipper::fullScaleForZeroVu(rv::design::meterCalDbFs[index]), std::memory_order_relaxed);
+}
+
+void Rev246Processor::setMeterCal(int index)
+{
+    applyMeterCal(index);
+    uiState().setProperty(UiProps::meterCal, getMeterCal(), nullptr);
 }
 
 bool Rev246Processor::isBusesLayoutSupported(const BusesLayout& layouts) const
@@ -51,13 +66,16 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
         e.prepare(sampleRate, samplesPerBlock);
     for (auto& t : transformers)
         t.prepare(sampleRate);
-    for (auto* s : {&inGain, &outGain, &mixAmount, &panLeft, &panRight, &wetOn, &transformerOn})
+    for (auto& c : clippers)
+        c.prepare(sampleRate);
+    for (auto* s : {&inGain, &outGain, &mixAmount, &panLeft, &panRight, &wetOn, &transformerOn, &sixteenBitOn})
         s->reset(sampleRate, rampSeconds);
     inGain.setCurrentAndTargetValue(rv::params::gainLinear(*pIn));
     outGain.setCurrentAndTargetValue(rv::params::gainLinear(*pOut));
     mixAmount.setCurrentAndTargetValue(*pMix);
     wetOn.setCurrentAndTargetValue(*pPower >= 0.5f ? 1.0f : 0.0f);
     transformerOn.setCurrentAndTargetValue(*pTransformer >= 0.5f ? 1.0f : 0.0f);
+    sixteenBitOn.setCurrentAndTargetValue(*pSixteenBit >= 0.5f ? 1.0f : 0.0f);
     scratch.setSize(7, samplesPerBlock, false, false, true);
     // VU meter: a first-order RMS integrator. The classic VU reaches 99% in ~300 ms, so tau = 300 ms / ln 100.
     vuTauSamples = (vuRiseSeconds / std::log(100.0f)) * sampleRate;
@@ -87,6 +105,7 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     {
         engines[1].reset();
         transformers[1].reset();
+        clippers[1].reset();
         lastTrueStereo = trueStereo;
     }
 
@@ -110,6 +129,10 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     mixAmount.setTargetValue(*pMix);
     wetOn.setTargetValue(*pPower >= 0.5f ? 1.0f : 0.0f);
     transformerOn.setTargetValue(*pTransformer >= 0.5f ? 1.0f : 0.0f);
+    sixteenBitOn.setTargetValue(s.sixteenBit ? 1.0f : 0.0f);
+    const auto fullScale = adcFullScale.load(std::memory_order_relaxed);
+    for (auto& c : clippers)
+        c.setFullScale(fullScale);
     // The pan places the dry signal; constant power with unity at the centre.
     const auto angle = (juce::jlimit(-1.0f, 1.0f, pPan->load()) + 1.0f) * juce::MathConstants<float>::pi * 0.25f;
     panLeft.setTargetValue(std::cos(angle) * juce::MathConstants<float>::sqrt2);
@@ -126,13 +149,16 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     const auto* inR = buffer.getReadPointer(stereoIn ? 1 : 0);
 
     // The unit has one mono input: sum (0.5 times, so correlated channels keep their level rather than gaining
-    // 6 dB), apply INPUT, and read the level there. Then the optional input transformer. The transformer always
-    // runs so its state is warm when switched on; off, its crossfade weight is exactly 0 and the signal is unchanged.
+    // 6 dB), apply INPUT, and read the level there. Then the optional input transformer, then the A/D: in 16-bit
+    // mode its clipping (AdcClipper; the wet path is then latency() samples later). Both stages always run so their
+    // state is warm when switched on, and the A/D also feeds the OVL LED in float mode; off, a stage's crossfade
+    // weight is exactly 0 and the signal is unchanged.
     float peak = 0.0f, sumSq = 0.0f;
     for (int i = 0; i < n; ++i)
     {
         const auto g = inGain.getNextValue();
         const auto w = transformerOn.getNextValue();
+        const auto q = sixteenBitOn.getNextValue();
         const auto l = inL[i], r = inR[i];
         const auto meterInput = monoSumGain * (l + r) * g;
         peak = std::max(peak, std::abs(meterInput));
@@ -144,18 +170,23 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
             monoR[i] = r * g;
             monoL[i] += w * (transformers[0].processInput(monoL[i]) - monoL[i]);
             monoR[i] += w * (transformers[1].processInput(monoR[i]) - monoR[i]);
+            monoL[i] += q * (clippers[0].process(monoL[i]) - monoL[i]);
+            monoR[i] += q * (clippers[1].process(monoR[i]) - monoR[i]);
         }
         else
         {
             monoL[i] = meterInput;
             monoL[i] += w * (transformers[0].processInput(monoL[i]) - monoL[i]);
+            monoL[i] += q * (clippers[0].process(monoL[i]) - monoL[i]);
         }
     }
     const auto rms = std::sqrt(sumSq / (float)n);
     const auto a = 1.0f - std::exp(-(float)n / (float)vuTauSamples);
     vu = a * rms + (1.0f - a) * vu;
     inputVu.store(vu, std::memory_order_relaxed);
-    if (peak >= 0.999f)
+    // OVL: a full-scale input, or the A/D clipping (the unit's REG LED; in float mode, where it would clip).
+    const bool over0 = clippers[0].takeOverload(), over1 = clippers[1].takeOverload();
+    if (peak >= 0.999f || over0 || (trueStereo && over1))
         inputClip.store(true, std::memory_order_relaxed);
 
     engines[0].process(monoL, wetL0, wetR0, n);
@@ -242,6 +273,7 @@ void Rev246Processor::setStateInformation(const void* data, int size)
         {
             const auto tree = juce::ValueTree::fromXml(*xml);
             apvts.replaceState(tree);
+            applyMeterCal((int)uiState().getProperty(UiProps::meterCal, rv::design::defaultMeterCal));
             presets.setCurrentName(uiState().getProperty("preset", "Init S").toString());
         }
 }

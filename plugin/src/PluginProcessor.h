@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dsp/AdcClipper.h"
 #include "dsp/ReverbEngine.h"
 #include "dsp/Transformer.h"
 #include "params/Parameters.h"
@@ -56,6 +57,11 @@ class Rev246Processor : public juce::AudioProcessor
     float getInputVu() const { return inputVu.load(std::memory_order_relaxed); }
     bool takeInputClip() { return inputClip.exchange(false, std::memory_order_relaxed); }
 
+    // The meter calibration (an index into design::meterCalDbFs), kept in the UI state. It is the unit's input
+    // alignment, so it also places the 16-bit mode's A/D full scale: 6 dB over 0 VU for a sine (AdcClipper).
+    int getMeterCal() const { return meterCal.load(std::memory_order_relaxed); }
+    void setMeterCal(int index);
+
     // True only for a stereo in / stereo out bus layout: the original / true-stereo choice has no meaning otherwise.
     bool isStereoToStereo() const
     {
@@ -69,13 +75,18 @@ class Rev246Processor : public juce::AudioProcessor
     // mode (one mono path per input channel); otherwise engine 0 carries the (possibly summed) mono input.
     std::array<rv::dsp::ReverbEngine, 2> engines;
     std::array<rv::dsp::Transformer, 2> transformers;
-    juce::LinearSmoothedValue<float> inGain, outGain, mixAmount, panLeft, panRight, wetOn, transformerOn;
+    std::array<rv::dsp::AdcClipper, 2> clippers; // one A/D per engine
+    juce::LinearSmoothedValue<float> inGain, outGain, mixAmount, panLeft, panRight, wetOn, transformerOn, sixteenBitOn;
     juce::AudioBuffer<float> scratch;
     std::atomic<float> inputVu{0.0f};
     std::atomic<bool> inputClip{false};
+    std::atomic<int> meterCal{0};
+    std::atomic<float> adcFullScale{1.0f}; // the A/D's clip level, linear peak
     float vu = 0.0f;         // the VU integrator's state (linear RMS), audio thread only
     double vuTauSamples = 0.0; // VU time constant in samples (tau * sample rate), set in prepareToPlay
     bool lastTrueStereo = false; // engine 1's state is reset when the routing turns true stereo on or off
+
+    void applyMeterCal(int index); // the atomics only (audio-thread readable), not the UI state
 
     std::atomic<float>*pProgram, *pMix, *pPan, *pIn, *pOut, *pPower, *pTransformer, *pTrueStereo, *pSixteenBit;
     std::array<std::atomic<float>*, rv::params::numJoys> pJoy;

@@ -104,6 +104,7 @@ if (RV_BUILD_TESTS)
         tests/StateTests.cpp
         tests/ProcessorTests.cpp
         tests/TransformerTests.cpp
+        tests/AdcClipperTests.cpp
         tests/EditorTests.cpp
     )
     target_include_directories(REV246Tests PRIVATE src tests)

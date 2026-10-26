@@ -35,7 +35,8 @@ being finalised, so there is no download yet. When there is, the latest one will
   together.
 - **Level meter** with an overload light and a calibration button for the reference level.
 - **16-bit mode:** quantises the reverb's internal storage to 16 bits, as the original did, for its faint, signal-
-  dependent noise floor and grit in the decays. Set it to FLOAT for full precision.
+  dependent noise floor and grit in the decays, and clips the input where the original's A/D converter did. Set it to
+  FLOAT for full precision.
 - **XFMR:** adds the weight in the low end and the gentle low-frequency harmonic distortion of a unit
   fitted with the optional input and output transformers. Off, the sound is that of the standard unit.
 - **Factory and user presets**, with a bypass (power) button.
@@ -91,6 +92,14 @@ Both options are off or on independently, and both only change the reverb path.
 that depth costs a little noise and grit: its service data put the reverb around 15 dB noisier than the unit's own
 straight-through path. With **16-BIT** selected, REV-246 will quantise its loops the same way (the placeholder engine
 has no loops yet). Leave it on **FLOAT** for a cleaner tail.
+
+In 16-bit mode the input also clips where the original's A/D converter did. That converter left only 6 dB of headroom
+above the 0 mark on its meter, and it clipped hard: past full scale it simply holds the last code. Its input filter
+lifts the treble by up to 5 dB first, so cymbals and sibilance clip sooner than the meter suggests. And because it
+clipped at its own sample rate of 26.4 kHz, the clipping comes out as inharmonic grit rather than plain harmonics.
+Where it clips follows **CAL**: CAL sets what 0 VU means in dBFS, and the converter clips 6 dB above that for a low
+sine (at the default -18 dBFS, that's a sine peaking at -9 dBFS). **OVL** lights whenever the converter clips, and in
+FLOAT mode it lights where it would have clipped.
 
 **XFMR.** The original could be ordered with balanced input and output transformers, which the manual says raise the
 harmonic distortion slightly. With this option on, the wet path gains the low-frequency colour and gentle odd-

@@ -52,7 +52,22 @@
   `CaptureEq::cla` and the reference table in `tests/TransformerTests.cpp` together.
 - `sixteenBit` (default off, the FLOAT / 16-BIT button) is a sound setting and part of presets. It is passed to the
   engine as `Settings::sixteenBit`; the placeholder has no loops yet, so the real algorithm applies the 16-bit storage
-  quantisation when it lands.
+  quantisation when it lands. It also switches on the A/D's clipping (`src/dsp/AdcClipper.h`, one per engine, after
+  the input transformer; always running, 20 ms crossfade). The unit's converter is a SAR, which sticks at the end of
+  its range: a hard clip of each held sample at the device rate, on the input filter's output (+5.1 dB at 10-11.5 kHz,
+  so HF clips early). The stage runs the input filter beside the signal (matched-z from the transcribed netlist's
+  poles and zeros, one extra zero tuned per rate: within 0.17 dB to 12.6 kHz), samples it at the device instants
+  (Kaiser sinc), clips, and reinjects each error through g0 = IFT{taper / H}, the input filter's band-limited inverse.
+  Its output is the input delayed by `latency()` (about 1.4 ms, wet path only, not reported to the host) plus those
+  corrections, so below full scale it is an exact delay. **The engine must apply the input filter after this stage**
+  (as part of its analogue chain); once the engine runs that chain at the device rate, clip there and drop the
+  reinjection. What survives the scheme: the clip error to the taper's floor (-35 dB of it for a sine; error above
+  11.5 kHz is lost). Cost 0.15 % of a core idle, 0.8 % clipping hard at 48 kHz (2 % at 192 kHz). Design and checks:
+  `../tools/analog/adc_clip.py`; tests: `tests/AdcClipperTests.cpp`.
+- The A/D's full scale follows the meter calibration (`Rev246Processor::setMeterCal`, the CAL button; UI state, kept
+  with the session, not in presets): the calibration stands for the unit's input alignment, and its full scale is a
+  sine 6 dB over 0 VU (unit facts §2). OVL lights at +6 VU, on a full-scale input, or when the A/D clips (in float
+  mode too: where it would clip), as the unit's REG LED did.
 - Preset saving: SAVE always opens the Save As dialog prefilled with the current name. Factory names are rejected
   with a message; a chosen name that matches an existing user preset asks Yes/No before overwriting. No returns to the
   name dialog. A modified preset's name is shown italic with a trailing `*`.
@@ -73,6 +88,7 @@
 |---|---|
 | `src/PluginProcessor.*` | Parameters, channel handling (mono/mono, mono/stereo, stereo/stereo), power (bypass), pan, mix, gains, input level for the meter |
 | `src/dsp/ReverbEngine.h` | The model's interface (placeholder body) |
+| `src/dsp/AdcClipper.h` | The A/D's clipping in 16-bit mode (see `sixteenBit` above) |
 | `src/dsp/Transformer.h`, `CaptureEq.h` | The optional TRANSFORMER stage: low-band EQ and guessed transformer distortion (see below) |
 | `src/params/` | Parameter IDs (permanent), the joystick step tables (placeholders), the fader scales |
 | `src/presets/` | Preset manager: factory presets (one per programme) and user presets as `.r246preset` XML |

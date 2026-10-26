@@ -190,7 +190,8 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
 
     formatButton.setTooltip("Float: full-precision processing (default). 16-BIT: quantises the reverb's internal storage "
                             "to 16 bits, as the original did, for its faint signal-dependent noise floor and grit in the "
-                            "decays. Only affects the reverb path.");
+                            "decays, and clips the input where the unit's A/D converter did (set by CAL; OVL lights when "
+                            "it clips). Only affects the reverb path.");
     formatButton.onToggle = [this](bool on) {
         auto& pr = param(P::id::sixteenBit);
         pr.beginChangeGesture();
@@ -208,14 +209,15 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
         pr.endChangeGesture();
     };
 
-    meterCalIndex = juce::jlimit(0, rv::design::numMeterCal - 1,
-                                 (int)proc.uiState().getProperty(Rev246Processor::UiProps::meterCal, rv::design::defaultMeterCal));
+    meterCalIndex = proc.getMeterCal();
     calButton.setTooltip("Meter calibration: what 0 VU reads, in dBFS. Click to cycle. -18 dBFS is the default "
-                         "(the unit's 0 VU is 1 kHz at 0.775 V).");
+                         "(the unit's 0 VU is 1 kHz at 0.775 V). It is the unit's input alignment, so it also sets where "
+                         "its A/D clips: 6 dB over 0 VU for a sine below 2 kHz, up to 5 dB sooner at high frequencies. "
+                         "16-BIT applies that clipping; OVL shows it in either mode.");
     calButton.setLabel(calLabel());
     calButton.onClick = [this] {
-        meterCalIndex = (meterCalIndex + 1) % rv::design::numMeterCal;
-        proc.uiState().setProperty(Rev246Processor::UiProps::meterCal, meterCalIndex, nullptr);
+        proc.setMeterCal((proc.getMeterCal() + 1) % rv::design::numMeterCal);
+        meterCalIndex = proc.getMeterCal();
         calButton.setLabel(calLabel());
     };
 
@@ -358,6 +360,11 @@ juce::String Rev246Editor::calLabel() const
 
 void Rev246Editor::timerCallback()
 {
+    if (proc.getMeterCal() != meterCalIndex) // e.g. a session or state restored with the editor open
+    {
+        meterCalIndex = proc.getMeterCal();
+        calButton.setLabel(calLabel());
+    }
     levelMeter.setLevel(proc.getInputVu(), proc.takeInputClip(), rv::design::meterCalDbFs[meterCalIndex]);
     // The host may change the bus layout while the editor is open; the stereo button follows it.
     if (proc.isStereoToStereo() != stereoAvailable)

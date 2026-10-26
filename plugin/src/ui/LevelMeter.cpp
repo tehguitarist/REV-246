@@ -33,7 +33,7 @@ void LevelMeter::setLevel(float vuLinear, bool clip, float refDbFs)
     for (int i = design::numLevelLeds - 1; i >= 1; --i) // from -12 up to +3
         if (db >= design::levelStepsDb[i])
             count = design::numLevelLeds - i;
-    // OVL: +6 VU, or a full-scale peak, whichever comes first.
+    // OVL: +6 VU, or a peak (full scale, or the unit's A/D overload), whichever comes first.
     const bool ovl = db >= design::levelStepsDb[0] || clip;
     if (count != lit || ovl != over)
     {
@@ -46,8 +46,9 @@ void LevelMeter::setLevel(float vuLinear, bool clip, float refDbFs)
 
 juce::String LevelMeter::getTooltip()
 {
-    return "Input level in VU, after the INPUT fader (the 0 VU reference is set in the bottom bar). OVL lights at +6 VU "
-           "or on a full-scale peak.";
+    return "Input level in VU, after the INPUT fader (the 0 VU reference is set in the bottom bar). OVL lights at +6 VU, "
+           "or on any peak the unit's A/D converter would clip (as its REG LED did: high frequencies and short peaks "
+           "can clip before the VU reading gets there).";
 }
 
 void LevelMeter::paint(juce::Graphics& g)

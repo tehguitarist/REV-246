@@ -81,7 +81,8 @@ inline const juce::Colour segmentGlow{0xffff0a00};
 inline constexpr float segmentGhostAlpha = 0.2f;
 
 // The LEVEL LEDs, top (OVL) to bottom (-12). Thresholds in dB relative to the meter's 0 VU reference, of the input
-// after the INPUT fader, read on a VU ballistic (not peak). OVL is +6 VU or a full-scale peak, whichever comes first.
+// after the INPUT fader, read on a VU ballistic (not peak). OVL is +6 VU or a peak the A/D clips (or full scale),
+// whichever comes first (dsp/AdcClipper.h).
 // What 0 VU reads in dBFS is the meter calibration, selectable in the bottom bar (default -18 dBFS: 0 = 1 kHz at
 // 0.775 V, H).
 inline constexpr int numLevelLeds = 7;
