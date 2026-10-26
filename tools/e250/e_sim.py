@@ -34,23 +34,59 @@ OCTS = [250, 500, 1000, 2000, 4000]
 ADOPTED = dict(law="lfo", wave="tri", f=0.553, A=32.0, fsd=0.3, groups=0, b=0.81, lo=410, hi=3600, share=0.5, M=6, mdel=314)
 
 
-def render_ir(rt, lf=None, hf=None, seed=0, secs=None, fs_out=None):
-    """Reference impulse response of Program E (n, 2) = (L, R), the adopted parameters; lf / hf default to the Altiverb
-    family's fit. Device rate, or resampled to fs_out. The chain kernel is the Altiverb capture's (replace by the 246's
-    analogue chain in the plugin)."""
+LFO_RATE = {"time": 0.553, "samples": 0.553 * 26373.6 / 24000}   # §14.6: the 250's 0.553 Hz kept in seconds (default) or in samples
+L_KERNEL = (0.77, 0.23)                    # §14.1: L's output kernel at the device rate (E has it; Tomkin's L p = 0.23)
+AMPL_REF = 80.0                            # the Altiverb family's AMPL (H: as the S / M families, library_notes §6)
+
+
+def lowpass_sos(khz):
+    """The LOW PASS lever (2-12 kHz, acting on the whole output, operation card): open at 12 kHz (the analogue band limit is
+    the 12.2 kHz input / output filters); below it a 2nd-order Butterworth at the device rate. H: the lever's response has
+    never been measured (no LP variation in any existing capture, §14.1)."""
+    from scipy.signal import butter
+    return None if khz >= 12 else butter(2, khz * 1e3, fs=FS, output="sos")
+
+
+def render_ir(rt, lf=None, hf=None, seed=0, secs=None, fs_out=None, ampl=AMPL_REF, delay_ms=0.0, lp_khz=12.0, lfo="time",
+              chain="altiverb", law=None, moving=True):
+    """Reference impulse response of Program E, (n, 2) = (L, R), with every control the 246 panel gives E:
+      rt, lf, hf  the 246's loop law (ml_lines.line_coefs); lf / hf default to the Altiverb family's fit (1.38 / 0.74)
+      ampl        REFLECTIONS AMPL. %: the direct taps x ampl / 80 (S's linear cluster law, model_s_results §21; H for E)
+      delay_ms    REFLECTIONS DELAY: a pure delay of the whole output, rounded to device samples (operation card; H for E)
+      lp_khz      LOW PASS: see lowpass_sos (H)
+      lfo         'time' (0.553 Hz, default) or 'samples' (0.608 Hz): the moving reads' triangle rate (H)
+      chain       'altiverb': the measured chain kernel of the E presets (the capture's chain x L's output kernel; validated
+                  against them); 'device': L's output kernel [0.77, 0.23] only, for a host that adds the 246's analogue chain
+      law         the moving-read law (None: ADOPTED, §13.4; 'plugin': §14.4's plugin-faithful structure)
+      moving      False: the static network only (deterministic; the plugin's reference for a sample-exact null)
+    Device rate, or resampled to fs_out."""
     global X_STATIC
     static_params(); q = X_STATIC.copy()
     if lf is not None: q[9] = lf
     if hf is not None: q[10] = hf
     kern = E.kernels([r for r in E.RTS if r >= 1.0])
+    if chain == "device":
+        k = np.zeros(len(kern[0])); k[16:18] = L_KERNEL; kern = [k, k.copy()]
+    prm = dict(DEF) | ADOPTED | dict(f=LFO_RATE[lfo], ampl_scale=ampl / AMPL_REF)
+    if law == "plugin":
+        prm |= dict(law="plugin", f=LFO_RATE[lfo] + 0.0005, A=35.2, gs=0.17, gw=0.28, Mw=6, lo=300, dwell=0.1, sets=True)
+    if not moving:
+        prm |= dict(b=0.0, gs=0.0, gw=0.0)
     secs = secs or min(3 * rt + 1, 15); n = int(secs * FS) + 4096
     x = np.zeros(n); x[1000] = 1.0
     keep = X_STATIC; X_STATIC = q
     try:
-        y, _ = render(x, rt, dict(DEF) | ADOPTED, kern, np.random.default_rng(seed))
+        y, _ = render(x, rt, prm, kern, np.random.default_rng(seed))
     finally:
         X_STATIC = keep
     y = y[1000 + 16 - K0:1000 + 16 - K0 + int(secs * FS)]
+    d = int(round(delay_ms * 1e-3 * FS))
+    if d:
+        y = np.vstack([np.zeros((d, 2)), y])[:len(y)]
+    sos = lowpass_sos(lp_khz)
+    if sos is not None:
+        from scipy.signal import sosfilt
+        y = sosfilt(sos, y, axis=0)
     if fs_out:
         from scipy.signal import resample_poly
         from fractions import Fraction
@@ -139,6 +175,7 @@ def render(x, rt, prm, kern, rng):
     q = E.unpack(X_STATIC); n = len(x)
     # direct path
     direct = x.copy(); direct[429:] += q["a"][0] * x[:-429]; direct[718:] += q["a"][1] * x[:-718]
+    direct *= prm.get("ampl_scale", 1.0)                 # REFLECTIONS AMPL. (render_ir)
     # all-pass chain
     u = x.copy()
     for D, g in zip(E.AP_D, q["g"]):
@@ -270,8 +307,10 @@ if __name__ == "__main__":
     a = ap.parse_args()
     if a.stage == "data":
         show(data_stats(), "data")
-    elif a.stage == "render":                   # --json '{"rt": 2.5, "lf": 1.4, "hf": 0.7, "seed": 0, "fs": 48000, "out": "e.wav"}'
-        o = json.loads(a.json); y = render_ir(o["rt"], o.get("lf"), o.get("hf"), o.get("seed", 0), o.get("secs"), o.get("fs"))
+    elif a.stage == "render":   # --json '{"rt": 2.5, "lf": 1.4, "hf": 0.7, "ampl": 80, "delay_ms": 0, "lp_khz": 12, "lfo": "time", "chain": "altiverb", "seed": 0, "fs": 48000, "out": "e.wav"}'
+        o = json.loads(a.json)
+        y = render_ir(o["rt"], o.get("lf"), o.get("hf"), o.get("seed", 0), o.get("secs"), o.get("fs"), o.get("ampl", AMPL_REF),
+                      o.get("delay_ms", 0.0), o.get("lp_khz", 12.0), o.get("lfo", "time"), o.get("chain", "altiverb"), o.get("law"))
         import soundfile as sf
         sf.write(o.get("out", "e_render.wav"), (y / np.abs(y).max() * 0.5).astype(np.float32), int(o.get("fs") or round(FS)))
         print(f"wrote {o.get('out', 'e_render.wav')}: {y.shape}")

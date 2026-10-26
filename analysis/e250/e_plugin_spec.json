@@ -1,0 +1,359 @@
+{
+ "program": "E (the EMT 250 program on the 246), docs/EMT250_program.md \u00a711-15",
+ "device_rate_hz": 26373.626373626375,
+ "delays": "integer device samples; positions after R's first direct tap",
+ "direct_path": {
+  "value": {
+   "taps": [
+    0,
+    429,
+    718
+   ],
+   "gains": [
+    1.0,
+    -0.7091043911652353,
+    0.5884986303763999
+   ],
+   "L": {
+    "delay": 314,
+    "sign": -1,
+    "gain": 1.1140091476171738
+   }
+  },
+  "label": "S",
+  "source": "\u00a711.2, held out by RT"
+ },
+ "allpasses": {
+  "value": {
+   "form": "H(z) = (-g + z^-D) / (1 - g z^-D), in series, before the loops",
+   "D": [
+    46,
+    146,
+    392
+   ],
+   "g": [
+    0.7076395805945448,
+    0.7103564464196855,
+    0.7097593705153248
+   ]
+  },
+  "label": "S",
+  "source": "\u00a711.2"
+ },
+ "loops": {
+  "value": {
+   "P": [
+    2215,
+    2507,
+    2776
+   ],
+   "feedback": "negative: line[t] = G{u[t] - line[t - P]}",
+   "static_read_delay": [
+    2223,
+    805,
+    1802
+   ],
+   "static_read_gain": [
+    0.31436194430636644,
+    0.3866476616653242,
+    -0.3848518310578072
+   ],
+   "read": "after the loop filter (reads the line)",
+   "L": {
+    "delay": 315,
+    "sign": 1,
+    "gain": "as the direct path's L gain"
+   }
+  },
+  "label": "S",
+  "source": "\u00a711.2"
+ },
+ "loop_filter": {
+  "value": {
+   "law": "the 246's own: tools/ml_lines.line_coefs(P, rt, lf, hf) / line_resp (shelf + HF pole, HF floor)",
+   "altiverb_family": {
+    "lf": 1.3833446362074198,
+    "hf": 0.7361446779362695
+   },
+   "high_band_uncertainty": "+-10 % (original capture method unknown, \u00a713.6)"
+  },
+  "label": "S",
+  "source": "\u00a711.2, \u00a713.5-13.6"
+ },
+ "moving_reads": {
+  "value": {
+   "adopted": {
+    "law": "lfo",
+    "wave": "tri",
+    "f": 0.553,
+    "A": 32.0,
+    "fsd": 0.3,
+    "groups": 0,
+    "b": 0.81,
+    "lo": 410,
+    "hi": 3600,
+    "share": 0.5,
+    "M": 6,
+    "mdel": 314
+   },
+   "meaning": "per loop M reads on the loop line, gain +-b x |static_read_gain|, centre uniform in [lo, hi] samples, offset A x triangle(f t + phase), phase independent per read, rate x (1 +- fsd) per read; a fraction 'share' also added to L with the opposite sign (L delay mdel), the rest independent in L; integer addresses, no interpolation",
+   "lfo_rate_hz": {
+    "time": 0.553,
+    "samples": 0.6076917000000001
+   },
+   "plugin_faithful": {
+    "reads": [
+     {
+      "centre": 635,
+      "loop": "A",
+      "R_sign": -1,
+      "L_sign": 1,
+      "set": "Z"
+     },
+     {
+      "centre": 1199,
+      "loop": "C",
+      "R_sign": -1,
+      "L_sign": 1,
+      "set": "Y"
+     },
+     {
+      "centre": 1412,
+      "loop": "B",
+      "R_sign": 1,
+      "L_sign": 1,
+      "set": "X"
+     },
+     {
+      "centre": 1458,
+      "loop": "A",
+      "R_sign": 1,
+      "L_sign": -1,
+      "set": "Y"
+     },
+     {
+      "centre": 1879,
+      "loop": "A",
+      "R_sign": -1,
+      "L_sign": -1,
+      "set": "X"
+     },
+     {
+      "centre": 2078,
+      "loop": "B",
+      "R_sign": 1,
+      "L_sign": -1,
+      "set": "Z"
+     },
+     {
+      "centre": 2391,
+      "loop": "C",
+      "R_sign": -1,
+      "L_sign": -1,
+      "set": "X"
+     }
+    ],
+    "set_probability": {
+     "X": 0.62,
+     "Y": 0.29,
+     "Z": 0.09
+    },
+    "common_triangle": {
+     "f": 0.5535,
+     "A": 35.2
+    },
+    "gain": 0.17,
+    "weak": {
+     "per_loop": 6,
+     "gain": 0.28,
+     "lo": 300,
+     "hi": 3600
+    },
+    "dwell_s": 0.1,
+    "note": "\u00a714.4-14.5: the UAD plugin's structure; fits E's statistics worse (250 vs 182), a listening alternative"
+   }
+  },
+  "label": "S (energy, range, speed, L/R share: E's statistics) / H (triangle and rate: from the UAD plugin)",
+  "source": "\u00a712-14"
+ },
+ "output_kernel": {
+  "value": {
+   "fir": [
+    0.77,
+    0.23
+   ],
+   "rate": "device",
+   "note": "L's output kernel; E has it, the LP lever does not cause it"
+  },
+  "label": "S",
+  "source": "\u00a714.1"
+ },
+ "controls": {
+  "RT": {
+   "value": {
+    "measured_steps": [
+     0.4,
+     1.0,
+     1.5,
+     2.0,
+     2.5,
+     3.0,
+     3.6,
+     4.0,
+     4.5
+    ],
+    "note": "the Altiverb family's steps; the 246's E table itself is unknown"
+   },
+   "label": "C (these values exist) / H (full table)",
+   "source": "\u00a70"
+  },
+  "LF_HF": {
+   "value": "the 246's LF x / HF x controls through the loop law",
+   "label": "S",
+   "source": "\u00a711.2"
+  },
+  "AMPL": {
+   "value": {
+    "law": "direct taps x AMPL / 80",
+    "reference": "the Altiverb family taken as AMPL 80"
+   },
+   "label": "H",
+   "source": "\u00a715 (S's linear cluster law, model_s_results)"
+  },
+  "DELAY": {
+   "value": "a pure delay of the whole output, 0-999 ms, device samples; the Altiverb family at 0",
+   "label": "H",
+   "source": "\u00a715, operation card"
+  },
+  "LOW_PASS": {
+   "value": {
+    "steps_khz": [
+     2,
+     3,
+     4,
+     5,
+     6,
+     8,
+     10,
+     12
+    ],
+    "open": 12,
+    "guess": "2nd-order Butterworth at the device rate below 12 kHz"
+   },
+   "label": "H",
+   "source": "\u00a714.1, \u00a715"
+  }
+ },
+ "not_resolved": [
+  "the L-only detail of E's moving reads (\u00a714.3)",
+  "E's own LFO rate and phase grouping (needs E repeat captures)",
+  "the LP lever's response",
+  "AMPL / DELAY in E"
+ ],
+ "references": {
+  "static_ir": [
+   "analysis/e250/ref/e_static_rt0.4.wav",
+   "analysis/e250/ref/e_static_rt1.0.wav",
+   "analysis/e250/ref/e_static_rt2.5.wav",
+   "analysis/e250/ref/e_static_rt4.5.wav"
+  ],
+  "static_ir_note": "render_ir(rt, moving=False, chain='device'), lf / hf the family's, AMPL 80, DELAY 0, LP open; device rate, (L, R)",
+  "targets": {
+   "e_ratio": [
+    -15.66329144838615,
+    4.783197546579601,
+    5.821258769900704,
+    5.132407971182489
+   ],
+   "lobes": [
+    -0.0033066900401874295,
+    -0.006514074237240797,
+    -0.014034297473466233,
+    -0.0251960223136249,
+    -0.03222462951796762,
+    -0.033173859636529544,
+    -0.03168596056594744,
+    -0.027230483552058513,
+    -0.02023208744417866,
+    -0.01519082421080543,
+    -0.010982548510820771,
+    -0.009775012270246183,
+    -0.014452618544947466,
+    -0.014335920096273236,
+    -0.01645900101858223,
+    -0.028572104700560527,
+    -0.04441394177548513,
+    -0.05778793314589486,
+    -0.05716787777430465,
+    -0.04308255997680705,
+    -0.027876286016237758,
+    -0.018523928831287634,
+    -0.010540559788581908,
+    -0.004573656647153306,
+    -0.0015594327187611109
+   ],
+   "lr": [
+    -0.23308370438296344,
+    -0.47179466485354643,
+    -0.1626479286486037,
+    0.16272289269852305,
+    0.0257679276756002
+   ],
+   "frac": [
+    0.25395336795832957,
+    0.23803780441459063,
+    0.2324830164247001,
+    0.25375531566206716,
+    0.27775321909808104
+   ],
+   "e_ratio_sd": [
+    0.30791092060313235,
+    1.8521378276366771,
+    1.2871161073709452,
+    1.3364310394320384
+   ],
+   "lobes_sd": [
+    0.017119575539335512,
+    0.021531493557636016,
+    0.022836403416120057,
+    0.026598949415219883,
+    0.03117736911378456,
+    0.03161032857226547,
+    0.029477518694511567,
+    0.026479882673300054,
+    0.024732366738377656,
+    0.01886464997732289,
+    0.011639148288575265,
+    0.012728977118860783,
+    0.018789623509196326,
+    0.017123772165822008,
+    0.024905788422862948,
+    0.03221685388090884,
+    0.03615731127773868,
+    0.03526076759055027,
+    0.03002478855485724,
+    0.028182531471205204,
+    0.028161777685769083,
+    0.023727702856349852,
+    0.018636331775740613,
+    0.013938574106944046,
+    0.011985210548871496
+   ],
+   "lr_sd": [
+    0.03658641321181235,
+    0.057957161921257536,
+    0.04541123696896401,
+    0.029671961697945424,
+    0.03009501514798088
+   ],
+   "frac_sd": [
+    0.040746194854438374,
+    0.031678071194942876,
+    0.026530659564201864,
+    0.026599583632399698,
+    0.016436534457625388
+   ]
+  },
+  "targets_note": "e_sim.stats of the eight RT >= 1.0 Altiverb presets (leave-one-out residuals); a plugin's E, rendered at those RTs through e_sim.capture's sweep method and the same function, should land within ~1.3-2 x the data's own half-vs-half cost (100)"
+ }
+}
