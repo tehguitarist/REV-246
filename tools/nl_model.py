@@ -41,7 +41,8 @@ FADE_GUARD = 0.75                               # s before the file's end (S's 0
 NOISE = os.path.join(nl.OUT, "noise" + ("" if nl.WIDE else "_narrow") + ".json")
 EQ = os.environ.get("NL_EQ", "1") == "1"            # the top-end EQ (NonLin_program 11.3), adopted; NL_EQ=0 leaves it out
 BENCH = os.path.join(nl.OUT, "bench" + ("" if nl.WIDE else "_narrow") + ("" if EQ else "_noeq")
-                     + ("_bk" if os.environ.get("NL_BK") == "1" else ""))
+                     + ("_bk" if os.environ.get("NL_BK") == "1" else "")
+                     + (f"_a{os.environ.get('NL_BK_ALPHA', 0.65)}" if os.environ.get("NL_BK") == "1" and os.environ.get("NL_BK_ALPHA") != "1" else ""))
 
 
 def late_db(span, early):
@@ -57,10 +58,16 @@ BK_H = 14                                    # +-14: the per-tap shape spans -13
 BK_PAD = 40                                  # the stored kernel's half-length (the low-pass spreads it)
 BK_LP = float(os.environ.get("NL_BK_LP", 11000))   # the kernel's band limit (Hz)
 BK_TRAIN = [(sp, e, 0.0) for sp in (0.2, 0.4) for e in (10.0, 3.0, 1.0, 0.5, 0.3, -0.5, -0.7, -1.0, -3.0)]
+BK_ALPHA_DEFAULT = 0.65                      # the strict rule holds at 0.65 on all 1,044 captures (NonLin_program 11.5); 1.0 fails it
 BK = None
 if os.environ.get("NL_BK") == "1" and os.path.exists(BK_FILE):          # the branch kernel (NonLin_program 11.2): a switch.
     # The main taps' read shape (device side: the front taps do not carry it), band-limited below 11 kHz
     BK = {int(c): np.array(v) for c, v in json.load(open(BK_FILE)).items()}
+    BK_ALPHA = float(os.environ.get("NL_BK_ALPHA", BK_ALPHA_DEFAULT))   # kernel strength: 1 = fitted, 0 = off; 0.65 adopted (NonLin_program 11.5)
+    for _c, _k in BK.items():
+        _d = np.zeros(len(_k))
+        _d[(len(_k) - 1) // 2] = 1.0
+        BK[_c] = _d + BK_ALPHA * (_k - _d)
 
 
 @functools.lru_cache(maxsize=8)

@@ -109,10 +109,12 @@ def spec():
                                    "reproduce it at 12 kHz rather than add it on top"),
                          "S (measured) / H (cause)", "§11.3"),
         "branch_read_kernel": lab(dict(taps={("L", "R")[int(c)]: v for c, v in json.load(open(nm.BK_FILE)).items()},
-                                       centre=nm.BK_PAD, band_limit_hz=nm.BK_LP,
+                                       centre=nm.BK_PAD, band_limit_hz=nm.BK_LP, strength=nm.BK_ALPHA_DEFAULT,
+                                       use="kernel = delta + strength * (taps - delta), per channel (the stored taps are the fitted, strength 1 kernel)",
                                        applies_to="the whole AP(124) branch (main taps, R's first-tap direct term, late section); not the front taps",
-                                       status="tried, not adopted by the strict rule (0.05-0.15 s median -54.8 -> -59.5 dB, but up to +0.96 dB on "
-                                              "~40 steep-ramp captures); a user decision (NonLin_program 11.5)",
+                                       status="adopted at strength 0.65 (user decision, 27 Oct 2026): 0.05-0.15 / 0.15-0.3 / 0.3-0.6 s medians -54.8 / -54.2 / -50.9 -> "
+                                              "-58.4 / -57.3 / -52.0 dB, no capture of 1,044 worse than +0.43 dB (the strict rule holds); at strength 1 "
+                                              "~40 steep-ramp captures lose up to +0.96 dB (NonLin_program 11.5)",
                                        note="deviations from a unit tap are <= 0.0007 (-63 dB): inaudible, only for null-level fidelity; centred, "
                                             "so a plugin needs BK_PAD samples of look-ahead or the same delay on the front taps"),
                                   "S (measured, held out) / H (cause: the main taps' read)", "§11.5"),
