@@ -110,3 +110,41 @@ SPAN 0.5, EARLY −1.0, the full 0–500 ms envelope is **identical to the displ
 - **How is the late section fed?** Continuity at the early's end level (§5) suggests the late is released at SPAN from the early's state (the N-A "fed from a tap at SPAN" option), not a parallel sum. Test: exact phase continuity across SPAN in the device domain.
 - **Exact laws:** RT_early(EARLY) and RT_late(LATE) need device-domain EDC fits on un-trimmed renders (or fresh captures), since the library trims. The card gives the intended straight-line-in-dB decay.
 - **Lineage:** the 251/252 Non-Lin is "two concatenated processes" (`EMT246_discovery.md` §10), which fits the measured splice. The RMX16 / 480L precedents (`algorithm_research.md` §6) suggest the early section is a shaped-gain FIR — consistent with the missing early loops.
+
+## 9. The early section, decoded (26 October 2026)
+
+*Device-rate IRs of all 1,046 settings (`tools/nl_structure.py`, chain3 kernel, file sample 0 at K0; the files are trimmed, so no onset search), fits in `tools/nl_early.py` on the 96 LATE 0 files (nothing but the early section is there). Labels as in `EMT246_unit_facts.md`: **C** confirmed, **S** strong, **H** hypothesis.*
+
+### 9.1 What changes with EARLY and SPAN (S)
+- At fixed SPAN, every EARLY gives **the same waveform times a smooth gain**: window correlation with EARLY 10 is 0.95–0.98 (positive) and 0.88–0.89 (negative) in every 20 ms window. A negative EARLY is **a rising gain ramp, not a time-reversed signal**.
+- At fixed EARLY, every SPAN gives **the first part of SPAN 0.5's waveform** at 0.0 dB (correlation 0.89–1.00): one fixed process, cut by SPAN. After the cut it dies at ≈ −440 dB/s (the diffuser's tail, §9.2): the card's thin line continuing past SPAN.
+
+### 9.2 Structure (S)
+- **Front taps:** three plain taps per channel, no diffuser, the place of S's cluster: **L 41 / 410 / 463, R 41 / 278 / 463**, amplitudes **1 : 2 : 1** in units of a main tap (R's 463 negative).
+- **Main taps:** the input through **AP(124)**, then **27 taps** (`TAPS`: 685, 1230, 1767, 2523, 2817, 3747, 3835, 4821, 4902, 5775, 5988, 6697, 7005, 7587, 7953, 8445, 8832, 9271, 9642, 10065, 10383, 10827, 11055, 11557, 11658, 12192, 12255), then **AP(180) in L and AP(188) in R**. All three all-passes at **g = −1/√2** (S's diffuser gain; free feed-forward and feedback gains land within 2·10⁻⁴ of it, ±1 sample on any delay costs 13–16 dB). Undoing the diffuser leaves 94 % of the early energy in 50 taps.
+- **R's taps are L's 221 samples earlier**, each with its own sign (`SIGNS`). R's first tap is the exception: its direct (feed-forward) term sits at 465 in the front taps' frame, its delayed terms in the main taps' frame (§9.4); with that, R's first-tap residual goes from −18 to −45 dB.
+- **Stages:** the taps share gains in pairs, 14 stages (the first a single tap): {685}, {1230, 1767}, {2523, 2817}, … {12192, 12255}. The tap intervals shrink through the train (two interleaved families whose spacing falls by 32 and 69 samples per step), so the density rises with time.
+- **SPAN** switches whole stages: SPAN 0 / 0.1 / 0.2 / 0.3 / 0.4 / 0.5 runs 0 / 2 / 4 / 7 / 10 / 14 stages (last tap 1767, 3835, 7005, 9642, 12255). Each cut falls 480–870 samples before SPAN × fs; consistent with "a stage runs if it ends at least 15–33 ms before SPAN" (H for the steps between the library's).
+
+### 9.3 The EARLY law (S; every stage step and front tap to ±0.01 dB)
+Law time τ in 4 ms ticks: front taps at L 0 / 4 / 12 ms, R 0 / 8 / 12 ms; one stage = 36 ms (9 ticks).
+- **EARLY > 0:** stage j at τ = 16 + 36 j ms, gain **−60 τ / EARLY dB** (stage steps 0.72 / 2.16 / 4.32 / 7.2 dB at EARLY 3 / 1 / 0.5 / 0.3).
+- **EARLY < 0:** the last stage at τ_end = SPAN + 12 ms, the others 36 ms apart before it, gain **+60 (τ − τ_end) / |EARLY| dB**: the ramp rises over the whole SPAN (front taps included) to the flat level. This places the front taps at −2.11 / −2.89 / −2.67 / −2.44 / −1.23 stages before stage 0 at SPAN 0.1 … 0.5, as measured.
+- **EARLY 10 is flat** (0 dB per stage, not 6 dB/s): the top step means "no slope".
+- **The late section is fed at the law's gain of stage min(ns, 13)** for EARLY > 0 (T = 16 / 88 / 160 / 268 / 376 / 484 ms for SPAN 0 … 0.5; measured from the late level 16 / 88 / 160 / 267 / 377 / 487) and at 0 dB for EARLY < 0.
+
+### 9.4 Per-capture branch offset (S as data; H as cause)
+- The AP(124) branch (main taps **and** the late section) sits o samples from the front taps, o per capture: 0 in most, else −63…−64, −84…−87 or −163, mixed at random among captures of one (SPAN, EARLY) that differ only in LATE. For steep negative EARLY at long SPAN (−0.2…−0.7 at SPAN 0.3–0.5) o reaches −486 … −9,316 samples; the train keeps its exact shape and law gains, and the stages that would land before the file start are missing (Tomkin's trim cut them).
+- R's first-tap direct term (§9.2) does not move with o.
+- **H:** the front taps and the branch run on different processors joined by a buffer whose pointer phase is set at program load (2 × TMS32010). For the model, o is one alignment per capture; the plugin uses o = 0.
+
+### 9.5 Held-out score (`nl_early.py --stage law`, `analysis/nl/early_law.json`)
+Per capture only the alignment (front shift, o, clock) and one gain per channel; every structural number is shared and no setting's gains are fitted. On the 96 LATE 0 captures, 100 Hz–10 kHz, from 20 samples before the first front tap to 3000 samples past the last main tap: **median L −45.3, R −45.1 dB** (the free per-tap fit, ≈ 31 gains per channel per file, in-sample: −44.2 / −44.4). Clock ratios +1…+14 ppm.
+- **Floor:** captures that share their early section (settings differing only in LATE) agree to −52…−62 dB, so ≈ 10 dB of model error is left. The residual is dense, HF-heavy (70 % of it at 6–10 kHz while the data is white), follows the signal's envelope, repeats across captures (correlation 0.99 in L) and is not a linear function of the main taps (a shared 63-tap output kernel, per-tap 5-tap shapes, all-pass damping or gain changes each gain ≤ 1 dB; a 1,300-tap shared kernel 3–4 dB held out). Local timing errors of ±0.003 samples would explain its size and spectrum (H: sample-level timing in the unit's output); open.
+- Steep negative EARLY at long SPAN puts the front taps below the noise (−60 dB re the ramp's end), so their windows are noise-only.
+
+### 9.6 Model size
+Structure: 27 tap positions, 2 × 27 signs, 3 front positions per channel with 1 : 2 : 1 amplitudes, R's offset (−221) and first-tap direct position (465), three all-pass delays at one gain, 14 stages and the SPAN → stage table; law: 4 ms tick, 36 ms stage, front ticks, the 16 ms / 12 ms offsets. Per sample: 3 + 27 taps per channel and 3 all-passes (≈ 36 multiplies per channel), within the 2 × TMS32010 budget.
+
+### 9.7 Defects
+`defects.NL_DEFECTS`: (SPAN 0, EARLY −0.5, LATE 0) carries a 0.27-sample slip between the front taps 410 and 463 (−15.7 dB against the model; every other file with visible front taps holds 369.00 / 53.00 samples to ±0.2).

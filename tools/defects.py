@@ -17,3 +17,4 @@ GLITCH = {("1.0_0.3_0.4", 0), ("1.0_0.3_0.4", 90), ("2.0_0.3_0.4", 30), ("2.0_0.
 DEFECTS = BAD | SLIPPED | GLITCH
 ML_SLIPPED = {("M", "0.7_3.0_0.4", 10), ("M", "1.2_1.8_0.4", 60), ("M", "2.0_0.6_0.7", 60), ("M", "2.0_0.8_0.4", 60),
               ("M", "2.0_1.2_0.4", 60)}
+NL_DEFECTS = {(0.0, -0.5, 0.0)}   # Non-Lin (SPAN, EARLY, LATE): a 0.27-sample slip between front taps 410 and 463 (NonLin_program 9.7)

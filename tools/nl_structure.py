@@ -1,0 +1,100 @@
+"""Program N (Non-Lin) from the Tomkin 96 kHz library: device-rate IRs and the structure tests of docs/NonLin_program.md.
+
+    .venv/bin/python tools/nl_structure.py --stage cache [--workers 6]
+
+The Non-Lin files are trimmed to their first sample (DELAY 0 throughout), so no onset is searched: file sample 0 is put
+at device index K0 and the files are aligned on their content afterwards. Deconvolved with the chain3 kernel (the M / L
+default, ml_structure.md 12, 18) unless EMT_KERNEL says otherwise, resampled to 19.2 MHz / 728, L half a sample late
+as in the other programs (library_notes.md 3). Cache: analysis/nl/cache_<kernel>/<name>.npy, (n, 2) float32, not
+committed.
+"""
+import argparse, glob, os, sys
+from concurrent.futures import ProcessPoolExecutor
+import numpy as np
+import soundfile as sf
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+sys.path.insert(0, os.path.join(HERE, "harness"))
+os.environ.setdefault("EMT_KERNEL", "chain3")
+from core import PAD, Kernel, deconvolve, fs_dev, load_config, to_device_grid  # noqa: E402
+
+CFG = load_config()
+FSD = fs_dev(CFG)
+LIB = os.path.join(ROOT, "irs", "EMT 246 captures", "96kHz", "Non-Lin")
+KTAG = os.environ["EMT_KERNEL"]
+KERNEL = os.path.join(ROOT, "analysis", "library", "tomkin96", "kernels", KTAG + ".npz")
+OUT = os.path.join(ROOT, "analysis", "nl")
+CACHE = os.path.join(OUT, f"cache_{KTAG}")
+K0 = 50                        # device index of file sample 0
+LR_US = 19.19                  # library L/R offset (library_notes.md 3)
+
+
+def labels(path):
+    """LP_DELAY_SPAN_EARLY_LATE, one implied decimal on the last three (library_notes.md 2)."""
+    lp, delay, span, early, late = (int(v) for v in os.path.basename(path).replace("_dc.wav", "").split("_"))
+    return dict(span=span / 10, early=early / 10, late=late / 10)
+
+
+def key(l):
+    return (l["span"], l["early"], l["late"])
+
+
+def files():
+    return sorted(glob.glob(os.path.join(LIB, "*.wav")))
+
+
+def table():
+    """{(span, early, late): path}"""
+    return {key(labels(f)): f for f in files()}
+
+
+def _cache_path(path):
+    return os.path.join(CACHE, os.path.basename(path)[:-7] + ".npy")
+
+
+def _make(path):
+    out = _cache_path(path)
+    if os.path.exists(out):
+        return
+    x, fs = sf.read(path, always_2d=True)
+    d = deconvolve(np.vstack([np.zeros((PAD, 2)), x]), fs, Kernel.load(KERNEL))
+    anchor = float(PAD)
+    k0 = int(np.floor(anchor / fs * FSD))
+    h = np.stack([to_device_grid(d[:, 0], fs, anchor + LR_US * 1e-6 * fs, k0, CFG),
+                  to_device_grid(d[:, 1], fs, anchor, k0, CFG)], 1)
+    np.save(out, h[k0 - K0:].astype(np.float32))
+
+
+def ir(path_or_key):
+    """Device-rate IR (n, 2), file sample 0 at K0."""
+    p = table()[path_or_key] if isinstance(path_or_key, tuple) else path_or_key
+    return np.load(_cache_path(p)).astype(np.float64)
+
+
+def cache_stage(workers):
+    os.makedirs(CACHE, exist_ok=True)
+    todo = [p for p in files() if not os.path.exists(_cache_path(p))]
+    print(f"{len(todo)} of {len(files())} to build", flush=True)
+    with ProcessPoolExecutor(workers) as ex:
+        for i, _ in enumerate(ex.map(_make, todo, chunksize=4)):
+            if i % 100 == 0:
+                print(i, flush=True)
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--stage", default="cache")
+    ap.add_argument("--workers", type=int, default=6)
+    ap.add_argument("--only", type=int, default=0)
+    a = ap.parse_args()
+    if a.stage == "cache":
+        if a.only:
+            global files
+            fl = files()[:a.only]
+            files = lambda: fl  # noqa: E731
+        cache_stage(a.workers)
+
+
+if __name__ == "__main__":
+    main()
