@@ -148,3 +148,21 @@ Structure: 27 tap positions, 2 × 27 signs, 3 front positions per channel with 1
 
 ### 9.7 Defects
 `defects.NL_DEFECTS`: (SPAN 0, EARLY −0.5, LATE 0) carries a 0.27-sample slip between the front taps 410 and 463 (−15.7 dB against the model; every other file with visible front taps holds 369.00 / 53.00 samples to ±0.2).
+
+## 10. The late section, decoded (26 October 2026)
+
+*`tools/nl_late.py` (per-frequency excitation solve, renderer), `tools/nl_model.py` (whole program), on the clock-corrected captures.*
+
+### 10.1 What it depends on (S)
+- **LATE only.** At fixed LATE every (SPAN, EARLY) gives the same late waveform (correlation 0.96–1.00), shifted in time by SPAN and scaled by EARLY. **RT = LATE exactly and flat in frequency** (125 Hz–8 kHz within ±3 % from LATE 0.4 up; LATE 0.2 reads 0.23–0.29 s, the short-RT estimator bias). No LF / HF damping. **LATE 0 = no late section at all**, not even a first pass (the gate).
+- **Feed:** the AP(124) line, one sample before a main tap: **684 / 1766 / 3834 / 6696 / 9270 / 12254** for SPAN 0 / 0.1 / … / 0.5 (to ±0.002 samples, −50 dB nulls with the late shift free); R's late is fed 220 samples earlier. The late moves with the per-capture branch offset (§9.4). (The earlier note in §4 that the late set "switches with LATE" was the excitation's structure, see 10.2.)
+- **Level:** EARLY > 0: the early law's gain at stage min(ns, 13), τ = 16 + 36 min(ns, 13) ms (measured 16 / 88 / 160 / 267 / 377 / 487 ms for SPAN 0 … 0.5; the late's level is within 0.2 dB of the law down to −50 dB); EARLY < 0 and EARLY 10: 0 dB. Where the law puts the late below about −55 dB (EARLY 0.3 / 0.5 at long SPAN) the captures are 6–12 dB louder than the law (H: a floor or a small leak; ≥ 55 dB down, left open).
+
+### 10.2 Structure (S; equal-gain read taps C-level consistent: all 12 within 0.4 %)
+- **Input path:** AP(124) (shared with the early section) → the feed → **AP(314)**, g = −1/√2 (the excitation's 314-sample chains fall 3 dB per step with an all-pass's sign pattern +, +, −, +, −).
+- **Three uncoupled flat loops, 1108 / 1254 / 1386 samples** (ACF: each loop's multiples, no sum lags), gain 10^(−3 P / (fs · LATE)). A joint per-frequency solve over ten LATE values (one LATE-independent part + one excitation per loop, nothing else) fits every SPAN 0 capture to **−59…−70 dB** (the noise); the LATE-independent part is empty (−22…−29 dB re the loops).
+- **Four equal read taps per loop**, the same positions in both channels, per-channel signs; the last one sample short of the loop length: **1108: 301 / 712 / 923 / 1107; 1254: 398 / 689 / 1022 / 1253; 1386: 582 / 897 / 1179 / 1385**. Read amplitude 0.5 main-tap units (0.2494–0.2500 of the 410 front tap). S has five equal signed taps per loop; this is the same idea.
+- **R = L's network 220 samples earlier** (the early's R taps are 221 earlier). H: one TMS32010 per channel running the same program with its own offsets and signs.
+
+### 10.3 What is left in the late section
+With the session clock (11.6 ppm) fixed, the late model nulls SPAN 0 captures at −47…−55 dB at 50–300 ms; captures sharing a setting agree to −57…−64 / −50…−57 dB there. Free per-loop gain corrections are −11…−15 millidB per pass (an ≈ 1 % RT shortfall, as in M / L) and gain 0.3 dB. The later windows are noise-limited.

@@ -1,0 +1,431 @@
+{
+ "program": "N (Non-Lin), docs/NonLin_program.md \u00a79-12",
+ "device_rate_hz": 26373.626373626375,
+ "units": "a main tap = 1; delays in integer device samples from the input; mono in, (L, R) out",
+ "front_taps": {
+  "value": {
+   "L": {
+    "delay": [
+     41,
+     410,
+     463
+    ],
+    "amp": [
+     1,
+     2,
+     1
+    ],
+    "law_tick": [
+     0,
+     1,
+     3
+    ]
+   },
+   "R": {
+    "delay": [
+     41,
+     278,
+     463
+    ],
+    "amp": [
+     1,
+     2,
+     -1
+    ],
+    "law_tick": [
+     0,
+     2,
+     3
+    ]
+   },
+   "note": "plain taps, no diffuser, gains on the EARLY law at their tick (4 ms)"
+  },
+  "label": "S",
+  "source": "\u00a79.2-9.3"
+ },
+ "branch_input": {
+  "value": {
+   "allpass": {
+    "D": 124,
+    "g": -0.7071067811865475
+   },
+   "form": "(-g + z^-D) / (1 - g z^-D)"
+  },
+  "label": "S",
+  "source": "\u00a79.2"
+ },
+ "main_taps": {
+  "value": {
+   "L_delay": [
+    685,
+    1230,
+    1767,
+    2523,
+    2817,
+    3747,
+    3835,
+    4821,
+    4902,
+    5775,
+    5988,
+    6697,
+    7005,
+    7587,
+    7953,
+    8445,
+    8832,
+    9271,
+    9642,
+    10065,
+    10383,
+    10827,
+    11055,
+    11557,
+    11658,
+    12192,
+    12255
+   ],
+   "R_delay": "L - 221",
+   "L_sign": [
+    1,
+    -1,
+    -1,
+    -1,
+    1,
+    -1,
+    -1,
+    1,
+    -1,
+    -1,
+    -1,
+    1,
+    -1,
+    -1,
+    -1,
+    1,
+    -1,
+    -1,
+    -1,
+    1,
+    -1,
+    -1,
+    -1,
+    1,
+    -1,
+    -1,
+    -1
+   ],
+   "R_sign": [
+    1,
+    1,
+    -1,
+    1,
+    1,
+    1,
+    -1,
+    1,
+    1,
+    -1,
+    1,
+    1,
+    1,
+    -1,
+    1,
+    1,
+    1,
+    -1,
+    1,
+    1,
+    1,
+    -1,
+    1,
+    1,
+    1,
+    1,
+    -1
+   ],
+   "stages": [
+    [
+     0
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ],
+    [
+     5,
+     6
+    ],
+    [
+     7,
+     8
+    ],
+    [
+     9,
+     10
+    ],
+    [
+     11,
+     12
+    ],
+    [
+     13,
+     14
+    ],
+    [
+     15,
+     16
+    ],
+    [
+     17,
+     18
+    ],
+    [
+     19,
+     20
+    ],
+    [
+     21,
+     22
+    ],
+    [
+     23,
+     24
+    ],
+    [
+     25,
+     26
+    ]
+   ],
+   "out_allpass": {
+    "L": 180,
+    "R": 188,
+    "g": -0.7071067811865475
+   },
+   "branch_delay": {
+    "value": 1,
+    "note": "the whole AP(124) branch (main taps and late) sits this many samples after the table positions re the front taps: the captures' modal offset; with it R's first tap (464 + 1) is where its direct term was measured (465), so no special case is needed"
+   },
+   "R_first_tap": "in captures whose branch is jittered its direct term stays at 465 (\u00a79.4); none at branch = 1"
+  },
+  "label": "S",
+  "source": "\u00a79.2"
+ },
+ "span": {
+  "value": {
+   "stages_running": {
+    "0.0": 0,
+    "0.1": 2,
+    "0.2": 4,
+    "0.3": 7,
+    "0.4": 10,
+    "0.5": 14
+   },
+   "between_steps": "H: a stage runs if its last tap is at least 15-33 ms before SPAN"
+  },
+  "label": "C (library steps) / H (between them)",
+  "source": "\u00a79.2"
+ },
+ "early_law": {
+  "value": {
+   "tick_s": 0.004,
+   "stage_s": 0.036000000000000004,
+   "positive": "stage j at tau = 16 + 36 j ms, front taps at their tick; gain -60 tau / EARLY dB",
+   "negative": "last stage at tau_end = SPAN + 12 ms, others 36 ms apart before it; gain +60 (tau - tau_end) / |EARLY| dB",
+   "flat": "EARLY 10: 0 dB everywhere"
+  },
+  "label": "S",
+  "source": "\u00a79.3"
+ },
+ "late": {
+  "value": {
+   "feed": {
+    "delay_on_branch_line": {
+     "0.0": 684,
+     "0.1": 1766,
+     "0.2": 3834,
+     "0.3": 6696,
+     "0.4": 9270,
+     "0.5": 12254
+    },
+    "R": "220 samples earlier"
+   },
+   "gain": "EARLY > 0: the early law at stage min(ns, 13) (tau = 16 + 36 min(ns, 13) ms); EARLY < 0 or 10: 0 dB",
+   "allpass": {
+    "D": 314,
+    "g": -0.7071067811865475
+   },
+   "loops": {
+    "P": [
+     1108,
+     1254,
+     1386
+    ],
+    "form": "line[n] = v[n] + G line[n - P], G = 10^(-3 P / (fs LATE)), no filter"
+   },
+   "reads": {
+    "1108": {
+     "delay": [
+      301,
+      712,
+      923,
+      1107
+     ],
+     "L_sign": [
+      -1,
+      1,
+      1,
+      1
+     ],
+     "R_sign": [
+      1,
+      -1,
+      1,
+      1
+     ]
+    },
+    "1254": {
+     "delay": [
+      398,
+      689,
+      1022,
+      1253
+     ],
+     "L_sign": [
+      1,
+      -1,
+      1,
+      1
+     ],
+     "R_sign": [
+      1,
+      -1,
+      -1,
+      -1
+     ]
+    },
+    "1386": {
+     "delay": [
+      582,
+      897,
+      1179,
+      1385
+     ],
+     "L_sign": [
+      -1,
+      -1,
+      1,
+      -1
+     ],
+     "R_sign": [
+      1,
+      -1,
+      1,
+      1
+     ]
+    }
+   },
+   "read_amp": 0.5,
+   "late_0": "LATE 0: no late section at all (gated)"
+  },
+  "label": "S",
+  "source": "\u00a710"
+ },
+ "controls": {
+  "DELAY": {
+   "value": "a pure delay ahead of everything (card: DELAY precedes the early section); the library is all DELAY 0",
+   "label": "H",
+   "source": "card, \u00a70"
+  },
+  "SPAN (AMPL slot)": {
+   "value": {
+    "values_s": [
+     0.0,
+     0.1,
+     0.2,
+     0.3,
+     0.4,
+     0.5
+    ]
+   },
+   "label": "C (these exist) / H (finer steps)",
+   "source": "\u00a71, \u00a79.2"
+  },
+  "EARLY RT (LF slot)": {
+   "value": {
+    "values_s": [
+     -3.0,
+     -2.0,
+     -1.0,
+     -0.7,
+     -0.5,
+     -0.2,
+     0.1,
+     0.2,
+     0.3,
+     0.5,
+     0.7,
+     1.0,
+     1.5,
+     2.0,
+     3.0,
+     10.0
+    ],
+    "note": "16 values = the LF column's 16 steps; 10 means flat"
+   },
+   "label": "S",
+   "source": "\u00a71, \u00a79.3"
+  },
+  "RT (RT slot)": {
+   "value": "blank in N (front-panel photo)",
+   "label": "C",
+   "source": "unit facts \u00a73"
+  },
+  "LATE RT (HF slot)": {
+   "value": {
+    "values_s": [
+     0.0,
+     0.2,
+     0.4,
+     0.6,
+     0.8,
+     1.0,
+     1.2,
+     1.4,
+     1.6,
+     1.8,
+     2.0
+    ],
+    "note": "RT = LATE exactly, flat in frequency; 0 = no late; 11 values (the HF column has 10 steps in S)"
+   },
+   "label": "C (these values) / H (beyond 2.0)",
+   "source": "\u00a71, \u00a710"
+  },
+  "LOW PASS": {
+   "value": "applies to N as to the other programs (card: 2-12 kHz)",
+   "label": "C (card) / H (response)",
+   "source": "\u00a70"
+  }
+ },
+ "per_capture_only": "branch offset o (0 in the plugin), clock, gain",
+ "cost_per_sample": "per channel: 3 front + up to 27 main taps, 3 + 1 all-passes (124 shared, 180/188, 314), 3 loops, 12 reads",
+ "references": {
+  "0.0_10.0_1.0": "analysis/nl/ref/nl_0.0_10.0_1.0.wav",
+  "0.2_1.0_1.0": "analysis/nl/ref/nl_0.2_1.0_1.0.wav",
+  "0.5_-1.0_2.0": "analysis/nl/ref/nl_0.5_-1.0_2.0.wav",
+  "0.3_3.0_0.0": "analysis/nl/ref/nl_0.3_3.0_0.0.wav",
+  "0.4_-3.0_0.6": "analysis/nl/ref/nl_0.4_-3.0_0.6.wav",
+  "0.1_0.3_1.4": "analysis/nl/ref/nl_0.1_0.3_1.4.wav",
+  "check": "simulate() = the bench model to -136 dB on these settings"
+ },
+ "not_resolved": [
+  "the -45 dB dense residual of the early section (\u00a79.5)",
+  "late gains below about -55 dB run 6-12 dB above the law (\u00a711)",
+  "SPAN and LATE steps between the library's, DELAY, LOW PASS",
+  "the per-capture branch offset's cause (\u00a79.4)"
+ ]
+}
