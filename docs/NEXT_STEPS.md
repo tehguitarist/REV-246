@@ -8,6 +8,9 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 
 ## 0. Start here (hand-over, updated 26 October 2026)
 
+### Non-Lin done (26 October 2026, later)
+**Program N is decoded** (`NonLin_program.md` §9–12, unit facts §5d): front taps; AP124 → 27 main taps in 14 stages → AP180 / AP188; SPAN switches stages; an exact EARLY law; the late section fed from the main-tap line → AP314 → three flat loops 1108 / 1254 / 1386 (RT = LATE) → four equal read taps per loop. **Bench** (§11, 1,045 captures held out, 5 numbers per capture): −54.7 / −54.1 / −50.8 dB at 0.05–0.15 / 0.15–0.3 / 0.3–0.6 s (excess over noise 16 / 14 / 12 dB); 0–50 ms −42 dB (open). Plugin: `tools/nl_spec.py` (sample-by-sample reference = model to −136 dB), `analysis/nl/nl_plugin_spec.json`, reference IRs; **the plugin's N step tables are wrong** (EARLY = the 16 library values, 10 = flat; LATE 0–2.0 in 0.2 = 11 values; SPAN 0–0.5) — for the plugin session, not edited here. Open: the 0–50 ms residual, late gains below −55 dB, steps between the library's, DELAY / LP. **Next: the plugin phase.**
+
 ### Paused 26 October 2026: read this block first
 
 **State.** The accuracy work on S, M and L that the Tomkin library supports is finished; nothing is running and nothing is half-done. The user paused here and will start a fresh session, probably on **Non-Lin (§6)** before the plugin (the user thinks the card with the block diagram may make it fairly simple). Then the plugin phase (§11, item 4 below), then the late items (Altiverb preset settings, the EMT 250 program, the final optimisation pass). Code review 10a still waits for the user.

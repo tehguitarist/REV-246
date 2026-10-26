@@ -166,3 +166,23 @@ Structure: 27 tap positions, 2 × 27 signs, 3 front positions per channel with 1
 
 ### 10.3 What is left in the late section
 With the session clock (11.6 ppm) fixed, the late model nulls SPAN 0 captures at −47…−55 dB at 50–300 ms; captures sharing a setting agree to −57…−64 / −50…−57 dB there. Free per-loop gain corrections are −11…−15 millidB per pass (an ≈ 1 % RT shortfall, as in M / L) and gain 0.3 dB. The later windows are noise-limited.
+
+## 11. Bench: the whole program held out on the library (26 October 2026)
+
+`tools/nl_model.py --stage bench` / `report`, results in `analysis/nl/bench/` (one JSON per capture). 1,045 captures (`NL_DEFECTS` left out), 96 kHz set only. **Per capture only:** the front taps' trim shift (measured), the branch offset o, the clock ratio (held within 11.6 ± 3 ppm) and one gain per channel; every structural number and law is shared, no setting's gains are fitted. Nulls 100 Hz–10 kHz per window from the input, each up to the fade guard; windows within 10 dB of the noise are not scored. Floor = the capture noise (median of the LATE 0 tails, `analysis/nl/noise.json`) over the window's energy; excess = null − floor.
+
+| Window (s) | n | Null L / R (median, dB) | Noise floor (median) | Excess (median) |
+|---|---|---|---|---|
+| 0–0.05 | 1045 | −42.3 / −42.3 | −78.7 | 36.3 |
+| 0.05–0.15 | 1027 | **−54.7 / −54.6** | −70.6 | 15.8 |
+| 0.15–0.3 | 984 | **−54.1 / −53.7** | −67.8 | 14.3 |
+| 0.3–0.6 | 905 | **−50.8 / −50.8** | −60.4 | 12.3 |
+| 0.6–1.0 | 646 | −40.4 / −40.6 | −48.4 | 7.6 |
+| 1.0–2.0 | 344 | −30.3 / −30.2 | −36.5 | 5.5 |
+
+By group (L, median): EARLY > 0 (584): −42.4 / −54.4 / −53.2 / −44.7 / −36.2 / −25.8; EARLY < 0 (395): −41.7 / −54.9 / −54.6 / −53.4 / −45.6 / −31.8; EARLY 10 (66): −42.3 / −55.2 / −54.4 / −52.6 / −41.6 / −27.3.
+
+- **The −50 dB target is met at 0.05–0.6 s** (median, both channels), against repeat captures that agree to −57…−64 dB at 0.05–0.15 s (§10.3): the model is 3–9 dB above the repeat level there.
+- **0–50 ms misses it (−42 dB):** the trimmed start (Tomkin's trim cuts the first tap's pre-ringing), the strong front / first main taps and the dense HF-heavy residual of §9.5 (H). Open.
+- **After 0.6 s** the excess shrinks to 5–8 dB and the windows approach the noise; EARLY > 0 is worst there (the late's level from the law at −40…−75 dB, and §10.1's deviation below −55 dB).
+- **Parameters:** per capture 5 (o, clock, two gains; the front shift measured). Shared model: 27 tap positions, 54 signs, 6 front positions and 1 : 2 : 1, R offsets (−221 / −220), 4 all-pass delays at one gain, 14-stage table and SPAN → stage / feed tables (6 + 6), law constants (tick, stage, front ticks, 16 / 12 ms offsets), 3 loops, 12 read positions + 24 signs, read amplitude. No per-setting numbers.
