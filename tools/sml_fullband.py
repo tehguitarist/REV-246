@@ -884,6 +884,60 @@ def wide_stage(workers, every, only=None):
             pass
 
 
+# ---------- stage gate: the full-band sanity gate ----------
+GATE_TOL = 0.5                                       # dB a band-window median may get worse
+
+
+def gate_stage(workers, tag):
+    """pulse_check's gate keys (16 S settings, 8 M / L groups) scored in BANDS: S nulls per band at 50-150 / 150-300 /
+    300-600 ms, M / L per band in cluster / gap and first pass, L and R. --tag ref writes the reference (the adopted model);
+    any other tag is PASS / FAIL against it: no band-window median worse by more than GATE_TOL. Run beside
+    pulse_check --stage gate after any model change (its nulls are 100 Hz-10 kHz only). -> analysis/fullband/gate_<tag>/"""
+    global OUT
+    from concurrent.futures import ProcessPoolExecutor
+    base = OUT
+    OUT = os.path.join(base, f"gate_{tag}")
+    try:
+        s_stage(workers, list(pc.GATE_S))
+        d = os.path.join(OUT, "ml")
+        os.makedirs(d, exist_ok=True)
+        jobs = [(p, k, os.path.join(d, f"{p}_{k}.json")) for p in "ML" for k in pc.GATE_ML[p] if not os.path.exists(os.path.join(d, f"{p}_{k}.json"))]
+        with ProcessPoolExecutor(workers, max_tasks_per_child=1) as ex:
+            for _ in ex.map(_ml_job, jobs):
+                pass
+    finally:
+        OUT = base
+    if tag == "ref":
+        print("full-band gate reference written", flush=True)
+        return
+    G, R = os.path.join(base, f"gate_{tag}"), os.path.join(base, "gate_ref")
+    lines, ok = [f"## Full-band gate '{tag}' against gate_ref (BANDS 20 Hz-12.3 kHz; median null per band and window, L / R; allowed +{GATE_TOL} dB)"], True
+    for w in ("50-150", "150-300", "300-600"):
+        for b in BNAME:
+            for ch in (0, 1):
+                val = lambda root: _med([_db(c["bands"][b][w]["e"][ch], c["bands"][b][w]["y"][ch]) for k in pc.GATE_S
+                                         for c in json.load(open(os.path.join(root, "s", k + ".json")))["caps"].values() if w in c["bands"][b]])
+                v, r = val(G), val(R)
+                if v is not None and r is not None and v > r + GATE_TOL:
+                    ok = False
+                    lines.append(f"- FAIL S {w} ms {b} {'LR'[ch]}: {v:.2f} (reference {r:.2f})")
+    for p in "ML":
+        for w in ("cluster_gap", "first_pass"):
+            for b in BNAME:
+                for ch in (0, 1):
+                    def val(root):
+                        xs = [r_["bands"][b][w][ch] for k in pc.GATE_ML[p] for r_ in json.load(open(os.path.join(root, "ml", f"{p}_{k}.json")))
+                              if b in r_["bands"] and w in r_["bands"][b] and r_["bands"][b][w][ch]]
+                        return _med([_db(x[1], x[0]) for x in xs])
+                    v, r = val(G), val(R)
+                    if v is not None and r is not None and v > r + GATE_TOL:
+                        ok = False
+                        lines.append(f"- FAIL {p} {w} {b} {'LR'[ch]}: {v:.2f} (reference {r:.2f})")
+    lines.append(f"**{'PASS' if ok else 'FAIL'}** ({'no band-window median worse by more than ' + str(GATE_TOL) + ' dB' if ok else 'see above'})")
+    open(os.path.join(G, "gate.log"), "w").write("\n".join(lines) + "\n")
+    print("\n".join(lines))
+
+
 # ---------- report ----------
 def _db(num, den):
     return float(10 * np.log10(num / den)) if num > 0 and den > 0 else None
@@ -1148,11 +1202,12 @@ def _report_ml(mdir, lines, rep):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["s", "tfix", "takefit", "ml", "warp", "wide", "kfix", "shf", "report"], required=True)
+    ap.add_argument("--stage", choices=["s", "tfix", "takefit", "ml", "warp", "wide", "kfix", "shf", "gate", "report"], required=True)
     ap.add_argument("--only", nargs="*")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--prog", default="SML")
     ap.add_argument("--every", type=int, default=2)
+    ap.add_argument("--tag", default="ref")
     a = ap.parse_args()
     if a.stage in ("s", "tfix"):
         s_stage(a.workers, a.only, a.stage == "tfix")
@@ -1160,6 +1215,8 @@ def main():
         takefit_stage(a.workers, a.only)
     elif a.stage == "ml":
         ml_stage(list(a.prog), a.every, a.workers, int(a.only[0]) if a.only else None)
+    elif a.stage == "gate":
+        gate_stage(a.workers, a.tag)
     elif a.stage == "shf":
         shf_fit(a.workers, a.every)
     elif a.stage == "kfix":
