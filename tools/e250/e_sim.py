@@ -26,7 +26,7 @@ import e_model as E  # noqa: E402
 
 FS, K0 = E.FS, E.K0
 X_STATIC = None                      # e_model parameters (246 law), set by static_params()
-DEF = dict(M=6, b=0.45, lo=600, hi=3600, v=60.0, vsd=0.0, vdn=None, f=0.55, A=17.0, fsd=0.0, wave="tri", groups=0, law="tri", tdir=1.0, share=0.5, tsw=10.0, seed=0, mdel=314)
+DEF = dict(M=6, b=0.45, lo=600, hi=3600, v=60.0, vsd=0.0, vdn=None, f=0.55, A=17.0, fsd=0.0, wave="tri", groups=0, gs=0.17, gw=0.1, Mw=6, dwell=0.1, sets=True, law="tri", tdir=1.0, share=0.5, tsw=10.0, seed=0, mdel=314)
 OCTS = [250, 500, 1000, 2000, 4000]
 
 
@@ -108,6 +108,32 @@ def trajectories(n, prm, rng):
     return np.array(out)
 
 
+# The UAD plugin's moving reads (EMT250_program §14, `uad_moving.py`), rescaled to E's clock (x 1.0989): (centre, loop, R sign, L sign, set)
+PLUGIN_READS = ((635, 0, -1, +1, "Z"), (1199, 2, -1, +1, "Y"), (1412, 1, +1, +1, "X"), (1458, 0, +1, -1, "Y"),
+                (1879, 0, -1, -1, "X"), (2078, 1, +1, -1, "Z"), (2391, 2, -1, -1, "X"))
+SETS = {"X": 0.62, "Y": 0.29, "Z": 0.09}
+
+
+def plugin_reads(n, prm, rng, lines, idx):
+    """§14's law: every read on one common triangle g(t) (rate f, depth A); the strong reads switch on and off by set (one set
+    drawn per dwell segment), gain gs (absolute, direct tap = 1); plus Mw weak reads per loop, always on, gain gw, centres in
+    [lo, hi], random signs, L sign shared (opposite) with probability share."""
+    t = np.arange(n) / FS; x = (prm["f"] * t + rng.uniform()) % 1; g = prm["A"] * (4 * np.abs(x - 0.5) - 1)
+    seg = (t / prm["dwell"]).astype(int); pick = rng.choice(list(SETS), seg.max() + 1, p=list(SETS.values()))[seg]
+    movR = np.zeros(n); movL = np.zeros(n)
+    def read(line, c):
+        j = idx - np.round(c + g).astype(int); return np.where(j >= 0, line[np.maximum(j, 0)], 0)
+    for c, k, sr, sl, st in PLUGIN_READS:
+        v = read(lines[k], c) * prm["gs"] * (pick == st if prm["sets"] else 1)
+        movR += sr * v; movL += sl * v
+    for k in range(3):
+        for _ in range(prm["Mw"]):
+            v = read(lines[k], rng.uniform(prm["lo"], prm["hi"])) * prm["gw"] * rng.choice([-1, 1])
+            movR += v
+            movL += -v if rng.uniform() < prm["share"] else read(lines[k], rng.uniform(prm["lo"], prm["hi"])) * prm["gw"] * rng.choice([-1, 1])
+    return movR, movL
+
+
 def render(x, rt, prm, kern, rng):
     """(n, 2) device-rate output of E for a mono input x (R's tap 1 at the input's own time + K0 - 16)."""
     q = E.unpack(X_STATIC); n = len(x)
@@ -133,6 +159,19 @@ def render(x, rt, prm, kern, rng):
     for line, dk, ck in zip(lines, E.DK, q["c"]):
         stat[dk:] += ck * line[:-dk]
     # moving reads
+    if prm["law"] == "plugin":
+        idx = np.arange(n); movR, movL = plugin_reads(n, prm, rng, lines, idx)
+    else:
+        movR, movL = generic_reads(n, prm, rng, lines, q)
+    R = direct + stat + movR
+    L = np.zeros(n)
+    md = prm["mdel"]
+    L[E.LDEL:] = -direct[:-E.LDEL]; L[E.LREV:] += stat[:-E.LREV]; L[md:] += movL[:-md]; L *= q["gL"]
+    out = np.stack([np.convolve(L, kern[0])[:n], np.convolve(R, kern[1])[:n]], 1)
+    return out, (direct, stat)
+
+
+def generic_reads(n, prm, rng, lines, q):
     trR = trajectories(n, prm, rng); trL = trajectories(n, prm, rng)
     sg = rng.choice([-1, 1], len(trR)); shared = rng.uniform(size=len(trR)) < prm["share"]
     movR = np.zeros(n); movL = np.zeros(n); idx = np.arange(n)
@@ -143,12 +182,7 @@ def render(x, rt, prm, kern, rng):
             movL -= np.where(jR >= 0, line[np.maximum(jR, 0)], 0) * sg[i] * prm["b"] * ck
         else:
             jL = idx - trL[i]; movL += np.where(jL >= 0, line[np.maximum(jL, 0)], 0) * sg[i] * prm["b"] * ck
-    R = direct + stat + movR
-    L = np.zeros(n)
-    md = prm["mdel"]
-    L[E.LDEL:] = -direct[:-E.LDEL]; L[E.LREV:] += stat[:-E.LREV]; L[md:] += movL[:-md]; L *= q["gL"]
-    out = np.stack([np.convolve(L, kern[0])[:n], np.convolve(R, kern[1])[:n]], 1)
-    return out, (direct, stat)
+    return movR, movL
 
 
 def sweep(tsw, f1=20.0, f2=12500.0):
