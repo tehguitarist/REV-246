@@ -254,6 +254,19 @@ Altiverb 246 plugin, 66 presets, captured by a third party with a log sweep (`li
 | **The all-pass damping step b is the same law on a third unit:** 0.32 (M RT 0.5), 0.48 and 0.155 (L RT 2 and 3), 0 at longer RT, on the library's steps 0 / 0.17 / 0.33 / 0.50 to within 0.02 | S | model §18.2 |
 | **Not identified:** ~~the REV-250 presets~~ (now Program E, decoded in `EMT250_program.md` §11) and PRESET72–90 (SM / MED / LG with LIVE / REF / WARM), PRESET54 GATED. Not used | H | `--stage deconv` |
 
+## 5d. Program N (Non-Lin) (measured from the Tomkin library, `NonLin_program.md` §9–12)
+
+| Finding | Label | Source |
+|---|---|---|
+| **Front taps:** three plain taps per channel, no diffuser, **L 41 / 410 / 463, R 41 / 278 / 463**, amplitudes 1 : 2 : 1 (R's 463 negative); their gains follow the EARLY law at law times L 0 / 4 / 12 ms, R 0 / 8 / 12 ms | S | NonLin §9.2–9.3 |
+| **Early section:** input → **AP(124)** → **27 main taps** (685 … 12255) in **14 stages** (pairs share a gain) → **AP(180) L / AP(188) R**, all at g = −1/√2; R's taps are L's 221 samples earlier with their own signs. SPAN runs 0 / 2 / 4 / 7 / 10 / 14 stages at SPAN 0 / 0.1 / … / 0.5 | S | NonLin §9.2 |
+| **EARLY law:** 4 ms ticks, 36 ms per stage. EARLY > 0: stage j at τ = 16 + 36 j ms, gain −60 τ / EARLY dB. EARLY < 0: the ramp rises over the whole SPAN to the flat level (last stage at τ = SPAN + 12 ms). **EARLY 10 = flat.** A negative EARLY is a rising gain ramp on the same taps, **not** a time-reversed signal. Every stage step and front tap on the law to ±0.01 dB | S | NonLin §9.1, 9.3 |
+| **Late section:** the AP(124) line one sample before a main tap (684 / 1766 / 3834 / 6696 / 9270 / 12254 by SPAN; R 220 earlier) → **AP(314)** → three **flat, uncoupled loops 1108 / 1254 / 1386** at the Jot gain for **RT = LATE exactly**, no LF / HF damping → **four equal read taps per loop** (1108: 301 / 712 / 923 / 1107; 1254: 398 / 689 / 1022 / 1253; 1386: 582 / 897 / 1179 / 1385), per-channel signs, 0.5 main-tap units. Late gain = the EARLY law at stage min(ns, 13) (EARLY > 0), 0 dB otherwise. **LATE 0 = no late section** (the gate) | S | NonLin §10 |
+| **The card agrees with the data:** the late decay starts where the early ended (the short lines past SPAN with their own swing arrow, below the X); the "pivot" is the rising / falling ramp over SPAN; the thin tail past SPAN is the AP(180/188) tail (≈ 440 dB/s) | S | NonLin §0, §9.1 |
+| **Per-capture branch offset:** the AP(124) branch (early and late) sits o samples from the front taps, per capture: modal +1 (the plugin's value), else about −63, −84, −87, −163, and up to −9,300 for steep negative EARLY at long SPAN (the train keeps its shape; stages before the file start are cut). H: the front taps and the branch on different processors joined by a buffer whose phase is set at program load | S (data) / H (cause) | NonLin §9.4 |
+| **Static and stable:** captures that share a setting agree to −57…−64 dB (50–150 ms), unlike M / L's time variance | S | NonLin §10.3 |
+| **Steps (library):** SPAN 0 / 0.1 / … / 0.5; EARLY 16 values −3 / −2 / −1 / −0.7 / −0.5 / −0.2 / 0.1 / 0.2 / 0.3 / 0.5 / 0.7 / 1.0 / 1.5 / 2.0 / 3.0 / 10 (the LF column's 16 steps); LATE 0 / 0.2 / … / 2.0 | C (values exist) | NonLin §1 |
+
 ## 6. Memory and compute budget (derived)
 
 - 64 K words of delay RAM. Maximum pre-delay is 26,347 words, leaving **about 39 K words** for the loops, cluster and diffusion.
