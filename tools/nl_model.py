@@ -24,7 +24,7 @@ for _v in ("OMP_NUM_THREADS", "VECLIB_MAXIMUM_THREADS", "OPENBLAS_NUM_THREADS", 
 os.environ.setdefault("NL_KERNEL", "0")
 import numpy as np
 from scipy.optimize import minimize
-from scipy.signal import lfilter, sosfiltfilt
+from scipy.signal import butter, lfilter, sosfiltfilt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -36,9 +36,12 @@ import nl_structure as nl  # noqa: E402
 FS, K0 = nl.FSD, nl.K0
 LATE_AMP = 0.5                                  # read taps in main-tap units (0.2494-0.2500 of the 410 front tap)
 WINDOWS = [(0.0, 0.05), (0.05, 0.15), (0.15, 0.3), (0.3, 0.6), (0.6, 1.0), (1.0, 2.0)]
+BANDS = [(20, 100), (100, 1000), (1000, 5000), (5000, 10000), (10000, 12000)]   # per-band check, 0.05-0.6 s
 FADE_GUARD = 0.75                               # s before the file's end (S's 0.70 s fade ramp + a guard)
-NOISE = os.path.join(nl.OUT, "noise.json")
-BENCH = os.path.join(nl.OUT, "bench" + ("_bk" if os.environ.get("NL_BK") == "1" else ""))
+NOISE = os.path.join(nl.OUT, "noise" + ("" if nl.WIDE else "_narrow") + ".json")
+EQ = os.environ.get("NL_EQ", "1") == "1"            # the top-end EQ (NonLin_program 11.3), adopted; NL_EQ=0 leaves it out
+BENCH = os.path.join(nl.OUT, "bench" + ("" if nl.WIDE else "_narrow") + ("" if EQ else "_noeq")
+                     + ("_bk" if os.environ.get("NL_BK") == "1" else ""))
 
 
 def late_db(span, early):
@@ -50,10 +53,12 @@ def late_db(span, early):
 
 
 BK_FILE = os.path.join(nl.OUT, "branch_kernel.json")
-BK_H = 6
+BK_H = 14                                    # +-14: the per-tap shape spans -13...+12 (NonLin_program 11.2)
 BK_TRAIN = [(sp, e, 0.0) for sp in (0.2, 0.4) for e in (10.0, 3.0, 1.0, -1.0, -3.0)]
 BK = None
-if os.environ.get("NL_BK") == "1" and os.path.exists(BK_FILE):          # the branch kernel (NonLin_program 11.2): a switch
+if os.environ.get("NL_BK") == "1" and os.path.exists(BK_FILE):          # the branch kernel (NonLin_program 11.2): a switch.
+    # A CAPTURE-CHAIN term, not the device: it is flat below 11 kHz and fits the deconvolution's band edge (L and R
+    # disagree above 12 kHz); never part of the plugin
     BK = {int(c): np.array(v) for c, v in json.load(open(BK_FILE)).items()}
 
 
@@ -92,17 +97,50 @@ def spectra(key, ch, N):
     return front, branch
 
 
-def render(key, n, o=0.0, fr=0.0, band=True):
+EQ_FILE = os.path.join(nl.OUT, "out_eq.json")
+
+
+@functools.lru_cache(maxsize=4)
+def _proc(N):
+    """The deconvolution's response (zero phase, per channel) on the model's FFT grid: the captures carry it; with
+    NL_EQ=1 also the measured top-end EQ (zero phase, 0 dB below 11 kHz)."""
+    f = np.fft.rfftfreq(N, 1 / FS)
+    R = nl.processing_response(f)
+    if EQ:
+        e = json.load(open(EQ_FILE))
+        R = R * (10 ** (np.interp(f, e["f_hz"], e["db"]) / 20))[:, None]
+    return R
+
+
+def render(key, n, o=0.0, fr=0.0, band=True, proc=True):
     """The model (n, 2) with the front frame's zero at K0 + fr and the branch o samples later; band-limited to
-    100 Hz-10 kHz unless band=False."""
+    100 Hz-10 kHz unless band=False; through the captures' processing response and the top-end EQ unless proc=False
+    (proc=False is the device alone: what the plugin implements)."""
     N = 1 << int(np.ceil(np.log2(n + 2 * ne.TAPS[-1] + 4096)))
     ph = -2j * np.pi * np.fft.rfftfreq(N)
+    R = _proc(N) if proc else np.ones((len(ph), 2))
     out = []
     for ch in (0, 1):
         F, B = spectra(key, ch, N)
-        out.append(np.fft.irfft((F + B * np.exp(ph * o)) * np.exp(ph * (K0 + fr)), N)[:n])
+        out.append(np.fft.irfft((F + B * np.exp(ph * o)) * np.exp(ph * (K0 + fr)) * R[:, ch], N)[:n])
     y = np.array(out).T
     return sosfiltfilt(ne.BAND, y, axis=0) if band else y
+
+
+def window_start(h, fr):
+    """Where scoring starts: 20 samples before the first front tap, or where the capture's content begins if Tomkin's
+    trim cut away a quiet start (steep negative EARLY: the ramp's first stages and the front taps 40-60 dB down are gone,
+    NonLin_program 11.4); a file that is loud from its first sample was cut mid-signal, so a 40-sample edge guard too.
+    Returns (index, trimmed)."""
+    a = np.abs(h).max(1)
+    cs = int(np.argmax(a > a.max() * 10 ** (-45 / 20))) - 20
+    i0 = K0 + int(fr) + ne.FRONT[0][0] - 20
+    trimmed = cs > i0 + 60 or cs <= K0
+    if cs > i0:
+        i0 = cs
+    if cs <= K0:
+        i0 = max(i0, K0 + 40)
+    return i0, bool(trimmed)
 
 
 def usable_end(h):
@@ -157,7 +195,7 @@ def bench_file(key):
         m = render(key, n, o, fr)
         g = [(y[:, c] @ m[:, c]) / (m[:, c] @ m[:, c]) for c in (0, 1)]
         return y, m * np.array(g), g
-    i0 = K0 + int(fr) + ne.FRONT[0][0] - 20
+    i0, trimmed = window_start(h, fr)
 
     noise = json.load(open(NOISE))
     wins = []                                           # the windows with signal: each counts equally in the fit
@@ -179,7 +217,9 @@ def bench_file(key):
                           "initial_simplex": [[best[1], 11.6], [best[1] + 0.02, 11.6], [best[1], 12.1]]})
     o, ppm = float(r.x[0]), float(r.x[1])
     y, m, g = resid(o, ppm)
-    res = {"o": o, "ppm": ppm, "gain": [float(v) for v in g], "front_shift": fr, "windows": {}}
+    res = {"o": o, "ppm": ppm, "gain": [float(v) for v in g], "front_shift": fr, "trimmed": trimmed, "windows": {}}
+    ib = butter(12, 9500, fs=FS, output="sos")                  # the in-band metric: steep below the band edge
+    yi, mi = sosfiltfilt(ib, y, axis=0), sosfiltfilt(ib, m, axis=0)
     for t0, t1 in WINDOWS:
         a = max(i0, K0 + int(fr) + int(t0 * FS))
         b = min(n, K0 + int(fr) + int(t1 * FS))
@@ -192,7 +232,19 @@ def bench_file(key):
             e = float(np.sum(y[a:b, c] ** 2))
             w[f"null{c}"] = float(10 * np.log10(np.sum((y[a:b, c] - m[a:b, c]) ** 2) / e))
             w[f"floor{c}"] = float(10 * np.log10(noise[f"ch{c}"] * (b - a) / e))
+            w[f"inband{c}"] = float(10 * np.log10(np.sum((yi[a:b, c] - mi[a:b, c]) ** 2) / np.sum(yi[a:b, c] ** 2)))
         res["windows"][f"{t0}-{t1}"] = w
+    # per band over 0.05-0.6 s, from the unfiltered (full-band) capture and model: nothing outside the scoring band hides
+    a, b2 = max(i0, K0 + int(fr) + int(0.05 * FS)), min(n, K0 + int(fr) + int(0.6 * FS))
+    yf = nlt.unwarp(rawp, ppm)[:n] if ppm else rawp[:n]
+    mf = render((span, early, late), n, o, fr, band=False) * np.array(g)
+    res["bands"] = {}
+    if b2 - a > int(0.05 * FS):
+        for lo, hi in BANDS:
+            sos = butter(4, [lo, hi], btype="band", fs=FS, output="sos")
+            yb, mb = sosfiltfilt(sos, yf, axis=0)[a:b2], sosfiltfilt(sos, mf, axis=0)[a:b2]
+            res["bands"][f"{lo}-{hi}"] = [float(10 * np.log10(np.sum((yb[:, c] - mb[:, c]) ** 2) / np.sum(yb[:, c] ** 2)))
+                                          for c in (0, 1)]
     os.makedirs(BENCH, exist_ok=True)
     json.dump(res, open(out_f, "w"))
     return key, res
@@ -222,7 +274,7 @@ def bkernel_stage():
             X.append(b["gain"][ch] * np.c_[f, cols][a:e])
             Y.append(y[a:e])
         sol = np.linalg.lstsq(np.vstack(X), np.concatenate(Y), rcond=None)[0]
-        out[ch] = (sol[1:] / sol[0]).tolist()
+        out[ch] = (sol[1:] / sol[0]).tolist()   # flat to +-0.03 dB below 11 kHz; acts at 11.5-13 kHz only
         print(ch, np.round(out[ch], 5))
     json.dump(out, open(BK_FILE, "w"), indent=1)
 
@@ -245,7 +297,8 @@ def report_stage():
         k = tuple(float(v) for v in f[:-5].split("_"))
         if k not in defects.NL_DEFECTS:
             rows.append((k, json.load(open(os.path.join(BENCH, f)))))
-    print(f"{len(rows)} captures (NL_DEFECTS left out)")
+    print(f"{len(rows)} captures (NL_DEFECTS left out); {sum(r.get('trimmed', False) for _, r in rows)} with a trimmed start "
+          "(scored from their content start; also reported apart)")
     print("window      n    null L / R (median)   floor L     excess L / R (median, windows above the floor)")
     for t0, t1 in WINDOWS:
         t = f"{t0}-{t1}"
@@ -256,10 +309,17 @@ def report_stage():
         nl1 = np.median([w["null1"] for w in ws])
         fl = np.median([w["floor0"] for w in ws])
         ex = [max(w[f"null{c}"] - w[f"floor{c}"], 0) for w in ws for c in (0, 1)]
-        print(f"{t:10s} {len(ws):4d}   {nl0:6.1f} / {nl1:6.1f}        {fl:6.1f}     {np.median(ex):5.1f}")
-    for name, sel in [("EARLY > 0", lambda k: 0 < k[1] < 10), ("EARLY < 0", lambda k: k[1] < 0),
+        ib = np.median([w["inband0"] for w in ws if "inband0" in w]) if any("inband0" in w for w in ws) else float("nan")
+        print(f"{t:10s} {len(ws):4d}   {nl0:6.1f} / {nl1:6.1f}        {fl:6.1f}     {np.median(ex):5.1f}      in-band (<9.5 kHz) L {ib:6.1f}")
+    print("per band, 0.05-0.6 s, full-band capture and model (median L / R):")
+    for lo, hi in BANDS:
+        v = [r["bands"][f"{lo}-{hi}"] for _, r in rows if f"{lo}-{hi}" in r.get("bands", {})]
+        if v:
+            print(f"   {lo:>5}-{hi:<5} Hz: {np.median([x[0] for x in v]):6.1f} / {np.median([x[1] for x in v]):6.1f}  (n {len(v)})")
+    for name, sel in [("trimmed", None), ("not trimmed", None), ("EARLY > 0", lambda k: 0 < k[1] < 10), ("EARLY < 0", lambda k: k[1] < 0),
                       ("EARLY 10", lambda k: k[1] >= 10), ("LATE 0", lambda k: k[2] == 0), ("LATE > 0", lambda k: k[2] > 0)]:
-        sub = [r for k, r in rows if sel(k)]
+        sub = ([r for k, r in rows if r.get("trimmed")] if name == "trimmed" else
+               [r for k, r in rows if not r.get("trimmed")] if name == "not trimmed" else [r for k, r in rows if sel(k)])
         line = []
         for t0, t1 in WINDOWS:
             t = f"{t0}-{t1}"

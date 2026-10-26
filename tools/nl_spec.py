@@ -103,6 +103,11 @@ def spec():
                          reads={str(P): dict(delay=list(q), L_sign=list(nlt.READ_SIGNS[0][P]), R_sign=list(nlt.READ_SIGNS[1][P]))
                                 for P, q in nlt.READS.items()},
                          read_amp=nm.LATE_AMP, late_0="LATE 0: no late section at all (gated)"), "S", "§10"),
+        "output_eq": lab(dict(table=json.load(open(nm.EQ_FILE)), form="zero-phase gain on the whole output, 0 dB below 11 kHz",
+                              note="the N captures roll off 1.0 / 1.85 / 3.0 dB at 12 / 12.3 / 12.6 kHz beyond the S / M / L chain kernel, "
+                                   "the same early and late, L and R: most likely the LOW PASS at its 12 kHz step; the plugin's LP should "
+                                   "reproduce it at 12 kHz rather than add it on top"),
+                         "S (measured) / H (cause)", "§11.3"),
         "controls": {
             "DELAY": lab("a pure delay ahead of everything (card: DELAY precedes the early section); the library is all DELAY 0",
                          "H", "card, §0"),
@@ -131,7 +136,7 @@ def main():
     worst = -999.0
     for key in REF_SETTINGS:
         y = simulate(x, *key)
-        m = nm.render(key, n + nm.K0, float(BRANCH), 0.0, band=False)[nm.K0:]
+        m = nm.render(key, n + nm.K0, float(BRANCH), 0.0, band=False, proc=False)[nm.K0:]
         null = 10 * np.log10(np.sum((y - m) ** 2) / np.sum(y ** 2))
         worst = max(worst, null)
         print(key, f"time-domain simulate vs frequency-domain model: {null:.1f} dB")

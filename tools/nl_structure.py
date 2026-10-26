@@ -17,7 +17,15 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(HERE, "harness"))
 os.environ.setdefault("EMT_KERNEL", "chain3")
+import core  # noqa: E402
 from core import PAD, Kernel, deconvolve, fs_dev, load_config, to_device_grid  # noqa: E402
+
+# A wider analysis band than the harness's (11.0-12.3 kHz raised cosine), the default: the unit's chain is only 4 dB
+# down at 12 kHz and 26 dB at 12.5 kHz, so 12.0-12.8 kHz keeps the content that is there (NonLin_program 11.3). Own
+# cache. NL_WIDE=0: the harness's band (cache_chain3).
+WIDE = os.environ.get("NL_WIDE", "1") == "1"
+if WIDE:
+    core.F_ROLL, core.F_HI = 12000.0, 12800.0
 
 CFG = load_config()
 FSD = fs_dev(CFG)
@@ -25,7 +33,8 @@ LIB = os.path.join(ROOT, "irs", "EMT 246 captures", "96kHz", "Non-Lin")
 KTAG = os.environ["EMT_KERNEL"]
 KERNEL = os.path.join(ROOT, "analysis", "library", "tomkin96", "kernels", KTAG + ".npz")
 OUT = os.path.join(ROOT, "analysis", "nl")
-CACHE = os.path.join(OUT, f"cache_{KTAG}")
+CACHE = os.path.join(OUT, f"cache_{KTAG}" + ("_wide" if WIDE else ""))
+EPS_REL = 1e-3                 # core.deconvolve's regularisation
 K0 = 50                        # device index of file sample 0
 LR_US = 19.19                  # library L/R offset (library_notes.md 3)
 
@@ -70,6 +79,24 @@ def ir(path_or_key):
     """Device-rate IR (n, 2), file sample 0 at K0."""
     p = table()[path_or_key] if isinstance(path_or_key, tuple) else path_or_key
     return np.load(_cache_path(p)).astype(np.float64)
+
+
+def processing_response(f):
+    """The deconvolution's own response to a flat input, per channel (len(f), 2), zero phase: the regularised inverse
+    of the chain kernel times the analysis band window (what every cached IR carries and the model must carry too)."""
+    k = Kernel.load(KERNEL)
+    fs = k.fs
+    N = 1 << 18
+    ff = np.fft.rfftfreq(N, 1 / fs)
+    G = k.response(N, fs)
+    G = G if G.ndim == 2 else np.stack([G, G], 1)
+    g2 = np.abs(G) ** 2
+    win = core._band_window(ff)
+    if k.hp_hz:                                       # the low band edge core.deconvolve applies with high-pass corners
+        win = win * np.sin(np.pi / 2 * np.clip((ff - core.F_LO[0]) / (core.F_LO[1] - core.F_LO[0]), 0, 1)) ** 2
+    R = g2 / (g2 + EPS_REL * np.max(np.abs(G), 0) ** 2) * win[:, None]
+    R = R / R[np.argmin(np.abs(ff - 1000))]          # unit at 1 kHz (the normalisation is the tap gain's)
+    return np.stack([np.interp(f, ff, R[:, c]) for c in (0, 1)], 1)
 
 
 def cache_stage(workers):

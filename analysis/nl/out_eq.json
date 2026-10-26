@@ -1,0 +1,3 @@
+{"f_hz": [0, 11000, 11500, 12000, 12300, 12600, 13200],
+ "db":   [0.0, 0.0, -0.24, -1.03, -1.85, -3.02, -3.02],
+ "note": "zero-phase top-end EQ of the N captures re the model, pooled over 8 captures, early and late, L and R alike (NonLin_program 11.3); H: the LOW PASS at its 12 kHz step beyond the S/M/L chain kernel"}
