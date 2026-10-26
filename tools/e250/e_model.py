@@ -193,7 +193,20 @@ def render(x, rt, kern, n):
     return out
 
 
-def render_mean(x, rt, kern, n, reads=None, box=70):
+def pretap(x, rts, kern, ch_lp=150.0, secs=1.0):
+    """The captures' own low-frequency content before the kernel starts (§16.7): deterministic across presets, non-causal
+    (the capture's deconvolution, not the unit's causal chain): the presets' mean minus the expected response, low-passed,
+    kept up to each channel's kernel start. A capture-chain term for nulling the Altiverb captures only, never part of E
+    or the plugin spec."""
+    from scipy.signal import butter, sosfiltfilt
+    lp = butter(4, ch_lp, fs=FS, output="sos"); n = K0 + int(secs * FS)
+    r = np.mean([dev(rt)[:n] - render_mean(x, rt, kern, n) for rt in rts], 0); out = np.zeros((K0 + LDEL, 2))
+    for ch, o in ((0, LDEL), (1, 0)):
+        out[:K0 + o - 16, ch] = sosfiltfilt(lp, r[:, ch])[:K0 + o - 16]
+    return out
+
+
+def render_mean(x, rt, kern, n, reads=None, box=70, pre=None):
     """E's expected response (§16): the static network plus each fixed moving read averaged over its glide (a centred boxcar of
     `box` samples = the triangle's full excursion), with its own R / L amplitude (L 314 samples later). The deterministic part
     of every capture; what a single capture can be nulled against."""
@@ -212,6 +225,8 @@ def render_mean(x, rt, kern, n, reads=None, box=70):
         for r in reads:
             k = "ABC".index(r["loop"]); acc = acc + r[key] * G[k] / (1 + G[k] * z(P[k])) * z(r["centre"])
         out[:, ch] += np.fft.irfft(Hk * ap * bx * acc, NFS)[:n]
+    if pre is not None:                                  # the capture-chain pre-tap term (pretap), for comparisons with captures
+        out[:len(pre)] += pre[:n]
     return out
 
 

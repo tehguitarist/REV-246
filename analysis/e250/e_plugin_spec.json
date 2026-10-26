@@ -89,7 +89,8 @@
     "A": 32.0,
     "fsd": 0.5,
     "common": false,
-    "mdel": 314
+    "mdel": 314,
+    "dl_same": 1
    },
    "reads": [
     {
@@ -147,7 +148,7 @@
      "L": -0.33682796044678576
     }
    ],
-   "meaning": "nine fixed reads on the loop lines (centre = output delay after R's direct tap, loop, signed R and L amplitudes, direct tap = 1), each read at centre + A x triangle(f_j t + phase_j), triangle in [-1, 1], phase independent per read and realisation, rate f_j = f x (1 +- fsd) per read; L reads the same address with its own amplitude, mdel samples later; integer addresses, no interpolation",
+   "meaning": "nine fixed reads on the loop lines (centre = output delay after R's direct tap, loop, signed R and L amplitudes, direct tap = 1), each read at centre + A x triangle(f_j t + phase_j), triangle in [-1, 1], phase independent per read and realisation, rate f_j = f x (1 +- fsd) per read; L reads the same address with its own amplitude, mdel samples later, or mdel + dl_same for the reads whose L and R signs agree (\u00a716.7); integer addresses, no interpolation",
    "superseded_random_reads": {
     "law": "lfo",
     "wave": "tri",
@@ -314,9 +315,12 @@
    "source": "\u00a714.1, \u00a715"
   }
  },
+ "capture_pretap": {
+  "value": "the Altiverb captures carry a deterministic, non-causal low-band component before the direct tap (deconvolution): e_model.pretap, for comparisons with captures only",
+  "label": "S",
+  "source": "\u00a716.7"
+ },
  "not_resolved": [
-  "R's direct-path low band (20-100 Hz -29 dB against a -37 dB floor, \u00a716)",
-  "the L/R correlation of the moving part (-0.22 against the data's -0.44, \u00a716)",
   "E's own LFO rate and phase grouping (needs E repeat captures)",
   "the LP lever's response",
   "AMPL / DELAY in E"

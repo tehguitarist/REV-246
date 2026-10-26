@@ -40,7 +40,8 @@ def spec():
                                  meaning="nine fixed reads on the loop lines (centre = output delay after R's direct tap, loop, signed R and L "
                                          "amplitudes, direct tap = 1), each read at centre + A x triangle(f_j t + phase_j), triangle in [-1, 1], "
                                          "phase independent per read and realisation, rate f_j = f x (1 +- fsd) per read; L reads the same "
-                                         "address with its own amplitude, mdel samples later; integer addresses, no interpolation",
+                                         "address with its own amplitude, mdel samples later, or mdel + dl_same for the reads whose L and R signs agree (§16.7); "
+                                         "integer addresses, no interpolation",
                                  superseded_random_reads={k: v for k, v in S.ADOPTED_13.items()},
                                  lfo_rate_hz=S.LFO_RATE,
                                  plugin_faithful=dict(reads=[dict(centre=c, loop="ABC"[k], R_sign=sr, L_sign=sl, set=st) for c, k, sr, sl, st in S.PLUGIN_READS],
@@ -57,7 +58,8 @@ def spec():
             "DELAY": lab("a pure delay of the whole output, 0-999 ms, device samples; the Altiverb family at 0", "H", "§15, operation card"),
             "LOW_PASS": lab(dict(steps_khz=[2, 3, 4, 5, 6, 8, 10, 12], open=12, guess="2nd-order Butterworth at the device rate below 12 kHz"), "H", "§14.1, §15"),
         },
-        "not_resolved": ["R's direct-path low band (20-100 Hz -29 dB against a -37 dB floor, §16)", "the L/R correlation of the moving part (-0.22 against the data's -0.44, §16)", "E's own LFO rate and phase grouping (needs E repeat captures)",
+        "capture_pretap": lab("the Altiverb captures carry a deterministic, non-causal low-band component before the direct tap (deconvolution): e_model.pretap, for comparisons with captures only", "S", "§16.7"),
+        "not_resolved": ["E's own LFO rate and phase grouping (needs E repeat captures)",
                          "the LP lever's response", "AMPL / DELAY in E"],
         "references": dict(static_ir=[f"analysis/e250/ref/e_static_rt{r}.wav" for r in REF_RTS],
                            static_ir_note="render_ir(rt, moving=False, chain='device'), lf / hf the family's, AMPL 80, DELAY 0, LP open; device rate, (L, R)",

@@ -31,7 +31,7 @@ OCTS = [250, 500, 1000, 2000, 4000]
 
 
 # The adopted moving-read generator (EMT250_program §16): E's own fixed reads (from its low band), triangle glide, independent phases
-ADOPTED = dict(law="fixed", f=0.553, A=32.0, fsd=0.5, common=False, mdel=314)     # §16: E's nine fixed reads (fixed_reads.json)
+ADOPTED = dict(law="fixed", f=0.553, A=32.0, fsd=0.5, common=False, mdel=314, dl_same=1)   # §16: E's nine fixed reads; same-sign reads reach L at 315
 ADOPTED_13 = dict(law="lfo", wave="tri", f=0.553, A=32.0, fsd=0.3, groups=0, b=0.81, lo=410, hi=3600, share=0.5, M=6, mdel=314)  # §13.4, superseded
 
 
@@ -188,7 +188,11 @@ def e_reads(n, prm, rng, lines, idx):
         o = np.round(r["centre"] + prm["A"] * (4 * np.abs(x - 0.5) - 1)).astype(int)
         j = idx - o; v = np.where(j >= 0, lines["ABC".index(r["loop"])][np.maximum(j, 0)], 0)
         ms = prm.get("mscale", 1.0)              # 0 = moving reads off (render_ir moving=False)
-        movR += ms * r["R"] * v; movL += ms * r["L"] * v / X_STATIC[2]     # L amplitudes include L's gain (applied again to all of L below)
+        movR += ms * r["R"] * v
+        dl = prm.get("dl_same", 0) if r["L"] * r["R"] > 0 else prm.get("dl_opp", 0)   # extra L delay per sign group (§16.7)
+        if dl:
+            jl = j - dl; v = np.where(jl >= 0, lines["ABC".index(r["loop"])][np.maximum(jl, 0)], 0)
+        movL += ms * r["L"] * v / X_STATIC[2]     # L amplitudes include L's gain (applied again to all of L below)
     return movR, movL
 
 
