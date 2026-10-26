@@ -59,7 +59,7 @@ def spec():
             "LOW_PASS": lab(dict(steps_khz=[2, 3, 4, 5, 6, 8, 10, 12], open=12, guess="2nd-order Butterworth at the device rate below 12 kHz"), "H", "§14.1, §15"),
         },
         "capture_pretap": lab("the Altiverb captures carry a deterministic, non-causal low-band component before the direct tap (deconvolution): e_model.pretap, for comparisons with captures only", "S", "§16.7"),
-        "not_resolved": ["E's own LFO rate and phase grouping (needs E repeat captures)",
+        "not_resolved": ["E's LFO rate (0.553 or 0.608 Hz) and triangle shape, from the UAD plugin (needs E repeat captures)", "the decay law's high bands +-10 % (the original capture method)",
                          "the LP lever's response", "AMPL / DELAY in E"],
         "references": dict(static_ir=[f"analysis/e250/ref/e_static_rt{r}.wav" for r in REF_RTS],
                            static_ir_note="render_ir(rt, moving=False, chain='device'), lf / hf the family's, AMPL 80, DELAY 0, LP open; device rate, (L, R)",

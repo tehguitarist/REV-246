@@ -321,7 +321,8 @@
   "source": "\u00a716.7"
  },
  "not_resolved": [
-  "E's own LFO rate and phase grouping (needs E repeat captures)",
+  "E's LFO rate (0.553 or 0.608 Hz) and triangle shape, from the UAD plugin (needs E repeat captures)",
+  "the decay law's high bands +-10 % (the original capture method)",
   "the LP lever's response",
   "AMPL / DELAY in E"
  ],
