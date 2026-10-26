@@ -190,7 +190,10 @@ class Model:
         if HK_FILE:                                         # ML_HK: S a unit tap, M and L the kernels refitted there
             hk = json.load(open(HK_FILE if os.path.isabs(HK_FILE) else os.path.join(ROOT, HK_FILE)))["output_kernels"]
             self.h = np.array(hk[prog]) if prog in hk else np.array([1.0])
-        kf = os.path.join(ROOT, "analysis", "ml_lines", "kernel_fix.json")
+        kf = os.environ.get("ML_KFIX_FILE") or os.path.join(ROOT, "analysis", "ml_lines", "kernel_fix_full.json")   # the full-band
+        # kernel (ml_structure 25: §18's 11 taps plus an 11-tap correction above 9.5 kHz, fitted 20 Hz-12.3 kHz);
+        # ML_KFIX_FILE=analysis/ml_lines/kernel_fix.json: §18's in-band kernel
+        kf = kf if os.path.isabs(kf) else os.path.join(ROOT, kf)
         if KFIX and prog in ("M", "L") and os.path.exists(kf):  # refitted with the undamped step at b = 0 (ml_structure 18)
             self.h = np.array(json.load(open(kf))[prog]["kernel"])
         self.kh = (len(self.h) - 1) // 2

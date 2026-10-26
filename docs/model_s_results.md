@@ -3766,3 +3766,117 @@ foldcmp.py <_apml> <_apml0> --per-setting > analysis/s_step0/rw/foldcmp_<form>.l
 L the same within 0.1–0.2 dB. Per setting (R or L, beyond +0.5 dB): about 20 settings at 300–600 ms, all HF 0.2 / 0.4 at RT ≥ 1.0 (worst 2.0_2.5_0.2 +0.77, 0.4_2.2_0.2 +0.73); none at 50–300 ms beyond +0.40; 600–1000 ms worst +0.47. Better than the first pass late (§39's +0.97 at 600–1000 ms is gone), worse at 300–600 ms than §39's full form, and the flat 0–50 ms loss stays.
 
 **Conclusion.** Three ways of re-adapting S's loops to step 0 at b = 0 (§38.2 probe, §39, here) all keep the 50–150 ms gain (≈ 0.9 dB on the median, about 1 dB at RT ≥ 1.4) and none passes the strict rule: whatever carries the early gain costs HF 0.2 / 0.4 at long RT 0.5–1.0 dB from 300 ms on, and the flat settings lose 0.7–0.8 dB at 0–50 ms where only the cluster, the injection and AP230 act. The flat settings are the injection's training set, fitted with b = 0.00069; refitting its 9 numbers at b = 0 does not release them, so the 0–50 ms preference there is in the cluster / diffuser fit as a whole, not the loops (H). Not adopted. Kept: `analysis/s_step0/rw/` (the change, both cells variants, foldcmp logs), `analysis/q2/diffuser_tied_fix-0.707107_ap230b0_chain3.*`, the `TAKEFIT_WIN` and `EMT_COMPACT` switches (defaults unchanged); the variant fold set is not kept.
+
+## 41. S / M / L over the plugin's whole band, 20 Hz–12.8 kHz: the five open low-band / band-edge items closed (`tools/sml_fullband.py`, 27 October 2026) **[S: S is at the cross-take repeat level from 3 kHz to 12.8 kHz in every window, the band edge included; S: below ~3 kHz S's excess (+5…+16 dB at 50–600 ms) is one deterministic waveform in both takes (residual correlation 0.93–1.00) and one fixed transfer of the loop paths, the same in every setting (held out by RT fold it takes 50–150 ms 160–270 Hz from −46.0 to −57.1 dB against a repeat of −61.6); S: the 270–300 Hz "edge" is the top of §25.12's 200–250 Hz loop-path transfer error, not the chain kernel (chain2 = chain3 to ±0.02 dB above 100 Hz) and not the analysis band; S: the transfer is S's own (applied to M / L it makes them 3–9 dB worse) and M / L's first pass has no low-band excess (−1…−4 dB against its repeat); S: §32.9's per-setting refit gains almost nothing below 270 Hz (≤ 1.0 dB, 1–5 % of the energy it removes); S: none of the S / M / L clock warps leaves a band-edge artefact (≤ −82 dB to 12.3 kHz); the free transfer is a diagnostic (12,000 numbers, 20–35 % of captures worse by > 0.5 dB in some band), not adopted; the M / L top-band kernel fix it led to is `ml_structure.md` §25]**
+
+```
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 7 -- .venv/bin/python tools/sml_fullband.py --stage s --workers 8   # 127 settings, ~13 min
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 [SML_TREV=1] [SML_TREFIT=1] [SML_TFORM=short_ap|short_ap_lf] .venv/bin/python tools/sml_fullband.py --stage tfix --workers 8
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 EMT_CV_FOLDS=$PWD/analysis/loop_cv/cap0.8475_folds \
+    SHELF_CELLS=$PWD/analysis/loop_cv/hfcells_chain3_cap0.8475_pallf/cells.json SHELF_TAG=_pallf EMT_AP230=ap230_g0.7071_chain2.json \
+    .venv/bin/python tools/sml_fullband.py --stage takefit --workers 5
+EMT_KERNEL=chain3 [ML_KFIX_FILE=...] [SML_TFIX=1] .venv/bin/python tools/sml_fullband.py --stage ml --prog SML --every 2 --workers 6
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/sml_fullband.py --stage wide --every 4 --workers 6        # 12.0-12.8 kHz window
+EMT_KERNEL=chain3 .venv/bin/python tools/sml_fullband.py --stage warp | report
+```
+
+Outputs in `analysis/fullband/` (`report.{log,json}`, `warp.{log,json}`, the run logs; the per-setting files are not committed). Every null of §14–40 is 100 Hz–10 kHz, and the fits use 20 Hz–11 kHz. The plugin is meant to be right from 20 Hz to about 13 kHz, so this pass scores S, M and L in twelve bands from 20 Hz to the top of the captures (20–40–80–160–270–400–800 Hz, 1.6–3.2–6.4–10–11–12.3 kHz) and in sixth octaves, with the cross-take repeat beside every number. Above 12.3 kHz the S / M / L caches carry nothing (the deconvolution's window, `core.F_ROLL` / `F_HI` 11.0 / 12.3 kHz), so 12.3–12.8 kHz is scored from captures deconvolved again with N's wide window (§41.5). Above 12.8 kHz the unit itself is 43–72 dB down (chain3 / the reference kernel: −43 dB at 12.8 kHz, −56 at 13.0, −72 at 13.2), so there is nothing left to model or test.
+
+**Method.** The bench's own model and fit, unchanged: `pulse_check.setting_G` (the §38.1 fold set, each setting with the constants of the fold that held out its RT step), `q2_injection.fit_capture` per clean capture (clock, shift, gain on 20 Hz–11 kHz; the stored 100 Hz–10 kHz nulls reproduce `analysis/pulse/s` to 0.01 dB in every capture checked). Above 11 kHz the model gets the pipeline's own response: the reverb × the deconvolution window × `to_device_grid`'s resampler (an impulse through both), the cluster × the resampler only (its atoms already carry the window). Cross-take pairs (AMPL 0–30, 60–90) are the repeat; their 0–50 ms is not a reference (the AMPL difference is the cluster). Per pair, the correlation ρ of the two takes' model residuals (band-passed, per window) measures how much of the error is one fixed waveform.
+
+### 41.1 Where S's excess is, 20 Hz–12.3 kHz (item 3: deterministic or not)
+
+All 127 scored settings, clean captures, R: median strict null [cross-take repeat], median per-setting excess, residual correlation ρ (L alike within 1–2 dB, `report.log`):
+
+| Band | 50–150 ms | 150–300 ms | 300–600 ms |
+|---|---|---|---|
+| 20–40 Hz | −32.1 [−28.0] −4.8, ρ 0.99 | −36.4 [−41.8] +5.3, 0.99 | −36.9 [−52.9] +15.7, 0.99 |
+| 40–80 Hz | −47.2 [−37.8] −9.4, 0.93 | −49.3 [−57.9] +9.7, 0.96 | −44.1 [−54.3] +8.8, 0.94 |
+| 80–160 Hz | −51.0 [−49.4] −1.5, 0.99 | −49.9 [−58.5] +8.3, 0.97 | −45.8 [−54.1] +6.2, 0.90 |
+| 160–270 Hz | −46.0 [−61.6] **+16.3**, 1.00 | −47.6 [−59.9] **+12.4**, 0.98 | −45.6 [−54.5] +8.9, 0.94 |
+| 270–400 Hz | −52.3 [−60.6] +8.6, 0.98 | −52.8 [−60.6] +7.9, 0.96 | −48.5 [−55.3] +7.0, 0.93 |
+| 400–800 Hz | −52.4 [−61.4] +9.7, 0.98 | −52.2 [−60.2] +8.4, 0.96 | −50.1 [−55.5] +5.1, 0.87 |
+| 0.8–1.6 kHz | −51.9 [−60.6] +9.7, 0.98 | −51.9 [−59.0] +7.7, 0.95 | −48.7 [−53.1] +3.9, 0.83 |
+| 1.6–3.2 kHz | −54.6 [−60.2] +6.0, 0.88 | −52.9 [−56.7] +4.5, 0.84 | −47.1 [−48.5] +0.9, 0.61 |
+| 3.2–6.4 kHz | −56.0 [−58.7] +3.0, 0.75 | −51.5 [−52.4] +1.9, 0.68 | −43.4 [−43.1] −2.0, 0.27 |
+| 6.4–10 kHz | −49.9 [−53.6] +3.2, 0.78 | −47.2 [−48.6] +1.8, 0.67 | −39.0 [−37.7] −2.7, 0.20 |
+| 10–11 kHz | −49.5 [−47.4] −1.2, 0.49 | −44.6 [−45.1] +0.6, 0.50 | −35.7 [−34.0] −2.7, 0.09 |
+| 11–12.3 kHz | −44.0 [−42.5] −0.8, 0.09 | −41.6 [−40.8] +0.1, 0.21 | −34.0 [−32.2] −2.3, 0.08 |
+
+- **Above ~3 kHz, up to the band edge, S is at the repeat level** in every window (excess −3…+3 dB, ρ falling to 0.1–0.5: what is left is capture noise). The band edge hides nothing.
+- **Below ~3 kHz the excess is real and deterministic:** +5…+16 dB over the repeat at 50–600 ms with ρ 0.93–1.00, i.e. the same error waveform in both takes. It is fittable in principle (§41.3). 20–80 Hz at 50–150 ms is below the repeat because the repeat there is poor (the cluster's AMPL difference rings through the narrow bands).
+- **600–1000 ms:** excess +2…+4 dB below 1.6 kHz (+8…+10 at 20–40 Hz), at or below the repeat above.
+
+### 41.2 The 270–300 Hz "edge" (item 1)
+
+The sixth-octave profile (Hann-windowed band energies, R, median excess over the repeat; `report.log`) has no edge at 270–300 Hz as such. It has **a hump at 190–240 Hz** (+15.6 / +17.1 / +24.9 dB at 190 / 214 / 240 Hz at 50–150 ms; +10…+15 at 150–300 ms) that falls to +11.4 dB at 269 Hz and +9…+11 above, plus **a separate block at 20–42 Hz** (+25…+26 dB at 50–150 ms, +16…+19 at 150–300 ms) and a plateau of +9…+11 dB from 270 Hz to 1.4 kHz that tapers to the repeat level by 3 kHz. The smoke test's "edge" is the top of the hump.
+- **Not the chain kernel:** chain3 / chain2 differ by ±0.02 dB / ±0.2° from 100 Hz to 12 kHz (only below 60 Hz by up to 0.6 dB, the tail's low band). chain3's B-spline tail (lags 300–1000, knots every 40 device samples) carries content to about 330 Hz, but it sits 46–48 dB below the kernel at 270–400 Hz and is the same in every band there.
+- **Not the analysis band:** the sixth-octave profile uses no band filters; the band-passed nulls (BANDS straddle 270 Hz) agree with it.
+- **It is §25.12's 200–250 Hz loop-path transfer error** (there: the residual at 200–250 Hz follows each setting's own model with coherence 0.79–0.83, a narrow transfer error of the loop paths; above 250 Hz the inter-mode-trough part). §41.3 shows the whole sub-3 kHz excess is one fixed transfer, the hump included.
+
+### 41.3 One fixed transfer of S's loop paths (items 1 and 3)
+
+Per channel, T(f) = Σ Y M* / Σ |M|² over the reverb (150 ms to each capture's compensated end; 2 Hz bins, ±2 bins smoothed), pooled over the LF ≥ 1.0 settings of one RT fold (A: RT 0.3 / 0.8 / 1.4 / 2.2; B: 0.6 / 1.0 / 1.8 / 2.5), and applied to the other fold's settings (all LF), nothing else refitted (`--stage tfix`).
+- **Its shape:** |T − 1| is 0.17–0.26 % rms in every band above 80 Hz (1.3 % at 20–80 Hz); per sixth octave only +0.01…+0.03 dB and ±0.1° (−2.5° at 20 Hz), so it is fine structure, not a tilt. **The two folds agree to 0.01–0.02 %** above 80 Hz (0.2–0.4 % below): a property of every setting. In lag: at 80 Hz–3 kHz 73–84 % of (T − 1)'s energy is within ±20 lags (a short smooth kernel, +3.3…+3.9·10⁻⁴ at lag 0: the frequency-shaped level of §25.10 / §25.13), echoes at ±230 and ±460 (AP230's delay: §25.12's feedforward / feedback gap), and below 80 Hz a smooth long tail at lags 300–1700.
+- **Held out, on the whole model** (all 127, R, `s_tfix`): 50–150 ms 160–270 Hz −46.0 → −57.4 dB [repeat −61.6], 400–800 Hz −52.4 → −60.5 [−61.4], 0.8–1.6 kHz −51.9 → −60.4 [−60.6], 6.4–10 kHz −49.9 → −54.8 [−53.6]; 150–300 ms 160–270 Hz −47.6 → −53.9 [−59.9], and on LF ≥ 1.0 −48.4 → −58.8 [−59.1], at the repeat level in every band. But the cluster window loses 1–3 dB (0–50 ms 400–800 Hz −54.7 → −51.7): the cluster does not share it (as §25.12 found for its ±300-lag FIR).
+- **On the reverb only** (`SML_TREV=1`, `s_tfixrev`): the gains stay and 0–50 ms improves too (400–800 / 800–1600 Hz −54.7 / −53.6 → −58.1 / −58.2 dB). 50–150 ms 20–40 Hz −32.1 → −42.6, 160–270 Hz −46.0 → −57.1, 0.4–1.6 kHz −52 → −60.5; 150–300 ms 160–270 Hz −47.6 → −54.2; 300–600 ms 160–270 Hz −45.6 → −49.3. **With each capture's clock, shift and gain refitted against the corrected model** (`SML_TREFIT=1`, as the bench does; §25.12's dense correction did not survive this) the numbers are the same to 0.1–0.4 dB.
+- **But not per setting:** at 150–600 ms 20–35 % of the channel-nulls in a band lose more than 0.5 dB (mostly LF 0.1 / 0.4, whose shelf-side error a transfer fitted at LF ≥ 1.0 does not carry), and T is ~12,000 free numbers. A diagnostic, **not adopted.**
+- **S's own, not the chain:** S's T applied to the M / L model (`SML_TFIX=1`, `ml_tfix`) makes their cluster / gap and first pass 3–9 dB worse at 0.4–10 kHz and does nothing below 400 Hz. M and L share the capture chain and the chain kernel, so T belongs to S's loop paths.
+
+### 41.4 M / L's first pass in the low band (item 2)
+
+ml_lines' model (`--stage ml`, every second group: S 64, M 80, L 90 groups; per capture the law stage's in-band clock and gains, rendered full band × P(f); the repeat is another capture of the group fitted the same way), median per-capture excess over the repeat, first pass, R / L: **M −2.6…−0.0 dB at 20–160 Hz, −2.4…−0.6 at 160–800 Hz; L −2.5…−4.5 at 20–400 Hz** (`report.log`; recirculations −2…−4, time-variance-limited). No sub-300 Hz excess in M or L, at any frequency. S through the same model family: first pass +6.3 / +6.4 dB at 160–270 Hz (L / R), recirculation 1 +17…+20 dB from 80 Hz to 1.6 kHz. So the low-band excess is S's alone, and with §41.3 it is S's loop paths, not the shared chain or kernel.
+
+### 41.5 The band edge, 10–12.8 kHz (item 5 and the top of the band)
+
+- **The warps** (`--stage warp`, `warp.log`; each against the same read-out map through a 512-tap / β 14 Kaiser sinc, at the library's 5th / 50th / 95th percentile clock ratio, +10.5 / +12.3 / +14.3 ppm): S's `q1.warp` (128 / β 12, `apply_clock`) leaves ≤ −121 dB to 12.3 kHz at every window up to 1.5 s; the clock fit's `q1.warp` 32 / β 8 ≤ −82 dB to 12.3 kHz (−60 dB at 12.3–12.8 kHz late, where the S caches carry nothing; it only sets the fit's cost); `ml_lines.warp` (48 / β 10, on the M / L model) ≤ −109 dB to 12.3 kHz at 50–600 ms. Its −55…−61 dB at 1.0–1.5 s is the same at 3.2 kHz as at 12 kHz, the test setting's decayed tail (M 0.1_0.6_0.1), not the band edge. **None of them has nl_late.unwarp's ×32 Kaiser(5) artefact** (NonLin_program §11.6): they interpolate directly with long kernels. The S / M / L caches' resampler (`to_device_grid`, the same Kaiser(5) FIR) is a static droop (−0.22 dB at 11.5 kHz, −0.9 at 12 kHz), not time-growing; the model carries it through P(f) here, and the 11–12.3 kHz nulls are at the repeat level with it.
+- **12.3–12.8 kHz** (`--stage wide`, every fourth setting, 33): each capture deconvolved again with N's 12.0–12.8 kHz window (the in-memory path reproduces the harness cache to −84 dB with the harness window; one scalar per capture for the deconvolution's peak normalisation, which depends on the window width), aligned with q1's stored shifts, clock / shift / gain from the bench's fit; the model × the wide window × the regularised inverse's own response |G|² / (|G|² + 10⁻³ max|G|²) (−20 dB at 12.5 kHz) × the resampler. R [L], model null against the cross-take repeat:
+
+  | Band | Level re 1–4 kHz, 50–150 ms | 50–150 ms | 150–300 ms | 300–600 ms |
+  |---|---|---|---|---|
+  | 11–12 kHz | −18.5 dB | −42.4 [−43.5] vs −41.1 | −38.6 vs −36.0 | −13.5 vs −12.5 |
+  | 12.0–12.3 kHz | −41.7 | −35.7 vs −34.7 | −32.5 vs −29.5 | −9.2 vs −8.2 |
+  | 12.3–12.8 kHz | −56.9 | −35.7 [−33.1] vs −34.5 | −30.7 vs −28.6 | −5.5 vs −4.0 |
+
+  **At the repeat level everywhere**, and 12.3–12.8 kHz carries 57 dB less than 1–4 kHz at 50–150 ms (71 dB at 150–300): its own nulls are the captures' noise there. In the harness band the same model is 3–7 dB deeper at 12.3–12.8 kHz (the window removes most of it); at 11–12.3 kHz the wide deconvolution costs up to 1.3 dB, both versions at the repeat level.
+
+### 41.6 §32.9's per-setting refit, by band (item 4)
+
+`lowband_shelf.py --stage takefit`'s stored fits on `_pallf` (12 numbers per setting, one take fitted, the other scored; its environment), rendered and scored per band (124 settings with fits; the base reproduces the stored 100 Hz–10 kHz nulls exactly), R median base → refit (lead):
+
+| Band | 150–300 ms | 300–600 ms |
+|---|---|---|
+| 20–40 Hz | −36.6 → −36.7 (+0.07) | −36.9 → −37.5 (+0.21) |
+| 40–80 Hz | −49.1 → −50.1 (+0.41) | −44.0 → −45.3 (+0.17) |
+| 80–160 Hz | −49.9 → −51.9 (+1.04) | −45.6 → −48.5 (+0.78) |
+| 160–270 Hz | −47.6 → −48.8 (+0.72) | −45.6 → −48.1 (+1.01) |
+| 270–400 Hz | −52.7 → −54.8 (+1.46) | −48.7 → −51.5 (+1.83) |
+| 400–800 Hz | −52.2 → −55.1 (+1.96) | −50.0 → −53.2 (+2.82) |
+| 0.8–1.6 kHz | −51.8 → −55.1 (+2.91) | −48.6 → −53.0 (+3.37) |
+| 1.6–3.2 kHz | −52.6 → −54.6 (+1.89) | −47.0 → −49.4 (+1.68) |
+| 3.2–6.4 kHz | −51.1 → −51.9 (+0.66) | −43.3 → −44.4 (+0.21) |
+| 6.4–10 kHz | −47.0 → −47.7 (+0.44) | −39.0 → −39.2 (+0.14) |
+| 10–12.3 kHz | ≤ +0.14 | ≤ +0.01 |
+
+Of the residual energy the refit removes, 5.2 % (150–300 ms) and 1.3 % (300–600 ms) is below 270 Hz; 50–150 ms barely moves (≤ 0.5 dB anywhere). **So the refit's 1.5–1.9 dB is the 0.27–3.2 kHz shelf / HF-pole detail §31–32 named, not the low band**, and the low-band excess (§41.1) is a different error: the fixed loop-path transfer of §41.3.
+
+### 41.7 Compact forms of the transfer (`SML_TFORM`, on the reverb, clocks refitted) **[S: the short kernel plus AP230's echoes (82 numbers) keeps most of the early gain; S: it fails the strict rule late, so the error is not one output transfer for all times; not adopted; first-pass-only and low-band forms running]**
+
+The transfer's impulse response kept at |lag| ≤ 10 plus ±2 lags around ±230 and ±460 (`short_ap`, 82 numbers for both channels; 90 % of T at 270 Hz–3 kHz, 25 % unexplained at 3–12 kHz, 52 % at 80–270 Hz, none of the 20–80 Hz tail), fold-held-out, on the reverb, each capture's clock / shift / gain refitted against the corrected model (`s_tfixrev_short_ap_refit`). 80 Hz–10 kHz, R, median [settings worse by > 0.5 dB, worst]:
+
+| | 0–50 ms | 50–150 | 150–300 | 300–600 | 600–1000 |
+|---|---|---|---|---|---|
+| All 127 | −50.5 → −51.7 [4, +1.1] | **−52.2 → −56.5** [3, +3.0] | −50.9 → −52.7 [19, +2.8] | −46.5 → −46.9 [27, +2.7] | −39.5 → −39.7 [16, +1.4] |
+| LF ≥ 1.0 (63) | −50.3 → −51.6 [0] | −51.9 → −56.4 [0] | −50.9 → −52.8 [4, +1.5] | −46.9 → −47.0 [12, +2.7] | −40.9 → −40.5 [12, +1.4] |
+| LF 0.4 (32) | −51.0 → −51.9 [0] | −52.8 → −56.8 [0] | −50.9 → −53.9 [3, +2.0] | −47.3 → −48.9 [4, +1.4] | −40.6 → −41.1 [0] |
+| LF 0.1 (32) | −50.8 → −51.9 [4, +1.1] | −52.1 → −56.3 [3, +3.0] | −50.7 → −51.8 [12, +2.8] | −43.6 → −43.0 [11, +1.9] | −34.1 → −34.4 [4, +0.9] |
+
+- **50–150 ms gains 4.3 dB** on the median (every LF ≥ 0.4 setting better), the deepest S has been in that window (§32.7's "floor" at ≈ −52 dB was this transfer). The free T (§41.3) does the same there.
+- **It fails later:** at 300–600 ms 27 settings lose more than 0.5 dB (LF 0.1 and long-RT LF ≥ 1.0). A fixed output transfer applies the first pass's correction to every recirculation too; §25.12 found the error enters on the loops' input side and decorrelates with the loop gains, so for strong loop filters the late part needs a different correction. Not adopted.
+- Running (results to follow in this section): the same correction on each loop path's first pass only (S's first pass is the loop excitations before their first recirculation; its first-pass FIR is zero), and `short_ap_lf` (plus the 20–100 Hz part of T, 282 numbers).
+
+### 41.8 What this closes, and what is left
+
+- Items 1–5 of the S low-band list (NEXT_STEPS §0) are answered: (1) the "edge" is the top of the 200–250 Hz loop-path transfer error; (2) S only, M / L have no low-band excess; (3) deterministic, one fixed transfer of S's loop paths for every setting; (4) the refit's lead is not below 270 Hz; (5) no warp artefact in S / M / L.
+- **The full band is now scored.** S: at the repeat level from 3 kHz to 12.8 kHz; below 3 kHz the known 50–600 ms excess, now located (§41.3). M / L: the first pass at 10–12.3 kHz was 15–28 dB over the repeat (the output kernel, fitted in band): fixed and adopted, `ml_structure.md` §25.
+- Left (S): the fixed transfer as a compact, adoptable term (§41.7: 50–150 ms −52.2 → −56.5 dB with 82 numbers, but the late windows fail the strict rule), which must pass per setting; LF 0.1 / 0.4 need their own (shelf-side) part. S's cluster window at 11–12.3 kHz (−36…−42 dB, take B 8–10 dB worse than take A from 6.4 kHz) is being tested with the M / L top-band form (`--stage shf`).
