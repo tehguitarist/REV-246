@@ -101,8 +101,8 @@ TEST_CASE("the transformer is off by default and leaves the output alone")
     CHECK(p.apvts.getRawParameterValue(rv::params::id::transformer)->load() < 0.5f);
 
     // Mix 100 %: the output is the wet path. The placeholder engine passes the mono input, so off the output must be
-    // exactly mono x INPUT x OUTPUT (the default fader positions are within 0.05 dB of unity, not exactly 1); on must
-    // change it.
+    // exactly mono x INPUT x OUTPUT (the default fader positions are within 0.05 dB of unity, not exactly 1), delayed by
+    // the plugin's latency; on must change it.
     auto run = [](bool eqOn) {
         Rev246Processor proc;
         proc.prepareToPlay(48000.0, 256);
@@ -110,21 +110,23 @@ TEST_CASE("the transformer is off by default and leaves the output alone")
         mix->setValueNotifyingHost(1.0f);
         proc.apvts.getParameter(rv::params::id::transformer)->setValueNotifyingHost(eqOn ? 1.0f : 0.0f);
         juce::MidiBuffer midi;
+        const auto latency = proc.getLatencySamples();
+        auto input = [](int n) { return n < 0 ? 0.0f : 0.3f * std::sin(0.02f * (float)n); }; // ~150 Hz
         float maxDiff = 0.0f;
         for (int block = 0; block < 8; ++block)
         {
             juce::AudioBuffer<float> b(2, 256);
             for (int ch = 0; ch < 2; ++ch)
                 for (int i = 0; i < 256; ++i)
-                    b.setSample(ch, i, 0.3f * std::sin(0.02f * (float)(block * 256 + i))); // ~150 Hz
-            const auto in = b;
+                    b.setSample(ch, i, input(block * 256 + i));
             proc.processBlock(b, midi);
             const auto g = rv::params::gainLinear(rv::params::defaultGainPosition);
             if (block >= 4) // after the 20 ms ramps
                 for (int ch = 0; ch < 2; ++ch)
                     for (int i = 0; i < 256; ++i)
                     {
-                        const auto expected = 0.5f * (in.getSample(0, i) + in.getSample(1, i)) * g * g;
+                        const auto x = input(block * 256 + i - latency);
+                        const auto expected = 0.5f * (x + x) * g * g;
                         maxDiff = std::max(maxDiff, std::abs(b.getSample(ch, i) - expected));
                     }
         }
@@ -159,4 +161,27 @@ TEST_CASE("the transformer core's distortion follows its calibration")
     CHECK(thdPercent(harmonics(48000.0, 1000.0, 1.0f)) < 0.001);
     CHECK(thdPercent(harmonics(48000.0, 40.0, 0.25f)) < 0.3 * thdPercent(at40));
     CHECK_THAT(thdPercent(harmonics(96000.0, 40.0, 1.0f)), WithinAbs(thdPercent(at40), 0.002));
+}
+
+TEST_CASE("the transformer's drive follows the A/D full scale")
+{
+    // Harmonic 3 re harmonic 1 of a 40 Hz sine through the input transformer, over the second of two seconds.
+    auto h3 = [](float fullScale, float amp) {
+        rv::dsp::Transformer t;
+        t.prepare(48000.0);
+        t.setFullScale(fullScale);
+        std::complex<double> h1, h3c;
+        for (int i = 0; i < 96000; ++i)
+        {
+            const auto ph = juce::MathConstants<double>::twoPi * 40.0 * i / 48000.0;
+            const auto y = (double)t.processInput(amp * (float)std::sin(ph));
+            if (i >= 48000)
+                h1 += y * std::polar(1.0, -ph), h3c += y * std::polar(1.0, -3.0 * ph);
+        }
+        return std::abs(h3c) / std::abs(h1);
+    };
+    const auto fs = rv::dsp::AdcClipper::fullScaleForZeroVu(-18.0f);
+    const auto atFullScale = h3(1.0f, 1.0f);
+    CHECK(std::abs(h3(fs, fs) / atFullScale - 1.0) < 1e-3); // the same distortion at the A/D's full scale
+    CHECK(h3(1.0f, fs) < 0.5 * atFullScale);                // the old, fixed calibration drove it far less there
 }

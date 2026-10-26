@@ -85,6 +85,10 @@ class Rev246Processor : public juce::AudioProcessor
     float vu = 0.0f;         // the VU integrator's state (linear RMS), audio thread only
     double vuTauSamples = 0.0; // VU time constant in samples (tau * sample rate), set in prepareToPlay
     bool lastTrueStereo = false; // engine 1's state is reset when the routing turns true stereo on or off
+    // The reported latency is the A/D stage's (AdcClipper::latency, in both modes so it never changes with 16-BIT):
+    // the dry and bypassed signals are delayed by the same amount.
+    std::array<std::vector<float>, 2> dryDelay;
+    size_t dryPos = 0;
 
     void applyMeterCal(int index); // the atomics only (audio-thread readable), not the UI state
 

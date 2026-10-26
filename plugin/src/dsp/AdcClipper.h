@@ -27,8 +27,8 @@ namespace rv::dsp
 // pole and zero at its own frequency, plus one zero tuned for the flattest magnitude), samples its output at the
 // device instants with a windowed sinc, clips there, and turns each clip error back into the input domain with
 // g0 = IFT{T(w) / H(jw)} (H the input filter, T a taper to 0 by 12.6 kHz that is also the reconstruction low-pass).
-// The output is the input delayed by latency() samples plus those corrections, so with no clipping it is the input
-// delayed exactly, and passing the output through the input filter gives the clipped A/D samples to the taper's
+// The output is the input delayed by latency() samples plus `amount` times those corrections (0 = the input delayed:
+// float mode; it runs anyway, for warm state and the overload flag), so with no clipping it is the input delayed exactly, and passing the output through the input filter gives the clipped A/D samples to the taper's
 // floor (-35 dB of the clip error for a sine). The future engine must apply the input filter AFTER this stage.
 //
 // Full scale is a peak level in the input domain at 1 kHz (where the input filter's gain is taken as 1).
@@ -184,7 +184,7 @@ class AdcClipper
         return o;
     }
 
-    float process(float in)
+    float process(float in, float amount = 1.0f)
     {
         const auto dryMask = dryBuf.size() - 1;
         dryBuf[dryPos] = in;
@@ -224,7 +224,7 @@ class AdcClipper
         }
 
         const auto accMask = acc.size() - 1;
-        const auto out = delayed + (float)acc[accPos];
+        const auto out = delayed + amount * (float)acc[accPos];
         acc[accPos] = 0.0;
         accPos = (accPos + 1) & accMask;
         return out;

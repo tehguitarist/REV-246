@@ -58,8 +58,10 @@
   so HF clips early). The stage runs the input filter beside the signal (matched-z from the transcribed netlist's
   poles and zeros, one extra zero tuned per rate: within 0.17 dB to 12.6 kHz), samples it at the device instants
   (Kaiser sinc), clips, and reinjects each error through g0 = IFT{taper / H}, the input filter's band-limited inverse.
-  Its output is the input delayed by `latency()` (about 1.4 ms, wet path only, not reported to the host) plus those
-  corrections, so below full scale it is an exact delay. **The engine must apply the input filter after this stage**
+  Its output is the input delayed by `latency()` (about 1.4 ms) plus those corrections (times 0 in float mode), so
+  below full scale it is an exact delay. That delay is the plugin's reported latency, the same in both modes (so
+  16-BIT never changes it and its crossfade has no comb); the dry and power-off signals are delayed to match. When the
+  real engine lands, add its own latency (resampling) to the report. **The engine must apply the input filter after this stage**
   (as part of its analogue chain); once the engine runs that chain at the device rate, clip there and drop the
   reinjection. What survives the scheme: the clip error to the taper's floor (-35 dB of it for a sine; error above
   11.5 kHz is lost). Cost 0.15 % of a core idle, 0.8 % clipping hard at 48 kHz (2 % at 192 kHz). Design and checks:
@@ -73,8 +75,11 @@
   name dialog. A modified preset's name is shown italic with a trailing `*`.
 - The transformer cores are a guess (H): flux = a leaky integral of the signal (5 Hz corner, normalised at 40 Hz),
   distortion voltage = a·φ|φ| + b·φ³ subtracted from the signal (the nonlinear magnetising current across the source
-  resistance). a and b are set for 0.08 % THD at 40 Hz and 0 dBFS (= +12 dBu), three quarters from the a term; the
-  input core runs at half the drive. The datasheet points it was checked against are in `Transformer.h`. The flux
+  resistance). a and b are set for 0.08 % THD at 40 Hz and a core peak of 1 (= +12 dBu), three quarters from the a
+  term; the input core runs at half the drive. The stage maps the A/D's full scale (which follows CAL) to that peak
+  (`Transformer::setFullScale`), so the cores are driven as in a unit at the factory alignment (nominal +6 dBu, A/D
+  clip at +12 dBu) whatever CAL is. A studio running the unit at another nominal would drive the input transformer,
+  which sits before the level trim, by that difference. The datasheet points it was checked against are in `Transformer.h`. The flux
   term is low-pass by construction, so no oversampling is needed. `tests/TransformerTests.cpp` holds the calibration.
 
 

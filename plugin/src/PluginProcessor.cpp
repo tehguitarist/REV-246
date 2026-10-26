@@ -76,14 +76,18 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
     wetOn.setCurrentAndTargetValue(*pPower >= 0.5f ? 1.0f : 0.0f);
     transformerOn.setCurrentAndTargetValue(*pTransformer >= 0.5f ? 1.0f : 0.0f);
     sixteenBitOn.setCurrentAndTargetValue(*pSixteenBit >= 0.5f ? 1.0f : 0.0f);
-    scratch.setSize(7, samplesPerBlock, false, false, true);
+    scratch.setSize(9, samplesPerBlock, false, false, true);
     // VU meter: a first-order RMS integrator. The classic VU reaches 99% in ~300 ms, so tau = 300 ms / ln 100.
     vuTauSamples = (vuRiseSeconds / std::log(100.0f)) * sampleRate;
     vu = 0.0f;
     inputVu.store(0.0f);
     inputClip.store(false);
     lastTrueStereo = isStereoToStereo() && *pTrueStereo >= 0.5f;
-    setLatencySamples(0);
+    const auto latency = clippers[0].latency();
+    for (auto& d : dryDelay)
+        d.assign((size_t)latency, 0.0f);
+    dryPos = 0;
+    setLatencySamples(latency);
 }
 
 void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
@@ -98,7 +102,7 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     // input. True stereo runs one engine per input channel.
     const bool trueStereo = stereoIn && stereoOut && *pTrueStereo >= 0.5f;
     if (n > scratch.getNumSamples())
-        scratch.setSize(7, n, false, false, true); // only if a host exceeds its promised block size
+        scratch.setSize(9, n, false, false, true); // only if a host exceeds its promised block size
 
     // A new routing has no usable state in the second engine: start it silent rather than with an old tail.
     if (trueStereo != lastTrueStereo)
@@ -133,6 +137,8 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     const auto fullScale = adcFullScale.load(std::memory_order_relaxed);
     for (auto& c : clippers)
         c.setFullScale(fullScale);
+    for (auto& t : transformers)
+        t.setFullScale(fullScale);
     // The pan places the dry signal; constant power with unity at the centre.
     const auto angle = (juce::jlimit(-1.0f, 1.0f, pPan->load()) + 1.0f) * juce::MathConstants<float>::pi * 0.25f;
     panLeft.setTargetValue(std::cos(angle) * juce::MathConstants<float>::sqrt2);
@@ -145,14 +151,16 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
     auto* wetL1 = scratch.getWritePointer(4);
     auto* wetR1 = scratch.getWritePointer(5);
     auto* xfWeight = scratch.getWritePointer(6);
+    auto* dryInL = scratch.getWritePointer(7);
+    auto* dryInR = scratch.getWritePointer(8);
     const auto* inL = buffer.getReadPointer(0);
     const auto* inR = buffer.getReadPointer(stereoIn ? 1 : 0);
 
     // The unit has one mono input: sum (0.5 times, so correlated channels keep their level rather than gaining
     // 6 dB), apply INPUT, and read the level there. Then the optional input transformer, then the A/D: in 16-bit
-    // mode its clipping (AdcClipper; the wet path is then latency() samples later). Both stages always run so their
-    // state is warm when switched on, and the A/D also feeds the OVL LED in float mode; off, a stage's crossfade
-    // weight is exactly 0 and the signal is unchanged.
+    // mode its clipping (AdcClipper). Both stages always run so their state is warm when switched on, and the A/D
+    // also feeds the OVL LED in float mode; off, a stage's crossfade weight is exactly 0. The A/D stage delays the
+    // wet path by the plugin's latency in either mode; the dry and bypassed signals get the same delay here.
     float peak = 0.0f, sumSq = 0.0f;
     for (int i = 0; i < n; ++i)
     {
@@ -160,6 +168,11 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         const auto w = transformerOn.getNextValue();
         const auto q = sixteenBitOn.getNextValue();
         const auto l = inL[i], r = inR[i];
+        dryInL[i] = dryDelay[0][dryPos];
+        dryInR[i] = dryDelay[1][dryPos];
+        dryDelay[0][dryPos] = l;
+        dryDelay[1][dryPos] = r;
+        dryPos = (dryPos + 1) % dryDelay[0].size();
         const auto meterInput = monoSumGain * (l + r) * g;
         peak = std::max(peak, std::abs(meterInput));
         sumSq += meterInput * meterInput;
@@ -170,14 +183,14 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
             monoR[i] = r * g;
             monoL[i] += w * (transformers[0].processInput(monoL[i]) - monoL[i]);
             monoR[i] += w * (transformers[1].processInput(monoR[i]) - monoR[i]);
-            monoL[i] += q * (clippers[0].process(monoL[i]) - monoL[i]);
-            monoR[i] += q * (clippers[1].process(monoR[i]) - monoR[i]);
+            monoL[i] = clippers[0].process(monoL[i], q);
+            monoR[i] = clippers[1].process(monoR[i], q);
         }
         else
         {
             monoL[i] = meterInput;
             monoL[i] += w * (transformers[0].processInput(monoL[i]) - monoL[i]);
-            monoL[i] += q * (clippers[0].process(monoL[i]) - monoL[i]);
+            monoL[i] = clippers[0].process(monoL[i], q);
         }
     }
     const auto rms = std::sqrt(sumSq / (float)n);
@@ -231,15 +244,15 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         const auto og = outGain.getNextValue();
         const auto on = wetOn.getNextValue();
         const auto pl = panLeft.getNextValue(), pr = panRight.getNextValue();
-        const auto dryMono = monoSumGain * (inL[i] + inR[i]);
+        const auto dryMono = monoSumGain * (dryInL[i] + dryInR[i]);
         // True stereo keeps the dry signal's channels; the original mode pans the mono sum as before.
-        const auto dryL = trueStereo ? inL[i] * pl : dryMono * pl;
-        const auto dryR = trueStereo ? inR[i] * pr : dryMono * pr;
+        const auto dryL = trueStereo ? dryInL[i] * pl : dryMono * pl;
+        const auto dryR = trueStereo ? dryInR[i] * pr : dryMono * pr;
         if (stereoOut)
         {
             const auto processedL = ((1.0f - mixV) * dryL + mixV * wetL[i]) * og;
             const auto processedR = ((1.0f - mixV) * dryR + mixV * wetR[i]) * og;
-            const auto bypassL = inL[i], bypassR = inR[i]; // power off: the host's signal untouched
+            const auto bypassL = dryInL[i], bypassR = dryInR[i]; // power off: the host's signal, delayed only
             outL[i] = on * processedL + (1.0f - on) * bypassL;
             outR[i] = on * processedR + (1.0f - on) * bypassR;
         }
@@ -247,7 +260,7 @@ void Rev246Processor::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
         {
             // A mono output cannot carry the pan, so the dry is the mono sum.
             const auto processed = ((1.0f - mixV) * dryMono + mixV * wetL[i]) * og;
-            outL[i] = on * processed + (1.0f - on) * inL[i];
+            outL[i] = on * processed + (1.0f - on) * dryInL[i];
         }
     }
 }

@@ -16,7 +16,7 @@ namespace rv::dsp
 //
 // GUESSED (H): the service manual (pp. 37, 46) offers input and output transformers only as "slightly" raising the
 // distortion, with no type or values. The two terms are a Rayleigh-like a·φ|φ| (low and mid level) and a saturation
-// onset b·φ³; they are set so that at 0 dBFS (= +12 dBu: the unit's +6 dBu nominal plus its 6 dB headroom) and 40 Hz
+// onset b·φ³; they are set so that at a peak of 1 (= +12 dBu: the unit's +6 dBu nominal plus its 6 dB headroom) and 40 Hz
 // the THD is 0.08 %, three quarters from the Rayleigh term. Against datasheets: 0.11 % at 20 Hz / +4 dBu (Jensen
 // JT-11-FLCF, a modern 50 % nickel part: 0.035 %), 0.064 % at 50 Hz / +14 dBu (Lundahl LL1935: < 0.1 %), 0.31 % at
 // 50 Hz / +24 dBu (LL1935: < 1 % at +26). 0.011 % at 100 Hz, 0.0001 % at 1 kHz; 5th harmonic 20 dB under the 3rd.
@@ -49,13 +49,17 @@ class TransformerCore
 
   private:
     static constexpr double refHz = 40.0, cornerHz = 5.0, maxFlux = 8.0;
-    static constexpr double rayleigh = 0.00353429, saturation = 0.0008; // THD 0.08 % at 40 Hz, 0 dBFS (see above)
+    static constexpr double rayleigh = 0.00353429, saturation = 0.0008; // THD 0.08 % at 40 Hz, peak 1 (see above)
     double k = 0, r = 0, c = 0, a = 0, b = 0;
     double hx = 0, hy = 0, phi = 0;
 };
 
 // The transformer-fitted unit (the manual's option, H): an input transformer on the mono input, and on each output
 // the measured low-band transfer of the commercial captures (CaptureEq) followed by an output transformer.
+//
+// Level: the cores are calibrated with a peak of 1 = +12 dBu, the A/D's full scale (nominal +6 dBu plus its 6 dB
+// headroom; the unit is unity gain in and out, so the outputs share the reference). The A/D's full scale follows the
+// meter calibration (AdcClipper::fullScaleForZeroVu), so setFullScale moves the cores' drive with it.
 class Transformer
 {
   public:
@@ -75,8 +79,15 @@ class Transformer
             o.reset();
     }
 
-    float processInput(float in) { return input.process(in); }
-    float processOutput(int ch, float in) { return output[(size_t)ch].process(eq.process(ch, in)); }
+    // The A/D's full-scale peak in host units: the level the cores treat as +12 dBu.
+    void setFullScale(float peak)
+    {
+        fullScale = peak;
+        inverse = 1.0f / peak;
+    }
+
+    float processInput(float in) { return input.process(in * inverse) * fullScale; }
+    float processOutput(int ch, float in) { return output[(size_t)ch].process(eq.process(ch, in) * inverse) * fullScale; }
 
     const CaptureEq& captureEq() const { return eq; }
 
@@ -84,5 +95,6 @@ class Transformer
     CaptureEq eq;
     TransformerCore input;
     std::array<TransformerCore, 2> output;
+    float fullScale = 1.0f, inverse = 1.0f;
 };
 } // namespace rv::dsp

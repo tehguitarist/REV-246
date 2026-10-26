@@ -101,6 +101,9 @@ Where it clips follows **CAL**: CAL sets what 0 VU means in dBFS, and the conver
 sine (at the default -18 dBFS, that's a sine peaking at -9 dBFS). **OVL** lights whenever the converter clips, and in
 FLOAT mode it lights where it would have clipped.
 
+REV-246 reports about 1.4 ms of latency (the converter stage needs that much look-ahead), and your DAW compensates
+for it. It is the same in FLOAT and 16-BIT, so switching between them never shifts the timing.
+
 **XFMR.** The original could be ordered with balanced input and output transformers, which the manual says raise the
 harmonic distortion slightly. With this option on, the wet path gains the low-frequency colour and gentle odd-
 harmonic distortion of that option. The low-frequency colour comes from measurement; the distortion is an informed
