@@ -4,7 +4,7 @@
     .venv/bin/python tools/memguard.py --limit-gb 3 -- .venv/bin/python tools/e250/e_sim.py --stage sim [--json params]
     .venv/bin/python tools/e250/e_sim.py --stage render --json '{"rt": 2.5, "fs": 48000, "out": "e_2.5.wav"}'   # reference IR
 
-The static network is e_model's (§11.2, the 246 law at LF 1.44 / HF 0.72). The time-variant part (§11.3) is M reads per loop,
+The static network is e_model's (§11.2, the 246 law at LF 1.49 / HF 0.69). The time-variant part (§11.3) is M reads per loop,
 each at an integer output delay o(t) (as the 250's addresses: no interpolation) moving between lo and hi, up at v and down at vdn samples per second, a gain +-b (relative to the loop's static read), added to R and, with probability 'share', to L with the opposite sign
 (otherwise an independent read for L). Motion laws: 'tri' (bounces between lo and hi), 'sine' (centre in [lo, hi], depth A, rate f), 'walk' (constant speed, direction
 re-drawn every 'tdir' seconds). A capture is the response to an exponential sweep (sweep seconds 'tsw', unknown for the Altiverb
@@ -51,7 +51,8 @@ def lowpass_sos(khz):
 def render_ir(rt, lf=None, hf=None, seed=0, secs=None, fs_out=None, ampl=AMPL_REF, delay_ms=0.0, lp_khz=12.0, lfo="time",
               chain="altiverb", law=None, moving=True):
     """Reference impulse response of Program E, (n, 2) = (L, R), with every control the 246 panel gives E:
-      rt, lf, hf  the 246's loop law (ml_lines.line_coefs); lf / hf default to the Altiverb family's fit (1.38 / 0.74)
+      rt, lf, hf  the 246's loop law (ml_lines.line_coefs); lf / hf default to the adopted static fit (1.49 / 0.69,
+                  EMT250_program §16.5, §17.3)
       ampl        REFLECTIONS AMPL. %: the direct taps x ampl / 80 (S's linear cluster law, model_s_results §21; H for E)
       delay_ms    REFLECTIONS DELAY: a pure delay of the whole output, rounded to device samples (operation card; H for E)
       lp_khz      LOW PASS: see lowpass_sos (H)
@@ -68,7 +69,7 @@ def render_ir(rt, lf=None, hf=None, seed=0, secs=None, fs_out=None, ampl=AMPL_RE
     if hf is not None: q[10] = hf
     kern = E.kernels([r for r in E.RTS if r >= 1.0])
     if chain == "device":
-        k = np.zeros(len(kern[0])); k[16:18] = L_KERNEL; kern = [k, k.copy()]
+        k = np.zeros(18); k[16:18] = L_KERNEL; kern = [k, k.copy()]
     prm = dict(DEF) | ADOPTED | dict(f=LFO_RATE[lfo], ampl_scale=ampl / AMPL_REF)
     if law == "random":
         prm = dict(DEF) | ADOPTED_13 | dict(f=LFO_RATE[lfo], ampl_scale=ampl / AMPL_REF)
@@ -124,7 +125,7 @@ def trajectories(n, prm, rng):
     t = np.arange(n) / FS; out = []
     PH = rng.uniform(0, 1, 8)
     for _ in range(3 * M):
-        o0 = rng.uniform(lo, hi); d = rng.choice([-1, 1]); v = prm["v"] * rng.uniform(1 - prm["vsd"], 1 + prm["vsd"])
+        o0 = rng.uniform(lo, hi); _ = rng.choice([-1, 1]); v = prm["v"] * rng.uniform(1 - prm["vsd"], 1 + prm["vsd"])
         if prm["law"] == "tri":         # up at v, down at vdn (asymmetric triangle; vdn None: symmetric)
             span = hi - lo; vd = v * (prm["vdn"] / prm["v"]) if prm["vdn"] else v
             Tu, Td = span / v, span / vd; ph = (rng.uniform(0, Tu + Td) + t) % (Tu + Td)

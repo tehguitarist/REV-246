@@ -25,7 +25,11 @@ def spec():
     lab = lambda v, c, src: dict(value=v, label=c, source=src)
     return {
         "program": "E (the EMT 250 program on the 246), docs/EMT250_program.md §11-15",
-        "device_rate_hz": E.FS, "delays": "integer device samples; positions after R's first direct tap",
+        "device_rate_hz": E.FS, "k0": E.K0,
+        "delays": "integer device samples; positions after R's first direct tap at index k0",
+        "rev_gain_db": lab(float(json.load(open(os.path.join(E.OUT, "static_all_246.json"))).get("rev_gain", 0.0)),
+                           "the reverb's level against the direct tap; the loops.static_read_gain values already include it",
+                           "§16.5, §17.5, §17.7"),
         "direct_path": lab(dict(taps=list(E.TAPS), gains=[1.0, float(q["a"][0]), float(q["a"][1])],
                                 L=dict(delay=E.LDEL, sign=-1, gain=float(q["gL"]))), "S", "§11.2, held out by RT"),
         "allpasses": lab(dict(form="H(z) = (-g + z^-D) / (1 - g z^-D), in series, before the loops", D=list(E.AP_D),

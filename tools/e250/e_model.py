@@ -210,7 +210,12 @@ def render_mean(x, rt, kern, n, reads=None, box=70, pre=None, prefilter=True):
     """E's expected response (§16): the static network plus each fixed moving read averaged over its glide (a centred boxcar of
     `box` samples = the triangle's full excursion), with its own R / L amplitude (L 314 samples later). The deterministic part
     of every capture; what a single capture can be nulled against. prefilter: the moving reads read the loop line before
-    the loop filter (§17: their amplitudes follow 1 / |G| per RT when fitted after it), the static reads after it."""
+    the loop filter (§17: their amplitudes follow 1 / |G| per RT when fitted after it), the static reads after it.
+
+    Known approximation (left for the plugin/refit, not applied here): this analytic form omits e_sim.e_reads' dl_same
+    (same-sign reads reach L one sample later, §16.7) and its mlp one-pole (0.07, §17.7). The time-domain reference
+    render() includes both. Adding them here would move the committed static / tail fits' LF and HF numbers, so it is
+    deliberately not changed without a refit and a re-audit of §16-17."""
     if reads is None:
         reads = json.load(open(os.path.join(OUT, "fixed_reads.json")))["reads"]
     q = unpack(x); z = lambda d: np.exp(-2j * np.pi * W * d)

@@ -87,5 +87,5 @@ for cn in "RL":
         for k in (a, bb): errs.append(m / ratio[k] - 1)
     m = ratio.mean(0)
     print(f"  {cn}: m_b (all 8)             " + " ".join(f"{v:6.3f}" for v in m))
-    print(f"     held-out T60 error %      " + " ".join(f"{v:6.2f}" for v in np.sqrt(np.mean(np.square(errs), 0)) * 100) + "   (7 parameters)")
-    print(f"     RT 0.4 measured / (RT m_b)" + " ".join(f"{v:6.2f}" for v in T[0] / (0.4 * m)) + "   (the short preset departs from the law, mostly in the top bands)")
+    print("     held-out T60 error %      " + " ".join(f"{v:6.2f}" for v in np.sqrt(np.mean(np.square(errs), 0)) * 100) + "   (7 parameters)")
+    print("     RT 0.4 measured / (RT m_b)" + " ".join(f"{v:6.2f}" for v in T[0] / (0.4 * m)) + "   (the short preset departs from the law, mostly in the top bands)")

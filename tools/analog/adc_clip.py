@@ -166,8 +166,6 @@ def main():
     k = h_mna[2] / h_analog(s[2:3], poles, zeros)[0]
     assert np.max(np.abs(k * h_analog(s, poles, zeros) / h_mna - 1)) < 1e-6
     # The band part: drop the filter's own sub-Hz coupling (pole near 0.6 Hz, zero at DC), which is not inverted.
-    hp_p = poles[np.abs(poles) < TWO_PI * 5]
-    hp_z = zeros[np.abs(zeros) < TWO_PI * 1e-3]
     pb = poles[np.abs(poles) >= TWO_PI * 5]
     zb = zeros[np.abs(zeros) >= TWO_PI * 1e-3]
     norm = np.abs(h_analog(TWO_PI * 1j * np.array([1e3]), pb, zb))[0]
