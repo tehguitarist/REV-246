@@ -8,7 +8,7 @@ default, ml_structure.md 12, 18) unless EMT_KERNEL says otherwise, resampled to 
 as in the other programs (library_notes.md 3). Cache: analysis/nl/cache_<kernel>/<name>.npy, (n, 2) float32, not
 committed.
 """
-import argparse, glob, os, sys
+import argparse, functools, glob, os, sys
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 import soundfile as sf
@@ -97,6 +97,28 @@ def processing_response(f):
     R = g2 / (g2 + EPS_REL * np.max(np.abs(G), 0) ** 2) * win[:, None]
     R = R / R[np.argmin(np.abs(ff - 1000))]          # unit at 1 kHz (the normalisation is the tap gain's)
     return np.stack([np.interp(f, ff, R[:, c]) for c in (0, 1)], 1)
+
+
+@functools.lru_cache(maxsize=1)
+def _resampler_response():
+    """(frequency in Hz at the capture rate, gain) of core.to_device_grid's resample_poly FIR (the 96 kHz -> device rate
+    step every cached IR went through), DC-normalised."""
+    from scipy.signal import firwin
+    fs = 96000
+    up, down = core.dev_ratio(fs, CFG)
+    mr = max(up, down)
+    h = firwin(2 * 10 * mr + 1, 1.0 / mr, window=("kaiser", 5.0))
+    N = 1 << 22
+    H = np.abs(np.fft.rfft(h, N))
+    return np.fft.rfftfreq(N) * fs * up, H / H[0]
+
+
+def resampler_gain(f):
+    """Gain of to_device_grid's polyphase low-pass at f (Hz), zero phase. Every cached IR carries it (NonLin_program
+    11.6): it is the 'top-end EQ' of 11.3 (-0.22 / -0.90 / -1.50 / -2.33 / -3.65 dB at 11.5 / 12 / 12.25 / 12.5 / 12.8 kHz),
+    not a property of the unit."""
+    ff, H = _resampler_response()
+    return np.interp(f, ff, H)
 
 
 def cache_stage(workers):

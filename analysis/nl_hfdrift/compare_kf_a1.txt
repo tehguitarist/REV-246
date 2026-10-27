@@ -1,0 +1,14 @@
+1044 captures common to both
+0.0-0.05   n 1036  null L/R median new  -53.3  old  -53.0 | diff median -0.28 dB, worse than +0.5: 0, worst +0.19 (0.1_-0.7_0.6 ch1) | excess over floor median new 24.2 old 24.6
+0.05-0.15  n 1026  null L/R median new  -59.6  old  -58.4 | diff median -0.72 dB, worse than +0.5: 128, worst +0.98 (0.3_-0.2_0.0 ch1) | excess over floor median new 11.5 old 12.1
+0.15-0.3   n  983  null L/R median new  -58.1  old  -57.3 | diff median -0.55 dB, worse than +0.5: 28, worst +0.82 (0.3_10.0_1.8 ch1) | excess over floor median new 10.1 old 11.1
+0.3-0.6    n  904  null L/R median new  -52.3  old  -52.0 | diff median -0.19 dB, worse than +0.5: 2, worst +0.58 (0.3_10.0_1.0 ch1) | excess over floor median new 9.0 old 9.9
+0.6-1.0    n  645  null L/R median new  -41.8  old  -41.8 | diff median -0.05 dB, worse than +0.5: 0, worst +0.16 (0.0_0.1_1.8 ch0) | excess over floor median new 6.5 old 6.7
+1.0-2.0    n  344  null L/R median new  -31.2  old  -31.1 | diff median -0.01 dB, worse than +0.5: 0, worst +0.33 (0.4_-1.0_1.2 ch0) | excess over floor median new 5.6 old 5.6
+per band, 0.05-0.6 s (median L / R, new | old; worse than +0.5 dB count, worst):
+  20-100       new  -40.2 /  -39.0 | old  -40.2 /  -39.0 | diff median -0.01, >+0.5: 0/2088, worst +0.39
+  100-1000     new  -55.2 /  -56.7 | old  -55.2 /  -56.8 | diff median -0.02, >+0.5: 6/2088, worst +0.55
+  1000-5000    new  -59.6 /  -59.6 | old  -59.0 /  -58.7 | diff median -0.65, >+0.5: 0/2088, worst +0.13
+  5000-10000   new  -57.5 /  -57.5 | old  -56.4 /  -55.8 | diff median -0.45, >+0.5: 211/2088, worst +1.59
+  10000-12000  new  -40.8 /  -39.9 | old  -34.6 /  -34.3 | diff median -5.89, >+0.5: 204/2088, worst +5.23
+ppm new-old: mean -0.001 sd 0.009; o new-old: median 0.0000, max |.| 0.010

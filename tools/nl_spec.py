@@ -103,18 +103,22 @@ def spec():
                          reads={str(P): dict(delay=list(q), L_sign=list(nlt.READ_SIGNS[0][P]), R_sign=list(nlt.READ_SIGNS[1][P]))
                                 for P, q in nlt.READS.items()},
                          read_amp=nm.LATE_AMP, late_0="LATE 0: no late section at all (gated)"), "S", "§10"),
-        "output_eq": lab(dict(table=json.load(open(nm.EQ_FILE)), form="zero-phase gain on the whole output, 0 dB below 11 kHz",
-                              note="the N captures roll off 1.0 / 1.85 / 3.0 dB at 12 / 12.3 / 12.6 kHz beyond the S / M / L chain kernel, "
-                                   "the same early and late, L and R: most likely the LOW PASS at its 12 kHz step; the plugin's LP should "
-                                   "reproduce it at 12 kHz rather than add it on top"),
-                         "S (measured) / H (cause)", "§11.3"),
+        "output_eq": lab(dict(table=None, form="none: the plugin's N output is flat to the 12.8 kHz analysis edge",
+                              note="the 1.0 / 1.85 / 3.0 dB roll-off at 12 / 12.3 / 12.6 kHz that 11.3 first adopted as an EQ is the harness's own "
+                                   "96 kHz -> device-rate resampler (resample_poly 25/91, Kaiser 5; -0.22 / -0.90 / -1.50 / -2.33 / -3.65 dB at "
+                                   "11.5 / 12 / 12.25 / 12.5 / 12.8 kHz, nl_structure.resampler_gain), not a property of the unit: refitted after "
+                                   "the clock warp was fixed it matches that filter to 0.05 dB up to 12 kHz. The LOW PASS therefore needs no "
+                                   "special 12 kHz shape on N. (The plugin's low-band CaptureEq is the separate model_s_results 27 transfer.)"),
+                         "S", "§11.3, §11.6"),
         "branch_read_kernel": lab(dict(taps={("L", "R")[int(c)]: v for c, v in json.load(open(nm.BK_FILE)).items()},
                                        centre=nm.BK_PAD, band_limit_hz=nm.BK_LP, strength=nm.BK_ALPHA_DEFAULT,
                                        use="kernel = delta + strength * (taps - delta), per channel (the stored taps are the fitted, strength 1 kernel)",
                                        applies_to="the whole AP(124) branch (main taps, R's first-tap direct term, late section); not the front taps",
-                                       status="adopted at strength 0.65 (user decision, 27 Oct 2026): 0.05-0.15 / 0.15-0.3 / 0.3-0.6 s medians -54.8 / -54.2 / -50.9 -> "
-                                              "-58.4 / -57.3 / -52.0 dB, no capture of 1,044 worse than +0.43 dB (the strict rule holds); at strength 1 "
-                                              "~40 steep-ramp captures lose up to +0.96 dB (NonLin_program 11.5)",
+                                       status="adopted (27 Oct 2026; refitted and set to strength 0.7 under the long-kernel clock warp, NonLin_program 11.5-11.6): "
+                                              "0.05-0.15 / 0.15-0.3 / 0.3-0.6 s medians -58.7 / -57.6 / -52.2 dB (1,044 captures held out; the 0.65 kernel on the old warp "
+                                              "gave -58.4 / -57.3 / -52.0), no channel-window worse than the previous adopted bench by more than +0.07 dB (0.0-0.6 s); against "
+                                              "the same bench without the kernel the worst loss is +0.81 dB (22 channel-windows over +0.5 at 0.05-0.15 s); strength 0.5 "
+                                              "keeps that within +0.5 dB",
                                        note="deviations from a unit tap are <= 0.0007 (-63 dB): inaudible, only for null-level fidelity; centred, "
                                             "so a plugin needs BK_PAD samples of look-ahead or the same delay on the front taps"),
                                   "S (measured, held out) / H (cause: the main taps' read)", "§11.5"),

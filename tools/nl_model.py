@@ -40,9 +40,14 @@ BANDS = [(20, 100), (100, 1000), (1000, 5000), (5000, 10000), (10000, 12000)]   
 FADE_GUARD = 0.75                               # s before the file's end (S's 0.70 s fade ramp + a guard)
 NOISE = os.path.join(nl.OUT, "noise" + ("" if nl.WIDE else "_narrow") + ".json")
 EQ = os.environ.get("NL_EQ", "1") == "1"            # the top-end EQ (NonLin_program 11.3), adopted; NL_EQ=0 leaves it out
-BENCH = os.path.join(nl.OUT, "bench" + ("" if nl.WIDE else "_narrow") + ("" if EQ else "_noeq")
+WARP2 = nlt.WARP2                                   # long-kernel clock warp (default) + the exact resampler gain in place of the fitted EQ (11.6); NL_WARP2=0: the legacy warp and EQ
+BK_FILE = os.environ.get("NL_BK_FILE") or os.path.join(nl.OUT, "branch_kernel_warp2.json" if WARP2 else "branch_kernel.json")   # refitted under the long-kernel warp (11.5)
+BK_ALPHA_DEFAULT = 0.7 if WARP2 else 0.65           # strict rule against the 0.65 bench on all 1,044 captures (NonLin_program 11.5); 0.5 also keeps every channel-window within +0.5 dB of the no-kernel bench
+BK_ALPHA = os.environ.get("NL_BK_ALPHA", str(BK_ALPHA_DEFAULT))
+BENCH = os.path.join(nl.OUT, "bench" + ("" if nl.WIDE else "_narrow") + ("" if EQ else "_noeq") + ("_warp2" if WARP2 else "")
                      + ("_bk" if os.environ.get("NL_BK") == "1" else "")
-                     + (f"_a{os.environ.get('NL_BK_ALPHA', 0.65)}" if os.environ.get("NL_BK") == "1" and os.environ.get("NL_BK_ALPHA") != "1" else ""))
+                     + ("_kf" if os.environ.get("NL_BK") == "1" and os.path.basename(BK_FILE) != "branch_kernel.json" else "")
+                     + (f"_a{float(BK_ALPHA):g}" if os.environ.get("NL_BK") == "1" and float(BK_ALPHA) != 1.0 else ""))
 
 
 def late_db(span, early):
@@ -53,17 +58,15 @@ def late_db(span, early):
     return -60 * (4 + 9 * j) * ne.TICK / early
 
 
-BK_FILE = os.path.join(nl.OUT, "branch_kernel.json")
 BK_H = 14                                    # +-14: the per-tap shape spans -13...+12 (NonLin_program 11.5)
 BK_PAD = 40                                  # the stored kernel's half-length (the low-pass spreads it)
 BK_LP = float(os.environ.get("NL_BK_LP", 11000))   # the kernel's band limit (Hz)
 BK_TRAIN = [(sp, e, 0.0) for sp in (0.2, 0.4) for e in (10.0, 3.0, 1.0, 0.5, 0.3, -0.5, -0.7, -1.0, -3.0)]
-BK_ALPHA_DEFAULT = 0.65                      # the strict rule holds at 0.65 on all 1,044 captures (NonLin_program 11.5); 1.0 fails it
 BK = None
 if os.environ.get("NL_BK") == "1" and os.path.exists(BK_FILE):          # the branch kernel (NonLin_program 11.2): a switch.
     # The main taps' read shape (device side: the front taps do not carry it), band-limited below 11 kHz
     BK = {int(c): np.array(v) for c, v in json.load(open(BK_FILE)).items()}
-    BK_ALPHA = float(os.environ.get("NL_BK_ALPHA", BK_ALPHA_DEFAULT))   # kernel strength: 1 = fitted, 0 = off; 0.65 adopted (NonLin_program 11.5)
+    BK_ALPHA = float(BK_ALPHA)                  # kernel strength: 1 = fitted, 0 = off; 0.7 adopted with the long-kernel warp (NonLin_program 11.5)
     for _c, _k in BK.items():
         _d = np.zeros(len(_k))
         _d[(len(_k) - 1) // 2] = 1.0
@@ -117,7 +120,9 @@ def _proc(N):
     NL_EQ=1 also the measured top-end EQ (zero phase, 0 dB below 11 kHz)."""
     f = np.fft.rfftfreq(N, 1 / FS)
     R = nl.processing_response(f)
-    if EQ:
+    if WARP2:                                   # the captures carry to_device_grid's low-pass, exactly (NonLin_program 11.6); no fitted EQ
+        R = R * nl.resampler_gain(f)[:, None]
+    elif EQ:
         e = json.load(open(EQ_FILE))
         R = R * (10 ** (np.interp(f, e["f_hz"], e["db"]) / 20))[:, None]
     return R
@@ -200,8 +205,10 @@ def bench_file(key):
     cands = [0, -64, -84, -87, -163] + (ne.coarse_offsets(h, key, fr) if ns else [])
     rawp = np.vstack([raw[:n + 64], np.zeros((max(0, n + 64 - len(raw)), 2))])
 
+    up32 = nlt.upsample(rawp)                                   # the clock-independent part of the warp, once per capture
+
     def resid(o, ppm):
-        y = nlt.unwarp(rawp, ppm)[:n] if ppm else rawp[:n]
+        y = nlt.unwarp_from(up32, n, ppm)[:n] if ppm else rawp[:n]
         y = sosfiltfilt(ne.BAND, y, axis=0)
         m = render(key, n, o, fr)
         g = [(y[:, c] @ m[:, c]) / (m[:, c] @ m[:, c]) for c in (0, 1)]
@@ -247,7 +254,7 @@ def bench_file(key):
         res["windows"][f"{t0}-{t1}"] = w
     # per band over 0.05-0.6 s, from the unfiltered (full-band) capture and model: nothing outside the scoring band hides
     a, b2 = max(i0, K0 + int(fr) + int(0.05 * FS)), min(n, K0 + int(fr) + int(0.6 * FS))
-    yf = nlt.unwarp(rawp, ppm)[:n] if ppm else rawp[:n]
+    yf = nlt.unwarp_from(up32, n, ppm)[:n] if ppm else rawp[:n]
     mf = render((span, early, late), n, o, fr, band=False) * np.array(g)
     res["bands"] = {}
     if b2 - a > int(0.05 * FS):

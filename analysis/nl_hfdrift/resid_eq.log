@@ -1,0 +1,17 @@
+captures 160 warp2 True EQ file used: False
+fold A: train even / test odd | real residual dB at knots [ 0.02  0.03  0.03  0.04  0.05  0.05  0.05  0.04  0.03  0.02 -2.86] | complex phase mrad [ -0.2   0.5   1.6   1.4   0.4  -2.8  -8.9 -14.3 -25.  -37.2  -7.1]
+   MID  test median L/R: exact gain only -53.6/-52.7 | + real residual -53.8/-53.3 | + complex residual -53.9/-53.3 | worse than exact by >0.5 dB (real, cplx): 11, 13 of 160
+   HI1  test median L/R: exact gain only -47.5/-45.9 | + real residual -50.2/-48.5 | + complex residual -50.2/-48.2 | worse than exact by >0.5 dB (real, cplx): 39, 39 of 160
+   S1   test median L/R: exact gain only -40.2/-39.1 | + real residual -41.4/-39.7 | + complex residual -41.4/-39.6 | worse than exact by >0.5 dB (real, cplx): 39, 38 of 160
+   S2   test median L/R: exact gain only -34.6/-33.9 | + real residual -34.4/-33.7 | + complex residual -34.8/-34.3 | worse than exact by >0.5 dB (real, cplx): 39, 42 of 160
+   S3   test median L/R: exact gain only -28.1/-29.2 | + real residual -28.0/-29.1 | + complex residual -29.9/-31.3 | worse than exact by >0.5 dB (real, cplx): 7, 27 of 160
+   C    test median L/R: exact gain only -39.7/-38.9 | + real residual -39.8/-39.0 | + complex residual -40.7/-39.4 | worse than exact by >0.5 dB (real, cplx): 39, 40 of 160
+fold B: train odd / test even | real residual dB at knots [ 0.03  0.04  0.04  0.05  0.06  0.07  0.06  0.05  0.05  0.03 -5.88] | complex phase mrad [-2.000e-01  4.000e-01  1.400e+00  1.300e+00  2.000e-01 -3.500e+00
+ -9.800e+00 -1.510e+01 -2.600e+01 -3.820e+01 -2.394e+02]
+   MID  test median L/R: exact gain only -53.6/-52.9 | + real residual -53.8/-53.3 | + complex residual -53.8/-53.3 | worse than exact by >0.5 dB (real, cplx): 23, 24 of 160
+   HI1  test median L/R: exact gain only -48.0/-46.3 | + real residual -50.2/-49.5 | + complex residual -50.5/-49.4 | worse than exact by >0.5 dB (real, cplx): 51, 50 of 160
+   S1   test median L/R: exact gain only -40.1/-38.9 | + real residual -42.8/-41.1 | + complex residual -42.8/-40.9 | worse than exact by >0.5 dB (real, cplx): 50, 50 of 160
+   S2   test median L/R: exact gain only -33.3/-33.0 | + real residual -33.3/-33.0 | + complex residual -36.1/-35.6 | worse than exact by >0.5 dB (real, cplx): 44, 50 of 160
+   S3   test median L/R: exact gain only -27.7/-28.4 | + real residual -27.3/-28.4 | + complex residual -29.9/-31.2 | worse than exact by >0.5 dB (real, cplx): 16, 39 of 160
+   C    test median L/R: exact gain only -39.8/-38.8 | + real residual -40.7/-39.9 | + complex residual -42.1/-40.6 | worse than exact by >0.5 dB (real, cplx): 50, 50 of 160
+[memguard] peak footprint 0.34 GB, 129 s, exit 0

@@ -17,9 +17,9 @@ X = AP(124), P_i = LOOPS: one LATE-independent part F and one excitation E_i per
 Writes analysis/nl/late_excite.npz (time-domain F and E_i per channel, re the feed) and prints the solve's residual
 per capture and the excitations' largest taps.
 """
-import argparse, json, os, sys
+import argparse, functools, json, os, sys
 import numpy as np
-from scipy.signal import butter, lfilter, resample_poly, sosfiltfilt
+from scipy.signal import butter, firwin, lfilter, resample_poly, sosfiltfilt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -74,11 +74,34 @@ def late_column(ch, n, span, late, o_branch, kappa=0.0, r_off=R_LATE):
     return late_columns(ch, n, span, late, o_branch, kappa, r_off) @ np.array(sg, float)
 
 
+# The clock warp with a long interpolation kernel (NonLin_program 11.6; default, NL_WARP2=0 restores the old one). scipy's default Kaiser(5) kernel
+# (10 input samples per side) has a 3.9 kHz transition band around Nyquist, which leaves the image of 11-13 kHz in the
+# 32x signal: a fractional-position resample then gives G(f) + G(fs - f) exp(i 2 pi frac), a phase error growing with
+# file time and an amplitude loss at 11-12.8 kHz. The long kernel (150 input samples per side, Kaiser 9) is flat to
+# 12.8 kHz and rejects from 13.6 kHz, where the captures' analysis band ends. The old warp is kept for the legacy benches.
+WARP2 = os.environ.get("NL_WARP2", "1") == "1"
+WARP_HALF, WARP_BETA = 150, 9.0
+
+
+@functools.lru_cache(maxsize=1)
+def _warp_kernel(up):
+    return firwin(2 * WARP_HALF * up + 1, 1.0 / up, window=("kaiser", WARP_BETA))
+
+
+def upsample(x, up=32):
+    """x (n, c) on the 32x grid; the part of unwarp that does not depend on the clock ratio (cache it per capture)."""
+    return resample_poly(x, up, 1, axis=0, window=_warp_kernel(up)) if WARP2 else resample_poly(x, up, 1, axis=0)
+
+
+def unwarp_from(u, n, ppm, up=32):
+    """The first n samples of the clock-corrected capture from its 32x grid u (see unwarp)."""
+    t = np.arange(n) * (1 + ppm * 1e-6) * up
+    return np.stack([np.interp(t, np.arange(len(u)), u[:, c]) for c in range(u.shape[1])], 1)
+
+
 def unwarp(x, ppm, up=32):
     """x resampled from the capture clock to the device clock: sample n of the result is x at n (1 + ppm 1e-6)."""
-    u = resample_poly(x, up, 1, axis=0)
-    t = np.arange(len(x)) * (1 + ppm * 1e-6) * up
-    return np.stack([np.interp(t, np.arange(len(u)), u[:, c]) for c in range(x.shape[1])], 1)
+    return unwarp_from(upsample(x, up), len(x), ppm, up)
 
 
 def late_capture(key, n):
