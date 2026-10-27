@@ -31,7 +31,7 @@ def _job(a):
     if M.b.get(key, 0.0) >= 0.05:
         return key, None
     W = mll.windows(prog)[1]["first_pass"]
-    a0, a1 = mll.K0 + W[0], mll.K0 + W[1]
+    a1 = mll.K0 + W[1]
     out = []
     for amp, (y, m, ue) in mll.fitted(prog, key).items():
         if min(ue) < a1:

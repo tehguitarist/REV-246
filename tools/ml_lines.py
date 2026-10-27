@@ -29,9 +29,12 @@ deterministic part [0, onset + shortest line) only, which no line reaches. Every
           error (energy-based, so the M/L time variance does not bias it) and gives RT(f) = 60 / (60 / RT_law(f) - slope).
   report  breakdowns of the law files by control, the capture-to-capture / model error split, the limit scans.
   ML_HK=<chain_kernel json> in the environment replaces the stored output kernels (firstpass.json) by the ones
-  refitted with the chain kernel (tools/chain_kernel.py), and S's by a unit tap.
+  refitted with the chain kernel (tools/chain_kernel.py), and S's by a unit tap. For M / L the default ML_KFIX refit
+  (kernel_fix_full.json) then overrides those kernels unless ML_KFIX=0.
   ML_FP=<firstpass json> reads the first-pass parameters (positions, signs, kernel, b per setting) from that file
   instead of analysis/ml_carryover/firstpass.json, e.g. firstpass_chain2.json refitted on the chain-kernel IRs.
+  ML_BREFIT then still replaces the damped b (its default, "steps", is the adopted M / L table), so ML_FP alone
+  does not restore an older per-setting b; set ML_BREFIT=0 as well for that.
   Tools that honour either suffix their outputs with SUFFIX (_fp, _hk).
   fitted(prog, key)  (a function, no stage) rebuilds one group's captures with their models from the law files.
   fit     per setting, the line law's three numbers (Nyquist-end RT, DC RT ratio, HF RT factor at f_ref; shelf pole
@@ -125,10 +128,11 @@ def onepole_for(T, f):
     return ((1 - T2 * c) - np.sqrt((1 - T2 * c) ** 2 - (1 - T2) ** 2)) / (1 - T2)
 
 
-def line_coefs(P, rt, lf, hf, caps=True, v=None, p_max=P_MAX, dc_min=DC_MIN, beta=BETA):
+def line_coefs(P, rt, lf, hf, caps=True, v=None, p_max=P_MAX, dc_min=DC_MIN, beta=BETA, pole_map=True):
     """Per line (g, shelf r0, HF pole p): S's laws at line length P, or v = (rt_hi, dc ratio, HF factor) in place of
     the law's (L['hi'] rt, L['dc'] / L['hi'], hf ** (1 / k)); the limits applied when caps (p_max / dc_min None: that
-    limit off)."""
+    limit off). pole_map: apply the HF pole curve when p_max is the default P_MAX (False: a plain min(p, p_max), as the
+    limit scans need)."""
     L = lf_law(lf)
     if caps and HFRT_MIN and v is None:                     # the HF control saturates (model_s_results 29), in program time
         hf = max(hf, HFRT_MIN * round(min(P) / 1321) / rt)
@@ -153,7 +157,8 @@ def line_coefs(P, rt, lf, hf, caps=True, v=None, p_max=P_MAX, dc_min=DC_MIN, bet
             T = 10 ** (kk / rt_hi * (1 / v[2] - 1)) if v[2] < 1.0 else 1.0
         p = onepole_for(T, LAW["f_ref"]) if T < 1.0 else 0.0
         if caps and p_max is not None and p > 0.0:
-            p = POLE_MAP(p) if POLE_MAP and p_max == P_MAX else min(p, p_max)   # §25.20: the pole curve unless another limit is asked
+            p = POLE_MAP(p) if pole_map and POLE_MAP and p_max == P_MAX else min(p, p_max)   # 25.20: the pole curve unless another limit is asked
+            p = max(p, 0.0)                                     # the curve's first knot is slightly negative; a pole cannot be
         out.append((g, r0, p))
     return out
 
@@ -194,7 +199,9 @@ class Model:
         # kernel (ml_structure 25: §18's 11 taps plus an 11-tap correction above 9.5 kHz, fitted 20 Hz-12.3 kHz);
         # ML_KFIX_FILE=analysis/ml_lines/kernel_fix.json: §18's in-band kernel
         kf = kf if os.path.isabs(kf) else os.path.join(ROOT, kf)
-        if KFIX and prog in ("M", "L") and os.path.exists(kf):  # refitted with the undamped step at b = 0 (ml_structure 18)
+        if KFIX and prog in ("M", "L"):                     # refitted with the undamped step at b = 0 (ml_structure 18)
+            if not os.path.exists(kf):
+                raise FileNotFoundError(f"ML_KFIX refit kernel not found: {kf} (set ML_KFIX=0 for the stored kernel)")
             self.h = np.array(json.load(open(kf))[prog]["kernel"])
         self.kh = (len(self.h) - 1) // 2
         self.b = {}
@@ -208,6 +215,7 @@ class Model:
                 if cells[f"{rt}_{hf}"] > 0:
                     self.b[key] = tab[cells[f"{rt}_{hf}"]]
         elif BREFIT and prog in ("M", "L"):                 # ML_BREFIT: per-setting b from a file (only the keys it lists)
+            # ML_FP set also lands here: the adopted ML_BREFIT default wins over the first-pass file's b; ML_BREFIT=0 keeps it.
             bf = os.path.join(ROOT, "analysis", "ml_lines", "b_refit.json") if BREFIT == "1" else BREFIT
             bf = bf if os.path.isabs(bf) else os.path.join(ROOT, bf)
             self.b.update({k: float(v) for k, v in json.load(open(bf)).get(prog, {}).items()})
@@ -224,7 +232,11 @@ class Model:
     def parts(self, n, key, coefs=None, F=None, band=True):
         """(cluster, reverb), (n, 2) each, unit gain, band-limited, on the nominal device clock with cluster tap 0 at K0.
         All delays are integers (the taps' fractional parts are the capture clock, ml_structure §7.2), so the weighted
-        grid stays causal; clock and shift come after (warp)."""
+        grid stays causal; clock and shift come after (warp).
+
+        This is the plugin's reference form. ml_carryover.render and ml_variance.paths/core are independent copies of
+        the same diffuser / line / coupling algebra (deliberately different in tap rounding and band placement); a change
+        to the render algebra must be made in all of them or regression-tested against this one."""
         lf, rt, hf = (float(x) for x in key.split("_"))
         coefs = coefs if coefs is not None else line_coefs(self.P, rt, lf, hf)
         F = self.F if F is None else F
@@ -304,8 +316,9 @@ _FADES = None
 
 def fade_start(f, prog):
     """Seconds before a file's end where Tomkin's fade starts, plus a guard: M / L from tools/ml_fade.py's per-file table
-    (ml_structure §15: M a linear 1.0 s ramp, ~0.3 s on files under 1.5 s; L linear, ~0.3 x the file length), its
-    program fallback where the reverb meets the floor before the fade; S (or no file) S's 0.70 s ramp (FADE)."""
+    (ml_structure §15: M a linear 1.0 s ramp, ~0.3 s on files under 1.5 s; L linear, ~0.5 x the file length when no
+    measured fade exists), its program fallback where the reverb meets the floor before the fade; S (or no file) S's
+    0.70 s ramp (FADE)."""
     global _FADES
     if f is None or prog not in ("M", "L"):
         return FADE, None
@@ -417,7 +430,7 @@ def variants(prog, key):
                   dc=bool(min(g * r0 for g, r0, _ in raw) < max(x for x in DC_SCAN if x)))
     v = {"law": {}, "nocaps": dict(coefs=raw), "uncoupled": dict(F=np.eye(4))}
     if active["hf"]:
-        v.update({f"p{x}": dict(coefs=line_coefs(P, rt, lf, hf, p_max=x)) for x in P_SCAN})
+        v.update({f"p{x}": dict(coefs=line_coefs(P, rt, lf, hf, p_max=x, pole_map=False)) for x in P_SCAN})
     if active["dc"]:
         v.update({f"dc{x}": dict(coefs=line_coefs(P, rt, lf, hf, dc_min=x)) for x in DC_SCAN})
         v.update({f"beta{x}": dict(coefs=line_coefs(P, rt, lf, hf, beta=x)) for x in BETA_SCAN})
@@ -677,7 +690,7 @@ def fit_stage(progs, workers, tag=""):
         print("- HF pole (max over lines) fitted vs law-with-limits, per HF step (median over settings) and where the law's pole is capped:")
         for h in sorted({l["hf"] for l in lab.values()}):
             ks = [k for k in o if lab[k]["hf"] == h]
-            capped = [k for k in ks if max(o[k]["law_hf_pole"]) >= P_MAX - 1e-9]
+            capped = [k for k in ks if max(o[k]["law_hf_pole"]) >= P_MAX - 1e-9]   # law + pole curve: includes curve values above P_MAX, not only the 0.84 cap
             print(f"  HF {h}: fitted {np.median([max(o[k]['hf_pole']) for k in ks]):.3f} (law {np.median([max(o[k]['law_hf_pole']) for k in ks]):.3f}); "
                   f"capped in the law: {len(capped)} settings, fitted max pole there {np.median([max(o[k]['hf_pole']) for k in capped]) if capped else float('nan'):.3f}")
         print("- RT fit / law per octave (median over all groups), by HF step:")

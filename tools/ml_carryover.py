@@ -356,7 +356,7 @@ def taps_stage(workers, only=None):
             for ch in (0, 1):
                 print(f"- {'LR'[ch]} minus {SC[p]} x S: " + " ".join(f"{x:+.2f}" for x in d[ch]))
         sh = shifts[p]
-        print(f"- R - L shifts (route): " + " ".join(f"{x['shift']:.2f}({x['s_route']})" for x in sh))
+        print("- R - L shifts (route): " + " ".join(f"{x['shift']:.2f}({x['s_route']})" for x in sh))
 
 
 # ---------------------------------------------------------------- routing
