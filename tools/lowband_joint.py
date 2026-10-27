@@ -18,7 +18,7 @@ import functools, json, os
 import numpy as np
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SHARED = os.path.join(ROOT, "analysis", "lowband", "chain3_lowband_joint.json")
+SHARED = os.environ.get("LOWBAND_SHARED") or os.path.join(ROOT, "analysis", "lowband", "chain3_lowband_joint.json")   # LOWBAND_SHARED: an alternative table (tests)
 NFINE = os.path.join(ROOT, "analysis", "nl", "lowband_N_fine.npz")
 
 

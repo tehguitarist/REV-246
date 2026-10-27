@@ -1,0 +1,15 @@
+captures 513 variant w60 lam 0.01
+shipped lb2, raw                                        median L/R  -49.1 /  -46.5   mean  -45.6  n=513
+shipped lb2, pre-roll step subtracted (2 numbers/capture) median L/R  -49.0 /  -47.0   mean  -45.7  n=513
+step effect: median change -0.01 dB, better>0.5 dB in 273 of 1026
+ORACLE per-capture sub-18 table (in-sample, 18 params), raw median L/R  -53.3 /  -51.4   mean  -49.5  n=513
+ORACLE per-capture sub-18 table (in-sample), step-subtracted median L/R  -53.3 /  -51.4   mean  -49.5  n=513
+held out leave-one-SPAN-out, raw (+18 params shared)    median L/R  -47.4 /  -44.6   mean  -44.3  n=513
+held out leave-one-(session,SPAN)-out, raw (+18 params shared) median L/R  -47.5 /  -45.1   mean  -44.6  n=513
+held out leave-one-capture-out (pooled), raw (+18 params shared) median L/R  -47.3 /  -45.2   mean  -44.5  n=513
+held out leave-one-session-out, raw (+18 params shared) median L/R  -47.7 /  -44.6   mean  -44.6  n=513
+held out leave-one-SPAN-out, step-sub (+18 params shared) median L/R  -48.0 /  -45.8   mean  -45.2  n=513
+held out leave-one-(session,SPAN)-out, step-sub (+18 params shared) median L/R  -48.2 /  -46.2   mean  -45.5  n=513
+held out leave-one-capture-out (pooled), step-sub (+18 params shared) median L/R  -48.0 /  -46.3   mean  -45.4  n=513
+held out leave-one-session-out, step-sub (+18 params shared) median L/R  -48.6 /  -45.9   mean  -45.4  n=513
+[memguard] peak footprint 0.16 GB, 1 s, exit 0

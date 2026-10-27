@@ -1,0 +1,14 @@
+base                                           n 51  N0: -40.8  -38.4  -51.6  -52.3 Nall: -40.1  -38.6  -51.5  -52.0 S: -39.6  -38.1  -50.0  -48.6
++LATE>0.2, windows >= 0.30 s only              n105  N0: -40.8  -38.3  -51.3  -52.8  d+0.49 Nall: -40.1  -38.3  -50.9  -52.7  d+0.71 S: -39.5  -38.0  -50.0  -48.5  d+0.10
++LATE>0.2, windows >= 0.30 s, window to 0.6    n120  N0: -40.8  -38.1  -51.2  -52.8  d+0.48 Nall: -39.9  -37.9  -50.9  -52.7  d+0.66 S: -39.5  -38.0  -50.0  -48.6  d+0.07
+base, windows >= 0.30 s only                   n 36  N0: -40.8  -38.3  -51.5  -52.5  d+0.22 Nall: -40.2  -38.4  -51.2  -52.2  d+0.26 S: -39.6  -38.0  -50.1  -48.5  d+0.08
+base + EARLY<0 + SPAN0.1 (all LATE<=0.2)       n 94  N0: -40.5  -38.5  -51.5  -52.5  d+0.27 Nall: -39.9  -38.5  -51.2  -51.9  d+0.31 S: -39.9  -38.2  -50.0  -48.6  d+0.31
+Traceback (most recent call last):
+  File "/Users/leighpierce/Git/246/analysis/nl_lowband30/cand_sub18/b2.py", line 14, in <module>
+    print("window lengths (s) of base design:", np.round(sorted(NN[k]["win"]["w45f"][3] / 26373.6 for k in NN if DES[list(DES)[0]](k, NN[k])), 2)[::5])
+                                                         ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/leighpierce/Git/246/analysis/nl_lowband30/cand_sub18/b2.py", line 14, in <genexpr>
+    print("window lengths (s) of base design:", np.round(sorted(NN[k]["win"]["w45f"][3] / 26373.6 for k in NN if DES[list(DES)[0]](k, NN[k])), 2)[::5])
+                                                                ~~~~~~~~~~~~^^^^^^^^
+KeyError: 'w45f'
+[memguard] peak footprint 0.94 GB, 1 s, exit 1

@@ -1,0 +1,16 @@
+lam 0.01 knots <= 18.0 params 18 per channel
+raw shipped: median L/R -49.1 / -46.5
+   leave-one-SPAN-out             median L/R  -50.7 /  -46.7   change median -0.56  worse>0.5: 177/1026  better>0.5: 538
+   leave-one-(session,SPAN)-out   median L/R  -50.7 /  -46.7   change median -0.56  worse>0.5: 177/1026  better>0.5: 537
+   leave-one-session-out          median L/R  -50.7 /  -46.6   change median -0.54  worse>0.5: 171/1026  better>0.5: 522
+   leave-one-EARLY-out            median L/R  -50.8 /  -46.8   change median -0.69  worse>0.5: 153/1026  better>0.5: 568
+   in-sample pooled               median L/R  -50.9 /  -46.8
+   shipped: fraction of channel-windows <= -50 dB: 0.20
+step-subtracted shipped: median L/R -49.0 / -47.0
+   leave-one-SPAN-out             median L/R  -51.1 /  -47.9   change median -1.09  worse>0.5: 118/1026  better>0.5: 698
+   leave-one-(session,SPAN)-out   median L/R  -51.3 /  -47.9   change median -1.07  worse>0.5: 117/1026  better>0.5: 696
+   leave-one-session-out          median L/R  -51.2 /  -47.8   change median -1.03  worse>0.5: 106/1026  better>0.5: 680
+   leave-one-EARLY-out            median L/R  -51.3 /  -48.2   change median -1.15  worse>0.5: 105/1026  better>0.5: 697
+   in-sample pooled               median L/R  -51.3 /  -48.2
+   shipped: fraction of channel-windows <= -50 dB: 0.23
+[memguard] peak footprint 0.16 GB, 2 s, exit 0

@@ -1,5 +1,5 @@
 import sys, json
-sys.argv = [sys.argv[0], "2", "1"]
+import os; sys.argv = [sys.argv[0], os.environ.get("LB_SM", "2"), "1"]
 exec(open("lb_joint.py").read().split("one = np.ones")[0])
 Sall = tot([S[q] for q in S_keys()]); Nall = tot(list(N.values()))
 T = {"joint": T_from([(*Sall, 1.0), (*Nall, 1.0)]), "N": T_from([(*Nall, 1.0)]), "S": T_from([(*Sall, 1.0)])}
