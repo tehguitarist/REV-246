@@ -963,6 +963,94 @@ def xfit_stage(workers, only=None):
     json.dump(out, open(os.path.join(OUT, "xcorr" + ("_smoke" if only else "") + ".json"), "w"), indent=1)
 
 
+# ---------- stage xprobe: the per-loop correction's normal equations by window, band, RT fold and LF ----------
+XP_LAGS = sorted({*range(-10, 11), *(s_ * (e + d) for e in (230, 460) for d in range(-2, 3) for s_ in (1, -1)),
+                  *(s_ * l_ for l_ in range(12, 91, 3) for s_ in (1, -1))})
+XP_WINS = [(0, 50), (50, 150), (150, 300), (300, 600)]
+XP_BANDS = [(20, 400), (400, 3200), (3200, 12300)]
+XP_SOS = [butter(3, ab, btype="band", fs=FS, output="sos") for ab in XP_BANDS]
+
+
+def _xprobe_job(a):
+    """As _xfit_job, but the normal equations are kept apart per window (XP_WINS) and per band (XP_BANDS: columns, residual and
+    capture are band-passed zero-phase before the window is cut), each capture's rows scaled by its own energy in that
+    band and window (so a block is a sum of fractional errors), and bTb kept: the error of any form h is then
+    (bTb - 2 h'ATb + h'ATA h) / captures, held out by summing other settings' blocks."""
+    key, lab, b230, law, fold, fc, v, caps, ends = a
+    q1.EXT = 1700
+    G = pc.setting_G(lab, b230, law, fold, fc)
+    J = q1.Joint([dict(G, files=[dict(y=np.zeros((4096, 2)), w=np.ones(4096), amp=0)])])
+    cl, f_, xs = J.split(v)
+    F_, X_ = J._spectra(f_, xs, G["N"])
+    nl, ncol = len(G["R"]), len(G["R"]) * len(XP_LAGS)
+    nw, nb = len(XP_WINS), len(XP_BANDS)
+    nz = 2 if os.environ.get("XPROBE_CH") == "1" else 1       # XPROBE_CH=1: L and R kept apart (leading axis)
+    ATA, ATb, BTB, CNT = np.zeros((nz, nw, nb, ncol, ncol)), np.zeros((nz, nw, nb, ncol)), np.zeros((nz, nw, nb)), np.zeros((nz, nw, nb))
+    for c in caps:
+        y, mdl, g, te = q2.fit_capture(G, v, c["amp"], c["file"], c["fade2"], c["eps"], ends[c["file"]], 1700)
+        n = len(y)
+        mf = full_model(J, v, G, n, c["amp"], mdl)
+        e = y - mf * g
+        N = 1 << int(np.ceil(np.log2(n + 8192)))
+        Pr = pipeline(N, True)
+        ixs = [win_idx(a_ms, b_ms, te, n) for a_ms, b_ms in XP_WINS]
+        if not any(ixs):
+            continue
+        m = min(n, max(ix[1] for ix in ixs if ix) + 400)
+        for ch in (0, 1):
+            ri = [apply_f(np.fft.irfft(X_[ch, i] * G["R"][i], G["N"])[:n, None] * np.ones((1, 2)), Pr)[:, 0] for i in range(nl)]
+            cols = np.stack([np.roll(r, lag)[:m] * g[:m, ch] for r in ri for lag in XP_LAGS], 1)
+            for k, sos in enumerate(XP_SOS):
+                Ab, eb, yb = sosfiltfilt(sos, cols, axis=0), sosfiltfilt(sos, e[:m, ch]), sosfiltfilt(sos, y[:m, ch])
+                for w, ix in enumerate(ixs):
+                    if ix is None:
+                        continue
+                    i0, i1 = ix
+                    sc = 1.0 / np.sqrt(np.sum(yb[i0:i1] ** 2))
+                    A, bb = Ab[i0:i1] * sc, eb[i0:i1] * sc
+                    z = ch if nz == 2 else 0
+                    ATA[z, w, k] += A.T @ A
+                    ATb[z, w, k] += A.T @ bb
+                    BTB[z, w, k] += bb @ bb
+                    CNT[z, w, k] += 1
+    print(key, flush=True)
+    return key, lab["lf"], lab["rt"], ATA, ATb, BTB, CNT
+
+
+def xprobe_stage(workers, only=None):
+    from concurrent.futures import ProcessPoolExecutor
+    assert not os.environ.get("EMT_XCORR"), "fit on the baseline: unset EMT_XCORR"
+    info, fade, _, _, eps0 = q2.q1_tables()
+    ap = json.load(open(os.path.join(q2.OUT, pc.lf_.AP230)))
+    ends = json.load(open(os.path.join(q2.OUT, "ramp.json")))
+    v, law, _ = q2.final_injection(compact=pc.COMPACT)
+    cells = json.load(open(os.path.join(pc.CV, "cells.json")))
+    folds = {rt: json.load(open(os.path.join(pc.CV, f"fold_{rt}.json"))) for rt in sorted({g["rt"] for g in info.values()})}
+    jobs = []
+    for i, (k, g) in enumerate(sorted(info.items())):
+        if (only and k not in only) or (not only and i % 3):
+            continue
+        caps = [dict(amp=a_, file=nm, eps=eps0[nm], fade2=fade[nm]) for a_, nm in q2.files_of(g) if (k, a_) not in DEFECTS]
+        if caps:
+            jobs.append((k, dict(lf=g["lf"], rt=g["rt"], hf=g["hf"]), ap["steps"][ap["settings"][k]["step"]], law, folds[g["rt"]], cells.get(k), v, caps, ends))
+    acc = {}
+    with ProcessPoolExecutor(workers, max_tasks_per_child=1) as ex:
+        for key, lf, rt, ATA, ATb, BTB, CNT in ex.map(_xprobe_job, jobs):
+            for z in range(ATA.shape[0]):
+                gk = ("A" if rt in TFOLDS["A"] else "B", lf) + ((z,) if ATA.shape[0] == 2 else ())
+                cur = acc.get(gk)
+                new = (ATA[z], ATb[z], BTB[z], CNT[z])
+                acc[gk] = new if cur is None else tuple(x + y_ for x, y_ in zip(cur, new))
+    gks = sorted(acc)
+    d = os.path.join(OUT, "xprobe")
+    os.makedirs(d, exist_ok=True)
+    tag = ("_ch" if os.environ.get("XPROBE_CH") == "1" else "") + ("_smoke" if only else "")
+    np.savez(os.path.join(d, "groups" + tag + ".npz"), groups=np.array(["|".join(str(x) for x in gk) for gk in gks]),
+             ATA=np.stack([acc[g][0] for g in gks]), ATb=np.stack([acc[g][1] for g in gks]), BTB=np.stack([acc[g][2] for g in gks]),
+             CNT=np.stack([acc[g][3] for g in gks]), lags=np.array(XP_LAGS), wins=np.array(XP_WINS), bands=np.array(XP_BANDS))
+    print("saved", len(gks), "groups", flush=True)
+
+
 # ---------- stage gate: the full-band sanity gate ----------
 GATE_TOL = 0.5                                       # dB a band-window median may get worse
 
@@ -1048,7 +1136,7 @@ def report_stage():
                 cells.append(f"{x:g}: {20 * np.log10(abs(a_)):+.2f} / {np.degrees(np.angle(a_)):+.1f} ; {20 * np.log10(abs(b_)):+.2f} / {np.degrees(np.angle(b_)):+.1f}")
                 rep["T"].setdefault("LR"[c], {})[str(x)] = [20 * np.log10(abs(a_)), np.degrees(np.angle(a_)), 20 * np.log10(abs(b_)), np.degrees(np.angle(b_))]
             lines.append(f"- {'LR'[c]}: " + "; ".join(cells))
-    for vdir in sorted(os.path.basename(x) for x in glob.glob(os.path.join(OUT, "s_tfix*"))):
+    for vdir in sorted(os.path.basename(x) for pat in ("s_tfix*", "s_xcorr*") for x in glob.glob(os.path.join(OUT, pat))):
         _report_variant("s", vdir, lines, rep)
     _report_rest(lines, rep)
 
@@ -1281,7 +1369,7 @@ def _report_ml(mdir, lines, rep):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["s", "tfix", "takefit", "ml", "warp", "wide", "kfix", "shf", "gate", "xfit", "report"], required=True)
+    ap.add_argument("--stage", choices=["s", "tfix", "takefit", "ml", "warp", "wide", "kfix", "shf", "gate", "xfit", "xprobe", "report"], required=True)
     ap.add_argument("--only", nargs="*")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--prog", default="SML")
@@ -1296,6 +1384,8 @@ def main():
         ml_stage(list(a.prog), a.every, a.workers, int(a.only[0]) if a.only else None)
     elif a.stage == "xfit":
         xfit_stage(a.workers, a.only)
+    elif a.stage == "xprobe":
+        xprobe_stage(a.workers, a.only)
     elif a.stage == "gate":
         gate_stage(a.workers, a.tag)
     elif a.stage == "shf":

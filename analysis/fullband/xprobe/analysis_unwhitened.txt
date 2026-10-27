@@ -1,0 +1,33 @@
+8. unwhitened training (blocks summed as they are: the low band's large fractional error dominates), as xfit did; other fold
+
+8. per-loop short lags (164), UNWHITENED
+  window ms     20-400 Hz  400-3200 Hz  3200-12300 Hz   worst cell
+    0-50            -0.52        -1.38        -0.19   -0.19
+   50-150           -1.58        -3.31        -1.44   -1.44
+  150-300           -0.27        -0.74        -0.16   -0.16
+  300-600           +0.06        +0.11        +0.00   +0.11
+  mean -0.79 dB, cells worse than +0.1 dB: 1 of 12
+
+8. per-loop short lags (164), whitened
+  window ms     20-400 Hz  400-3200 Hz  3200-12300 Hz   worst cell
+    0-50            -0.25        -1.89        -0.39   -0.25
+   50-150           -1.46        -4.39        -1.86   -1.46
+  150-300           -0.36        -1.06        -0.20   -0.20
+  300-600           +0.04        +0.08        -0.00   +0.08
+  mean -0.98 dB, cells worse than +0.1 dB: 0 of 12
+
+8. common to all loops, short lags (41), UNWHITENED
+  window ms     20-400 Hz  400-3200 Hz  3200-12300 Hz   worst cell
+    0-50            -0.31        -1.76        -0.30   -0.30
+   50-150           -1.46        -4.01        -1.67   -1.46
+  150-300           -0.29        -0.97        -0.20   -0.20
+  300-600           +0.06        +0.08        -0.00   +0.08
+  mean -0.90 dB, cells worse than +0.1 dB: 0 of 12
+
+8. common to all loops, short lags (41), whitened
+  window ms     20-400 Hz  400-3200 Hz  3200-12300 Hz   worst cell
+    0-50            -0.22        -1.91        -0.38   -0.22
+   50-150           -1.39        -4.44        -1.85   -1.39
+  150-300           -0.37        -1.07        -0.20   -0.20
+  300-600           +0.04        +0.08        -0.00   +0.08
+  mean -0.98 dB, cells worse than +0.1 dB: 0 of 12
