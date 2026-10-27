@@ -45,14 +45,14 @@ BK_FILE = os.environ.get("NL_BK_FILE") or os.path.join(nl.OUT, "branch_kernel_wa
 BK_ALPHA_DEFAULT = 0.7 if WARP2 else 0.65           # strict rule against the 0.65 bench on all 1,044 captures (NonLin_program 11.5); 0.5 also keeps every channel-window within +0.5 dB of the no-kernel bench
 BK_ALPHA = os.environ.get("NL_BK_ALPHA", str(BK_ALPHA_DEFAULT))
 HF = os.environ.get("NL_HF") == "1"                 # NL_HF=1: the capture chain's band-edge term above 10 kHz, per capture run (NonLin_program 11.6); a measurement-side term, not the unit
-HF_FILE = os.path.join(nl.OUT, "hf_corr.json")
+HF_FILE = os.environ.get("NL_HF_FILE") or os.path.join(nl.OUT, "hf_corr.json")   # NL_HF_FILE: another table (hf_corr_g5.json: Gaussian-weighted scalar + a front-tap skip rule)
 HF_ALPHA = float(os.environ.get("NL_HF_ALPHA", 1.0))   # strength of the correction (1 = as fitted)
 BENCH = os.path.join(nl.OUT, "bench" + ("" if nl.WIDE else "_narrow") + ("" if EQ else "_noeq") + ("_warp2" if WARP2 else "")
                      + ("_bk" if os.environ.get("NL_BK") == "1" else "")
                      + ("_kf" if os.environ.get("NL_BK") == "1" and os.path.basename(BK_FILE) != "branch_kernel.json" else "")
                      + (f"_a{float(BK_ALPHA):g}" if os.environ.get("NL_BK") == "1" and float(BK_ALPHA) != 1.0 else "")
                      + (f"_lb{os.environ.get('NL_LOWBAND', '2')}" if os.environ.get("NL_LOWBAND", "2") != "0" else "") + os.environ.get("NL_LOWBAND_TAG", "")   # NL_LOWBAND_TAG: bench folder tag for table tests
-                     + ("_hf" + (f"{HF_ALPHA:g}" if HF_ALPHA != 1.0 else "") if HF else ""))   # NL_LOWBAND (default 2, adopted): tools/lowband_joint.py
+                     + ("_hf" + ("" if os.path.basename(HF_FILE) == "hf_corr.json" else "_" + os.path.basename(HF_FILE)[len("hf_corr_"):-5]) + (f"{HF_ALPHA:g}" if HF_ALPHA != 1.0 else "") if HF else ""))   # NL_LOWBAND (default 2, adopted): tools/lowband_joint.py
 
 
 def late_db(span, early):
@@ -143,6 +143,8 @@ def hf_gain(key, N):
     between the knots, unity below 10 kHz and from 12.8 kHz (hf_corr.json: shape + a scalar from the run's front taps)."""
     d = _hf_table()
     c = d["captures"].get("_".join(str(v) for v in key), d["default"])
+    if c.get("skip"):                                   # the front taps' estimates scatter: no correction (unity)
+        return np.ones(N // 2 + 1, complex)
     z = HF_ALPHA * (np.array(c["z_re"]) + 1j * np.array(c["z_im"]))
     kx = np.r_[9500.0, 10000.0, d["knots_hz"], 13200.0]
     g = np.r_[1.0, 1.0, np.exp(z), 1.0]

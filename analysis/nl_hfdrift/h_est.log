@@ -1,0 +1,28 @@
+front-tap noise model: var(s_i - s_nb) = 0 + 0.003275 (1/inf_i + 1/inf_nb); median inf_i 2.92, resid sd 0.018
+var of s over front-tap captures 0.003027 (noise-corrected true 0.001542)
+neighbour scatter percentiles 50/75/90: [0.002 0.005 0.016]
+none                               C med -39.9 (L -40.6 / R -39.6) gain -0.0 harm  0.0% worst +0.0 | S1 -40.3 S2 -33.6 S3 -27.7 | rest -41.1/0% S0.1 -41.3/0% S0.3 -37.2/0% trimmed -40.8/0%
+mean z0 only                       C med -41.8 (L -42.0 / R -40.8) gain +3.2 harm 27.5% worst +11.1 | S1 -42.3 S2 -37.3 S3 -31.5 | rest -41.2/36% S0.1 -46.2/30% S0.3 -40.9/22% trimmed -43.3/22%
+knn k=5                            C med -48.4 (L -48.2 / R -48.7) gain +5.7 harm 11.5% worst +17.6 | S1 -48.5 S2 -44.3 S3 -33.7 | rest -49.0/3% S0.1 -48.3/20% S0.3 -48.4/10% trimmed -46.0/13%
+knn k=15                           C med -47.3 (L -47.3 / R -47.1) gain +4.5 harm 22.5% worst +13.6 | S1 -47.4 S2 -43.2 S3 -33.3 | rest -49.1/3% S0.1 -48.1/25% S0.3 -46.2/27% trimmed -42.0/35%
+knn k=40                           C med -46.0 (L -46.3 / R -45.7) gain +4.0 harm 26.3% worst +11.5 | S1 -46.4 S2 -42.5 S3 -33.3 | rest -48.6/6% S0.1 -48.2/34% S0.3 -45.7/33% trimmed -44.1/32%
+knn15 same-SPAN                    C med -46.2 (L -46.3 / R -46.0) gain +3.7 harm 20.7% worst +12.3 | S1 -46.6 S2 -42.7 S3 -33.0 | rest -49.0/6% S0.1 -48.3/15% S0.3 -46.2/27% trimmed -40.0/35%
+knn15 same-run                     C med -48.2 (L -48.1 / R -48.4) gain +5.5 harm 12.0% worst +13.6 | S1 -48.3 S2 -44.0 S3 -33.6 | rest -49.1/3% S0.1 -48.2/18% S0.3 -48.3/11% trimmed -45.6/16%
+gauss tau=5min                     C med -48.4 (L -48.2 / R -48.8) gain +5.6 harm 11.2% worst +17.6 | S1 -48.4 S2 -44.3 S3 -33.7 | rest -49.1/3% S0.1 -48.2/21% S0.3 -48.4/8% trimmed -46.0/13%
+gauss tau=20min                    C med -47.7 (L -47.8 / R -47.7) gain +5.0 harm 16.3% worst +17.6 | S1 -48.1 S2 -42.9 S3 -33.4 | rest -49.0/4% S0.1 -48.4/22% S0.3 -48.2/18% trimmed -44.9/21%
+gauss tau=60min                    C med -46.0 (L -46.1 / R -45.8) gain +4.1 harm 35.5% worst +17.6 | S1 -46.1 S2 -41.8 S3 -32.8 | rest -47.7/21% S0.1 -46.7/37% S0.3 -47.9/24% trimmed -40.9/59%
+own front taps alone               C med -48.0 (L -48.0 / R -48.1) gain +5.6 harm 16.8% worst +13.6 | S1 -48.2 S2 -44.1 S3 -33.5 | rest -49.1/3% S0.1 -48.3/13% S0.3 -48.2/17% trimmed -42.0/35%
+own+knn15 precision-weighted       C med -47.3 (L -47.3 / R -47.1) gain +4.6 harm 22.0% worst +13.6 | S1 -47.4 S2 -43.3 S3 -33.3 | rest -49.1/3% S0.1 -48.1/23% S0.3 -46.2/27% trimmed -42.0/35%
+own+gauss20 precision-weighted     C med -47.7 (L -47.8 / R -47.7) gain +5.1 harm 16.0% worst +17.6 | S1 -48.1 S2 -43.0 S3 -33.4 | rest -49.0/3% S0.1 -48.4/22% S0.3 -48.2/17% trimmed -44.9/21%
+knn15 + L front taps               C med -44.3 (L -44.6 / R -44.1) gain +3.0 harm 28.3% worst +12.9 | S1 -44.4 S2 -40.6 S3 -33.2 | rest -47.5/4% S0.1 -42.8/43% S0.3 -46.4/27% trimmed -42.3/40%
+shrink knn15 -> 0                  C med -47.5 (L -47.7 / R -47.3) gain +4.4 harm 23.2% worst +12.9 | S1 -47.9 S2 -43.1 S3 -33.3 | rest -48.9/3% S0.1 -48.3/28% S0.3 -46.5/27% trimmed -42.8/35%
+shrink knn15 -> run mean           C med -47.7 (L -47.7 / R -47.6) gain +4.5 harm 18.8% worst +12.9 | S1 -47.9 S2 -43.3 S3 -33.3 | rest -49.1/3% S0.1 -48.4/11% S0.3 -46.2/27% trimmed -42.6/35%
+shrink x2 -> 0                     C med -47.6 (L -47.6 / R -47.1) gain +4.4 harm 23.2% worst +12.3 | S1 -47.9 S2 -43.1 S3 -33.3 | rest -48.8/4% S0.1 -48.4/28% S0.3 -47.0/26% trimmed -43.4/35%
+shrink x2 -> run mean              C med -47.8 (L -47.8 / R -47.8) gain +4.6 harm 19.0% worst +12.3 | S1 -48.0 S2 -43.3 S3 -33.3 | rest -49.2/3% S0.1 -48.6/11% S0.3 -47.0/26% trimmed -42.9/35%
+skip if scatter>p75 (unity)        C med -47.0 (L -47.2 / R -46.8) gain +2.2 harm  2.5% worst +4.0 | S1 -46.8 S2 -42.3 S3 -32.5 | rest -48.0/1% S0.1 -48.1/3% S0.3 -48.3/0% trimmed -44.7/5%
+skip if scatter>p90 (unity)        C med -47.8 (L -47.6 / R -47.8) gain +3.5 harm  4.5% worst +4.0 | S1 -47.7 S2 -43.1 S3 -33.1 | rest -49.0/3% S0.1 -48.1/10% S0.3 -48.3/0% trimmed -45.1/5%
+skip p75 + trimmed + no-front      C med -46.3 (L -46.4 / R -46.1) gain -0.0 harm  1.2% worst +4.0 | S1 -46.4 S2 -41.0 S3 -31.8 | rest -46.6/1% S0.1 -48.1/3% S0.3 -48.3/0% trimmed -40.8/0%
+skip p90 + trimmed                 C med -46.8 (L -47.0 / R -46.4) gain +1.1 harm  3.2% worst +4.0 | S1 -46.7 S2 -42.2 S3 -32.3 | rest -49.0/3% S0.1 -48.1/10% S0.3 -48.3/0% trimmed -40.8/0%
+skip p75 -> mean z0                C med -47.8 (L -47.4 / R -48.4) gain +4.1 harm 23.2% worst +9.1 | S1 -47.8 S2 -43.8 S3 -33.6 | rest -48.0/32% S0.1 -48.3/27% S0.3 -47.7/22% trimmed -46.8/11%
+ORACLE best s (uses reverb)        C med -48.1 (L -48.1 / R -48.1) gain +6.1 harm  0.0% worst +0.4 | S1 -48.5 S2 -43.2 S3 -33.5 | rest -48.1/0% S0.1 -47.6/0% S0.3 -49.6/0% trimmed -47.1/0%
+[memguard] peak footprint 0.63 GB, 64 s, exit 0
