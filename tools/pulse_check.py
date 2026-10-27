@@ -294,6 +294,7 @@ def setting_G(lab, b230, law, fold, fc):
         law["lf"][float(lf_k)]["dc"] = float(dc)
     gamma, fl, hfdp = fold["gamma"], {}, fold["hfdp"]
     if fc and "dc_min" in fc:
+        # fc["dc"] is the floor grid's LF 0.1 DC ratio, even for an LF 0.4 setting (see q2_injection._final_setting).
         law["lf"][0.1]["dc"] = fc["dc"]
         gamma, fl = fc["gamma"], dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
     elif fc and "floor_form" in fc:                 # the floor's shoulder where no floor cell acts (LF 0.4 / RT >= 0.6, 35)

@@ -529,7 +529,9 @@ class Joint:
         return lsqr(op, self.target(), iter_lim=iters, atol=1e-12, btol=1e-12, x0=x0)[0]
 
     def render(self, v, g, n, amp):
-        """Model for one file of setting g (unweighted), n samples."""
+        """Model for one file of setting g (unweighted), n samples; n must not exceed g['N'] (the render's FFT length)."""
+        if n > g["N"]:
+            raise ValueError(f"render length {n} exceeds the setting's grid {g['N']}")
         cl, f, xs = self.split(v)
         r = self.reverb(g, *self._spectra(f, xs, g["N"]))
         if n > self.nmax:                                # longer than every training capture: extend the cluster atoms

@@ -478,7 +478,13 @@ def loop_factors(lab, law, w):
     """Per loop: (gain g, LF shelf H_LF(w), HF lowpass H_HF(w)) as in q1.G_law (G = g H_LF H_HF)."""
     import model_s as m
     rt, lf, hf = lab["rt"], lab["lf"], lab["hf"]
-    L = law["lf"][lf]
+    if lf in law["lf"]:
+        L = law["lf"][lf]
+    else:                                                 # an off-grid LF step: interpolate as q1.G_law does
+        ks = sorted(law["lf"], key=float)
+        x = np.log([float(k) for k in ks])
+        L = {n: float(np.exp(np.interp(np.log(lf), x, np.log([law["lf"][k][n] for k in ks]))))
+             for n in ("hi", "dc", "k")}
     out = []
     for Pi in q1.P:
         kk = -3 * Pi / FS
@@ -1242,7 +1248,7 @@ def _capped_setting(a):
     out = []
     forms = [("law", q1.G_law(lab, law, w)), ("capped", G_capped(lab, law, w, beta=0.0))]
     if beta:
-        forms.append((f"capped+beta", G_capped(lab, law, w, beta=beta)))
+        forms.append(("capped+beta", G_capped(lab, law, w, beta=beta)))
     for name, Gs in forms:
         G = make_G(lab, law, Gs, b230, diff)
         for c in caps:
@@ -1291,7 +1297,7 @@ def capped_stage(workers, only=None, frozen=COMPACT, beta=0.0):
                                                 for lp in forms_))
 
 
-def make_G(lab, law, Gs, b230, diff, w=None):
+def make_G(lab, law, Gs, b230, diff):
     """Group spectra with the diffuser override and given loop responses Gs."""
     G = branch_spectra(lab, law, [0.0], b230, diff)
     w = 2 * np.pi * np.fft.rfftfreq(G["N"])
@@ -1311,13 +1317,14 @@ def _loops_setting(a):
     N = G0["N"]
     w = 2 * np.pi * np.fft.rfftfreq(N)
     z = lambda M: np.exp(-1j * w * M)
+    dt = np.exp(-1j * w * diff.get("dtap", 0.0))       # the compact's common loop-path delay, as branch_spectra / make_G
     J = q1.Joint([dict(G0, files=[dict(y=np.zeros((4096, 2)), w=np.ones(4096), amp=0)])])
     cl, f, xs = J.split(v)
     F, X = J._spectra(f, xs, N)
     C = J.cluster(cl)
 
     def reverb(Gs):
-        R = np.array([G0["PB"] / (1 - Gi * z(Pi)) for Gi, Pi in zip(Gs, q1.P)])
+        R = np.array([dt * G0["PB"] / (1 - Gi * z(Pi)) for Gi, Pi in zip(Gs, q1.P)])
         return np.fft.irfft(F * G0["PB"][None] + np.einsum("cik,ik->ck", X, R), N, axis=1).T
     data = []
     r_law = reverb(q1.G_law(lab, law, w))
@@ -1528,6 +1535,8 @@ def final_injection(ext=1700, compact=None):
     q1.EXT = ext
     law = q1.fit_laws(json.load(open(os.path.join(Q1, "loops.json"))))
     law["lf"] = {float(k): x for k, x in law["lf"].items()}
+    # The compact fit's JSON does not record --ext: all adopted fits use 1700 (diffuser_stage's default). A fit made with
+    # another --ext would be read into the wrong Joint layout here; store ext in the fit before relying on that.
     G = branch_spectra(dict(lf=1.0, rt=1.4, hf=1.0), law, [0.0], 0.0, FINAL_DIFF)
     J = q1.Joint([dict(G, files=[dict(y=np.zeros((4096, 2)), w=np.ones(4096), amp=0)])])
     v_c = np.load(os.path.join(OUT, (compact or COMPACT) + ".npy"))
@@ -1551,6 +1560,8 @@ def _final_setting(a_):
     law["lf"] = {float(k): x for k, x in law["lf"].items()}
     fl = {}
     if fc and "dc_min" in fc:                       # --floorcells: this setting's floor constants (model_s_results 25.6)
+        # fc["dc"] is the floor grid's LF 0.1 DC ratio (lowband_shelf.floor_grid), even for an LF 0.4 setting; the
+        # other LF steps' ratios are not part of that grid, so it always belongs in the 0.1 entry.
         law["lf"][0.1]["dc"] = fc["dc"]
         gamma, fl = fc["gamma"], dict(dc_min=fc["dc_min"], beta=fc["beta"], gamma_dc=fc.get("gamma_dc", True))
     elif fc and "floor_form" in fc:                 # the floor's shoulder where no floor cell acts (LF 0.4 / RT >= 0.6, 35)
