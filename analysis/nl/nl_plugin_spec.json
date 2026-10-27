@@ -519,6 +519,8 @@
    "strength": 0.7,
    "use": "kernel = delta + strength * (taps - delta), per channel (the stored taps are the fitted, strength 1 kernel)",
    "applies_to": "the whole AP(124) branch (main taps, R's first-tap direct term, late section); not the front taps",
+   "reference_irs": "kernel-free: analysis/nl/ref/*.wav come from simulate(), which omits this kernel. Null a kernel-on port with the kernel bypassed, or expect about -55 dB against these files; the port's own reference should be rendered with the kernel and BK_PAD samples of latency",
+   "latency_samples": 40,
    "status": "adopted (27 Oct 2026; refitted and set to strength 0.7 under the long-kernel clock warp, NonLin_program 11.5-11.6): 0.05-0.15 / 0.15-0.3 / 0.3-0.6 s medians -58.7 / -57.6 / -52.2 dB (1,044 captures held out; the 0.65 kernel on the old warp gave -58.4 / -57.3 / -52.0), no channel-window worse than the previous adopted bench by more than +0.07 dB (0.0-0.6 s); against the same bench without the kernel the worst loss is +0.81 dB (22 channel-windows over +0.5 at 0.05-0.15 s); strength 0.5 keeps that within +0.5 dB",
    "note": "deviations from a unit tap are <= 0.0007 (-63 dB): inaudible, only for null-level fidelity; centred, so a plugin needs BK_PAD samples of look-ahead or the same delay on the front taps"
   },

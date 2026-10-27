@@ -1,7 +1,13 @@
 {
  "program": "E (the EMT 250 program on the 246), docs/EMT250_program.md \u00a711-15",
  "device_rate_hz": 26373.626373626375,
- "delays": "integer device samples; positions after R's first direct tap",
+ "k0": 64,
+ "delays": "integer device samples; positions after R's first direct tap at index k0",
+ "rev_gain_db": {
+  "value": 0.5,
+  "label": "the reverb's level against the direct tap; the loops.static_read_gain values already include it",
+  "source": "\u00a716.5, \u00a717.5, \u00a717.7"
+ },
  "direct_path": {
   "value": {
    "taps": [
