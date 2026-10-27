@@ -3,15 +3,15 @@
   -0.7091043911652353,
   0.5884986303763999,
   1.1140091476171738,
-  0.32728791256503786,
-  0.4025458818299916,
-  -0.4006762100662814,
+  0.33298906056049404,
+  0.4095579759500827,
+  -0.40765573568928287,
   0.7076395805945448,
   0.7103564464196855,
   0.7097593705153248,
   1.49,
   0.69
  ],
- "note": "LF 1.49: refitted on 63-500 Hz decay statistics with the fixed reads and kernel tail (held out by RT: 0.7-3.6 %, EMT250_program \u00a716); the IR least-squares value 1.383 was biased by the random part; HF 0.69: refitted on 2k-12.4 kHz decay statistics with impulse renders (held out by RT: 0.6-2.1 % at 63 Hz-12.4 kHz, EMT250_program \u00a717); the IR least-squares value 0.736 was biased; static read gains x 10^(0.35/20): the reverb level against the direct tap from the G1-G6 audit's level gains (1.03-1.07 at every RT, \u00a717.5)",
- "rev_gain": 0.35
+ "note": "LF 1.49: refitted on 63-500 Hz decay statistics with the fixed reads and kernel tail (held out by RT: 0.7-3.6 %, EMT250_program \u00a716); the IR least-squares value 1.383 was biased by the random part; HF 0.69: refitted on 2k-12.4 kHz decay statistics with impulse renders (held out by RT: 0.6-2.1 % at 63 Hz-12.4 kHz, EMT250_program \u00a717); the IR least-squares value 0.736 was biased; static read gains x 10^(0.50/20): the reverb level against the direct tap from the G1-G6 audit's level gains (1.03-1.07 at every RT, \u00a717.5); rev_gain 0.5 dB = 0.35 + 0.15 compensating the moving reads' one-pole 0.07 (EMT250_program \u00a717.7)",
+ "rev_gain": 0.5
 }
