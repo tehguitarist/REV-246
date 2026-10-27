@@ -44,8 +44,8 @@ WARP2 = nlt.WARP2                                   # long-kernel clock warp (de
 BK_FILE = os.environ.get("NL_BK_FILE") or os.path.join(nl.OUT, "branch_kernel_warp2.json" if WARP2 else "branch_kernel.json")   # refitted under the long-kernel warp (11.5)
 BK_ALPHA_DEFAULT = 0.7 if WARP2 else 0.65           # strict rule against the 0.65 bench on all 1,044 captures (NonLin_program 11.5); 0.5 also keeps every channel-window within +0.5 dB of the no-kernel bench
 BK_ALPHA = os.environ.get("NL_BK_ALPHA", str(BK_ALPHA_DEFAULT))
-HF = os.environ.get("NL_HF") == "1"                 # NL_HF=1: the capture chain's band-edge term above 10 kHz, per capture run (NonLin_program 11.6); a measurement-side term, not the unit
-HF_FILE = os.environ.get("NL_HF_FILE") or os.path.join(nl.OUT, "hf_corr.json")   # NL_HF_FILE: another table (hf_corr_g5.json: Gaussian-weighted scalar + a front-tap skip rule)
+HF = os.environ.get("NL_HF", "1") == "1"            # the capture chain's band-edge term above 10 kHz, per capture run (NonLin_program 11.6), default; NL_HF=0 leaves it out. A measurement-side term, not the unit
+HF_FILE = os.environ.get("NL_HF_FILE") or os.path.join(nl.OUT, "hf_corr_g5.json")   # default: Gaussian-weighted scalar + a front-tap skip rule; NL_HF_FILE=.../hf_corr.json: the first table (15 nearest, no skip)
 HF_ALPHA = float(os.environ.get("NL_HF_ALPHA", 1.0))   # strength of the correction (1 = as fitted)
 BENCH = os.path.join(nl.OUT, "bench" + ("" if nl.WIDE else "_narrow") + ("" if EQ else "_noeq") + ("_warp2" if WARP2 else "")
                      + ("_bk" if os.environ.get("NL_BK") == "1" else "")

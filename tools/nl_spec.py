@@ -108,7 +108,8 @@ def spec():
                                    "96 kHz -> device-rate resampler (resample_poly 25/91, Kaiser 5; -0.22 / -0.90 / -1.50 / -2.33 / -3.65 dB at "
                                    "11.5 / 12 / 12.25 / 12.5 / 12.8 kHz, nl_structure.resampler_gain), not a property of the unit: refitted after "
                                    "the clock warp was fixed it matches that filter to 0.05 dB up to 12 kHz. The LOW PASS therefore needs no "
-                                   "special 12 kHz shape on N. (The plugin's low-band CaptureEq is the separate model_s_results 27 transfer.)"),
+                                   "special 12 kHz shape on N. (The plugin's low-band CaptureEq is the separate model_s_results 27 transfer.) The band-edge term above 10 kHz that "
+                                   "the bench applies per capture run (NonLin_program 11.6, hf_corr_g5.json) belongs to the capture chain, not to this spec."),
                          "S", "§11.3, §11.6"),
         "branch_read_kernel": lab(dict(taps={("L", "R")[int(c)]: v for c, v in json.load(open(nm.BK_FILE)).items()},
                                        centre=nm.BK_PAD, band_limit_hz=nm.BK_LP, strength=nm.BK_ALPHA_DEFAULT,
