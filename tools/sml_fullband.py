@@ -1264,7 +1264,7 @@ def _report_rest(lines, rep):
                 row.append(f"{_fmt(_med(m0))} -> {_fmt(_med(m1))} ({_fmt(_med(lead), 4)})")
             lines.append(f"| {b} | " + " | ".join(row) + " |")
         # energy share of the lead: where the refit removes residual energy (summed over captures, 100 Hz-10 kHz = the fit band)
-        lines.append(f"- share of the residual energy the refit removes, by band (R, summed over captures):")
+        lines.append("- share of the residual energy the refit removes, by band (R, summed over captures):")
         for a_, b_ in WINS[1:4]:
             wn = f"{a_}-{b_}"
             dE = {b: sum(c["bands"][b][wn]["e0"][1] - c["bands"][b][wn]["e1"][1] for t in T for c in t["caps"].values() if wn in c["bands"][b]) for b in BNAME}

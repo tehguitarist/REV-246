@@ -204,7 +204,6 @@ def classify_cluster(taps, templates):
     TL, TR = templates["L"], templates["R"]
     mL, mR = _match_template(oL, sL, TL), _match_template(oR, sR, TR)
     xL, xR = _match_template(oL, sL, TR), _match_template(oR, sR, TL)
-    pol = {1: "", -1: "inverted"}
     if mL in (1, -1) and mR in (1, -1):
         if mL == 1 and mR == 1:
             return "ok"

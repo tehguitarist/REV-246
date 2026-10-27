@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import soundfile as sf
 
-from core import Kernel, fs_dev
+from core import Kernel
 
 LABELS = ["label_program", "label_rt", "label_lf", "label_hf", "label_delay", "label_amp", "label_lp",
           "label_span", "label_early", "label_late"]

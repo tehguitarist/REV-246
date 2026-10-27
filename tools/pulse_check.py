@@ -381,8 +381,9 @@ def units_stage(chain=False, only=None):
     v, law, _ = q2.final_injection(compact=COMPACT)
     ap = json.load(open(os.path.join(q2.OUT, lf_.AP230)))
     fold = json.load(open(os.path.join(ROOT, "analysis", "loop_cv", "fold_all.json")))
-    fold["pramp"] = [float(np.median([json.load(open(p))["pramp"][0] for p in
-                                      glob.glob(os.path.join(ROOT, "analysis", "loop_cv", f"cap{os.environ['EMT_PMAX']}_folds", "fold_*.json"))])), 0.62]
+    if os.environ.get("EMT_PMAX"):                  # the fold's ramp median exists only for the capped fold sets
+        fold["pramp"] = [float(np.median([json.load(open(p))["pramp"][0] for p in
+                                          glob.glob(os.path.join(ROOT, "analysis", "loop_cv", f"cap{os.environ['EMT_PMAX']}_folds", "fold_*.json"))])), 0.62]
     irs = [("CLA", 1.0, av.cla_h())] + [(f"Altiverb RT {k}", rt, av.altiverb_h(k)[0]) for k, rt in av.PRESETS.items() if not only or k in only]
     res, keep = {}, {}
     for name, rt, h in irs:
