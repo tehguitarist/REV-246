@@ -48,10 +48,13 @@ if __name__ == "__main__":
               ", ".join(f"({FS[o // len(AS)]},{AS[o % len(AS)]})" for o in order[1:]))
     h = np.load(os.path.join(ROOT, "analysis", "altiverb", "cache", "REV-250 4.5s.npy")); Ri = 0 if cc.first(h[0]) < cc.first(h[1]) else 1
     print("\nAltiverb REV-250 4.5 s (data ratios rho_k/rho_1, k=2..8 at 1 / 2 / 4 kHz):")
+    dat = {}                                     # the two measured channel vectors, then their mean
     for nm, c in (("R", Ri), ("L", 1 - Ri), ("mean", None)):
-        if c is None: v = (dat["R"] + dat["L"]) / 2; dat["mean"] = v
+        if c is None:
+            v = (dat["R"] + dat["L"]) / 2
         else:
-            res = cc.coherence(h[c][:int(8 * r)], 168.0)[0]; v = vec(res); dat = globals().setdefault("dat", {}); dat[nm] = v
+            v = vec(cc.coherence(h[c][:int(8 * r)], 168.0)[0])
+        dat[nm] = v
         i, j, err = fit(v, T); rms = np.sqrt(err / v.size)
         good = [(FS[a], AS[b], round(float(rms[a, b]), 3)) for a, b in zip(*np.where(rms <= rms[i, j] * 1.25))]
         print(f"  {nm:4s}: best f_m {FS[i]} Hz, A {AS[j]} ms ({AS[j] * 1e-3 * 26373.6:.1f} device samples), rms err {rms[i, j]:.3f}; within 25 % of best: {good[:8]}")
