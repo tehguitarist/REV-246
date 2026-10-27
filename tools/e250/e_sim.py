@@ -60,7 +60,8 @@ def render_ir(rt, lf=None, hf=None, seed=0, secs=None, fs_out=None, ampl=AMPL_RE
                   against them); 'device': L's output kernel [0.77, 0.23] only, for a host that adds the 246's analogue chain
       law         the moving-read law (None: ADOPTED, §16; 'random': §13.4's random reads; 'plugin': §14.4's plugin-faithful structure)
       moving      False: the static network only (deterministic; the plugin's reference for a sample-exact null)
-    Device rate, or resampled to fs_out."""
+    Device rate, or resampled to fs_out. Units: R's direct tap 1 = 1.0 at AMPL 80 (x AMPL / 80); the level calibration against
+    S / M / L (the spec's controls.level, H) scales the whole output so that this tap equals an S / M / L cluster tap at the same AMPL."""
     global X_STATIC
     static_params(); q = X_STATIC.copy()
     if lf is not None: q[9] = lf
