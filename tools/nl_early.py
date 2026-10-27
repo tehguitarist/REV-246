@@ -15,7 +15,7 @@ one for the AP(124) branch (o, searched around offsets of a coarse scan), and fr
 front taps and every main tap of the active stages, per channel, on [0, last tap + 4000) in 100 Hz-10 kHz. Writes
 analysis/nl/early_fit.json: per file the shifts, the gains and the residual (in-sample) per channel.
 """
-import argparse, json, os, sys
+import argparse, ast, json, os, sys
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 from scipy.optimize import minimize, minimize_scalar
@@ -302,7 +302,7 @@ def law_file(key):
 
 
 def law_stage(workers):
-    keys = [eval(k) for k in json.load(open(OUT))]
+    keys = [ast.literal_eval(k) for k in json.load(open(OUT))]
     res = {}
     with ProcessPoolExecutor(workers) as ex:
         for k, out in ex.map(law_file, keys):

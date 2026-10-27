@@ -121,8 +121,8 @@ EQ_FILE = os.path.join(nl.OUT, "out_eq.json")
 
 @functools.lru_cache(maxsize=4)
 def _proc(N):
-    """The deconvolution's response (zero phase, per channel) on the model's FFT grid: the captures carry it; with
-    NL_EQ=1 also the measured top-end EQ (zero phase, 0 dB below 11 kHz)."""
+    """The deconvolution's response (per channel) on the model's FFT grid: the captures carry it. With the long-kernel
+    warp (default) it includes to_device_grid's exact resampler gain; NL_WARP2=0 uses the fitted top-end EQ instead."""
     f = np.fft.rfftfreq(N, 1 / FS)
     R = nl.processing_response(f)
     if WARP2:                                   # the captures carry to_device_grid's low-pass, exactly (NonLin_program 11.6); no fitted EQ
@@ -146,16 +146,19 @@ def hf_gain(key, N):
     if c.get("skip"):                                   # the front taps' estimates scatter: no correction (unity)
         return np.ones(N // 2 + 1, complex)
     z = HF_ALPHA * (np.array(c["z_re"]) + 1j * np.array(c["z_im"]))
-    kx = np.r_[9500.0, 10000.0, d["knots_hz"], 13200.0]
-    g = np.r_[1.0, 1.0, np.exp(z), 1.0]
+    kx = np.r_[9500.0, 10000.0, d["knots_hz"]]
+    g = np.r_[1.0, 1.0, np.exp(z)]
     f = np.fft.rfftfreq(N, 1 / FS)
-    return np.interp(f, kx, g.real) + 1j * np.interp(f, kx, g.imag)
+    out = np.interp(f, kx, g.real) + 1j * np.interp(f, kx, g.imag)
+    out[f >= d["knots_hz"][-1]] = 1.0                   # unity at and above the last knot, as the table says
+    return out
 
 
 def render(key, n, o=0.0, fr=0.0, band=True, proc=True):
     """The model (n, 2) with the front frame's zero at K0 + fr and the branch o samples later; band-limited to
-    100 Hz-10 kHz unless band=False; through the captures' processing response and the top-end EQ unless proc=False
-    (proc=False is the device alone: what the plugin implements)."""
+    100 Hz-10 kHz unless band=False; through the captures' processing response (with the long-kernel warp the exact
+    resampler gain; NL_WARP2=0 uses the fitted top-end EQ) and the per-run band-edge term unless proc=False (proc=False
+    is the device alone: what the plugin implements)."""
     N = 1 << int(np.ceil(np.log2(n + 2 * ne.TAPS[-1] + 4096)))
     ph = -2j * np.pi * np.fft.rfftfreq(N)
     R = _proc(N) if proc else np.ones((len(ph), 2))
@@ -385,11 +388,11 @@ def report_stage():
 
 def main():
     ap_ = argparse.ArgumentParser()
-    ap_.add_argument("--stage", default="bench")
+    ap_.add_argument("--stage", default="bench", choices=("noise", "report", "bkernel", "bench"))
     ap_.add_argument("--workers", type=int, default=6)
     ap_.add_argument("--only", type=int, default=0)
     a = ap_.parse_args()
-    {"noise": noise_stage, "report": report_stage, "bkernel": bkernel_stage}.get(a.stage, lambda: bench_stage(a.workers, a.only))()
+    {"noise": noise_stage, "report": report_stage, "bkernel": bkernel_stage, "bench": lambda: bench_stage(a.workers, a.only)}[a.stage]()
 
 
 if __name__ == "__main__":

@@ -82,8 +82,9 @@ def ir(path_or_key):
 
 
 def processing_response(f):
-    """The deconvolution's own response to a flat input, per channel (len(f), 2), zero phase: the regularised inverse
-    of the chain kernel times the analysis band window (what every cached IR carries and the model must carry too)."""
+    """The deconvolution's own response to a flat input, per channel (len(f), 2), unit at 1 kHz: the regularised inverse
+    of the chain kernel times the analysis band window (what every cached IR carries and the model must carry too).
+    Zero phase except for the measured low-band transfer (complex when NL_LOWBAND is on)."""
     k = Kernel.load(KERNEL)
     fs = k.fs
     N = 1 << 18
@@ -138,16 +139,15 @@ def cache_stage(workers):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", default="cache")
+    ap.add_argument("--stage", default="cache", choices=("cache",))
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--only", type=int, default=0)
     a = ap.parse_args()
-    if a.stage == "cache":
-        if a.only:
-            global files
-            fl = files()[:a.only]
-            files = lambda: fl  # noqa: E731
-        cache_stage(a.workers)
+    if a.only:
+        global files
+        fl = files()[:a.only]
+        files = lambda: fl  # noqa: E731
+    cache_stage(a.workers)
 
 
 if __name__ == "__main__":

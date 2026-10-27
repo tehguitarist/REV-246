@@ -17,9 +17,9 @@ X = AP(124), P_i = LOOPS: one LATE-independent part F and one excitation E_i per
 Writes analysis/nl/late_excite.npz (time-domain F and E_i per channel, re the feed) and prints the solve's residual
 per capture and the excitations' largest taps.
 """
-import argparse, functools, json, os, sys
+import argparse, functools, os, sys
 import numpy as np
-from scipy.signal import butter, firwin, lfilter, resample_poly, sosfiltfilt
+from scipy.signal import firwin, lfilter, resample_poly, sosfiltfilt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)

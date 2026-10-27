@@ -4,7 +4,7 @@ reference IRs to check a port against (docs/NonLin_program.md §12).
     .venv/bin/python tools/nl_spec.py
 
 simulate(x, span, early, late) runs the static model the way a plugin would, at the device rate (26,373.6 Hz), mono in,
-(n, 2) out, with integer delay lines, all-passes and loops (branch offset 0, the plugin's choice). main() checks it
+(n, 2) out, with integer delay lines, all-passes and loops (branch_delay = 1 sample, the plugin's choice). main() checks it
 against the frequency-domain bench model (tools/nl_model.render, band=False) and writes
 analysis/nl/nl_plugin_spec.json and analysis/nl/ref/nl_<SPAN>_<EARLY>_<LATE>.wav (float32, device rate, (L, R), the
 input impulse at sample 0, main-tap units: a main tap = 1).
@@ -42,7 +42,9 @@ BRANCH = 1   # the AP(124) branch one sample after the table positions (the capt
 
 def simulate(x, span, early, late, branch=BRANCH):
     """Program N's static network on a mono input x (device rate); returns (len(x), 2), main-tap units. branch: the
-    AP(124) branch's delay re the front taps beyond the tables (1 for the plugin; 0 reproduces the bench's frame)."""
+    AP(124) branch's delay re the front taps beyond the tables (1 for the plugin; 0 reproduces the bench's frame).
+    Kernel-free: the adopted branch_read_kernel is not applied here, so the reference IRs are kernel-free (see the
+    spec field's reference_irs)."""
     ns = ne.N_STAGES[span]
     out = np.zeros((len(x), 2))
     u = delay(ap(x, ne.AP_IN), branch)                            # the branch: AP(124) at the input
@@ -112,9 +114,13 @@ def spec():
                                    "the bench applies per capture run (NonLin_program 11.6, hf_corr_g5.json) belongs to the capture chain, not to this spec."),
                          "S", "§11.3, §11.6"),
         "branch_read_kernel": lab(dict(taps={("L", "R")[int(c)]: v for c, v in json.load(open(nm.BK_FILE)).items()},
-                                       centre=nm.BK_PAD, band_limit_hz=nm.BK_LP, strength=nm.BK_ALPHA_DEFAULT,
+                                       centre=nm.BK_PAD, band_limit_hz=nm.BK_LP, strength=float(nm.BK_ALPHA),
                                        use="kernel = delta + strength * (taps - delta), per channel (the stored taps are the fitted, strength 1 kernel)",
                                        applies_to="the whole AP(124) branch (main taps, R's first-tap direct term, late section); not the front taps",
+                                       reference_irs="kernel-free: analysis/nl/ref/*.wav come from simulate(), which omits this kernel. Null a "
+                                                     "kernel-on port with the kernel bypassed, or expect about -55 dB against these files; the "
+                                                     "port's own reference should be rendered with the kernel and BK_PAD samples of latency",
+                                       latency_samples=nm.BK_PAD,
                                        status="adopted (27 Oct 2026; refitted and set to strength 0.7 under the long-kernel clock warp, NonLin_program 11.5-11.6): "
                                               "0.05-0.15 / 0.15-0.3 / 0.3-0.6 s medians -58.7 / -57.6 / -52.2 dB (1,044 captures held out; the 0.65 kernel on the old warp "
                                               "gave -58.4 / -57.3 / -52.0), no channel-window worse than the previous adopted bench by more than +0.07 dB (0.0-0.6 s); against "
