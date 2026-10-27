@@ -124,11 +124,8 @@ Groups, case counts and audio length from `uad250_suite.py list` (447 cases, abo
 ### F. Parameter changes while ringing (13 cases)
 Automation lands on a sample: Time 4.5 → 0.4 / 0.4 → 4.5 / 4.5 → 2.5 mid-tail, LF and HF decay jumps, Predelay jumps under a 1 kHz tone (dry-only and wet), L delay 0 → 315 ms under a tone, a Mix ramp (zipper noise or smoothing), Power toggled mid-tail, Program switched mid-tail. These reveal how the feedback gains are applied (instant, ramped or recomputed), the **delay-change implementation** (a click, a crossfade or a pitch ramp = the interpolation quality, which is what the 250's address randomisation exercises), and state retention on bypass and program switch.
 
-## 4. Analysis to build next (not done)
-1. A1 harness: T60 per octave band, `find_loops` per setting, early taps, L/R offset, grid versus `EMT250_program.md` and the Altiverb REV-250 presets (and a fit of the plugin as a prior for the 246 E).
-2. B1 normalised-difference ladder; noise-floor versus level; deep-tail dead-zone check. B2 harmonic ladder.
-3. C1 decorrelation curve per band versus onset time (and the repeat-period question). C2 demodulation: the rate, depth and waveform of the modulation. C3/C4 as tables.
-4. F: the instantaneous-frequency tracks (predelay, delay) and the gain envelope across each Time/LF/HF jump.
+## 4. Analysis still to build
+- **F (parameter changes while ringing):** the instantaneous-frequency tracks (predelay, delay) and the gain envelope across each Time/LF/HF jump. The A1, B1/B2 and C1/C2/C3 analyses are done and reported in §2.
 
 ## 5. Limits (state these with any result)
 - The UAD plugin is a **commercial emulation of the 250**, not the 246's E and not an oracle. Everything it says about modulation and non-linearity is a *prior* until the 246's own evidence agrees. Keep it labelled **H** for the 246 until then.
