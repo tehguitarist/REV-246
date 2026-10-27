@@ -1,0 +1,9 @@
+noise tails from 39 LATE-0 files; per-sample noise power (dB re 1) L/R: {'b9_11': [np.float64(-129.7), np.float64(-130.2)], 'b11_11p6': [np.float64(-138.1), np.float64(-138.6)], 'b11p6_12p3': [np.float64(-138.2), np.float64(-139.1)], 'b12p3_12p8': [np.float64(-137.7), np.float64(-138.3)], 'b10_12': [np.float64(-131.7), np.float64(-132.2)]}
+spread (p10-p90, dB) of tail noise per band, L: {'b9_11': np.float64(7.3), 'b11_11p6': np.float64(7.3), 'b11p6_12p3': np.float64(6.8), 'b12p3_12p8': np.float64(0.7), 'b10_12': np.float64(7.6)}
+100 captures. Medians over captures whose band is >= 10 dB above the noise (L, R); model null, noise-limited null (single capture vs model), excess of model over noise
+b9_11       n  98/100 model [-51.  -50.2]  model+cplx gain [-56.3 -56. ]  noise-limited [-72.7 -72.9]  excess [19.6 20. ]
+b11_11p6    n  98/100 model [-41.5 -40.7]  model+cplx gain [-50.2 -48.4]  noise-limited [-75.6 -76.1]  excess [31.8 32.3]
+b11p6_12p3  n  98/100 model [-33.9 -33.2]  model+cplx gain [-41.1 -41.5]  noise-limited [-75.8 -76.2]  excess [39.9 40.7]
+b12p3_12p8  n  98/100 model [-27.4 -28.2]  model+cplx gain [-33.5 -38.1]  noise-limited [-61.5 -61.8]  excess [32.9 31.9]
+b10_12      n  98/100 model [-41.3 -40.3]  model+cplx gain [-43.7 -43.2]  noise-limited [-74.6 -75. ]  excess [31.  31.7]
+[memguard] peak footprint 0.48 GB, 159 s, exit 0

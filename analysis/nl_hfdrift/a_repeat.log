@@ -1,0 +1,40 @@
+(0.4, -3.0) pairs 18
+(0.4, -2.0) pairs 18
+(0.4, -1.0) pairs 18
+(0.4, -0.7) pairs 18
+(0.4, -0.5) pairs 18
+(0.4, -0.2) pairs 18
+(0.4, 0.1) pairs 18
+(0.4, 0.2) pairs 18
+(0.4, 0.3) pairs 18
+(0.4, 0.5) pairs 18
+(0.4, 0.7) pairs 18
+(0.4, 1.0) pairs 18
+(0.4, 1.5) pairs 18
+(0.4, 2.0) pairs 18
+(0.4, 3.0) pairs 18
+(0.4, 10.0) pairs 18
+(0.5, -3.0) pairs 18
+(0.5, -2.0) pairs 18
+(0.5, -1.0) pairs 18
+(0.5, -0.7) pairs 18
+(0.5, -0.5) pairs 18
+(0.5, -0.2) pairs 18
+(0.5, 0.1) pairs 18
+(0.5, 0.2) pairs 18
+(0.5, 0.3) pairs 18
+(0.5, 0.5) pairs 18
+(0.5, 0.7) pairs 18
+(0.5, 1.0) pairs 18
+(0.5, 1.5) pairs 18
+(0.5, 2.0) pairs 18
+(0.5, 3.0) pairs 18
+(0.5, 10.0) pairs 18
+median over 576 pairs, 352 captures (L, R)
+fit         repeat V1 [-56.9 -57. ] V2 [-56.9 -57. ] V3(cplx gain) [-56.9 -57. ] | model [-57.1 -57.3] model+cplx gain [-58.5 -60.4]
+b9_11       repeat V1 [-56.5 -56.8] V2 [-56.6 -56.8] V3(cplx gain) [-56.9 -56.9] | model [-52.6 -51.4] model+cplx gain [-56.5 -56.4]
+b11_11p6    repeat V1 [-56.  -55.7] V2 [-56.1 -55.7] V3(cplx gain) [-56.6 -56.2] | model [-42.2 -41.6] model+cplx gain [-51.2 -49.9]
+b11p6_12p3  repeat V1 [-52.4 -52.4] V2 [-52.5 -52.5] V3(cplx gain) [-53.6 -53.6] | model [-36.  -35.4] model+cplx gain [-42.6 -43.2]
+b12p3_12p8  repeat V1 [-40.4 -41.2] V2 [-40.4 -41.2] V3(cplx gain) [-40.6 -41.4] | model [-28.4 -29.6] model+cplx gain [-33.9 -39.3]
+b10_12      repeat V1 [-55.8 -55.7] V2 [-56.  -55.7] V3(cplx gain) [-56.3 -56.4] | model [-42.3 -41.2] model+cplx gain [-45.7 -45. ]
+[memguard] peak footprint 0.32 GB, 623 s, exit 0

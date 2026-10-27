@@ -1,0 +1,24 @@
+runs 12 n front [171, 97, 21, 11, 10, 9, 111, 77, 18, 71, 10, 98]  singular values [1.143e+00 1.460e-01 7.100e-02 3.400e-02 5.000e-03 4.000e-03 2.000e-03
+ 2.000e-03 1.000e-03 1.000e-03 0.000e+00 0.000e+00]  rank-1 share 0.979
+shape u (gain part, phase part mrad-scaled): [-0.066 -0.099 -0.143 -0.183 -0.196 -0.129 -0.005  0.109  0.201] [ 30.1  45.5  79.5 141.8 253.8 384.8 453.3 458.4 408.7]
+run  0 (04-09 09:42) n_front 171 s=-0.01  captures scored 25
+run  1 (04-10 10:44) n_front  97 s=-0.01  captures scored 25
+run  2 (04-10 13:43) n_front  21 s=-0.03  captures scored 21
+run  3 (04-10 19:42) n_front  11 s=+0.13  captures scored 19
+run  4 (04-10 21:01) n_front  10 s=-0.03  captures scored 10
+run  5 (04-10 21:45) n_front   9 s=-0.04  captures scored 9
+run  6 (04-10 22:26) n_front 111 s=+0.06  captures scored 25
+run  7 (04-11 14:55) n_front  77 s=+0.01  captures scored 25
+run  8 (04-11 17:53) n_front  18 s=+0.04  captures scored 25
+run  9 (04-11 20:06) n_front  71 s=+0.06  captures scored 25
+run 10 (04-11 23:45) n_front  10 s=+0.01  captures scored 25
+run 11 (04-12 05:53) n_front  98 s=+0.09  captures scored 25
+
+held out (shape from the other runs, scalar from the run's own front taps); median over captures, L / R null dB; (worse by >0.5 dB vs none)
+B5k  | none -53.6/-52.9 (0/518) | pooled -53.6/-52.9 (0/518) | span -53.7/-53.0 (0/518) | run -53.7/-53.0 (0/518) | local -53.7/-53.0 (0/518) | oracle -53.7/-53.0 (0/518)
+HI1  | none -47.9/-46.1 (0/518) | pooled -49.0/-47.6 (120/518) | span -50.1/-49.3 (118/518) | run -50.5/-49.3 (63/518) | local -50.5/-49.2 (67/518) | oracle -50.4/-49.3 (61/518)
+S1   | none -40.2/-39.2 (0/518) | pooled -41.9/-40.2 (141/518) | span -45.6/-44.5 (162/518) | run -47.7/-46.6 (74/518) | local -48.4/-48.6 (86/518) | oracle -47.8/-47.2 (73/518)
+S2   | none -33.2/-32.8 (0/518) | pooled -36.3/-35.5 (145/518) | span -40.1/-40.0 (170/518) | run -41.9/-42.3 (85/518) | local -43.4/-43.8 (103/518) | oracle -41.9/-42.4 (83/518)
+S3   | none -27.2/-27.8 (0/518) | pooled -30.6/-32.7 (102/518) | span -31.6/-34.2 (101/518) | run -32.3/-35.7 (68/518) | local -32.8/-36.2 (30/518) | oracle -32.4/-35.7 (65/518)
+C    | none -40.1/-38.8 (0/518) | pooled -41.3/-40.1 (139/518) | span -45.1/-44.5 (164/518) | run -47.5/-46.2 (78/518) | local -48.8/-48.3 (88/518) | oracle -47.6/-46.9 (74/518)
+[memguard] peak footprint 0.24 GB, 219 s, exit 0

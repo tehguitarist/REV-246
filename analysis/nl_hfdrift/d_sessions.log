@@ -1,0 +1,36 @@
+714 usable captures with timestamps
+knots kHz [11.5  12.   12.25 12.5  12.8 ]
+== channel L
+  pooled  phase mrad [ -2.  -10.1 -18.  -72.    2.5]  level dB [ 0.04   0.091  0.161  0.243 -1.811]  delay-equiv samples [ 0.0007  0.0035  0.0062  0.0242 -0.0008]
+  SPAN 0.0 n=172 phase mrad [  0. -12. -17. -29. -42.] level dB [ 0.043  0.028  0.024  0.025 -0.108]  delay-eq [-0.      0.0043  0.0058  0.0097  0.0136]
+  SPAN 0.1 n=129 phase mrad [  -7.   -8.  -27. -130.  278.] level dB [ 0.049  0.123  0.309  0.256 -3.396]  delay-eq [ 0.0026  0.003   0.0091  0.0437 -0.0911]
+  SPAN 0.2 n=131 phase mrad [  -8.  -21.  -33. -139. -145.] level dB [ 0.072  0.229  0.321  0.7   -5.506]  delay-eq [0.003  0.0075 0.0111 0.0468 0.0476]
+  SPAN 0.3 n= 88 phase mrad [ -6. -28. -35. -54.  11.] level dB [ 0.12   0.093  0.054 -0.022 -0.412]  delay-eq [ 0.0021  0.0097  0.0121  0.0181 -0.0036]
+  SPAN 0.4 n=100 phase mrad [10. 15. 14. -2. -4.] level dB [-0.049 -0.018  0.079  0.151 -0.098]  delay-eq [-0.0035 -0.0053 -0.005   0.0008  0.0012]
+  SPAN 0.5 n= 94 phase mrad [ -0.  -5. -11. -82. -47.] level dB [ 0.011  0.115  0.218  0.443 -2.801]  delay-eq [0.0002 0.0017 0.0037 0.0277 0.0153]
+== channel R
+  pooled  phase mrad [ -2.1 -13.6 -22.6 -32.2 -41.2]  level dB [0.064 0.054 0.027 0.029 0.08 ]  delay-equiv samples [0.0008 0.0048 0.0078 0.0108 0.0135]
+  SPAN 0.0 n=172 phase mrad [ -2. -11. -20. -29. -46.] level dB [0.05  0.039 0.017 0.026 0.106]  delay-eq [0.0006 0.004  0.0067 0.0098 0.0152]
+  SPAN 0.1 n=129 phase mrad [ -4. -18. -27. -36. -44.] level dB [0.073 0.05  0.009 0.002 0.058]  delay-eq [0.0015 0.0062 0.0093 0.0121 0.0145]
+  SPAN 0.2 n=131 phase mrad [ -9. -32. -45. -55. -55.] level dB [ 0.144  0.117  0.04  -0.008 -0.005]  delay-eq [0.0031 0.0112 0.0154 0.0184 0.0181]
+  SPAN 0.3 n= 88 phase mrad [ -7. -27. -39. -50. -57.] level dB [0.129 0.109 0.045 0.013 0.018]  delay-eq [0.0025 0.0096 0.0135 0.0167 0.0187]
+  SPAN 0.4 n=100 phase mrad [ 9. 17. 13.  3. -9.] level dB [-0.055 -0.021  0.038  0.118  0.21 ]  delay-eq [-0.0035 -0.0058 -0.0043 -0.001   0.0028]
+  SPAN 0.5 n= 94 phase mrad [ -1. -10. -18. -28. -32.] level dB [0.049 0.045 0.03  0.042 0.084]  delay-eq [0.0002 0.0034 0.0062 0.0094 0.0106]
+per-capture phase@12.5 kHz mrad: median L -54.4 R -34.9, sd (robust) L 66.5 R 24.1
+corr of R phase@12.5 with: ppm 0.38  o 0.20  front_shift 0.26  time 0.17  early -0.02  late -0.03  tapoffset(L) 0.10
+corr of L phase@12.5 with: ppm 0.19  o -0.00  front_shift -0.02  time 0.05
+within-session corr (R phase@12.5, ppm | time): {'0.0': (np.float64(-0.2), np.float64(-0.14)), '0.1': (np.float64(0.46), np.float64(0.66)), '0.2': (np.float64(-0.68), np.float64(-0.37)), '0.3': (np.float64(-0.82), np.float64(0.76)), '0.4': (np.float64(0.89), np.float64(-0.89)), '0.5': (np.float64(0.39), np.float64(-0.14))}
+session mean ppm: {'0.0': np.float64(12.38), '0.1': np.float64(12.03), '0.2': np.float64(11.93), '0.3': np.float64(11.67), '0.4': np.float64(12.2), '0.5': np.float64(12.24)}  sd within: {'0.0': np.float64(0.67), '0.1': np.float64(0.61), '0.2': np.float64(0.19), '0.3': np.float64(0.55), '0.4': np.float64(1.43), '0.5': np.float64(0.48)}
+time bins (hours from first): R phase@12.5 median mrad | ppm mean | n | sessions
+     0.0-   1.0 h   -18.6 | 12.04 |  60 | [np.float64(0.0)]
+     1.0-   2.1 h   -33.4 | 12.40 |  59 | [np.float64(0.0)]
+     2.1-  25.1 h   -34.6 | 12.53 |  60 | [np.float64(0.0), np.float64(0.1)]
+    25.1-  26.2 h   -35.5 | 11.76 |  59 | [np.float64(0.1)]
+    26.2-  34.2 h   -43.7 | 12.43 |  60 | [np.float64(0.1)]
+    34.2-  37.3 h   -55.5 | 11.80 |  59 | [np.float64(0.1), np.float64(0.2)]
+    37.3-  38.2 h   -55.0 | 12.02 |  59 | [np.float64(0.2)]
+    38.2-  54.2 h   -35.3 | 12.34 |  60 | [np.float64(0.2), np.float64(0.5)]
+    54.2-  58.5 h   -42.9 | 12.03 |  59 | [np.float64(0.0), np.float64(0.3), np.float64(0.5)]
+    58.5-  59.7 h   -57.2 | 11.82 |  60 | [np.float64(0.3)]
+    59.7-  68.6 h    13.3 | 12.96 |  59 | [np.float64(0.3), np.float64(0.4)]
+    68.6-  70.0 h   -12.6 | 11.11 |  60 | [np.float64(0.4)]

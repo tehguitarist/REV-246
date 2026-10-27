@@ -44,11 +44,15 @@ WARP2 = nlt.WARP2                                   # long-kernel clock warp (de
 BK_FILE = os.environ.get("NL_BK_FILE") or os.path.join(nl.OUT, "branch_kernel_warp2.json" if WARP2 else "branch_kernel.json")   # refitted under the long-kernel warp (11.5)
 BK_ALPHA_DEFAULT = 0.7 if WARP2 else 0.65           # strict rule against the 0.65 bench on all 1,044 captures (NonLin_program 11.5); 0.5 also keeps every channel-window within +0.5 dB of the no-kernel bench
 BK_ALPHA = os.environ.get("NL_BK_ALPHA", str(BK_ALPHA_DEFAULT))
+HF = os.environ.get("NL_HF") == "1"                 # NL_HF=1: the capture chain's band-edge term above 10 kHz, per capture run (NonLin_program 11.6); a measurement-side term, not the unit
+HF_FILE = os.path.join(nl.OUT, "hf_corr.json")
+HF_ALPHA = float(os.environ.get("NL_HF_ALPHA", 1.0))   # strength of the correction (1 = as fitted)
 BENCH = os.path.join(nl.OUT, "bench" + ("" if nl.WIDE else "_narrow") + ("" if EQ else "_noeq") + ("_warp2" if WARP2 else "")
                      + ("_bk" if os.environ.get("NL_BK") == "1" else "")
                      + ("_kf" if os.environ.get("NL_BK") == "1" and os.path.basename(BK_FILE) != "branch_kernel.json" else "")
                      + (f"_a{float(BK_ALPHA):g}" if os.environ.get("NL_BK") == "1" and float(BK_ALPHA) != 1.0 else "")
-                     + (f"_lb{os.environ.get('NL_LOWBAND', '2')}" if os.environ.get("NL_LOWBAND", "2") != "0" else ""))   # NL_LOWBAND (default 2, adopted): tools/lowband_joint.py
+                     + (f"_lb{os.environ.get('NL_LOWBAND', '2')}" if os.environ.get("NL_LOWBAND", "2") != "0" else "") + os.environ.get("NL_LOWBAND_TAG", "")   # NL_LOWBAND_TAG: bench folder tag for table tests
+                     + ("_hf" + (f"{HF_ALPHA:g}" if HF_ALPHA != 1.0 else "") if HF else ""))   # NL_LOWBAND (default 2, adopted): tools/lowband_joint.py
 
 
 def late_db(span, early):
@@ -129,6 +133,23 @@ def _proc(N):
     return R
 
 
+@functools.lru_cache(maxsize=1)
+def _hf_table():
+    return json.load(open(HF_FILE))
+
+
+def hf_gain(key, N):
+    """The capture-chain band-edge term for this capture on the model's FFT grid (N,), complex: exp(z(f)), z interpolated
+    between the knots, unity below 10 kHz and from 12.8 kHz (hf_corr.json: shape + a scalar from the run's front taps)."""
+    d = _hf_table()
+    c = d["captures"].get("_".join(str(v) for v in key), d["default"])
+    z = HF_ALPHA * (np.array(c["z_re"]) + 1j * np.array(c["z_im"]))
+    kx = np.r_[9500.0, 10000.0, d["knots_hz"], 13200.0]
+    g = np.r_[1.0, 1.0, np.exp(z), 1.0]
+    f = np.fft.rfftfreq(N, 1 / FS)
+    return np.interp(f, kx, g.real) + 1j * np.interp(f, kx, g.imag)
+
+
 def render(key, n, o=0.0, fr=0.0, band=True, proc=True):
     """The model (n, 2) with the front frame's zero at K0 + fr and the branch o samples later; band-limited to
     100 Hz-10 kHz unless band=False; through the captures' processing response and the top-end EQ unless proc=False
@@ -136,6 +157,8 @@ def render(key, n, o=0.0, fr=0.0, band=True, proc=True):
     N = 1 << int(np.ceil(np.log2(n + 2 * ne.TAPS[-1] + 4096)))
     ph = -2j * np.pi * np.fft.rfftfreq(N)
     R = _proc(N) if proc else np.ones((len(ph), 2))
+    if proc and HF:
+        R = R * hf_gain(key, N)[:, None]
     out = []
     for ch in (0, 1):
         F, B = spectra(key, ch, N)
