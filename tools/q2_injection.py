@@ -1645,12 +1645,18 @@ def final_stage(workers, only=None, compact=None, ap230=None, loopk=0.0, bbtilt=
     """compact / ap230: the 9 numbers and the AP230 step table to use (default: those fitted on the old IRs, as §17);
     either given -> output suffix _refit. lfdc: {lf: dc} replacing the law's shelf DC ratio at those LF steps (§25).
     xadd: a .npy correction of the loop excitations (dense_mid.py's x_*, Joint layout after the cluster and first-pass FIR)
-    added to the compact injection (model_s_results 25.10-25.11)."""
+    added to the compact injection (model_s_results 25.10-25.11).
+
+    The module defaults (COMPACT, P_MAX, HFRT_MIN, ap230) are the §17 / chain2 values, not the adopted baseline. A
+    baseline run passes EMT_KERNEL=chain3 EMT_PMAX=0.8475 EMT_HFRT_MIN=0.12 and --ap230 analysis/q2/ap230_mltable.json
+    (NEXT_STEPS §1); the provenance is printed below so a bare run cannot pass silently."""
     from concurrent.futures import ProcessPoolExecutor
     info, fade, _, _, eps0 = q1_tables()
     ap = json.load(open(ap230 or os.path.join(OUT, "ap230_g0.7071.json")))
     ends = json.load(open(os.path.join(OUT, "ramp.json")))
     v, law, a = final_injection(compact=compact)
+    print(f"final: kernel {q1.ms.KTAG or 'library'}, compact {compact or COMPACT}, ap230 {os.path.basename(ap230 or 'ap230_g0.7071.json')}, "
+          f"P_MAX {P_MAX:g}, HFRT_MIN {HFRT_MIN:g}, DC_MIN {DC_MIN:g}", flush=True)
     if xadd:
         v = v + np.r_[np.zeros(8 + 2 * q1.LFIR), np.load(xadd)]
     for lf_k, dc_v in (lfdc or {}).items():
