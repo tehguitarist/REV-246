@@ -1,3 +1,9 @@
+# STATUS (28 October 2026) - read this first
+
+Final state: the 20-100 Hz error of Program N was a model error (18-27 dB over the repeat level), a fixed linear transfer of the captures' processing, shared by N and S below ~100 Hz (parts 3-5). Adopted: `tools/lowband_joint.py`, `NL_LOWBAND=2` the N default (shared table below 100 Hz, N's own above 130 Hz, no extra smoothing; parts 6, 8): N bench 20-100 Hz -39.5 -> -48.9 / -48.0 dB, 100 Hz-1 kHz -55.8 -> -61.5 / -60.2, one channel-window +0.52 dB past the strict rule (accepted); S and M / L: `SML_LOWBAND` / `ML_LOWBAND`, full-band gate runs with the table, `gate_ref` rewritten (S 20-80 Hz +2...+13 dB, M / L neutral). The first-30-ms 'session' effect is the files' pre-roll DC (parts 1, 7). Tested and left: compact forms (part 7), residual structure at 100 Hz-1 kHz, sub-18 Hz table, front-tap terms, EARLY-class transfer. Where parts disagree, later parts win (part 6's 'default off' and its +-2-bin table are superseded by parts 6-8). Docs: `NonLin_program.md` 11.8, `model_s_results.md` 41.11, `ml_structure.md` 25.2.
+
+---
+
 # NonLin_program §11.6 bullet 2: the low band (100 Hz-1 kHz) in the first 30 ms. Report (27 Oct 2026)
 
 Scripts: `analysis/nl_lowband30/lb_*.py` (read-only on `tools/` and `analysis/nl/bench/`; `lb_common.py` loads the bench alignment and renders the

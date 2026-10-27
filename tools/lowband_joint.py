@@ -9,7 +9,8 @@ program's own, held out on both); above that it is program-specific.
     NL_LOWBAND=1   the shared table, 12-130 Hz (1 below 13 Hz and above 130 Hz)           analysis/lowband/chain3_lowband_joint.json
     NL_LOWBAND=2   the shared table below 100 Hz, Program N's own table above 130 Hz       analysis/nl/lowband_N_fine.npz
                    (linear blend over 100-130 Hz; N only). DEFAULT for Program N since 27 October 2026 (the user's decision).
-    SML_LOWBAND=1  S only (sml_fullband.full_model): the shared table; off by default.
+    SML_LOWBAND=1  S (sml_fullband.full_model, cluster and reverb) and ML_LOWBAND=1 M / L (their pipeline response): the shared table; off by default in
+                   the exploratory stages (the fold-transfer machinery needs the uncorrected sums), forced on in `sml_fullband.py --stage gate` (gate_ref rewritten 28 October).
 
 `response(f, mode)` -> (len(f), 2) complex data/model transfer (L, R) to multiply onto the model's response. Bench side only:
 it is a property of the captures' processing, not of the unit, and does not enter the plugin.

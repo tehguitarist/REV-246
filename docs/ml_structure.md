@@ -1198,6 +1198,10 @@ The 213 taps were the fixed high-pass's ±96-tap FIR around the 11 fitted number
 - **Adopted: M 21 taps, L 61** (`analysis/ml_lines/kernel_fix_full.json`; the 213-tap form is `kernel_fix_full_long.json`). Against the 213-tap kernel, every scored group, per channel-null: L (90 groups) no change beyond 0.5 dB anywhere, band medians within ±0.13 dB; M (80 groups) none worse, 10–11 kHz 0.4 dB better (median). Full-band gate PASS (`analysis/fullband/gate_compactkernel/`); pulse gate PASS (M first pass −49.43 → −49.45 dB, L −54.72 unchanged). The full-band gate reference was rewritten on it. (The pulse reference `analysis/pulse/ml` was regenerated with the 213-tap form; the two differ by ≤ 0.1 dB in its 100 Hz–10 kHz metrics.)
 - For the plugin: M is 21 taps at the device rate, L 61, per channel (L's is mostly the top octave's phase).
 
+### 25.2 Update, 28 October 2026: the shared sub-100 Hz capture transfer on M / L (`model_s_results.md` 41.11)
+
+**[S: the transfer shared by Programs N and S below ~100 Hz (`tools/lowband_joint.py`, `ML_LOWBAND=1` in `sml_fullband.py`; the full-band gate runs M / L with it) changes M's and L's cluster / gap and first pass by −0.9…+0.3 dB (best −0.9 at 20–40 Hz; 43 groups): neutral, because their time-variant reverb already sits at the capture-pair level there (§9). No M / L low-band excess was found (§25 / `model_s_results.md` 41.4); nothing to adopt beyond keeping the gate consistent.]**
+
 ## 26. M / L out of band on today's models: the §11 check rerun (`tools/outofband.py`, `EMT_KERNEL=chain3`, 27 October 2026) **[S: nothing has broken outside 100 Hz–10 kHz since §11; 10–12 kHz decay and level hold to 0.3 % / 0.06 dB; the 25–100 Hz high-LF shortfall of §11.2 is unchanged; no model change]**
 
 §11 predates the damping table (§22), the full-band kernel (§25) and the compact kernel (§25.1). Same procedure, nothing refitted (each capture keeps the in-band law stage's shift, clock and gains; model rendered full band times the pipeline response P(f)), on 160 M and 180 L groups (`analysis/outofband/groups_chain3/`, `report_chain3.log`; 954 s, 4 workers, 4.1 GB).
