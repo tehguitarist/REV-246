@@ -6,7 +6,7 @@ program if the mechanism is a fraction of the line length (so M / L would show d
 
     EMT_KERNEL=chain3 .venv/bin/python tools/loop_read/warp.py S [keys]          # dense_mid prep (the §25.7 baseline, clocks per capture)
     .venv/bin/python tools/loop_read/warp.py M|L [keys]                          # ml_lines.fitted (law model, stored clocks and gains)"""
-import json, os, sys
+import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 from scipy.signal import butter, sosfiltfilt

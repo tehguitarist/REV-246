@@ -40,5 +40,5 @@ for n in names:
         print(f"  {ch}: AM rms {np.std(am) * 100:6.2f} % ({20 * np.log10(am.max() / am.min()):5.2f} dB p-p) | PM rms {np.std(ph):7.4f} rad "
               f"(= {np.std(ph) / (2 * np.pi * f) * 1e6:7.2f} us of delay) p-p {ph.max() - ph.min():.3f} rad")
         pa, _, _ = spec_peaks(am, fs); pp, _, _ = spec_peaks(ph, fs)
-        print(f"     AM peaks Hz (rel amp): " + ", ".join(f"{fr:.3f} ({v:.3f})" for fr, v in pa))
-        print(f"     PM peaks Hz (rad):     " + ", ".join(f"{fr:.3f} ({v:.4f})" for fr, v in pp))
+        print("     AM peaks Hz (rel amp): " + ", ".join(f"{fr:.3f} ({v:.3f})" for fr, v in pa))
+        print("     PM peaks Hz (rad):     " + ", ".join(f"{fr:.3f} ({v:.4f})" for fr, v in pp))

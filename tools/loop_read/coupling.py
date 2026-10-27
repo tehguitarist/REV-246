@@ -34,7 +34,7 @@ def prep_one(a):
     key, path = a
     import lowband_shelf as ls
     from defects import DEFECTS
-    q2, q1 = ls.q2, ls.q1
+    q1 = ls.q1
     FS, PRE = q1.FS, q1.PRE
     d = ls.bb_prep(key)
     w, N, PB = d["w"], d["N"], d["G"]["PB"]

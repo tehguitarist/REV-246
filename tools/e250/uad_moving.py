@@ -12,7 +12,7 @@ alignment (285 samples), a least-squares FIR from R's residual to L's (fitted on
 other), its structure, the transfer function (coherence, gain, phase) and the same on the static mean.
 Stage t2: the moving reads themselves (strong taps of the base residual: bands, lockstep displacement g(t), loops).
 """
-import argparse, json, os, sys
+import argparse, json, os
 import numpy as np
 from scipy.signal import fftconvolve
 

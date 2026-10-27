@@ -338,7 +338,7 @@ def consts():
             C.append((f"AP step {k}, {p}", steps[p][k][0], float(np.hypot(steps[p][k][1], np.std(v, ddof=1))), "SEM (+) the S/M/L spread", "step_p"))
     sp = {p: (steps[p][2][0] - steps[p][1][0], steps[p][3][0] - steps[p][2][0]) for p in "SML"}
     d12 = np.array([sp[p][0] for p in "SML"]); d23 = np.array([sp[p][1] for p in "SML"])
-    log(f"   spacings step 2 - 1 / 3 - 2: " + "; ".join(f"{p} {sp[p][0]:.5f} / {sp[p][1]:.5f}" for p in "SML") +
+    log("   spacings step 2 - 1 / 3 - 2: " + "; ".join(f"{p} {sp[p][0]:.5f} / {sp[p][1]:.5f}" for p in "SML") +
         f"; mean {d12.mean():.5f} / {d23.mean():.5f}, difference {np.mean(d23 - d12):+.5f} +- {np.std(d23 - d12, ddof=1) / np.sqrt(3):.5f} (S alone: "
         f"{sp['S'][1] - sp['S'][0]:+.5f} +- {np.sqrt(2 * steps['S'][2][1] ** 2 + steps['S'][1][1] ** 2 + steps['S'][3][1] ** 2):.5f}): not equally spaced, so no k / 6 or k d (+ c) table")
     # the law constants (q1.fit_laws, 13 numbers): bootstrap over the law files
@@ -359,7 +359,7 @@ def consts():
     for rt in ("0.6", "1.4", "1.8"):
         v = 10 ** (sh["F"][rt] / 20)
         C.append((f"DC floor plateau RT {rt}{' (0.6-1.0)' if rt == '0.6' else ''}", float(v), float(v * (10 ** (0.003 / 20) - 1)), "0.003 dB (34: by HF step)", "floor"))
-    log(f"DC floor plateaus (35.1): RT 0.6 / 0.8 / 1.0 " + " / ".join(f"{10 ** (sh['F'][r] / 20):.5f}" for r in ("0.6", "0.8", "1.0")) + " (one value to 3e-5)")
+    log("DC floor plateaus (35.1): RT 0.6 / 0.8 / 1.0 " + " / ".join(f"{10 ** (sh['F'][r] / 20):.5f}" for r in ("0.6", "0.8", "1.0")) + " (one value to 3e-5)")
     for nm, v, s_, src in (("pole ceiling", 0.8475, 1e-3, "25.17-25.19: S upper quartile 0.8472, M / L 0.8443-0.8517"),
                            ("drop-back pole LF 0.1 / 0.4 / 2.0", 0.8465, 5e-4, "32.4: the ceiling + an old cell shift"),
                            ("drop-back pole LF 1.0", 0.847, 5e-4, "32.4"), ("drop-back threshold (law pole)", 0.856, 2e-3, "32.4: between law-pole samples"),
@@ -372,7 +372,7 @@ def consts():
         C.append((f"{prog} output kernel centre tap", float(k[5]), float(abs(k[5] - o[5])), "18: refit change (library chain inside)", "kernel"))
         C.append((f"{prog} output kernel sum", float(k.sum()), float(abs(k.sum() - o.sum())), "18: refit change", "kernel"))
     # the tests
-    log(f"\nPer constant: value +- sigma; on 2^-n grids testable where q >= 4 sigma: the finest testable n*, the offset at n* in LSB, and the")
+    log("\nPer constant: value +- sigma; on 2^-n grids testable where q >= 4 sigma: the finest testable n*, the offset at n* in LSB, and the")
     log("smallest chance p = 2 |d| / q over the testable grids, Sidak-corrected over their number (p_c); the nearest rational k / q (q <= 12) and two-term")
     log("shift-and-add form (+-2^-a +- 2^-b), each with its chance p (a constant drawn around the value lands as close).")
     log(f"{'constant':38s} {'value':>11s} {'sigma':>8s} | {'n*':>3s} {'d/q@n*':>7s} {'best n':>6s} {'p':>6s} {'p_c':>6s} | {'rational':>10s} {'d':>9s} {'p':>5s} | {'2-term':>10s} {'d':>9s} {'p':>5s}")
@@ -509,7 +509,7 @@ def panel():
                 ca = X @ a_ / (X @ X)
                 num[nm] += float((ca * X) @ b_)          # held out by take: fitted on A, the part of B it carries
             den += float(a_ @ b_)
-        log(f"   loop structure (A fitted, B scored; share of the reproducible sum A.B): " + "; ".join(f"{k} {v / den:.2f}" for k, v in num.items()))
+        log("   loop structure (A fitted, B scored; share of the reproducible sum A.B): " + "; ".join(f"{k} {v / den:.2f}" for k, v in num.items()))
         out[form] = dict(res, **{k: v / den for k, v in num.items()})
     json.dump(out, open(os.path.join(LB, "chain3_fixedpoint_panel.json"), "w"), indent=1)
 

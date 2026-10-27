@@ -210,7 +210,7 @@ def report_stage():
             rr = [r for r in rows if r["loops"] == lp and sel(r)]
             if rr:
                 print(f"| {g} | {lp} | " + " | ".join(f"{nul(rr, w):.1f} [{ex(rr, w):+.1f}]" for w in ws) + " |")
-    print(f"\n## The fir corrections per pass, median over the settings of a group and the four loops (magnitude dB / phase delay samples)")
+    print("\n## The fir corrections per pass, median over the settings of a group and the four loops (magnitude dB / phase delay samples)")
     print("| settings | n | " + " | ".join(f"{f} Hz" for f in FREQS) + " |\n|---|---|" + "---|" * len(FREQS))
     for g, sel in groups + [("RT 0.6", lambda r: r["rt"] == 0.6), ("RT 1.0", lambda r: r["rt"] == 1.0), ("RT 2.5", lambda r: r["rt"] == 2.5)]:
         ss = [s for s in res if sel(s)]

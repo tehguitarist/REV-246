@@ -10,7 +10,7 @@ imports or needs the plugin. Only `uad250_suite.py run` and au_render need the p
 gitignored and must not be committed or redistributed; the manifest (hashes and settings only) is committed.
 """
 import argparse, hashlib, json, os, subprocess, sys, time
-import numpy as np, soundfile as sf
+import soundfile as sf
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 import uad250_suite as su
 

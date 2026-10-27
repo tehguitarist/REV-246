@@ -96,7 +96,7 @@ best = max(cands, key=lambda n: max(res[n][1], res[n][2]))
 _, pr = loso([cands[best]], res[best][2] > res[best][1])
 for k in keys:
     s = [i for i, d in enumerate(rows) if d["key"] == k]
-    print(f"  {k:12s} " + " ".join(f"{r[i]:+.2f}" for i in s) + "  | " + " ".join(f"{pr[i]:+.2f}" for i in s) + f"   (noise " + " ".join(f"{abs(nz[i]):.2f}" for i in s) + ")")
+    print(f"  {k:12s} " + " ".join(f"{r[i]:+.2f}" for i in s) + "  | " + " ".join(f"{pr[i]:+.2f}" for i in s) + "   (noise " + " ".join(f"{abs(nz[i]):.2f}" for i in s) + ")")
 print("best single:", best)
 json.dump(dict(hf=HFSEL, n=len(rows), rms=float(np.sqrt(np.mean(r**2))), noise=float(np.sqrt(np.mean(nz**2))),
                cands={k: dict(rho=v[0], loso=v[1], loso_icpt=v[2]) for k, v in res.items()}), open(sys.argv[2], "w"), indent=1)

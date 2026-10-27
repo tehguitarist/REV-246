@@ -10,7 +10,7 @@ Within a family (S / MED / LONG / REV-250) the first tap is the same in every pr
 noise), so a family mean is used; the 48 kHz deconvolved Altiverb cache (not committable) is read, derived numbers go to
 analysis/e250/lp_chain.json.
 """
-import argparse, json, os, sys
+import argparse, json, os
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))

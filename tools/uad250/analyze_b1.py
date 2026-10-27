@@ -6,7 +6,7 @@ B1: each impulse-ladder IR is divided by its input gain and compared with the -3
 the floor); the residual energy in time windows (re the reference) shows non-linearity, the tail floor shows quantisation.
 B2: harmonics 2-5 of the sine ladder (re the fundamental), by level. B3: idle/floor noise and the Power-off/Mix-0 paths.
 """
-import glob, os, re, sys
+import glob, os
 import numpy as np, soundfile as sf
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 CAP = os.path.join(ROOT, "analysis", "uad250", "captures", "B_level")

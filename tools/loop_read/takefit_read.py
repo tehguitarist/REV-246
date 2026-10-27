@@ -87,7 +87,7 @@ def transfer(rows):
         out.append(f"   cell {'+'.join(cell):14s}" + " ".join(f"{x:7.2f}" for x in explained(B, P)))
     P = additive(rows, A)
     ok = ~np.isnan(P[:, 0])
-    out.append(f"   additive LF + HF   " + " ".join(f"{x:7.2f}" for x in explained(B[ok], P[ok])) + "   (per (RT, loop))")
+    out.append("   additive LF + HF   " + " ".join(f"{x:7.2f}" for x in explained(B[ok], P[ok])) + "   (per (RT, loop))")
     for rt in sorted({r["rt"] for r in rows}):
         k = ok & np.array([r["rt"] == rt for r in rows])
         out.append(f"     RT {rt:<4}          " + " ".join(f"{x:7.2f}" for x in explained(B[k], P[k])) +

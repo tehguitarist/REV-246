@@ -732,7 +732,6 @@ class Capture:
 
     def __init__(self, wav, eps, n_dev, t_fit=0.4, f_cmp=11500.0, k_pre=96, k_post=704, half=24, l_offset=0.0):
         import soundfile as sf
-        from scipy.sparse import csr_matrix
         from deconv_grid import locate_first_tap
         x, fs = sf.read(wav, always_2d=True); self.fs = fs
         self.i0 = locate_first_tap(x[:, 1], fs) - int(0.1e-3 * fs)   # deconv_grid's kernel start = first tap

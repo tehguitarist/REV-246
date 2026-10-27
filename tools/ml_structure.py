@@ -26,7 +26,7 @@ Methods (all on device-rate IRs: deconvolved with the library kernel, resampled 
   clock     S AMPL pairs in the capture domain with a per-capture clock ratio fitted (on R, 0.05-0.6 s):
             the repeat-capture null a perfect model could reach against one library capture.
 """
-import argparse, collections, glob, itertools, json, os, re, sys
+import argparse, collections, glob, itertools, json, os, sys
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 import soundfile as sf

@@ -7,7 +7,7 @@ iteratively refined template is found by cross-correlation of the 60-300 Hz band
 about 1 ms), with a parabolic sub-sample peak. Reports the spread of d, its autocorrelation, spectrum (period of the
 modulation) and the correlation between lag windows (common-mode versus independent per loop).
 """
-import os, sys
+import os
 import numpy as np, soundfile as sf
 from scipy.signal import butter, sosfiltfilt
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -51,7 +51,7 @@ def report(name, X, T, step):
         top = np.argsort(-sp[1:])[:4] + 1
         print(f" lag {a:3d}-{b:3d} ms: shift rms {d.std():6.3f} ms = {d.std() * FDEV / 1e3:5.1f} dev smp (p-p {d.max() - d.min():.2f} ms); "
               f"autocorr at 0.25/0.5/1/2/5 s: " + " ".join(f"{ac[int(t / step)]:5.2f}" for t in (0.25, 0.5, 1, 2, 5) if int(t / step) < len(ac)) +
-              f" | spectrum peaks Hz: " + ", ".join(f"{fr[i]:.3f}" for i in top))
+              " | spectrum peaks Hz: " + ", ".join(f"{fr[i]:.3f}" for i in top))
     ks = list(D)
     print(" correlation of shift series between lag windows: " + ", ".join(f"{a}-{b}ms~{c}-{e}ms {np.corrcoef(D[(a, b)], D[(c, e)])[0, 1]:+.2f}" for i, (a, b) in enumerate(ks) for (c, e) in ks[i + 1:]))
     return D

@@ -8,7 +8,7 @@ import json, os, sys
 import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import sml_fullband as sf
-from sml_fullband import q1, q2, pc, np as _np, sosfiltfilt
+from sml_fullband import q1, q2, pc, sosfiltfilt
 
 key = sys.argv[1]
 xc = json.load(open(os.path.join(sf.OUT, "xcorr.json")))

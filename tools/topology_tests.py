@@ -7,7 +7,7 @@ from docs/algorithm_research.md section 7.2, on the CLA IR plus two synthetic co
 """
 import numpy as np, scipy.sparse as sp
 from scipy.sparse.linalg import lsqr
-from scipy.signal import butter, sosfiltfilt, find_peaks, lfilter
+from scipy.signal import butter, sosfiltfilt, lfilter
 fsd=19.2e6/728; rt=0.98; P=[1321,1389,1461,1587]
 def decompose(h,k0,flp=6000):
     sos=butter(8,flp,fs=fsd,output='sos'); comps={}

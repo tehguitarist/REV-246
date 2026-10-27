@@ -17,7 +17,7 @@ Result (model_s_results 39): tried, not adopted; the variant fold set is not kep
     then: for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_AP230=ap230_mltable_b0.json <bench env> loop_cv.py --retake --tag apml0
         --stage run --rt $rt; done; foldcmp.py <_apml> <_apml0> --per-setting
 """
-import argparse, collections, glob, json, os, shutil, sys
+import argparse, collections, glob, json, os, shutil
 
 import numpy as np
 

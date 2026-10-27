@@ -8,7 +8,7 @@ ms and converted to 26,373.6 Hz device samples for comparison with docs/EMT250_p
 analysis/uad250/a1/a1.csv. Loop detection needs RT >= ~3 s (EMT250_program.md §3), so it is attempted at every setting
 but only trusted where the ACF peaks clear 8 sigma in both channels.
 """
-import argparse, csv, glob, json, os, re, sys
+import argparse, csv, glob, os, re, sys
 import numpy as np, soundfile as sf
 from scipy.signal import find_peaks
 

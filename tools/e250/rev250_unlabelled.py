@@ -14,7 +14,7 @@ Reads analysis/altiverb/cache (not committable); derived numbers go to analysis/
 """
 import json, os, sys
 import numpy as np
-from scipy.signal import butter, sosfiltfilt, fftconvolve, find_peaks
+from scipy.signal import butter, sosfiltfilt, fftconvolve
 from scipy.optimize import least_squares
 
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)

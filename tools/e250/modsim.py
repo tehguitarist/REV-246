@@ -5,7 +5,7 @@ The comb structure is deliberately plain (three combs of the measured lengths, a
 4 kHz); the modulation is a common 0.552 Hz sinusoid on every loop plus a 0.74 Hz one on the longest. What it is for is the *ratio* of comb
 coherence at k passes to k = 1 per band, which depends on the accumulated delay change and not on the read-tap detail.
 """
-import ctypes, os, sys
+import ctypes, os
 import numpy as np
 from scipy.optimize import fsolve
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(os.path.dirname(HERE))

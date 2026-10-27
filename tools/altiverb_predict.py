@@ -240,7 +240,6 @@ def stage_direct(out):
 
 def stage_diag(out):
     import soundfile as sf
-    from scipy.signal import resample_poly
     res = {}
     for nm, path in (("Tomkin S RT 1.0 AMPL 90", os.path.join(ROOT, "irs", "EMT 246 captures", "96kHz", "Short RT", "12_0_90_10_10_10_dc.wav")),
                      ("CLA", os.path.join(ROOT, "irs", "eugtone_EMT246_CLA_shortRT.wav"))):

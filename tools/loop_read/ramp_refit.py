@@ -4,7 +4,7 @@ curvature as weight, grid-edge settings out); the fold files of loop_cv's lf04dc
 analysis/loop_cv/cap<cap>_folds/. Also the same fit at cap 0.84 as a check against §22.8's c.
 
     .venv/bin/python tools/loop_read/ramp_refit.py 0.8475"""
-import json, os, shutil, sys
+import json, os, sys
 import numpy as np
 from scipy.optimize import minimize_scalar
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
