@@ -2,6 +2,7 @@
 
 #include "dsp/AdcClipper.h"
 #include "dsp/ReverbEngine.h"
+#include "dsp/StereoWidth.h"
 #include "dsp/Transformer.h"
 #include "params/Parameters.h"
 #include "presets/PresetManager.h"
@@ -10,6 +11,8 @@
 #include <juce_dsp/juce_dsp.h>
 
 #include <array>
+#include <atomic>
+#include <vector>
 
 class Rev246Processor : public juce::AudioProcessor
 {
@@ -21,6 +24,7 @@ class Rev246Processor : public juce::AudioProcessor
         static inline const juce::Identifier width{"width"};
         static inline const juce::Identifier tooltipsOn{"tooltipsOn"};
         static inline const juce::Identifier meterCal{"meterCal"}; // index into design::meterCalDbFs
+        static inline const juce::Identifier preset{"preset"};     // the current preset's name, written on save
     };
     static constexpr int defaultEditorWidth = 1398; // 40% of the 3495-wide design space
 
@@ -71,28 +75,52 @@ class Rev246Processor : public juce::AudioProcessor
     juce::ValueTree uiState() { return apvts.state.getOrCreateChildWithName(UiProps::node, nullptr); }
 
   private:
+    // Typed views of `scratch` for one chunk of a block (defined in PluginProcessor.cpp).
+    struct BlockBuffers;
+    // What the engines' settings are derived from; they are only sent when it changes (program -1: nothing sent yet).
+    struct EngineKey
+    {
+        int program = -1;
+        bool sixteenBit = false;
+        std::array<int, rv::params::numJoys> steps{};
+        bool operator==(const EngineKey& o) const
+        {
+            return program == o.program && sixteenBit == o.sixteenBit && steps == o.steps;
+        }
+    };
+
     // The unit's algorithm is mono in / stereo out. The second engine and transformer make the optional true-stereo
     // mode (one mono path per input channel); otherwise engine 0 carries the (possibly summed) mono input.
     std::array<rv::dsp::ReverbEngine, 2> engines;
     std::array<rv::dsp::Transformer, 2> transformers;
+    rv::dsp::StereoWidener stereoWidener;
     std::array<rv::dsp::AdcClipper, 2> clippers; // one A/D per engine
-    juce::LinearSmoothedValue<float> inGain, outGain, mixAmount, panLeft, panRight, wetOn, transformerOn, sixteenBitOn;
-    juce::AudioBuffer<float> scratch;
+    // 20 ms ramps (set in prepareToPlay). The three "On" ones are crossfade weights, 0 or 1 at rest: power (processed
+    // against bypassed), the transformer stage and the 16-bit mode's A/D clipping.
+    juce::LinearSmoothedValue<float> inGain, outGain, mixAmount, panLeft, panRight, powerOn, transformerOn, sixteenBitOn;
+    juce::AudioBuffer<float> scratch; // BlockBuffers' channels; sized in prepareToPlay, so a block never allocates
     std::atomic<float> inputVu{0.0f};
     std::atomic<bool> inputClip{false};
     std::atomic<int> meterCal{0};
     std::atomic<float> adcFullScale{1.0f}; // the A/D's clip level, linear peak
-    float vu = 0.0f;         // the VU integrator's state (linear RMS), audio thread only
-    double vuTauSamples = 0.0; // VU time constant in samples (tau * sample rate), set in prepareToPlay
+    float vuLevel = 0.0f;      // the VU integrator's state (linear RMS), audio thread only
+    double vuTauSamples = 1.0; // VU time constant in samples (tau * sample rate), set in prepareToPlay
     bool lastTrueStereo = false; // engine 1's state is reset when the routing turns true stereo on or off
+    EngineKey engineKey;
     // The reported latency is the A/D stage's (AdcClipper::latency, in both modes so it never changes with 16-BIT):
-    // the dry and bypassed signals are delayed by the same amount.
+    // the dry and bypassed signals are delayed by the same amount, in a ring per input channel.
     std::array<std::vector<float>, 2> dryDelay;
     size_t dryPos = 0;
 
     void applyMeterCal(int index); // the atomics only (audio-thread readable), not the UI state
 
-    std::atomic<float>*pProgram, *pMix, *pPan, *pIn, *pOut, *pPower, *pTransformer, *pTrueStereo, *pSixteenBit;
+    void processChunk(juce::AudioBuffer<float>&);
+    void applyParameters();
+    void processInputStage(const float* inL, const float* inR, const BlockBuffers&, int n, bool trueStereo);
+    void processTransformerOutputs(const BlockBuffers&, int n, bool trueStereo, bool stereoOut);
+    void mixOutput(juce::AudioBuffer<float>&, const BlockBuffers&, bool trueStereo, bool stereoOut);
+
+    std::atomic<float>*pProgram, *pMix, *pPan, *pIn, *pOut, *pPower, *pTransformer, *pTrueStereo, *pSixteenBit, *pStereoWidth;
     std::array<std::atomic<float>*, rv::params::numJoys> pJoy;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Rev246Processor)

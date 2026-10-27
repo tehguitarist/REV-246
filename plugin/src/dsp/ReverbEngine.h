@@ -4,6 +4,8 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 
+#include <array>
+
 namespace rv::dsp
 {
 // The reverb's settings as the panel shows them, already converted from step indices to values.

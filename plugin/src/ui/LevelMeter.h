@@ -11,7 +11,6 @@ class LevelMeter : public DesignComponent
   public:
     LevelMeter();
     void setLevel(float vuLinear, bool clip, float refDbFs);
-    int litCount() const { return lit; }
     juce::String getTooltip() override;
     void paint(juce::Graphics&) override;
 

@@ -54,7 +54,7 @@ juce::String LevelMeter::getTooltip()
 void LevelMeter::paint(juce::Graphics& g)
 {
     layer.paint(g, getLocalBounds(), juce::String(lit) + (over ? "o" : "n"), [this](juce::Graphics& lg, float scale) {
-        const auto k = getScale() * 2.5f;
+        const auto k = getScale() * 2.5f; // 1 at the default editor size (scale 0.4): the radii below are in its pixels
         for (int i = 0; i < design::numLevelLeds; ++i)
         {
             const bool on = i == 0 ? over : (design::numLevelLeds - i) <= lit;

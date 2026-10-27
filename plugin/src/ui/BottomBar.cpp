@@ -2,8 +2,17 @@
 
 #include "ui/Design.h"
 
+#include <utility>
+
 namespace rv::ui
 {
+namespace
+{
+// The bar buttons' look in design pixels: corner radius, outline width, text inset and the text's cap height.
+constexpr float barCornerRadius = 14.0f, barOutline = 4.0f, barTextInset = 12.0f, barCapHeight = 34.0f;
+constexpr float disabledAlpha = 0.3f;
+} // namespace
+
 BarButton::BarButton(juce::Rectangle<float> slot, juce::String text, Kind k)
     : DesignComponent(slot), label(std::move(text)), kind(k)
 {
@@ -24,6 +33,7 @@ void BarButton::setLabel(const juce::String& l)
     if (l == label)
         return;
     label = l;
+    setTitle(label);
     repaint();
 }
 
@@ -48,16 +58,16 @@ void BarButton::paint(juce::Graphics& g)
     const auto s = getScale();
     const auto b = getLocalBounds().toFloat().reduced(2.0f);
     const auto lit = isEnabled() && (alwaysLit || (kind == Kind::toggle ? on : held));
-    const auto fade = isEnabled() ? 1.0f : 0.3f; // greyed out
+    const auto fade = isEnabled() ? 1.0f : disabledAlpha; // greyed out
     g.setColour(design::gold.withAlpha((lit ? 0.22f : 0.08f) * fade));
-    g.fillRoundedRectangle(b, 14.0f * s);
+    g.fillRoundedRectangle(b, barCornerRadius * s);
     g.setColour(design::gold.withAlpha((lit ? 0.95f : 0.6f) * fade));
-    g.drawRoundedRectangle(b, 14.0f * s, juce::jmax(1.0f, 4.0f * s));
-    const auto font = italic ? labelFont(34.0f * s).italicised() : labelFont(34.0f * s);
+    g.drawRoundedRectangle(b, barCornerRadius * s, juce::jmax(1.0f, barOutline * s));
+    const auto font = italic ? labelFont(barCapHeight * s).italicised() : labelFont(barCapHeight * s);
     g.setFont(font);
     const auto labelColour = !alwaysLit && kind == Kind::toggle && !on ? design::labelDimmed : design::labelSelected;
     g.setColour(labelColour.withMultipliedAlpha(fade));
-    g.drawFittedText(label, getLocalBounds().reduced(juce::roundToInt(12.0f * s), 0), juce::Justification::centred, 1, 1.0f);
+    g.drawFittedText(label, getLocalBounds().reduced(juce::roundToInt(barTextInset * s), 0), juce::Justification::centred, 1, 1.0f);
 }
 
 void BarButton::mouseDown(const juce::MouseEvent&)
@@ -70,36 +80,32 @@ void BarButton::mouseDown(const juce::MouseEvent&)
 
 void BarButton::mouseUp(const juce::MouseEvent& e)
 {
+    const auto wasHeld = std::exchange(held, false); // also when it was disabled while held
+    repaint();
+    if (wasHeld && isEnabled() && getLocalBounds().contains(e.getPosition()))
+        activate();
+}
+
+void BarButton::activate()
+{
     if (!isEnabled())
         return;
-    held = false;
-    repaint();
-    if (!getLocalBounds().contains(e.getPosition()))
-        return;
-    if (kind == Kind::toggle)
+    if (kind == Kind::momentary)
     {
-        if (onToggle)
-            onToggle(!on);
-        else
-            setOn(!on);
+        if (onClick)
+            onClick();
     }
-    else if (onClick)
-        onClick();
+    else if (onToggle)
+        onToggle(!on);
+    else
+        setOn(!on);
 }
 
 std::unique_ptr<juce::AccessibilityHandler> BarButton::createAccessibilityHandler()
 {
     return std::make_unique<juce::AccessibilityHandler>(
         *this, kind == Kind::toggle ? juce::AccessibilityRole::toggleButton : juce::AccessibilityRole::button,
-        juce::AccessibilityActions().addAction(juce::AccessibilityActionType::press, [this] {
-            if (kind == Kind::toggle)
-            {
-                if (onToggle)
-                    onToggle(!on);
-            }
-            else if (onClick)
-                onClick();
-        }));
+        juce::AccessibilityActions().addAction(juce::AccessibilityActionType::press, [this] { activate(); }));
 }
 
 BarLabel::BarLabel(juce::Rectangle<float> slot, juce::String t, float cap, juce::Colour c, juce::Justification j)
@@ -122,7 +128,7 @@ constexpr float barY = design::barTop + 35.0f, barH = 80.0f;
 }
 
 PresetBar::PresetBar(rv::PresetManager& p, juce::Component& parentIn)
-    : presets(p), parent(parentIn), prev({110, barY, 90, barH}, juce::CharPointer_UTF8("\xe2\x97\x80")),
+    : presets(p), parent(parentIn), parentAlive(&parentIn), prev({110, barY, 90, barH}, juce::CharPointer_UTF8("\xe2\x97\x80")),
       next({916, barY, 90, barH}, juce::CharPointer_UTF8("\xe2\x96\xb6")), name({208, barY, 700, barH}, ""),
       save({1016, barY, 200, barH}, "SAVE")
 {
@@ -180,15 +186,15 @@ void PresetBar::showMenu()
         }
     }
     menu.addSeparator();
-    const int saveAs = id++, del = id++, reveal = id++;
-    menu.addItem(saveAs, "Save as...");
+    const int saveAsId = id++, del = id++, reveal = id++;
+    menu.addItem(saveAsId, "Save as...");
     menu.addItem(del, "Delete current", !presets.isFactory(presets.currentName()));
     menu.addItem(reveal, "Show presets folder");
 
-    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&name), [this, byId, saveAs, del, reveal](int r) {
-        if (r <= 0)
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&name), [this, alive = parentAlive, byId, saveAsId, del, reveal](int r) {
+        if (r <= 0 || alive == nullptr)
             return;
-        if (r == saveAs)
+        if (r == saveAsId)
             promptSaveAs();
         else if (r == del)
             presets.remove(presets.currentName());
@@ -211,56 +217,60 @@ void PresetBar::promptSaveAs(juce::String initial)
     w->addTextEditor("name", initial);
     w->addButton("Save As", 1, juce::KeyPress(juce::KeyPress::returnKey));
     w->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
-    w->enterModalState(true, juce::ModalCallbackFunction::create([this, w](int r) {
-                           if (r != 1)
-                               return;
-                           const auto chosen = rv::PresetManager::sanitise(w->getTextEditorContents("name"));
-                           if (chosen.isEmpty())
-                           {
-                               promptSaveAs();
-                               return;
-                           }
-                           if (presets.isFactory(chosen))
-                           {
-                               // Factory names are read-only; return to the name field rather than failing silently.
-                               juce::AlertWindow::showAsync(
-                                   juce::MessageBoxOptions()
-                                       .withIconType(juce::MessageBoxIconType::InfoIcon)
-                                       .withTitle("Factory preset")
-                                       .withMessage("\"" + chosen + "\" is a factory preset name. Choose another name.")
-                                       .withButton("OK")
-                                       .withAssociatedComponent(&parent),
-                                   [this, chosen](int) { promptSaveAs(chosen); });
-                               return;
-                           }
-                           if (presets.userNames().contains(chosen))
-                           {
-                               // Only user presets can be replaced.
-                               juce::AlertWindow::showAsync(
-                                   juce::MessageBoxOptions()
-                                       .withIconType(juce::MessageBoxIconType::QuestionIcon)
-                                       .withTitle("Override preset?")
-                                       .withMessage("A user preset called \"" + chosen + "\" already exists. Do you want to override it?")
-                                       .withButton("Yes")
-                                       .withButton("No")
-                                       .withAssociatedComponent(&parent),
-                                   [this, chosen](int choice) {
-                                       if (choice == 1)
-                                       {
-                                           presets.save(chosen);
-                                           refresh();
-                                       }
-                                       else
-                                       {
-                                           promptSaveAs(chosen); // No: go back to changing the name.
-                                       }
-                                   });
-                               return;
-                           }
-                           presets.save(chosen);
-                           refresh();
+    w->enterModalState(true, juce::ModalCallbackFunction::create([this, alive = parentAlive, w](int r) {
+                           if (r == 1 && alive != nullptr)
+                               saveAs(rv::PresetManager::sanitise(w->getTextEditorContents("name")));
                        }),
                        true);
 }
 
+void PresetBar::saveAs(const juce::String& chosen)
+{
+    if (chosen.isEmpty())
+    {
+        promptSaveAs();
+        return;
+    }
+    if (presets.isFactory(chosen))
+    {
+        // Factory names are read-only; return to the name field rather than failing silently.
+        juce::AlertWindow::showAsync(juce::MessageBoxOptions()
+                                         .withIconType(juce::MessageBoxIconType::InfoIcon)
+                                         .withTitle("Factory preset")
+                                         .withMessage("\"" + chosen + "\" is a factory preset name. Choose another name.")
+                                         .withButton("OK")
+                                         .withAssociatedComponent(&parent),
+                                     [this, alive = parentAlive, chosen](int) {
+                                         if (alive != nullptr)
+                                             promptSaveAs(chosen);
+                                     });
+        return;
+    }
+    if (presets.userNames().contains(chosen))
+    {
+        // Only user presets can be replaced.
+        juce::AlertWindow::showAsync(
+            juce::MessageBoxOptions()
+                .withIconType(juce::MessageBoxIconType::QuestionIcon)
+                .withTitle("Override preset?")
+                .withMessage("A user preset called \"" + chosen + "\" already exists. Do you want to override it?")
+                .withButton("Yes")
+                .withButton("No")
+                .withAssociatedComponent(&parent),
+            [this, alive = parentAlive, chosen](int choice) {
+                if (alive == nullptr)
+                    return;
+                if (choice == 1)
+                {
+                    presets.save(chosen);
+                    refresh();
+                }
+                else
+                    promptSaveAs(chosen); // No: go back to changing the name.
+            });
+        return;
+    }
+    presets.save(chosen);
+    refresh();
+}
 } // namespace rv::ui

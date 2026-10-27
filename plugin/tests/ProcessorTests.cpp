@@ -49,6 +49,24 @@ TEST_CASE("power off passes the input through, delayed by the reported latency")
     }
 }
 
+TEST_CASE("the factory defaults are period-accurate, fully wet and linked")
+{
+    Rev246Processor p;
+    auto value = [&](const char* id) { return p.apvts.getRawParameterValue(id)->load(); };
+    CHECK(value(rv::params::id::power) >= 0.5f);
+    CHECK(value(rv::params::id::mix) == 1.0f);
+    CHECK(value(rv::params::id::link) >= 0.5f);
+    CHECK(value(rv::params::id::transformer) >= 0.5f);
+    CHECK(value(rv::params::id::sixteenBit) >= 0.5f);
+    CHECK(value(rv::params::id::stereoWidth) == 100.0f);
+    CHECK(std::abs(rv::params::gainDbFromPosition(value(rv::params::id::inputGain))) < 0.01f);
+    CHECK(std::abs(rv::params::gainDbFromPosition(value(rv::params::id::outputGain))) < 0.01f);
+    CHECK(rv::params::joyDefaultStep(rv::params::Joy::lowpass) == rv::params::joyMaxStep(rv::params::Joy::lowpass));
+    CHECK(rv::params::joyValue(rv::params::Program::s, rv::params::Joy::lowpass,
+                               rv::params::joyDefaultStep(rv::params::Joy::lowpass))
+              .text == "12");
+}
+
 TEST_CASE("the latency is the same in float and 16-bit, and dry and wet stay aligned")
 {
     for (const auto rate : {44100.0, 96000.0})
@@ -56,6 +74,7 @@ TEST_CASE("the latency is the same in float and 16-bit, and dry and wet stay ali
         {
             Rev246Processor p;
             p.prepareToPlay(rate, 256);
+            setParam(p, rv::params::id::transformer, 0.0f); // isolate the latency from the accuracy stages
             setParam(p, rv::params::id::sixteenBit, sixteen ? 1.0f : 0.0f);
             const auto latency = p.getLatencySamples();
             rv::dsp::AdcClipper adc;
@@ -176,6 +195,8 @@ void setLayout(Rev246Processor& p, int in, int out)
 std::vector<float> runConstant(Rev246Processor& p, int channels, float l, float r)
 {
     setParam(p, rv::params::id::mix, 1.0f);
+    setParam(p, rv::params::id::transformer, 0.0f);
+    setParam(p, rv::params::id::sixteenBit, 0.0f);
     juce::MidiBuffer midi;
     for (int block = 0; block < 6; ++block)
     {
@@ -224,6 +245,22 @@ TEST_CASE("stereo in / stereo out defaults to the original mono sum with -6 dB s
     const auto out = runConstant(p, 2, 0.2f, -0.1f);
     CHECK(std::abs(out[0] - 0.05f) < 1e-3f);
     CHECK(std::abs(out[1] - 0.05f) < 1e-3f);
+}
+
+TEST_CASE("the stereo width defaults to 100 and can make the wet mono")
+{
+    Rev246Processor p;
+    auto* width = p.apvts.getParameter(rv::params::id::stereoWidth);
+    CHECK(std::abs(width->getDefaultValue() - 0.5f) < 1e-6f); // 100 of 0..200
+    CHECK(std::abs(width->convertFrom0to1(0.0f) - 0.0f) < 1e-6f);
+    CHECK(std::abs(width->convertFrom0to1(1.0f) - 200.0f) < 1e-6f);
+
+    setLayout(p, 2, 2);
+    setParam(p, rv::params::id::trueStereo, 1.0f);
+    setParam(p, rv::params::id::stereoWidth, 0.0f);
+    p.prepareToPlay(48000.0, 256);
+    const auto out = runConstant(p, 2, 0.2f, -0.1f);
+    CHECK(std::abs(out[0] - out[1]) < 1e-3f);
 }
 
 TEST_CASE("true stereo runs one reverb per input channel")

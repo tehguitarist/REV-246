@@ -8,14 +8,6 @@ ProgramButton::ProgramButton(ScaledImages& i, layout::Slot slot, layout::Image o
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 }
 
-void ProgramButton::setSelected(bool s)
-{
-    if (s == selected)
-        return;
-    selected = s;
-    repaint();
-}
-
 void ProgramButton::paint(juce::Graphics& g)
 {
     drawFitted(g, images, held ? inImage : outImage, getLocalBounds().toFloat());

@@ -4,6 +4,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <catch2/catch_approx.hpp>
 
 #include <cmath>
 #include <complex>
@@ -149,6 +150,7 @@ TEST_CASE("the meter calibration places the A/D full scale 6 dB over 0 VU")
         param->setValueNotifyingHost(param->convertTo0to1(real));
     };
     set(rv::params::id::mix, 1.0f);
+    set(rv::params::id::transformer, 0.0f);
     set(rv::params::id::sixteenBit, 1.0f);
     juce::MidiBuffer midi;
     // A 1 kHz sine whose mono sum peaks at 0.5: 3 dB over the default A/D full scale (CAL -18: 0.355 peak).
@@ -194,4 +196,15 @@ TEST_CASE("the meter calibration places the A/D full scale 6 dB over 0 VU")
     Rev246Processor q;
     q.setStateInformation(state.getData(), (int)state.getSize());
     CHECK(q.getMeterCal() == 4);
+}
+
+TEST_CASE("at low host rates the A/D stage still passes a sub-clip sine at its level")
+{
+    // Zeros and poles of the input filter above Nyquist used to fold into the band and amplify a 1 kHz sine ~80x.
+    const auto rate = GENERATE(22050.0, 24000.0, 32000.0);
+    rv::dsp::AdcClipper c;
+    c.prepare(rate);
+    c.setFullScale(0.3f);
+    const auto y = run(c, sine(rate, 1000.0, 0.1, (int)rate / 2));
+    REQUIRE(amplitude(y, rate, 1000.0) == Catch::Approx(0.1).margin(0.005));
 }

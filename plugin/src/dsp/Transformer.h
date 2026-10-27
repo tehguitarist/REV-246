@@ -27,31 +27,32 @@ class TransformerCore
     void prepare(double sampleRate, double drive)
     {
         const auto twoPi = juce::MathConstants<double>::twoPi;
-        k = twoPi * refHz / sampleRate;
-        r = std::exp(-twoPi * cornerHz / sampleRate);
-        c = 0.5 * (1.0 + r);
-        a = drive * rayleigh;
-        b = drive * saturation;
+        fluxGain = twoPi * refHz / sampleRate;
+        pole = std::exp(-twoPi * cornerHz / sampleRate);
+        blockGain = 0.5 * (1.0 + pole);
+        rayleighGain = drive * rayleigh;
+        cubicGain = drive * saturation;
         reset();
     }
 
-    void reset() { hx = hy = phi = 0.0; }
+    void reset() { blockerIn = blockerOut = flux = 0.0; }
 
     float process(float in)
     {
         const double v = in;
-        hy = c * (v - hx) + r * hy; // DC blocker at cornerHz (the coupling capacitor)
-        hx = v;
-        phi = r * phi + k * hy;     // flux: a leaky integral, |phi| = |v| for a sine at refHz
-        const auto p = juce::jlimit(-maxFlux, maxFlux, phi);
-        return (float)(v - (a * p * std::abs(p) + b * p * p * p));
+        blockerOut = blockGain * (v - blockerIn) + pole * blockerOut; // DC blocker at cornerHz (the coupling capacitor)
+        blockerIn = v;
+        flux = pole * flux + fluxGain * blockerOut; // a leaky integral, |flux| = |v| for a sine at refHz
+        const auto p = juce::jlimit(-maxFlux, maxFlux, flux);
+        return (float)(v - (rayleighGain * p * std::abs(p) + cubicGain * p * p * p));
     }
 
   private:
-    static constexpr double refHz = 40.0, cornerHz = 5.0, maxFlux = 8.0;
+    static constexpr double refHz = 40.0, cornerHz = 5.0;
+    static constexpr double maxFlux = 8.0; // bounds the cubic term for a huge input (flux 1 = the full-scale sine at refHz)
     static constexpr double rayleigh = 0.00353429, saturation = 0.0008; // THD 0.08 % at 40 Hz, peak 1 (see above)
-    double k = 0, r = 0, c = 0, a = 0, b = 0;
-    double hx = 0, hy = 0, phi = 0;
+    double fluxGain = 0, pole = 0, blockGain = 0, rayleighGain = 0, cubicGain = 0;
+    double blockerIn = 0, blockerOut = 0, flux = 0;
 };
 
 // The transformer-fitted unit (the manual's option, H): an input transformer on the mono input, and on each output
@@ -83,18 +84,24 @@ class Transformer
     void setFullScale(float peak)
     {
         fullScale = peak;
-        inverse = 1.0f / peak;
+        invFullScale = 1.0f / peak;
     }
 
-    float processInput(float in) { return input.process(in * inverse) * fullScale; }
-    float processOutput(int ch, float in) { return output[(size_t)ch].process(eq.process(ch, in) * inverse) * fullScale; }
+    float processInput(float in) { return input.process(finiteOrZero(in) * invFullScale) * fullScale; }
+    float processOutput(int ch, float in)
+    {
+        return output[(size_t)ch].process(eq.process(ch, finiteOrZero(in)) * invFullScale) * fullScale;
+    }
 
     const CaptureEq& captureEq() const { return eq; }
 
   private:
+    // A NaN/inf would stay in the recursive filters' state for good.
+    static float finiteOrZero(float x) { return std::isfinite(x) ? x : 0.0f; }
+
     CaptureEq eq;
     TransformerCore input;
     std::array<TransformerCore, 2> output;
-    float fullScale = 1.0f, inverse = 1.0f;
+    float fullScale = 1.0f, invFullScale = 1.0f;
 };
 } // namespace rv::dsp

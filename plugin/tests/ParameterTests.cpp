@@ -3,6 +3,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <cmath>
+
 using namespace rv::params;
 using Catch::Matchers::WithinAbs;
 
@@ -11,7 +13,7 @@ TEST_CASE("the gain scale hits the printed ticks")
     CHECK_THAT(gainDbFromPosition(defaultGainPosition), WithinAbs(0.0, 0.05));
     CHECK_THAT(gainDbFromPosition(1.0f), WithinAbs(12.0, 1e-4));
     CHECK(gainDbFromPosition(0.0f) <= -99.0f);
-    CHECK(gainLinear(0.0f) == 0.0f);
+    CHECK(gainLinearFromPosition(0.0f) == 0.0f);
     for (float db : {12.f, 6.f, 0.f, -5.f, -17.f, -50.f})
         CHECK_THAT(gainDbFromPosition(gainPositionFromDb(db)), WithinAbs(db, 1e-3));
 }
@@ -42,4 +44,77 @@ TEST_CASE("step ranges")
     CHECK(joyMaxStep(Joy::ampl) == 10);    // 11 AMPL steps
     CHECK(joyMaxStep(Joy::lf) == 15);      // 16 LF steps
     CHECK(joyMaxStep(Joy::hf) == 9);       // 10 HF steps
+}
+
+TEST_CASE("typed values map to exact steps where the control has a visible table")
+{
+    auto low = joyStepFromValue(Program::s, Joy::lowpass, 8.0);
+    REQUIRE(low.has_value());
+    CHECK(*low == 5);
+    CHECK_FALSE(joyStepFromValue(Program::s, Joy::lowpass, 7.0).has_value());
+
+    auto delay = joyStepFromValue(Program::s, Joy::delay, 123.0);
+    REQUIRE(delay.has_value());
+    CHECK(*delay == 123);
+    CHECK_FALSE(joyStepFromValue(Program::s, Joy::delay, 12.5).has_value());
+    CHECK_FALSE(joyStepFromValue(Program::s, Joy::delay, 1000.0).has_value());
+
+    auto ampl = joyStepFromValue(Program::s, Joy::ampl, 80.0);
+    REQUIRE(ampl.has_value());
+    CHECK(*ampl == 8);
+    CHECK_FALSE(joyStepFromValue(Program::s, Joy::ampl, 75.0).has_value());
+
+    auto lf = joyStepFromValue(Program::s, Joy::lf, 1.4);
+    REQUIRE(lf.has_value());
+    CHECK(*lf == 12);
+    CHECK_FALSE(joyStepFromValue(Program::s, Joy::lf, 1.3).has_value());
+
+    auto hf = joyStepFromValue(Program::s, Joy::hf, 0.9);
+    REQUIRE(hf.has_value());
+    CHECK(*hf == 8);
+    CHECK_FALSE(joyStepFromValue(Program::s, Joy::hf, 0.95).has_value());
+}
+
+TEST_CASE("the non-linear program uses its own typed-value ranges")
+{
+    auto span = joyStepFromValue(Program::n, Joy::ampl, 0.25);
+    REQUIRE(span.has_value());
+    CHECK(*span == 5);
+    CHECK_FALSE(joyStepFromValue(Program::n, Joy::ampl, 0.26).has_value());
+
+    auto early = joyStepFromValue(Program::n, Joy::lf, -3.0);
+    REQUIRE(early.has_value());
+    CHECK(*early == 2);
+    CHECK_FALSE(joyStepFromValue(Program::n, Joy::lf, -3.25).has_value());
+
+    CHECK_FALSE(joyStepFromValue(Program::n, Joy::rt, 1.0).has_value()); // RT is not used
+
+    auto late = joyStepFromValue(Program::n, Joy::hf, 10.0);
+    REQUIRE(late.has_value());
+    CHECK(*late == 9);
+    CHECK_FALSE(joyStepFromValue(Program::n, Joy::hf, 20.0).has_value());
+}
+
+TEST_CASE("the geometric RT accepts a range and picks the nearest step")
+{
+    auto rt = joyStepFromValue(Program::s, Joy::rt, 1.0);
+    REQUIRE(rt.has_value());
+    CHECK(*rt >= 0);
+    CHECK(*rt <= joyMaxStep(Joy::rt));
+    CHECK(std::abs(joyValue(Program::s, Joy::rt, *rt).value - 1.0) < 0.2);
+    CHECK_FALSE(joyStepFromValue(Program::s, Joy::rt, 3.0).has_value());
+}
+
+TEST_CASE("the typed-entry hints describe the S/M/L/E and N differences")
+{
+    CHECK(joyInputHint(Program::s, Joy::ampl).contains("10 %"));
+    CHECK(joyInputHint(Program::n, Joy::ampl).contains("0.05"));
+    CHECK(joyInputHint(Program::s, Joy::lf).contains("1.4"));
+    CHECK(joyInputHint(Program::n, Joy::lf).contains("-4.0"));
+    CHECK(joyInputHint(Program::s, Joy::rt).contains("nearest"));
+    CHECK(joyInputHint(Program::n, Joy::rt).contains("not used"));
+    CHECK(joyInputHint(Program::s, Joy::hf).contains("0.1"));
+    CHECK(joyInputHint(Program::n, Joy::hf).contains("nearest"));
+    CHECK(joyInputName(Program::s, Joy::ampl).contains("amplitude"));
+    CHECK(joyInputName(Program::n, Joy::ampl).contains("span"));
 }

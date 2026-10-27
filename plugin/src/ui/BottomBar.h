@@ -3,6 +3,10 @@
 #include "presets/PresetManager.h"
 #include "ui/DesignComponent.h"
 
+#include <functional>
+#include <memory>
+#include <vector>
+
 namespace rv::ui
 {
 // A control of the bottom bar: gold-outlined text, lit (white with a glow) while `on` for the toggles.
@@ -30,6 +34,9 @@ class BarButton : public DesignComponent
     std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
 
   private:
+    void activate(); // the button's action: a click for a momentary one, a requested change of state for a toggle
+    void enablementChanged() override { repaint(); }
+
     juce::String label;
     Kind kind;
     bool on = false, held = false, italic = false, alwaysLit = false;
@@ -73,9 +80,11 @@ class PresetBar
   private:
     void showMenu();
     void promptSaveAs(juce::String initial = {});
+    void saveAs(const juce::String& chosen); // asks again as needed (empty or factory name, replacing a user preset)
 
     rv::PresetManager& presets;
     juce::Component& parent;
+    juce::Component::SafePointer<juce::Component> parentAlive; // dialogs and menus can outlive the editor
     BarButton prev, next, name, save;
 };
 } // namespace rv::ui

@@ -13,7 +13,6 @@ class ProgramButton : public DesignComponent
 {
   public:
     ProgramButton(ScaledImages&, layout::Slot, layout::Image out, layout::Image in);
-    void setSelected(bool);
     std::function<void()> onClick;
     void paint(juce::Graphics&) override;
     void mouseDown(const juce::MouseEvent&) override;
@@ -22,7 +21,7 @@ class ProgramButton : public DesignComponent
   private:
     ScaledImages& images;
     layout::Image outImage, inImage;
-    bool selected = false, held = false;
+    bool held = false;
 };
 
 // An indicator lamp: one of two images.

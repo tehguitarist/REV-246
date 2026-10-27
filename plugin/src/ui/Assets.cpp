@@ -2,6 +2,9 @@
 
 #include <BinaryData.h>
 
+#include <cmath>
+#include <utility>
+
 namespace rv::ui
 {
 namespace
@@ -35,15 +38,14 @@ juce::Image halve(const juce::Image& src)
 
     for (int y = 0; y < h; ++y)
     {
-        for (int x = 0; x < w; ++x)
+        const auto* row0 = s.getLinePointer(2 * y);
+        const auto* row1 = s.getLinePointer(juce::jmin(2 * y + 1, maxY));
+        auto* out = d.getLinePointer(y);
+        for (int x = 0; x < w; ++x, out += d.pixelStride)
         {
-            const juce::uint8* p[4] = {s.getPixelPointer(2 * x, 2 * y),
-                                       s.getPixelPointer(juce::jmin(2 * x + 1, maxX), 2 * y),
-                                       s.getPixelPointer(2 * x, juce::jmin(2 * y + 1, maxY)),
-                                       s.getPixelPointer(juce::jmin(2 * x + 1, maxX), juce::jmin(2 * y + 1, maxY))};
-            auto* out = d.getPixelPointer(x, y);
+            const auto x0 = 2 * x * s.pixelStride, x1 = juce::jmin(2 * x + 1, maxX) * s.pixelStride;
             for (int c = 0; c < 4; ++c)
-                out[c] = (juce::uint8)((p[0][c] + p[1][c] + p[2][c] + p[3][c] + 2) / 4);
+                out[c] = (juce::uint8)((row0[x0 + c] + row0[x1 + c] + row1[x0 + c] + row1[x1 + c] + 2) / 4);
         }
     }
     return dst;
@@ -59,19 +61,25 @@ float glyphHeight(const juce::Font& font, const juce::String& glyph)
     return path.getBounds().getHeight();
 }
 
-// Scales `options` so `glyph` is `height` tall.
-juce::Font sizedByGlyph(const juce::FontOptions& options, const juce::String& glyph, float height)
+// The label typeface and the font height that gives a cap height of 1, found once: labelFont() is called from paint
+// code, and measuring a glyph outline per call would be wasted work.
+struct LabelTypeface
 {
-    constexpr float reference = 100.0f;
-    const auto measured = glyphHeight(juce::Font(options.withHeight(reference)), glyph);
-    return juce::Font(options.withHeight(measured > 0.0f ? reference * height / measured : height));
-}
+    juce::FontOptions options;
+    float heightPerCapHeight;
+};
 
-juce::String labelTypefaceName()
+const LabelTypeface& labelTypeface()
 {
-    static const auto name =
-        juce::Font::findAllTypefaceNames().contains("Arial") ? juce::String("Arial") : juce::String("Liberation Sans");
-    return name;
+    static const LabelTypeface typeface = [] {
+        const auto name = juce::Font::findAllTypefaceNames().contains("Arial") ? juce::String("Arial")
+                                                                                : juce::String("Liberation Sans");
+        const juce::FontOptions options(name, 10.0f, juce::Font::bold);
+        constexpr float reference = 100.0f;
+        const auto measured = glyphHeight(juce::Font(options.withHeight(reference)), "H");
+        return LabelTypeface{options, measured > 0.0f ? reference / measured : 1.0f};
+    }();
+    return typeface;
 }
 } // namespace
 
@@ -154,7 +162,8 @@ void drawRotated(juce::Graphics& g, ScaledImages& images, layout::Image id, juce
 //==============================================================================
 juce::Font labelFont(float capHeight)
 {
-    return sizedByGlyph(juce::FontOptions(labelTypefaceName(), 10.0f, juce::Font::bold), "H", capHeight);
+    const auto& typeface = labelTypeface();
+    return juce::Font(typeface.options.withHeight(capHeight * typeface.heightPerCapHeight));
 }
 
 void drawTextAt(juce::Graphics& g, const juce::Font& font, const juce::String& text, float x, float baselineY,

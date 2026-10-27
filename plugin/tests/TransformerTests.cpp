@@ -95,20 +95,20 @@ TEST_CASE("the capture EQ's processing matches bq_resp")
     }
 }
 
-TEST_CASE("the transformer is off by default and leaves the output alone")
+TEST_CASE("the transformer is on by default and leaves the output alone when off")
 {
     Rev246Processor p;
-    CHECK(p.apvts.getRawParameterValue(rv::params::id::transformer)->load() < 0.5f);
+    CHECK(p.apvts.getRawParameterValue(rv::params::id::transformer)->load() >= 0.5f);
 
     // Mix 100 %: the output is the wet path. The placeholder engine passes the mono input, so off the output must be
     // exactly mono x INPUT x OUTPUT (the default fader positions are within 0.05 dB of unity, not exactly 1), delayed by
     // the plugin's latency; on must change it.
     auto run = [](bool eqOn) {
         Rev246Processor proc;
-        proc.prepareToPlay(48000.0, 256);
-        auto* mix = proc.apvts.getParameter(rv::params::id::mix);
-        mix->setValueNotifyingHost(1.0f);
+        proc.apvts.getParameter(rv::params::id::mix)->setValueNotifyingHost(1.0f);
+        proc.apvts.getParameter(rv::params::id::sixteenBit)->setValueNotifyingHost(0.0f); // isolate the transformer
         proc.apvts.getParameter(rv::params::id::transformer)->setValueNotifyingHost(eqOn ? 1.0f : 0.0f);
+        proc.prepareToPlay(48000.0, 256);
         juce::MidiBuffer midi;
         const auto latency = proc.getLatencySamples();
         auto input = [](int n) { return n < 0 ? 0.0f : 0.3f * std::sin(0.02f * (float)n); }; // ~150 Hz
@@ -120,7 +120,7 @@ TEST_CASE("the transformer is off by default and leaves the output alone")
                 for (int i = 0; i < 256; ++i)
                     b.setSample(ch, i, input(block * 256 + i));
             proc.processBlock(b, midi);
-            const auto g = rv::params::gainLinear(rv::params::defaultGainPosition);
+            const auto g = rv::params::gainLinearFromPosition(rv::params::defaultGainPosition);
             if (block >= 4) // after the 20 ms ramps
                 for (int ch = 0; ch < 2; ++ch)
                     for (int i = 0; i < 256; ++i)
@@ -140,11 +140,12 @@ TEST_CASE("presets leave the transformer alone")
 {
     Rev246Processor p;
     auto* eq = p.apvts.getParameter(rv::params::id::transformer);
+    CHECK(eq->getValue() >= 0.5f); // on by default
     CHECK(p.presets.load("Init S"));
-    eq->setValueNotifyingHost(1.0f);
+    eq->setValueNotifyingHost(0.0f);
     CHECK_FALSE(p.presets.isModified()); // a preference, not a setting
     CHECK(p.presets.load("Init M"));
-    CHECK(eq->getValue() >= 0.5f);
+    CHECK(eq->getValue() < 0.5f); // the preference survives a preset load
 }
 
 TEST_CASE("the transformer core's distortion follows its calibration")

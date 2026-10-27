@@ -64,15 +64,15 @@ TEST_CASE("the format button selects float or 16-bit processing")
     REQUIRE(editor != nullptr);
     auto& button = editor->getFormatButton();
     CHECK(button.isAlwaysLit());
-    CHECK_FALSE(button.isOn());
-    CHECK(button.getLabel() == "FLOAT");
-    CHECK(button.getTooltip().contains("16-BIT"));
-
-    button.onToggle(true);
-    editor->refreshNow();
     CHECK(button.isOn());
     CHECK(button.getLabel() == "16-BIT");
-    CHECK(p.apvts.getRawParameterValue(rv::params::id::sixteenBit)->load() >= 0.5f);
+    CHECK(button.getTooltip().contains("16-BIT"));
+
+    button.onToggle(false);
+    editor->refreshNow();
+    CHECK_FALSE(button.isOn());
+    CHECK(button.getLabel() == "FLOAT");
+    CHECK(p.apvts.getRawParameterValue(rv::params::id::sixteenBit)->load() < 0.5f);
 }
 
 TEST_CASE("a modified preset name is italic with a star")
@@ -94,6 +94,23 @@ TEST_CASE("a modified preset name is italic with a star")
     editor->refreshNow();
     CHECK_FALSE(name.isItalic());
     CHECK_FALSE(name.getLabel().endsWithChar('*'));
+}
+
+TEST_CASE("the width halo follows stereo output availability")
+{
+    Rev246Processor p;
+    CHECK(std::abs(p.apvts.getRawParameterValue(rv::params::id::stereoWidth)->load() - 100.0f) < 1e-6f);
+    std::unique_ptr<juce::AudioProcessorEditor> base(p.createEditor());
+    auto* editor = dynamic_cast<Rev246Editor*>(base.get());
+    REQUIRE(editor != nullptr);
+    CHECK(editor->getWidthKnob().isEnabled());
+
+    juce::AudioProcessor::BusesLayout layout;
+    layout.inputBuses.add(juce::AudioChannelSet::mono());
+    layout.outputBuses.add(juce::AudioChannelSet::mono());
+    REQUIRE(p.setBusesLayout(layout));
+    editor->refreshNow();
+    CHECK_FALSE(editor->getWidthKnob().isEnabled());
 }
 
 // Renders the panel to a PNG when REV_SNAPSHOT names a file, for checking the layout against ui/main.png by eye.

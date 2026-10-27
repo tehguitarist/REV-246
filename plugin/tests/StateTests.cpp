@@ -2,12 +2,16 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <cmath>
+
 TEST_CASE("state round-trips")
 {
     Rev246Processor a;
     a.apvts.getParameter(rv::params::id::program)->setValueNotifyingHost(a.apvts.getParameter(rv::params::id::program)->convertTo0to1(2.0f));
     a.apvts.getParameter(rv::params::id::delay)->setValueNotifyingHost(a.apvts.getParameter(rv::params::id::delay)->convertTo0to1(123.0f));
-    a.apvts.getParameter(rv::params::id::sixteenBit)->setValueNotifyingHost(1.0f);
+    a.apvts.getParameter(rv::params::id::sixteenBit)->setValueNotifyingHost(0.0f);
+    a.apvts.getParameter(rv::params::id::stereoWidth)->setValueNotifyingHost(
+        a.apvts.getParameter(rv::params::id::stereoWidth)->convertTo0to1(150.0f));
     juce::MemoryBlock block;
     a.getStateInformation(block);
 
@@ -15,7 +19,8 @@ TEST_CASE("state round-trips")
     b.setStateInformation(block.getData(), (int)block.getSize());
     CHECK(juce::roundToInt(b.apvts.getRawParameterValue(rv::params::id::program)->load()) == 2);
     CHECK(juce::roundToInt(b.apvts.getRawParameterValue(rv::params::id::delay)->load()) == 123);
-    CHECK(b.apvts.getRawParameterValue(rv::params::id::sixteenBit)->load() >= 0.5f);
+    CHECK(b.apvts.getRawParameterValue(rv::params::id::sixteenBit)->load() < 0.5f);
+    CHECK(std::abs(b.apvts.getRawParameterValue(rv::params::id::stereoWidth)->load() - 150.0f) < 1e-6f);
 }
 
 TEST_CASE("factory presets load and are not user-overwritable")
@@ -41,11 +46,21 @@ TEST_CASE("presets leave the stereo mode alone")
     CHECK(mode->getValue() >= 0.5f);
 }
 
+TEST_CASE("the stereo width is part of a preset")
+{
+    Rev246Processor p;
+    CHECK(p.presets.load("Init S"));
+    CHECK_FALSE(p.presets.isModified());
+    auto* width = p.apvts.getParameter(rv::params::id::stereoWidth);
+    width->setValueNotifyingHost(width->convertTo0to1(150.0f));
+    CHECK(p.presets.isModified()); // a sound setting, unlike the transformer
+}
+
 TEST_CASE("the 16-bit mode is part of a preset")
 {
     Rev246Processor p;
     CHECK(p.presets.load("Init S"));
     CHECK_FALSE(p.presets.isModified());
-    p.apvts.getParameter(rv::params::id::sixteenBit)->setValueNotifyingHost(1.0f);
+    p.apvts.getParameter(rv::params::id::sixteenBit)->setValueNotifyingHost(0.0f);
     CHECK(p.presets.isModified()); // an accuracy setting, unlike the transformer
 }

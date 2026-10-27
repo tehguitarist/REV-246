@@ -2,15 +2,46 @@
 
 #include "params/Parameters.h"
 
+#include <cmath>
+
 namespace rv
 {
 namespace
 {
-juce::String factoryName(int program)
+// The properties of a parameter's node in the APVTS state; they are what the preset files hold.
+const juce::Identifier idProperty{"id"};
+const juce::Identifier valueProperty{"value"};
+
+// The preferences (routing and monitoring choices), as opposed to the sound settings: presets neither store nor
+// change them (DEVELOPMENT.md, Parameters).
+bool isPreference(const juce::String& paramId)
+{
+    return paramId == params::id::power || paramId == params::id::link || paramId == params::id::transformer ||
+           paramId == params::id::trueStereo;
+}
+
+// A preset holds parameters only: the session's own nodes (the window size, ...) have no id. Edits `copy` in place
+// (a ValueTree is a shared reference), so pass a copy of the live state.
+juce::ValueTree parametersOnly(juce::ValueTree copy)
+{
+    for (int i = copy.getNumChildren(); --i >= 0;)
+        if (!copy.getChild(i).hasProperty(idProperty))
+            copy.removeChild(i, nullptr);
+    return copy;
+}
+
+static_assert(sizeof("SMLEN") - 1 == (size_t)params::numPrograms, "one letter per program, in Program order");
+} // namespace
+
+juce::String PresetManager::factoryName(int program)
 {
     return "Init " + juce::String::charToString("SMLEN"[program]);
 }
-} // namespace
+
+juce::String PresetManager::sanitise(const juce::String& name)
+{
+    return juce::File::createLegalFileName(name.trim()).trim();
+}
 
 PresetManager::PresetManager(juce::AudioProcessorValueTreeState& s) : apvts(s)
 {
@@ -43,23 +74,48 @@ juce::StringArray PresetManager::userNames() const
     return n;
 }
 
-juce::String PresetManager::sanitise(const juce::String& name)
+juce::String PresetManager::currentName() const
 {
-    return juce::File::createLegalFileName(name.trim()).trim();
+    const juce::ScopedLock lock(stateLock);
+    return current;
+}
+
+void PresetManager::setCurrent(const juce::String& name, const juce::ValueTree& state)
+{
+    {
+        const juce::ScopedLock lock(stateLock);
+        current = name;
+        saved = state;
+    }
+    if (onChange)
+        onChange();
+}
+
+void PresetManager::setCurrentName(const juce::String& name)
+{
+    setCurrent(name, stateFor(name));
+}
+
+juce::File PresetManager::presetFile(const juce::String& name) const
+{
+    // A name is a file name, never a path (it can come from a restored session): nothing outside the folder.
+    if (name.isEmpty() || name.containsAnyOf("/\\:"))
+        return {};
+    return presetFolder.getChildFile(name + extension);
 }
 
 juce::ValueTree PresetManager::factoryState(int program) const
 {
-    // Every parameter at its default, with the program set; the settings are the unit's own defaults (params).
+    // Every sound setting at its default, with the program set; the settings are the unit's own defaults (params).
     auto state = apvts.copyState();
     for (const auto* p : apvts.processor.getParameters())
         if (auto* r = dynamic_cast<const juce::RangedAudioParameter*>(p))
-            if (r->paramID != params::id::power)
-                if (auto child = state.getChildWithProperty("id", r->paramID); child.isValid())
-                    child.setProperty("value", r->convertFrom0to1(r->getDefaultValue()), nullptr);
-    if (auto child = state.getChildWithProperty("id", params::id::program); child.isValid())
-        child.setProperty("value", program, nullptr);
-    return state;
+            if (!isPreference(r->paramID))
+                if (auto child = state.getChildWithProperty(idProperty, r->paramID); child.isValid())
+                    child.setProperty(valueProperty, r->convertFrom0to1(r->getDefaultValue()), nullptr);
+    if (auto child = state.getChildWithProperty(idProperty, params::id::program); child.isValid())
+        child.setProperty(valueProperty, program, nullptr);
+    return parametersOnly(state);
 }
 
 juce::ValueTree PresetManager::stateFor(const juce::String& name) const
@@ -67,26 +123,27 @@ juce::ValueTree PresetManager::stateFor(const juce::String& name) const
     const auto f = factoryNames().indexOf(name);
     if (f >= 0)
         return factoryState(f);
-    const auto file = presetFolder.getChildFile(name + extension);
-    if (auto xml = juce::parseXML(file))
+    const auto file = presetFile(name);
+    if (file == juce::File())
+        return {};
+    // Only an XML document of the state's own type is a preset: anything else is a stray or damaged file.
+    if (auto xml = juce::parseXML(file); xml != nullptr && xml->hasTagName(apvts.state.getType()))
         return juce::ValueTree::fromXml(*xml);
     return {};
 }
 
 void PresetManager::apply(const juce::ValueTree& state)
 {
-    // Parameter by parameter, so the host sees ordinary automation-style changes and the power button, link,
-    // transformer and stereo mode (preferences, not settings) are left alone.
+    // Parameter by parameter, so the host sees ordinary automation-style changes and the preferences are left alone.
     for (auto child : state)
     {
-        const auto pid = child.getProperty("id").toString();
-        if (pid == params::id::power || pid == params::id::link || pid == params::id::transformer ||
-            pid == params::id::trueStereo)
+        const auto pid = child.getProperty(idProperty).toString();
+        if (isPreference(pid) || !child.hasProperty(valueProperty))
             continue;
         if (auto* p = apvts.getParameter(pid))
         {
             p->beginChangeGesture();
-            p->setValueNotifyingHost(p->convertTo0to1((float)child.getProperty("value")));
+            p->setValueNotifyingHost(p->convertTo0to1((float)child.getProperty(valueProperty)));
             p->endChangeGesture();
         }
     }
@@ -98,27 +155,23 @@ bool PresetManager::load(const juce::String& name)
     if (!state.isValid())
         return false;
     apply(state);
-    current = name;
-    saved = state;
-    if (onChange)
-        onChange();
+    setCurrent(name, state);
     return true;
 }
 
 bool PresetManager::save(const juce::String& rawName)
 {
     const auto name = sanitise(rawName);
-    if (name.isEmpty() || isFactory(name))
+    const auto file = presetFile(name);
+    if (file == juce::File() || isFactory(name))
         return false;
     if (!presetFolder.createDirectory().wasOk())
         return false;
-    const auto xml = apvts.copyState().createXml();
-    if (xml == nullptr || !xml->writeTo(presetFolder.getChildFile(name + extension)))
+    const auto state = parametersOnly(apvts.copyState());
+    const auto xml = state.createXml();
+    if (xml == nullptr || !xml->writeTo(file))
         return false;
-    current = name;
-    saved = apvts.copyState();
-    if (onChange)
-        onChange();
+    setCurrent(name, state);
     return true;
 }
 
@@ -126,35 +179,50 @@ bool PresetManager::remove(const juce::String& name)
 {
     if (isFactory(name))
         return false;
-    const auto ok = presetFolder.getChildFile(name + extension).deleteFile();
-    if (ok && current == name)
-        current = factoryName(0);
-    if (onChange)
+    const auto file = presetFile(name);
+    if (!file.existsAsFile() || !file.deleteFile())
+        return false;
+    if (currentName() == name) // the parameters stay as they are, now under the default name
+        setCurrentName(factoryName(0));
+    else if (onChange)
         onChange();
-    return ok;
+    return true;
 }
 
 void PresetManager::step(int direction)
 {
     const auto names = allNames();
-    if (names.isEmpty())
+    const auto count = names.size();
+    if (count == 0 || direction == 0)
         return;
-    const auto i = names.indexOf(current);
-    load(names[(i < 0 ? 0 : i + direction + names.size()) % names.size()]);
+    const auto sign = direction > 0 ? 1 : -1;
+    const auto start = names.indexOf(currentName());
+    // Try each preset in turn from the neighbour, so a damaged file doesn't trap the buttons on it.
+    for (int offset = 1; offset <= count; ++offset)
+    {
+        const auto index = start < 0 ? (sign > 0 ? offset - 1 : count - offset)
+                                     : ((start + sign * offset) % count + count) % count;
+        if (load(names[index]))
+            return;
+    }
 }
 
 bool PresetManager::isModified() const
 {
-    if (!saved.isValid())
-        return false;
-    for (auto child : saved)
+    juce::ValueTree reference;
     {
-        const auto pid = child.getProperty("id").toString();
-        if (pid == params::id::power || pid == params::id::link || pid == params::id::transformer ||
-            pid == params::id::trueStereo)
+        const juce::ScopedLock lock(stateLock);
+        reference = saved;
+    }
+    if (!reference.isValid())
+        return false;
+    for (auto child : reference)
+    {
+        const auto pid = child.getProperty(idProperty).toString();
+        if (isPreference(pid) || !child.hasProperty(valueProperty))
             continue;
         if (auto* p = apvts.getParameter(pid))
-            if (std::abs(p->convertFrom0to1(p->getValue()) - (float)child.getProperty("value")) > 1e-4f)
+            if (std::abs(p->convertFrom0to1(p->getValue()) - (float)child.getProperty(valueProperty)) > 1e-4f)
                 return true;
     }
     return false;

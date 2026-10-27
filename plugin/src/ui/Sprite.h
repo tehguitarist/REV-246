@@ -3,6 +3,10 @@
 #include "ui/Assets.h"
 #include "ui/Design.h"
 
+#include <algorithm>
+#include <cmath>
+#include <tuple>
+
 namespace rv::ui
 {
 // An image with its drop shadow baked in, cached per pixel size: the knob and fader caps move over the panel, so the
@@ -30,14 +34,14 @@ class ShadowedSprite
             image = juce::Image(juce::Image::ARGB, pw + 2 * margin, ph + 2 * margin, true);
             juce::Graphics g(image);
             juce::Image cap = images.get(id, pw, ph).createCopy();
-            if (brightness != 1.0f || contrast != 1.0f)
+            if (!juce::approximatelyEqual(brightness, 1.0f) || !juce::approximatelyEqual(contrast, 1.0f))
             {
+                const auto adjust = [&](float v) { return juce::jlimit(0.0f, 1.0f, ((v - 0.5f) * contrast + 0.5f) * brightness); };
                 juce::Image::BitmapData px(cap, juce::Image::BitmapData::readWrite);
                 for (int y = 0; y < px.height; ++y)
                     for (int x = 0; x < px.width; ++x)
                     {
                         auto c = px.getPixelColour(x, y); // unpremultiplied
-                        auto adjust = [&](float v) { return juce::jlimit(0.0f, 1.0f, ((v - 0.5f) * contrast + 0.5f) * brightness); };
                         px.setPixelColour(x, y, juce::Colour::fromFloatRGBA(adjust(c.getFloatRed()), adjust(c.getFloatGreen()),
                                                                            adjust(c.getFloatBlue()), c.getFloatAlpha()));
                     }

@@ -11,7 +11,7 @@ namespace rv::dsp
 // The optional "commercial capture" low-band stage (docs/model_s_results.md §27): CLA's and the Altiverb's IRs share
 // a minimum-phase transfer below ~400 Hz (+3 dB at 40-60 Hz, -0.7 dB at 160 Hz, ripple to 400 Hz) that is in neither
 // Tomkin's library nor the stock unit; possibly the manual's transformer option (EMT246_unit_facts.md §2b). Part
-// of the TRANSFORMER stage (Transformer.h), off by default.
+// of the TRANSFORMER stage (Transformer.h), on by default.
 //
 // The 10 numbers are the "CLA" entry of analysis/unit_transfer/bq.json, fitted at the device rate: a first-order
 // high-pass, an RBJ low shelf and two RBJ peaking sections, the formulas of tools/unit_transfer.py (hp1_sos,
@@ -48,10 +48,11 @@ class CaptureEq
     float process(int ch, float in)
     {
         double v = in;
+        auto& chState = state[(size_t)ch];
         for (size_t k = 0; k < sections.size(); ++k)
         {
             const auto& c = sections[k];
-            auto& s = state[(size_t)ch][k];
+            auto& s = chState[k];
             const auto y = c.b0 * v + s.z1; // transposed direct form II
             s.z1 = c.b1 * v - c.a1 * y + s.z2;
             s.z2 = c.b2 * v - c.a2 * y;

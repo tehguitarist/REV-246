@@ -40,7 +40,7 @@
   stereo out, so a mono output takes its left side. For stereo in / stereo out, `trueStereo` (default off, the
   ORIGINAL / TRUE ST button) selects between the original summed path (0.5 x L+R into one engine) and two engines,
   one per input channel. Presets skip it, like `power`, `link` and `transformer`.
-- `transformer` (default off, the XFMR button) switches on `src/dsp/Transformer.h`: an input transformer core
+- `transformer` (default on, the XFMR button) switches on `src/dsp/Transformer.h`: an input transformer core
   on the mono input, then per output the low-band EQ (`src/dsp/CaptureEq.h`) and an output transformer core. Presets
   skip it, like `power` and `link`. The stage always runs (warm state, a 20 ms crossfade when toggled); off, its
   weight is exactly 0 and the signal is unchanged.
@@ -50,7 +50,11 @@
   the host rate from the same parameters, which matches `bq_resp` within 0.001 dB at 50 Hz–2 kHz from 22.05 to
   192 kHz (no prewarping needed; the fit is undefined below ~50 Hz). If `bq.json` is refitted, update
   `CaptureEq::cla` and the reference table in `tests/TransformerTests.cpp` together.
-- `sixteenBit` (default off, the FLOAT / 16-BIT button) is a sound setting and part of presets. It is passed to the
+- `stereoWidth` (default 100, the WIDTH halo) is a sound setting and part of presets. `src/dsp/StereoWidth.h` holds
+  the level-matched M/S `StereoWidener` (100 is a bit-exact bypass, 0 mono, 200 wide, bass mono above 100) and the
+  `LateDecorrelator` for the late tail. The widener runs on the whole wet (pure M/S gains do not smear transients); the
+  decorrelator is not in the chain yet because the placeholder engine has no early/late split. See the open item below.
+- `sixteenBit` (default on, the FLOAT / 16-BIT button) is a sound setting and part of presets. It is passed to the
   engine as `Settings::sixteenBit`; the placeholder has no loops yet, so the real algorithm applies the 16-bit storage
   quantisation when it lands. It also switches on the A/D's clipping (`src/dsp/AdcClipper.h`, one per engine, after
   the input transformer; always running, 20 ms crossfade). The unit's converter is a SAR, which sticks at the end of
@@ -70,6 +74,15 @@
   with the session, not in presets): the calibration stands for the unit's input alignment, and its full scale is a
   sine 6 dB over 0 VU (unit facts §2). OVL lights at +6 VU, on a full-scale input, or when the A/D clips (in float
   mode too: where it would clip), as the unit's REG LED did.
+- Display fields other than the program display open a typed-entry dialog on double-click. `params::joyStepFromValue`
+  validates the text for the current program and returns a step; `joyInputHint` supplies the unit/range/list shown in
+  the dialog. Discrete controls require an exact step, while the geometric RT (S/M/L/E) and HF (N) accept any value in
+  range and snap to the nearest step. RT in N is rejected with an information dialog. The same `setJoyStep` path is
+  used, so the levers, funnels and displays refresh.
+- Initial/factory defaults: S, the CLA reference levers (LP 12 kHz, DELAY 10 ms, AMPL 80 %, LF x1.0, RT 1.0 s, HF
+  x0.9), MIX 100 %, INPUT/OUTPUT 0 dB, LINK on, 16-bit on, XFMR on, WIDTH 100, ORIGINAL stereo mode and power on.
+  Factory presets reset the stored settings to these defaults but leave the preferences (`power`, `link`, `transformer`,
+  `trueStereo`) as they are.
 - Preset saving: SAVE always opens the Save As dialog prefilled with the current name. Factory names are rejected
   with a message; a chosen name that matches an existing user preset asks Yes/No before overwriting. No returns to the
   name dialog. A modified preset's name is shown italic with a trailing `*`.
@@ -94,6 +107,7 @@
 | `src/PluginProcessor.*` | Parameters, channel handling (mono/mono, mono/stereo, stereo/stereo), power (bypass), pan, mix, gains, input level for the meter |
 | `src/dsp/ReverbEngine.h` | The model's interface (placeholder body) |
 | `src/dsp/AdcClipper.h` | The A/D's clipping in 16-bit mode (see `sixteenBit` above) |
+| `src/dsp/StereoWidth.h` | The wet stereo width: level-matched M/S, bass mono above 100, and the late-tail decorrelator |
 | `src/dsp/Transformer.h`, `CaptureEq.h` | The optional TRANSFORMER stage: low-band EQ and guessed transformer distortion (see below) |
 | `src/params/` | Parameter IDs (permanent), the joystick step tables (placeholders), the fader scales |
 | `src/presets/` | Preset manager: factory presets (one per programme) and user presets as `.r246preset` XML |
@@ -117,7 +131,7 @@ in / stereo out, so:
   channel (left through engine 0 and right through engine 1). The button is greyed out for the mono layouts. Like LINK
   and XFMR it is a routing preference, so presets neither store nor change it.
 
-### TRANSFORMER (optional, off by default)
+### TRANSFORMER (optional, on by default)
 
 The service manual offers the unit with optional balanced input and output transformers ("harmonic distortion
 ... increased slightly", pp. 37 and 46). The XFMR button in the bottom bar (bool parameter `transformer`)
@@ -132,5 +146,13 @@ models such a unit on the wet path:
   0 dBFS (= +12 dBu, the unit's maximum) 0.35 % at 20 Hz, 0.08 % at 40 Hz, 0.01 % at 100 Hz, 0.0001 % at 1 kHz;
   calibrated against Jensen and Lundahl line-transformer datasheets, not measured on a 246 (IRs can't show it).
 
-Off (the default) the output is exactly the stock unit's, faithful to Tomkin and the schematic. It is a preference
+Off, the output is exactly the stock unit's, faithful to Tomkin and the schematic. It is on by default, and a preference
 like LINK, so presets neither store nor change it.
+
+## Open items
+
+- [ ] When `ReverbEngine` exposes separate early and late outputs, route `LateDecorrelator` on the late tail only,
+  before it is summed with the early reflections, then run `StereoWidener` on the sum. Check that the early reflections
+  are not smeared, the decorrelator's ~8 ms delay is confined to the tail, and the width sweep through 100 is
+  click-free. If the engine cannot expose the split, keep the widener only and reconsider, preserving the design
+  intent: width changes must not smear the early reflections.

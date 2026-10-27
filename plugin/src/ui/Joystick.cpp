@@ -3,6 +3,7 @@
 #include "ui/Design.h"
 
 #include <cmath>
+#include <iterator>
 
 namespace rv::ui
 {
@@ -19,7 +20,7 @@ void Joystick::paint(juce::Graphics& g)
 
 void Joystick::mouseDown(const juce::MouseEvent& e)
 {
-    if (e.mods.isCommandDown() || e.mods.isAltDown())
+    if (e.mods.isAltDown())
     {
         if (onReset)
             onReset();
@@ -55,7 +56,7 @@ void Joystick::timerCallback()
 void Joystick::fire()
 {
     if (onStep)
-        onStep(pushed, repeats * repeatMs >= 1000 ? repeats : 0);
+        onStep(pushed, repeats * repeatMs >= accelerateAfterMs ? repeats : 0);
 }
 
 //==============================================================================
@@ -74,6 +75,10 @@ void edgesAt(float y, float& left, float& right)
     left = p.left + (q.left - p.left) * t;
     right = p.right + (q.right - p.right) * t;
 }
+
+// The indicator's reds: the spill, the lit segment (edge and middle), and the wedge's ambient tint.
+const juce::Colour spillOuter{0xffff1a08}, spillInner{0xffff2a14}, litEdge{0xffff2e18}, litMiddle{0xffff5a30},
+    ambientTint{0xffff2410};
 } // namespace
 
 Funnel::Funnel(int col)
@@ -93,23 +98,23 @@ float Funnel::fractionAt(const juce::MouseEvent& e) const
 
 void Funnel::mouseDown(const juce::MouseEvent& e)
 {
-    if (e.mods.isCommandDown() || e.mods.isAltDown())
+    if (e.mods.isAltDown())
     {
-        if (onUserReset)
-            onUserReset();
+        if (onReset)
+            onReset();
         return;
     }
     dragging = true;
-    if (onUserSet)
-        onUserSet(fractionAt(e));
+    if (onSetFraction)
+        onSetFraction(fractionAt(e));
 }
 
 void Funnel::mouseDrag(const juce::MouseEvent& e)
 {
     if (!dragging)
         return;
-    if (onUserSet)
-        onUserSet(fractionAt(e));
+    if (onSetFraction)
+        onSetFraction(fractionAt(e));
 }
 
 void Funnel::mouseUp(const juce::MouseEvent&)
@@ -120,24 +125,24 @@ void Funnel::mouseUp(const juce::MouseEvent&)
 void Funnel::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& w)
 {
     const auto delta = w.isReversed ? -w.deltaY : w.deltaY;
-    if (delta != 0.0f && onUserStep)
-        onUserStep(delta > 0.0f ? 1 : -1);
+    if (delta != 0.0f && onStep)
+        onStep(delta > 0.0f ? 1 : -1);
 }
 
 void Funnel::setFraction(float f)
 {
     const auto seg = juce::jlimit(0, design::funnelSegments - 1,
                                   juce::roundToInt(juce::jlimit(0.0f, 1.0f, f) * (float)(design::funnelSegments - 1)));
-    if (seg == segment)
+    if (seg == litSegment)
         return;
-    segment = seg;
+    litSegment = seg;
     layer.invalidate();
     repaint();
 }
 
 void Funnel::paint(juce::Graphics& g)
 {
-    layer.paint(g, getLocalBounds(), juce::String(segment) + (isDimmed() ? "d" : "n"), [this](juce::Graphics& lg, float scale) {
+    layer.paint(g, getLocalBounds(), juce::String(litSegment) + (isDimmed() ? "d" : "n"), [this](juce::Graphics& lg, float scale) {
         const auto dx = design::funnelDx[column];
         const auto alpha = contentAlpha();
         const auto top = design::funnelTopY, bottom = design::funnelBottomY;
@@ -167,40 +172,41 @@ void Funnel::paint(juce::Graphics& g)
         };
 
         // The lit segment (counted from the bottom).
-        const auto yBottom = bottom - segH * (float)segment, yTop = yBottom - segH;
+        const auto yBottom = bottom - segH * (float)litSegment, yTop = yBottom - segH;
         const auto lit = wedge(yTop + design::funnelGap * 0.5f, yBottom - design::funnelGap * 0.5f);
+        const auto outline = wedge(top, bottom);
 
         // A little of the indicator's glow spills out past the wedge's edges, onto the frame and the panel.
-        const auto k = getScale() * 2.5f;
-        drawWithGlow(lg, getLocalBounds(), scale, juce::Colour(0xffff1a08).withAlpha(0.7f * alpha), 34.0f * k, [&](juce::Graphics& g1) {
-            drawWithGlow(g1, getLocalBounds(), scale, juce::Colour(0xffff2a14).withAlpha(0.9f * alpha), 14.0f * k, [&](juce::Graphics& g2) {
-                g2.setColour(juce::Colour(0xffff2e18).withAlpha(alpha)); // drawn again below; this casts the spill
+        const auto k = getScale() * 2.5f; // 1 at the default editor size (scale 0.4): the glow radii below are in its pixels
+        drawWithGlow(lg, getLocalBounds(), scale, spillOuter.withAlpha(0.7f * alpha), 34.0f * k, [&](juce::Graphics& g1) {
+            drawWithGlow(g1, getLocalBounds(), scale, spillInner.withAlpha(0.9f * alpha), 14.0f * k, [&](juce::Graphics& g2) {
+                g2.setColour(litEdge.withAlpha(alpha)); // drawn again below; this casts the spill
                 g2.fillPath(lit);
             });
         });
 
-        lg.reduceClipRegion(wedge(top, bottom)); // everything else stays inside the wedge
+        lg.reduceClipRegion(outline); // everything else stays inside the wedge
 
         // The glow also lights the wedge itself: a red tint, strongest around the lit segment and falling away from it.
         {
-            const auto centre = (((bottom - segH * ((float)segment + 0.5f)) - top) / (bottom - top)); // 0..1 down the wedge
+            const auto centre = (((bottom - segH * ((float)litSegment + 0.5f)) - top) / (bottom - top)); // 0..1 down the wedge
             auto tint = [&](double at) { return design::funnelAmbient * std::exp(-std::pow((at - centre) / design::funnelAmbientReach, 2.0)); };
             const auto topL = toLocal(juce::Point<float>(0.0f, top)).y, bottomL = toLocal(juce::Point<float>(0.0f, bottom)).y;
-            juce::ColourGradient ambient(juce::Colour(0xffff2410).withAlpha((float)tint(0.0) * alpha), 0.0f, topL,
-                                         juce::Colour(0xffff2410).withAlpha((float)tint(1.0) * alpha), 0.0f, bottomL, false);
+            juce::ColourGradient ambient(ambientTint.withAlpha((float)tint(0.0) * alpha), 0.0f, topL,
+                                         ambientTint.withAlpha((float)tint(1.0) * alpha), 0.0f, bottomL, false);
             for (int i = 1; i < 20; ++i)
-                ambient.addColour(i / 20.0, juce::Colour(0xffff2410).withAlpha((float)tint(i / 20.0) * alpha));
+                ambient.addColour(i / 20.0, ambientTint.withAlpha((float)tint(i / 20.0) * alpha));
             lg.setGradientFill(ambient);
-            lg.fillPath(wedge(top, bottom));
+            lg.fillPath(outline);
         }
 
         // The lit segment: a brighter middle fading to the red at its edges, in a soft glow.
         const auto topL = toLocal(juce::Point<float>(0.0f, yTop)).y, bottomL = toLocal(juce::Point<float>(0.0f, yBottom)).y;
-        juce::ColourGradient fill(juce::Colour(0xffff2e18).withAlpha(alpha), 0.0f, topL,
-                                  juce::Colour(0xffff2e18).withAlpha(alpha), 0.0f, bottomL, false);
-        fill.addColour(0.5, juce::Colour(0xffff5a30).withAlpha(alpha));
-        drawWithGlow(lg, getLocalBounds(), scale, juce::Colour(0xffff1a08).withAlpha(0.6f * alpha),
-                     17.0f * getScale() * 2.5f, [&](juce::Graphics& cg) {
+        juce::ColourGradient fill(litEdge.withAlpha(alpha), 0.0f, topL,
+                                  litEdge.withAlpha(alpha), 0.0f, bottomL, false);
+        fill.addColour(0.5, litMiddle.withAlpha(alpha));
+        drawWithGlow(lg, getLocalBounds(), scale, spillOuter.withAlpha(0.6f * alpha),
+                     17.0f * k, [&](juce::Graphics& cg) {
                          cg.setGradientFill(fill);
                          cg.fillPath(lit);
                      });

@@ -28,8 +28,9 @@ namespace rv::dsp
 // device instants with a windowed sinc, clips there, and turns each clip error back into the input domain with
 // g0 = IFT{T(w) / H(jw)} (H the input filter, T a taper to 0 by 12.6 kHz that is also the reconstruction low-pass).
 // The output is the input delayed by latency() samples plus `amount` times those corrections (0 = the input delayed:
-// float mode; it runs anyway, for warm state and the overload flag), so with no clipping it is the input delayed exactly, and passing the output through the input filter gives the clipped A/D samples to the taper's
-// floor (-35 dB of the clip error for a sine). The future engine must apply the input filter AFTER this stage.
+// float mode; it runs anyway, for warm state and the overload flag). With no clipping it is the input delayed
+// exactly; passing the output through the input filter gives the clipped A/D samples to the taper's floor (-35 dB of
+// the clip error for a sine). The future engine must apply the input filter AFTER this stage.
 //
 // Full scale is a peak level in the input domain at 1 kHz (where the input filter's gain is taken as 1).
 class AdcClipper
@@ -54,10 +55,20 @@ class AdcClipper
 
         // Matched-z sections: (pole pair, jw zero pair) x 3, (pole pair, real zero and -alpha), pole pair, real pole.
         const auto zp = [T](C r) { return std::exp(r * T); };
+        // A pole or zero above the host's Nyquist frequency would alias into the band the filter has to match (at
+        // 22.05-35 kHz hosts: a zero folded onto ~1 kHz makes the 1 kHz-normalised gain over 80, a pole pair a
+        // resonance), so it is left out there: the section is then flat, and the fitted extra zero absorbs some of the
+        // error. From 44.1 kHz up every one aliases above fitHiHz or is below Nyquist, so nothing is left out.
+        const auto aliasesIntoBand = [this](double hz) {
+            if (hz <= 0.5 * rate)
+                return false;
+            return std::abs(hz - rate * std::round(hz / rate)) < fitHiHz;
+        };
         auto pairDen = [&](C p, Section& s) {
             const auto z = zp(p);
-            s.a1 = -2.0 * z.real();
-            s.a2 = std::norm(z);
+            const auto absent = aliasesIntoBand(p.imag() / twoPi);
+            s.a1 = absent ? 0.0 : -2.0 * z.real();
+            s.a2 = absent ? 0.0 : std::norm(z);
         };
         constexpr std::array<size_t, 3> withJwZero{3, 4, 2}; // the 12.13 a, 12.13 b and 10.54 kHz pole pairs
         for (int i = 0; i < 3; ++i)
@@ -65,9 +76,10 @@ class AdcClipper
             auto& s = sections[(size_t)i];
             pairDen(polePairs[withJwZero[(size_t)i]], s);
             const auto z = zp(C(0.0, jwZeros[(size_t)i]));
+            const auto absent = aliasesIntoBand(jwZeros[(size_t)i] / twoPi);
             s.b0 = 1.0;
-            s.b1 = -2.0 * z.real();
-            s.b2 = std::norm(z);
+            s.b1 = absent ? 0.0 : -2.0 * z.real();
+            s.b2 = absent ? 0.0 : std::norm(z);
         }
         pairDen(polePairs[1], sections[3]);
         pairDen(polePairs[0], sections[4]);
@@ -90,32 +102,34 @@ class AdcClipper
             }
             return h;
         };
-        constexpr int numFit = 64;
-        std::array<C, numFit> fixed{};
-        std::array<double, numFit> target{};
         const auto a1k = analog(1000.0);
-        for (int k = 0; k < numFit; ++k)
+        std::array<C, numFit> fixed{}, zis{}; // the fixed sections' response and z^-1 at each fit frequency
+        std::array<double, numFit> target{};
+        for (size_t k = 0; k < numFit; ++k)
         {
-            const auto hz = 20.0 + (12.6e3 - 20.0) * k / (numFit - 1);
-            fixed[(size_t)k] = fixedPart(hz);
-            target[(size_t)k] = std::abs(analog(hz) / a1k);
+            const auto hz = fitLoHz + (fitHiHz - fitLoHz) * (double)k / (numFit - 1);
+            fixed[k] = fixedPart(hz);
+            zis[k] = std::polar(1.0, -twoPi * hz * T);
+            target[k] = std::abs(analog(hz) / a1k);
         }
         const auto f1k = fixedPart(1000.0);
         const auto zi1k = std::polar(1.0, -twoPi * 1000.0 * T);
         double bestErr = 1e9;
-        for (int a = 0; a <= 200; ++a)
+        for (int a = 0; a <= numAlpha; ++a)
         {
-            const auto alpha = a / 200.0;
+            const auto alpha = (double)a / numAlpha;
             const auto norm = std::abs(f1k * (1.0 + alpha * zi1k));
             double err = 0.0;
-            for (int k = 0; k < numFit; ++k)
+            for (size_t k = 0; k < numFit; ++k)
             {
-                const auto zi = std::polar(1.0, -twoPi * (20.0 + (12.6e3 - 20.0) * k / (numFit - 1)) * T);
-                const auto mag = std::abs(fixed[(size_t)k] * (1.0 + alpha * zi)) / norm;
-                err = std::max(err, std::abs(std::log(mag / target[(size_t)k])));
+                const auto mag = std::abs(fixed[k] * (1.0 + alpha * zis[k])) / norm;
+                err = std::max(err, std::abs(std::log(mag / target[k])));
             }
             if (err < bestErr)
-                bestErr = err, extraZero = alpha;
+            {
+                bestErr = err;
+                extraZero = alpha;
+            }
         }
         sections[3].b0 = 1.0;
         sections[3].b1 = extraZero - z0;
@@ -131,24 +145,30 @@ class AdcClipper
         // The device-instant sampler: a Kaiser-windowed sinc, tabulated over |tau| = 0 .. interpHalf, times 1 / rate.
         halfW = interpHalf * rate;
         const auto fc = std::min(interpFc, 0.5 * rate);
-        interpTable.resize(tableSize + 2);
+        const auto i0Beta = besselI0(interpBeta);
+        interpTable.resize(tableSize + 2); // one guard entry for the linear interpolation at the last cell
         for (int i = 0; i < tableSize + 2; ++i)
         {
             const auto u = std::min(1.0, (double)i / tableSize);
             const auto tau = u * interpHalf;
             const auto x = 2.0 * fc * tau;
             const auto sinc = x == 0.0 ? 1.0 : std::sin(juce::MathConstants<double>::pi * x) / (juce::MathConstants<double>::pi * x);
-            interpTable[(size_t)i] = 2.0 * fc * sinc * besselI0(interpBeta * std::sqrt(1.0 - u * u)) / besselI0(interpBeta) / rate;
+            interpTable[(size_t)i] = 2.0 * fc * sinc * besselI0(interpBeta * std::sqrt(1.0 - u * u)) / i0Beta / rate;
         }
+        interpScale = tableSize / halfW;
         step = rate / deviceRate;
+        g0PerSample = 1.0 / (rate * g0Step);
+        g0Offset = pre / g0Step;
 
         (void)g0Table(); // built once, here rather than at the first clip on the audio thread
         preS = pre * rate;
         postS = post * rate;
+        // Latency: the sampler's look-ahead, g0's anticausal part and the filter's lead, plus margin. The ring buffers
+        // are powers of two (index by mask), with a few samples of slack over the extents the process loops reach.
         delay = (int)std::ceil(halfW + preS + std::max(0.0, -leadSamples)) + 2;
         vBuf.assign((size_t)juce::nextPowerOfTwo((int)(2.0 * halfW + step) + 8), 0.0);
         dryBuf.assign((size_t)juce::nextPowerOfTwo(delay + 1), 0.0f);
-        acc.assign((size_t)juce::nextPowerOfTwo(delay + (int)postS + 8), 0.0);
+        acc.assign((size_t)juce::nextPowerOfTwo(delay + (int)(postS + std::max(0.0, leadSamples)) + 8), 0.0);
         reset();
     }
 
@@ -186,6 +206,8 @@ class AdcClipper
 
     float process(float in, float amount = 1.0f)
     {
+        if (!std::isfinite(in)) // a NaN/inf would stay in the filters' state for good
+            in = 0.0f;
         const auto dryMask = dryBuf.size() - 1;
         dryBuf[dryPos] = in;
         const auto delayed = dryBuf[(dryPos - (size_t)delay) & dryMask];
@@ -248,11 +270,18 @@ class AdcClipper
     static constexpr std::array<double, 3> jwZeros{89917.94340602914, 99035.025119406, 145852.83765769782};
 
     static constexpr double taperLo = 11.5e3, taperHi = 12.6e3; // T(w): 1 below, raised cosine, 0 above
+    // The extra zero is fitted to the analogue magnitude on a grid of numFit points over fitLoHz..fitHiHz, trying
+    // numAlpha + 1 values of alpha in 0..1.
+    static constexpr size_t numFit = 64;
+    static constexpr int numAlpha = 200;
+    static constexpr double fitLoHz = 20.0, fitHiHz = taperHi;
     static constexpr double pre = 1.2e-3, post = 0.3e-3;        // g0's support around its centre (mostly anticausal)
     static constexpr double interpHalf = 0.2e-3, interpFc = 22e3, interpBeta = 7.0;
     static constexpr double couplingHz = 3.35;
     static constexpr int tableSize = 4096;
-    static constexpr double g0Step = 0.5e-6;
+    static constexpr double g0Step = 0.5e-6;       // g0Table's grid (s)
+    static constexpr double g0Fade = 50e-6;        // raised-cosine fade at each end of g0 (s)
+    static constexpr double g0FreqStep = 5.0;      // g0's inverse Fourier sum: frequency grid (Hz)
 
     static std::complex<double> analog(double hz)
     {
@@ -281,7 +310,7 @@ class AdcClipper
     {
         static const std::vector<double> table = [] {
             const auto twoPi = juce::MathConstants<double>::twoPi;
-            constexpr double df = 5.0;
+            constexpr double df = g0FreqStep;
             const auto numF = (int)(taperHi / df) + 1;
             const auto norm = std::abs(analog(1000.0));
             std::vector<std::complex<double>> G((size_t)numF);
@@ -306,8 +335,7 @@ class AdcClipper
                     sum += (g * ph).real();
                     ph *= rot;
                 }
-                // A raised-cosine fade over the last 50 us at each end.
-                const auto edge = std::clamp(std::min(tau + pre, post - tau) / 50e-6, 0.0, 1.0);
+                const auto edge = std::clamp(std::min(tau + pre, post - tau) / g0Fade, 0.0, 1.0);
                 out[(size_t)k] = 2.0 * sum * 0.5 * (1.0 - std::cos(juce::MathConstants<double>::pi * edge)) / deviceRate;
             }
             return out;
@@ -317,7 +345,7 @@ class AdcClipper
 
     double interp(double distance) const
     {
-        const auto x = distance / halfW * tableSize;
+        const auto x = distance * interpScale;
         const auto i = (int)x;
         if (i >= tableSize)
             return 0.0;
@@ -333,7 +361,7 @@ class AdcClipper
         const auto last = (int)std::floor(centre + postS);
         for (auto m = std::max(0, (int)std::ceil(centre - preS)); m <= last; ++m)
         {
-            const auto x = ((m - centre) / rate + pre) / g0Step;
+            const auto x = (m - centre) * g0PerSample + g0Offset; // index into g0 (fractional)
             const auto i = (int)x;
             if (i < 0 || i + 1 >= (int)g0.size())
                 continue;
@@ -347,6 +375,7 @@ class AdcClipper
     double gain = 1.0, extraZero = 0.0, leadSamples = 0.0;
     double hpPole = 0.0, hpX = 0.0, hpY = 0.0;
     double halfW = 1.0, step = 1.0, preS = 0.0, postS = 0.0, nextDevice = 0.0;
+    double interpScale = 1.0, g0PerSample = 1.0, g0Offset = 0.0; // distance -> table index scales (see prepare)
     double fsLow = -1.0, fsHigh = 1.0;
     int delay = 0;
     std::vector<double> interpTable, vBuf, acc;

@@ -12,11 +12,12 @@ the hardware: there is no delay or echo section.
 
 It was built by comparing impulse responses from three separate units, and it has two switches that move it between a
 clean, modern reading and a period one: **16-bit** processing, which reproduces the original's quantisation, and an
-optional **transformer** stage, the factory option the real unit could be ordered with. Switch both off for a cleaner
-sound, or on for the more period-accurate one.
+optional **transformer** stage, the factory option the real unit could be ordered with. Both are on by default; switch
+either or both off for a cleaner sound.
 
 The original's remote joysticks are kept, made a little friendlier for a mouse, and the mix, input and output levels
-borrow the look of the unit's optional fader pack.
+borrow the look of the unit's optional fader pack. A WIDTH halo sets how wide the reverb's wet output sits, from mono
+through the original's width to extra wide, with the bass kept mono as it widens.
 
 > REV-246 is an independent project. It is not affiliated with or endorsed by EMT or any other manufacturer.
 
@@ -59,25 +60,42 @@ Then rescan plugins in your DAW. Logic caches Audio Units, so if REV-246 does no
 
 ## Using it
 
+The initial state is fully wet, with INPUT and OUTPUT at 0 dB and LINK on, the CLA reference lever settings, WIDTH at
+100 and both accuracy options on.
+
 **Pick a programme** (S, M, L, E or N) and set the six joysticks. Each joystick is the original's lever: press the
 upper half of the round button to step the value up and the lower half to step it down. Hold it to repeat; after a
 second it speeds up. For convenience you can also drag or click the wedge above it, use the mouse wheel for one step per
-notch, and Cmd/Alt-click to return to the default.
+notch, and Option/Alt-click to return to the default.
 
 | Control | What it does |
 |---|---|
 | **LOWPASS** (f, kHz) | Low-pass filter on the reverb, 2 to 12 kHz |
 | **REFLECTIONS** (DELAY, AMPL.) | Delay before the early reflections, 0 to 999 ms, and their level, 0 to 100 % |
 | **DECAY** (LF ×, RT, HF ×) | Reverberation time in seconds, with multipliers for how much faster or slower the low and high frequencies decay |
+| **WIDTH** | Wet stereo width: 0 = mono, 100 = unchanged, 200 = extra wide. Above 100 the bass stays mono |
 | **MIX** | Wet/dry balance. PAN places the dry signal |
 | **INPUT / OUTPUT** | Levels, with LINK to move them together |
 
 In the non-linear programme (N) the readouts change meaning to match the hardware's own labels (DELAY, SPAN, and early
 and late RT). Hover over any control for a description.
 
+## Width
+
+The WIDTH halo is the first control in the right-hand group. Its arc runs from 0 to 200 with the value in the middle;
+100 leaves the wet signal unchanged, 0 sums it to mono and 200 widens it. Above 100 the low band is kept mono so the
+bass does not wander. Drag up to widen and down to narrow (Shift for fine), or use the wheel; double-click to type a
+value, or Option/Alt-click to return to 100. Width only affects the wet path, never the dry signal.
+
+## Typed values
+
+Double-click any display field except the program display to type a value instead of using its lever. The dialog lists
+the valid values or range for the current program and unit; an invalid entry leaves the current value untouched. S/M/L/E
+and N have different meanings and ranges (for example amplitude in % vs span in s), and RT is not used in N.
+
 The bottom bar holds the preset browser (previous, next, name, **SAVE**) and **CAL** for the meter reference on the
-left, then the routing and accuracy buttons (**ORIGINAL / TRUE ST**, **FLOAT / 16-BIT**, **XFMR**), **LINK** and
-**?** on the right. A changed preset's name turns italic with a `*`. Saving under an existing user-preset name asks
+left, then the **WIDTH** halo and the routing and accuracy buttons (**ORIGINAL / TRUE ST**, **FLOAT / 16-BIT**,
+**XFMR**), **LINK** and **?** on the right. A changed preset's name turns italic with a `*`. Saving under an existing user-preset name asks
 before replacing it; factory names are read-only. ORIGINAL / TRUE ST, XFMR and LINK are preferences, so presets
 neither store nor change them.
 
@@ -86,12 +104,12 @@ neither store nor change them.
 <!-- TODO: the FLOAT / 16-BIT button and parameter exist, but the placeholder engine has no loops to quantise yet;
      the real algorithm applies the setting when it lands. -->
 
-Both options are off or on independently, and both only change the reverb path.
+Both options are off or on independently, both default on, and both only change the reverb path.
 
 **16-bit.** The original stored the intermediate results in its reverb loops as 16-bit words, and truncating them at
 that depth costs a little noise and grit: its service data put the reverb around 15 dB noisier than the unit's own
 straight-through path. With **16-BIT** selected, REV-246 will quantise its loops the same way (the placeholder engine
-has no loops yet). Leave it on **FLOAT** for a cleaner tail.
+has no loops yet). **16-BIT** is the default; switch to **FLOAT** for a cleaner tail.
 
 In 16-bit mode the input also clips where the original's A/D converter did. That converter left only 6 dB of headroom
 above the 0 mark on its meter, and it clipped hard: past full scale it simply holds the last code. Its input filter
@@ -105,8 +123,8 @@ REV-246 reports about 1.4 ms of latency (the converter stage needs that much loo
 for it. It is the same in FLOAT and 16-BIT, so switching between them never shifts the timing.
 
 **XFMR.** The original could be ordered with balanced input and output transformers, which the manual says raise the
-harmonic distortion slightly. With this option on, the wet path gains the low-frequency colour and gentle odd-
-harmonic distortion of that option. The low-frequency colour comes from measurement; the distortion is an informed
+harmonic distortion slightly. **XFMR** is on by default; with it on, the wet path gains the low-frequency colour and
+gentle odd-harmonic distortion of that option. The low-frequency colour comes from measurement; the distortion is an informed
 estimate, since measurements of a unit's response cannot show it.
 
 ## A/B comparison

@@ -6,16 +6,23 @@
 // design space as Layout.h) and the behaviour the designer's notes describe in words.
 namespace rv::design
 {
-// The reference editor is 1398 x 612 (40% of the design space); resizable from 25% to 60%.
-inline constexpr int defaultWidth = 1398;
-inline constexpr int defaultHeight = 612;
+// The editor is resizable from 25% to 60% of the design space (the default, 40%, is 1398 x 612).
 inline constexpr float minScale = 0.25f, maxScale = 0.60f;
 
 // The bottom bar (presets, link, help) sits under main.png and is drawn in code. The version number keeps
 // barEdgePad from the panel's right edge, and the "?" keeps the same distance from the version number.
 inline constexpr float barEdgePad = 57.0f;
 inline constexpr float barTop = 1380.0f;
-inline constexpr float barHeight = 150.0f;
+// The bar's buttons share one row; the width halo is taller and sits a little higher.
+inline constexpr float barRowTop = barTop + 35.0f, barRowHeight = 80.0f;
+inline constexpr float barGap = 12.0f; // between neighbouring buttons
+inline constexpr float linkWidth = 220.0f, transformerWidth = 180.0f, formatWidth = 210.0f, stereoModeWidth = 300.0f;
+inline constexpr float helpWidth = 90.0f, calWidth = 220.0f;
+inline constexpr float calLeft = 1224.0f;                          // CAL follows the preset buttons at the bar's left end
+inline constexpr float widthKnobTop = barTop + 10.0f, widthKnobW = 140.0f, widthKnobH = 130.0f;
+inline constexpr float titleLeft = 1597.0f, titleWidth = 300.0f;   // REV-246 centred on the panel
+inline constexpr float barRuleThickness = 4.0f, barRuleAlpha = 0.55f; // the gold rule where main.png ends
+inline constexpr float titleCapHeight = 42.0f, versionCapHeight = 30.0f;
 inline const juce::Colour barColour{0xff1a272d}; // main.png's own bottom edge
 inline const juce::Colour gold{0xfff8c55e};
 inline const juce::Colour labelSelected{0xfffff3d6};
@@ -45,9 +52,6 @@ inline constexpr float mixTop = 545.0f, mixBottom = 1185.0f;
 inline constexpr float gainTop = 218.0f, gainBottom = 1238.0f;
 inline constexpr float faderCapW = 100.0f, faderCapH = 211.0f;
 
-// Joystick columns' centre x (matches the funnels above them).
-inline constexpr float joyX[] = {897.0f, 1198.0f, 1431.0f, 1722.0f, 2004.0f, 2280.0f};
-
 // The funnel (wedge) above each joystick. The value's red line runs from the narrow bottom (minimum) to the wide
 // top (maximum), following the wedge, which is slightly curved. Edges of the wedge's dark interior measured on
 // the art for the first funnel; the others are the same shape shifted by funnelDx.
@@ -62,7 +66,7 @@ inline constexpr float funnelLineAlpha = 0.45f;
 // fraction of the wedge's height).
 inline constexpr float funnelAmbient = 0.30f;
 inline constexpr float funnelAmbientReach = 0.24f;
-inline constexpr float funnelGap = 3.0f;             // dark gap kept each side of a lit segment's lines
+inline constexpr float funnelGap = 3.0f;   // dark gap kept each side of a lit segment's lines
 inline constexpr float funnelInset = 3.0f; // keeps the band inside the gold edge
 struct FunnelPoint
 {

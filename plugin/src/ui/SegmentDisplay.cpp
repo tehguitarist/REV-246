@@ -1,10 +1,24 @@
 #include "ui/SegmentDisplay.h"
 
+#include <array>
+#include <cmath>
+
 namespace rv::ui
 {
 namespace
 {
 constexpr unsigned sa = 1, sb = 2, sc = 4, sd = 8, se = 16, sf = 32, sg = 64;
+constexpr int numSegments = 7;
+
+// Of a digit's pitch: how wide the digit is, how far it sits in from the pitch's left edge, and where its point sits.
+constexpr float digitWidth = 0.66f, digitLeftPad = 0.06f, pointOffset = 0.15f;
+constexpr float pointRadius = 0.09f; // of the digit's width
+constexpr float ghostBoost = 1.3f;   // the unlit segments are drawn a little stronger than segmentGhostAlpha
+// The three glow halos around the lit segments, widest and faintest first: radius in pixels at the default editor
+// size, and alpha.
+constexpr float glowRadii[] = {64.0f, 30.0f, 8.0f};
+constexpr float glowAlphas[] = {0.5f, 0.7f, 0.8f};
+constexpr int dragPixelsPerStep = 6; // vertical drag, in logical pixels
 
 // Hexagonal segments in a digit cell of width w and height h, thickness t.
 juce::Path hSegment(float x0, float x1, float yc, float t)
@@ -35,7 +49,7 @@ juce::Path vSegment(float xc, float y0, float y1, float t)
 
 // The verticals run the full height of the digit (a "1" is as tall as an "8"), mitred at the corners, and the
 // horizontals sit between them, shorter by a segment thickness on each side.
-std::array<juce::Path, 7> segmentPaths(float w, float h)
+std::array<juce::Path, numSegments> segmentPaths(float w, float h)
 {
     const auto t = w * 0.15f, gap = t * 0.7f, half = t * 0.5f;
     const auto mid = h * 0.5f;
@@ -85,8 +99,8 @@ unsigned SegmentDisplay::segmentsFor(juce::juce_wchar ch)
     }
 }
 
-SegmentDisplay::SegmentDisplay(juce::Rectangle<float> box, int numDigits, std::vector<Field> fieldList)
-    : DesignComponent(box), digits(numDigits), fields(std::move(fieldList)), tips(fields.size())
+SegmentDisplay::SegmentDisplay(juce::Rectangle<float> box, int digitCount, std::vector<Field> fieldList)
+    : DesignComponent(box), numDigits(digitCount), fields(std::move(fieldList)), tips(fields.size())
 {
     setOpaque(false);
 }
@@ -107,7 +121,7 @@ void SegmentDisplay::setFieldTooltip(size_t field, const juce::String& text)
 
 std::vector<SegmentDisplay::Digit> SegmentDisplay::layoutDigits() const
 {
-    std::vector<Digit> out((size_t)digits);
+    std::vector<Digit> out((size_t)numDigits);
     for (const auto& field : fields)
     {
         std::vector<Digit> run; // the text as digits, each '.' lighting the point of the digit before it
@@ -130,62 +144,56 @@ std::vector<SegmentDisplay::Digit> SegmentDisplay::layoutDigits() const
 
 void SegmentDisplay::paint(juce::Graphics& g)
 {
-    juce::String key;
-    for (const auto& field : fields)
-        key << field.text << '|';
-    key << (isDimmed() ? "d" : "n");
-
-    layer.paint(g, getLocalBounds(), key, [this](juce::Graphics& lg, float scale) {
+    // The text is not in the key: setText() invalidates the layer.
+    layer.paint(g, getLocalBounds(), isDimmed() ? "d" : "n", [this](juce::Graphics& lg, float scale) {
         const auto s = getScale();
         const auto area = getLocalBounds().toFloat().reduced(design::displayInsetX * s, design::displayInsetY * s);
-        const auto pitch = area.getWidth() / (float)digits;
-        const auto w = pitch * 0.66f, h = area.getHeight();
+        const auto pitch = area.getWidth() / (float)numDigits;
+        const auto w = pitch * digitWidth, h = area.getHeight();
         const auto paths = segmentPaths(w, h);
         const auto shear = std::tan(juce::degreesToRadians(design::displaySlantDegrees));
-        const auto dots = std::vector<Digit>(layoutDigits());
-        const auto pointR = w * 0.09f;
+        const auto cells = layoutDigits();
+        const auto pointR = w * pointRadius;
         const auto alpha = contentAlpha();
 
         auto place = [&](int i) {
             // Slanted about the bottom of the digit.
             return juce::AffineTransform::shear(-shear, 0.0f)
-                .translated(area.getX() + pitch * (float)i + shear * h + pitch * 0.06f, area.getY());
+                .translated(area.getX() + pitch * (float)i + shear * h + pitch * digitLeftPad, area.getY());
         };
-        auto pointAt = [&](int i) {
-            return juce::Point<float>(area.getX() + pitch * (float)i + w + pitch * 0.15f, area.getY() + h - pointR);
+        auto fillPoint = [&](juce::Graphics& cg, int i) {
+            const auto x = area.getX() + pitch * (float)i + w + pitch * pointOffset;
+            const auto y = area.getY() + h - pointR;
+            cg.fillEllipse(x - pointR, y - pointR, 2.0f * pointR, 2.0f * pointR);
         };
 
         // Ghost segments (everything that could light), then the lit ones with their glow.
-        lg.setColour(design::segmentGlow.withAlpha(design::segmentGhostAlpha * alpha * 1.3f)); // ghosts stay red
-        for (int i = 0; i < digits; ++i)
+        lg.setColour(design::segmentGlow.withAlpha(design::segmentGhostAlpha * alpha * ghostBoost)); // ghosts stay red
+        for (int i = 0; i < numDigits; ++i)
         {
             for (const auto& p : paths)
                 lg.fillPath(p, place(i));
-            lg.fillEllipse(pointAt(i).x - pointR, pointAt(i).y - pointR, 2 * pointR, 2 * pointR);
+            fillPoint(lg, i);
         }
 
         // Uniformly bright orange-red segments with a thick red glow that tapers off: three halos, wide and faint to
         // tight and strong.
         auto lit = [&](juce::Graphics& cg) {
-            for (int i = 0; i < digits; ++i)
+            cg.setColour(design::segmentLit.withAlpha(alpha));
+            for (int i = 0; i < numDigits; ++i)
             {
-                for (int sIdx = 0; sIdx < 7; ++sIdx)
-                    if (dots[(size_t)i].segments & (1u << sIdx))
-                    {
-                        cg.setColour(design::segmentLit.withAlpha(alpha));
-                        cg.fillPath(paths[(size_t)sIdx], place(i));
-                    }
-                if (dots[(size_t)i].point)
-                {
-                    cg.setColour(design::segmentLit.withAlpha(alpha));
-                    cg.fillEllipse(pointAt(i).x - pointR, pointAt(i).y - pointR, 2 * pointR, 2 * pointR);
-                }
+                for (int seg = 0; seg < numSegments; ++seg)
+                    if (cells[(size_t)i].segments & (1u << seg))
+                        cg.fillPath(paths[(size_t)seg], place(i));
+                if (cells[(size_t)i].point)
+                    fillPoint(cg, i);
             }
         };
-        const auto k = s * 2.5f;
-        drawWithGlow(lg, getLocalBounds(), scale, design::segmentGlow.withAlpha(0.5f * alpha), 64.0f * k, [&](juce::Graphics& g1) {
-            drawWithGlow(g1, getLocalBounds(), scale, design::segmentGlow.withAlpha(0.7f * alpha), 30.0f * k, [&](juce::Graphics& g2) {
-                drawWithGlow(g2, getLocalBounds(), scale, design::segmentGlow.withAlpha(0.8f * alpha), 8.0f * k, lit);
+        const auto k = s * 2.5f; // 1 at the default editor size (scale 0.4): the glow radii are in its pixels
+        const auto halo = [&](int n) { return design::segmentGlow.withAlpha(glowAlphas[n] * alpha); };
+        drawWithGlow(lg, getLocalBounds(), scale, halo(0), glowRadii[0] * k, [&](juce::Graphics& g1) {
+            drawWithGlow(g1, getLocalBounds(), scale, halo(1), glowRadii[1] * k, [&](juce::Graphics& g2) {
+                drawWithGlow(g2, getLocalBounds(), scale, halo(2), glowRadii[2] * k, lit);
             });
         });
     });
@@ -194,7 +202,8 @@ void SegmentDisplay::paint(juce::Graphics& g)
 int SegmentDisplay::fieldAt(int x) const
 {
     const auto area = getLocalBounds().toFloat().reduced(design::displayInsetX * getScale(), 0.0f);
-    const auto digit = (int)juce::jlimit(0.0f, (float)digits - 0.01f, ((float)x - area.getX()) / area.getWidth() * (float)digits);
+    const auto digit = (int)juce::jlimit(0.0f, (float)numDigits - 0.01f,
+                                         ((float)x - area.getX()) / area.getWidth() * (float)numDigits);
     for (size_t i = 0; i < fields.size(); ++i)
         if (digit >= fields[i].first && digit < fields[i].first + fields[i].count)
             return (int)i;
@@ -203,31 +212,40 @@ int SegmentDisplay::fieldAt(int x) const
 
 void SegmentDisplay::mouseDown(const juce::MouseEvent& e)
 {
-    if (e.mods.isCommandDown() || e.mods.isAltDown())
+    dragField = -1;
+    const auto i = fieldAt(e.x);
+
+    if (e.mods.isAltDown())
     {
-        const auto i = fieldAt(e.x);
         if (i >= 0 && fields[(size_t)i].onReset)
             fields[(size_t)i].onReset();
         return;
     }
+
+    // Acts on the second press rather than on mouseDoubleClick, which comes after a press that has started a drag.
+    if (e.getNumberOfClicks() >= 2 && i >= 0 && fields[(size_t)i].onDoubleClick)
+    {
+        fields[(size_t)i].onDoubleClick();
+        return;
+    }
+
     dragLastY = e.y;
     dragRemainder = 0;
-    const auto i = fieldAt(e.x);
-    dragField = i < 0 ? 0 : (size_t)i;
+    dragField = i;
 }
 
 void SegmentDisplay::mouseDrag(const juce::MouseEvent& e)
 {
-    if (!fields[dragField].onNudge)
+    if (dragField < 0 || !fields[(size_t)dragField].onNudge)
         return;
-    // About 6 logical pixels of vertical drag per step; up raises the value.
+    // Up raises the value.
     dragRemainder += dragLastY - e.y;
     dragLastY = e.y;
-    const auto steps = dragRemainder / 6;
+    const auto steps = dragRemainder / dragPixelsPerStep;
     if (steps != 0)
     {
-        dragRemainder -= steps * 6;
-        fields[dragField].onNudge(steps);
+        dragRemainder -= steps * dragPixelsPerStep;
+        fields[(size_t)dragField].onNudge(steps);
     }
 }
 

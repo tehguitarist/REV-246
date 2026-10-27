@@ -5,8 +5,8 @@
 
 namespace rv::ui
 {
-// A component placed in the 1954x1224 design space. The editor lays children out directly in its own
-// pixels (not through an AffineTransform on a 1954-wide content component), so every component sits on
+// A component placed in the 3495x1530 design space (Layout.h). The editor lays children out directly in its own
+// pixels (not through an AffineTransform on a 3495-wide content component), so every component sits on
 // whole logical pixels and its pre-scaled images stay 1:1 with the device. Components convert
 // design-space rectangles to local coordinates with toLocal().
 class DesignComponent : public juce::Component, public juce::SettableTooltipClient
