@@ -1579,7 +1579,22 @@ def final_G(lab, b230, law, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=No
     Gs = final_Gs(lab, law, w, loopk, bbtilt, lfrt, gamma, tilt, hfdp, pramp, b230, dc_min, beta, gamma_dc, p_curve, loopcell, floor_form)
     if Gmod:
         Gs = Gmod(lab, law, w, Gs)
-    return make_G(lab, law, Gs, b230, FINAL_DIFF)
+    G = make_G(lab, law, Gs, b230, FINAL_DIFF)
+    if XCORR:                                       # EMT_XCORR: a per-loop correction of each loop path (model_s_results 42)
+        G["R"] = [r * H for r, H in zip(G["R"], xcorr_resp(lab, 2 * np.pi * np.fft.rfftfreq(G["N"])))]
+    return G
+
+
+XCORR = json.load(open(os.environ["EMT_XCORR"])) if os.environ.get("EMT_XCORR") else None
+
+
+def xcorr_resp(lab, w):
+    """Per loop i: 1 + sum_l h[i][l] exp(-j w lag_l), the fold whose training RT steps exclude lab's RT ("all" if none or
+    EMT_XCORR_FOLD=all): sml_fullband.py --stage xfit (model_s_results 42)."""
+    fold = os.environ.get("EMT_XCORR_FOLD") or next((f for f, d in XCORR["folds"].items() if lab["rt"] not in d["train_rt"]), "all")
+    h = np.array(XCORR["folds"][fold]["h"] if fold in XCORR["folds"] else XCORR["all"]["h"])
+    E = np.exp(-1j * np.outer(w, np.array(XCORR["lags"], float)))
+    return [1 + E @ hi for hi in h]
 
 
 def final_Gs(lab, law, w, loopk=0.0, bbtilt=0.0, lfrt=None, gamma=0.0, tilt=None, hfdp=None, pramp=None, b230=0.0, dc_min=DC_MIN, beta=FINAL_BETA,

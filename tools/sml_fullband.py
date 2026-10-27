@@ -358,9 +358,11 @@ def compact_T(T, form):
     return Tc, 2 * nnum
 
 
-def s_stage(workers, only=None, tfix=False):
+def s_stage(workers, only=None, tfix=False, sub=None):
     from concurrent.futures import ProcessPoolExecutor
-    d = os.path.join(OUT, (("s_tfixrev" if T_REV else "s_tfix") + (f"_{T_FORM}" if T_FORM else "") + (f"_{T_PATH}" if T_PATH else "") + ("_refit" if T_REFIT else "")) if tfix else "s")
+    d = os.path.join(OUT, (("s_tfixrev" if T_REV else "s_tfix") + (f"_{T_FORM}" if T_FORM else "") + (f"_{T_PATH}" if T_PATH else "") + ("_refit" if T_REFIT else "")) if tfix
+                     else ("s_xcorr" + os.environ.get("SML_XTAG", "")) if os.environ.get("EMT_XCORR") else "s")
+    d = os.path.join(OUT, sub) if sub else d
     os.makedirs(d, exist_ok=True)
     Ts = {f: fold_T(f) for f in TFOLDS} if tfix else None
     if os.environ.get("SML_SHF") == "1":            # shf scoring: the correction of the other take on every capture
@@ -884,6 +886,83 @@ def wide_stage(workers, every, only=None):
             pass
 
 
+# ---------- stage xfit: a per-loop correction of S's loop paths ----------
+X_LAGS = list(range(-10, 11)) + [s_ * (e + d) for e in (230, 460) for d in range(-2, 3) for s_ in (1, -1)]
+X_WINS = [(0, 50), (50, 150), (150, 300)]           # fitted where the first pass and the first recirculation lie, each equally
+
+
+def _xfit_job(a):
+    """One S setting on the baseline (EMT_XCORR unset): per capture the residual and each loop path's contribution r_ci
+    (both x the pipeline response), shifted by every lag in X_LAGS, over X_WINS (rows scaled per window by the capture's
+    energy there): the normal equations A'A, A'b of the per-loop correction, shared by L and R."""
+    key, lab, b230, law, fold, fc, v, caps, ends = a
+    q1.EXT = 1700
+    G = pc.setting_G(lab, b230, law, fold, fc)
+    J = q1.Joint([dict(G, files=[dict(y=np.zeros((4096, 2)), w=np.ones(4096), amp=0)])])
+    cl, f_, xs = J.split(v)
+    F_, X_ = J._spectra(f_, xs, G["N"])
+    nl, ncol = len(G["R"]), len(G["R"]) * len(X_LAGS)
+    ATA, ATb = np.zeros((ncol, ncol)), np.zeros(ncol)
+    for c in caps:
+        y, mdl, g, te = q2.fit_capture(G, v, c["amp"], c["file"], c["fade2"], c["eps"], ends[c["file"]], 1700)
+        n = len(y)
+        mf = full_model(J, v, G, n, c["amp"], mdl)
+        e = y - mf * g
+        N = 1 << int(np.ceil(np.log2(n + 8192)))
+        Pr = pipeline(N, True)
+        for ch in (0, 1):
+            ri = [apply_f(np.fft.irfft(X_[ch, i] * G["R"][i], G["N"])[:n, None] * np.ones((1, 2)), Pr)[:, 0] for i in range(nl)]
+            for a_ms, b_ms in X_WINS:
+                ix = win_idx(a_ms, b_ms, te, n)
+                if ix is None:
+                    continue
+                i0, i1 = ix
+                sc = 1.0 / np.sqrt(np.sum(y[i0:i1, ch] ** 2))
+                A = np.stack([np.roll(r, lag)[i0:i1] * g[i0:i1, ch] for r in ri for lag in X_LAGS], 1) * sc
+                bb = e[i0:i1, ch] * sc
+                ATA += A.T @ A
+                ATb += A.T @ bb
+    print(key, flush=True)
+    return key, lab["rt"], ATA, ATb
+
+
+def xfit_stage(workers, only=None):
+    from concurrent.futures import ProcessPoolExecutor
+    assert not os.environ.get("EMT_XCORR"), "fit on the baseline: unset EMT_XCORR"
+    info, fade, _, _, eps0 = q2.q1_tables()
+    ap = json.load(open(os.path.join(q2.OUT, pc.lf_.AP230)))
+    ends = json.load(open(os.path.join(q2.OUT, "ramp.json")))
+    v, law, _ = q2.final_injection(compact=pc.COMPACT)
+    cells = json.load(open(os.path.join(pc.CV, "cells.json")))
+    folds = {rt: json.load(open(os.path.join(pc.CV, f"fold_{rt}.json"))) for rt in sorted({g["rt"] for g in info.values()})}
+    jobs = []
+    for k, g in sorted(info.items()):
+        caps = [dict(amp=a_, file=nm, eps=eps0[nm], fade2=fade[nm]) for a_, nm in q2.files_of(g) if (k, a_) not in DEFECTS]
+        if caps and (not only or k in only):
+            jobs.append((k, dict(lf=g["lf"], rt=g["rt"], hf=g["hf"]), ap["steps"][ap["settings"][k]["step"]], law, folds[g["rt"]], cells.get(k), v, caps, ends))
+    acc = {}
+    with ProcessPoolExecutor(workers, max_tasks_per_child=1) as ex:
+        for key, rt, ATA, ATb in ex.map(_xfit_job, jobs):
+            for name, rts in list(TFOLDS.items()) + [("all", tuple(sorted({g["rt"] for g in info.values()})))]:
+                if rt in rts:
+                    A0, b0 = acc.get(name, (0, 0))
+                    acc[name] = (A0 + ATA, b0 + ATb)
+    nl = 4
+    out = dict(lags=X_LAGS, windows=X_WINS, numbers=nl * len(X_LAGS), folds={}, all=None)
+    for name, (A, bb) in acc.items():
+        h = np.linalg.solve(A + 1e-9 * np.trace(A) / len(A) * np.eye(len(A)), bb).reshape(nl, len(X_LAGS))
+        entry = dict(train_rt=list(TFOLDS[name]) if name in TFOLDS else "all", h=h.tolist())
+        if name == "all":
+            out["all"] = entry
+        else:
+            out["folds"][name] = entry
+        print(name, "per loop |h| at lag 0 / sum |h|:", [f"{x[X_LAGS.index(0)]:+.5f} / {np.abs(x).sum():.4f}" for x in h], flush=True)
+    hA, hB = np.array(out["folds"]["A"]["h"]), np.array(out["folds"]["B"]["h"])
+    out["fold_agreement"] = float(np.sum(hA * hB) / np.sqrt(np.sum(hA ** 2) * np.sum(hB ** 2)))
+    print("fold agreement (cosine)", round(out["fold_agreement"], 3), flush=True)
+    json.dump(out, open(os.path.join(OUT, "xcorr" + ("_smoke" if only else "") + ".json"), "w"), indent=1)
+
+
 # ---------- stage gate: the full-band sanity gate ----------
 GATE_TOL = 0.5                                       # dB a band-window median may get worse
 
@@ -898,7 +977,7 @@ def gate_stage(workers, tag):
     base = OUT
     OUT = os.path.join(base, f"gate_{tag}")
     try:
-        s_stage(workers, list(pc.GATE_S))
+        s_stage(workers, list(pc.GATE_S), sub="s")
         d = os.path.join(OUT, "ml")
         os.makedirs(d, exist_ok=True)
         jobs = [(p, k, os.path.join(d, f"{p}_{k}.json")) for p in "ML" for k in pc.GATE_ML[p] if not os.path.exists(os.path.join(d, f"{p}_{k}.json"))]
@@ -1202,7 +1281,7 @@ def _report_ml(mdir, lines, rep):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["s", "tfix", "takefit", "ml", "warp", "wide", "kfix", "shf", "gate", "report"], required=True)
+    ap.add_argument("--stage", choices=["s", "tfix", "takefit", "ml", "warp", "wide", "kfix", "shf", "gate", "xfit", "report"], required=True)
     ap.add_argument("--only", nargs="*")
     ap.add_argument("--workers", type=int, default=8)
     ap.add_argument("--prog", default="SML")
@@ -1215,6 +1294,8 @@ def main():
         takefit_stage(a.workers, a.only)
     elif a.stage == "ml":
         ml_stage(list(a.prog), a.every, a.workers, int(a.only[0]) if a.only else None)
+    elif a.stage == "xfit":
+        xfit_stage(a.workers, a.only)
     elif a.stage == "gate":
         gate_stage(a.workers, a.tag)
     elif a.stage == "shf":

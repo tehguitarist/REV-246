@@ -6,7 +6,46 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 
 ---
 
-## 0. Start here (hand-over, updated 26 October 2026)
+## 0. Start here (hand-over, updated 27 October 2026)
+
+### Paused 27 October 2026 after the full-band pass: read this block first
+
+**State.** Nothing is running and nothing is half-done. This session scored S, M and L over the plugin's whole band, 20 Hz–12.8 kHz (`model_s_results.md` §41, `ml_structure.md` §25, `tools/sml_fullband.py`): the five S low-band items are closed, M / L's top octave is fixed (adopted, 21 / 61-tap output kernel), and a full-band gate now runs beside pulse_check's. The user stopped before S's per-loop correction ran in full; that is the next task, below. Commits `c0adf16`, `eea8c08`, `f00e939` and this hand-over.
+
+**Rule for all work from here (the user, 27 October):** every result must hold over 20 Hz–~13 kHz, per band, against a repeat reference; the 100 Hz–10 kHz bench and gate numbers are not enough alone. After any model change run both gates: `pulse_check.py --stage gate --tag <t>` and `sml_fullband.py --stage gate --tag <t>` (working rules below).
+
+**Baselines now.** S unchanged (`_apml`, §38.1; 371 numbers). M / L: `analysis/ml_lines/kernel_fix_full.json` is ml_lines' default output kernel (M 21 taps, L 61; `ML_KFIX_FILE=analysis/ml_lines/kernel_fix.json` gives §18's in-band kernel). Pulse M / L reference regenerated (L first pass −53.0 → −54.3 dB, no capture worse). Full-band gate reference `analysis/fullband/gate_ref/` (on the compact kernel).
+
+#### Next task (fresh session): S's per-loop correction of the loop paths
+
+**Why.** Below 3 kHz S's 50–600 ms excess (+5…+16 dB over the cross-take repeat) is one deterministic error, the same in every setting (§41.1, §41.3). A single transfer on S's output, held out by RT fold, takes 50–150 ms from −52.2 to −56.5 dB with 82 numbers (and the free form to the repeat level at LF ≥ 1.0), but every single-transfer form fails the strict rule later (300–600 ms: 14–27 settings worse by > 0.5 dB; LF 0.1 / 0.4 worst), whether on the output, on the first pass only or with the low band (§41.7). A transfer common to all loops is mathematically the same as one on the output, so only **per-loop** differences can follow each loop's own filter; §25.12 found the error enters the loops on their input side, one waveform per loop. The per-loop form has never been fitted with the clock refit in the loop (§25.12's dense version died on it, §25.13).
+
+**What is built and smoke-tested (this session, committed):**
+- `EMT_XCORR=<json>` in `tools/q2_injection.py` (`final_G` → `xcorr_resp`): each loop path's response R_i times H_i(f) = 1 + Σ h_i,λ e^(−jωλ), shared by L and R, from the fold whose training RT steps exclude the setting's (`EMT_XCORR_FOLD=all` forces the all-data fit). Off by default; the bench (`loop_cv --retake` → `q2_injection --stage final`), pulse_check's gate and `sml_fullband` all go through `final_G`, so each capture's clock / shift / gain is refitted against the corrected model, as the bench does.
+- `sml_fullband.py --stage xfit [--only keys] --workers 8`: linear least squares on the baseline (EMT_XCORR unset), per capture the residual against each loop path's contribution (× the pipeline response) shifted by each lag, over 0–50 / 50–150 / 150–300 ms, every window weighted equally (0–50 ms counts, as §25.13 requires), both channels, normal equations summed per RT fold (`TFOLDS` A: RT 0.3 / 0.8 / 1.4 / 2.2, B: 0.6 / 1.0 / 1.8 / 2.5) and over all → `analysis/fullband/xcorr.json`. Lags `X_LAGS`: −10…+10 plus ±2 around ±230 and ±460 (AP230's delay and twice it, where the free transfer had its echoes), 41 per loop, **164 numbers**.
+- **Smoke** (8 settings, 4 per fold; `analysis/fullband/xcorr_smoke.json`, 49 s, 2.3 GB): the two folds' corrections agree (cosine 0.90); lag-0 terms −0.0011…+0.0010, Σ|h| 0.010–0.028 per loop. Not scored yet.
+
+**Steps.**
+1. `EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 7 -- .venv/bin/python tools/sml_fullband.py --stage xfit --workers 8` (~3–5 min; ~0.3 GB per worker). Check the fold agreement printed (cosine; smoke 0.90).
+2. Held out, full band: `EMT_XCORR=$PWD/analysis/fullband/xcorr.json EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 7 -- .venv/bin/python tools/sml_fullband.py --stage s --workers 8` → `analysis/fullband/s_xcorr/` (~13 min), then `--stage report`: the `vs_` table against `s` (per band and window, captures worse by > 0.5 dB). Compare with §41.7's single-transfer forms; the late windows (300–1000 ms) and LF 0.1 / 0.4 are the test.
+3. If it passes per setting: the bench, `EMT_XCORR=... loop_cv.py --retake` into its own fold-set folder (copy the `_apml` fold files; every RT fold reruns, < 1 min each), the strict rule (no setting worse than 0.5 dB in any 50–1000 ms window, no group median worse beyond ±0.1 dB), both gates.
+4. If it fails late again: try fitting on 0–600 ms (adding the windows where it failed), or per channel (328 numbers), before giving up on the form; record either way in `model_s_results.md` §42.
+5. **Compaction, if adopted:** 164 numbers is a lot for a correction. Read which lags carry it per loop (the lag-0 neighbourhood should dominate; the ±230 / ±460 echoes are AP230's feedforward / feedback gap, §25.12, which may be one number per stage, H), and refit the smallest form that holds the bench. The plugin applies it as a per-loop FIR on each loop's input (cheap: 4 × ~21 taps).
+
+#### Compaction work still open (for the final optimisation pass unless noted)
+
+- **S's correction above** (step 5), if it is adopted.
+- **L's output kernel, 61 taps** (M 21): lossless as a direct FIR, but L's is mostly the top octave's phase (+8.9° at 12 kHz); an IIR form (a short symmetric FIR plus one all-pass section, or a first-order phase term) may hold it in ~10 numbers. Judge any shorter form against the nulls, not in dB: M / L's nulls are −54…−60 dB and a 0.1° error is itself ≈ −54 dB (`ml_structure.md` §25.1: a 31-tap L kernel within 0.0025 dB / 0.11° moved nulls by 2 dB). Verify on every scored group (`sml_fullband.py --stage ml` with `ML_KFIX_FILE`), then both gates.
+- **S's 371 numbers:** 320 of them the shelf and DC-floor cell tables. Their compaction was tried and rejected (§32.8, §34: the cells do not interpolate; the DC-floor form costs 12 LF 0.1 settings 0.5–2.9 dB). Only revisit with a new idea; the plugin uses the tables at the sampled steps.
+- **N (another session's area):** the branch read kernel (29 taps at strength 0.65) and the top-end EQ, which `analysis/nl_hfdrift/REPORT.md` found to be the harness's resampler, not the unit; see the N blocks below.
+
+#### Full-band checks not done (low priority)
+
+- M / L at 12.3–12.8 kHz (a wide-window deconvolution as `--stage wide` does for S): the user declined it as confirmation-only (the M / L kernel is fitted to 12.3 kHz, the plugin rolls off by 12.6 kHz).
+- Per-band decay and level at 20–100 Hz and 10–12.8 kHz on today's models (the out-of-band check, `ml_structure.md` §11, predates several baseline changes), M / L recirculations 2–3 per band.
+- CLA / Altiverb over the full band (mostly a test of the TRANSFORMER option's low band).
+
+**After S's task: the plugin phase** (§11; the plugin's reverb engine is still a placeholder).
 
 ### Non-Lin finished (27 October 2026): read this block first
 **Program N is decoded and benched** (`NonLin_program.md` §9–12, unit facts §5d). Structure: front taps 41 / 410 (R 278) / 463 at 1 : 2 : 1; AP124 → 27 main taps in 14 stages → AP180 (L) / AP188 (R); SPAN switches stages; an exact EARLY law (4 ms ticks, 36 ms stages; negative EARLY rises over SPAN; 10 = flat); the late section fed from the main-tap line → AP314 → three flat loops 1108 / 1254 / 1386 at RT = LATE → four equal read taps per loop; LATE 0 gates. Confirmed on a second capture (the Altiverb's NON-LIN and GATED presets, §11.7).
