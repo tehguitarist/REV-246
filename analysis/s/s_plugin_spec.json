@@ -1,7 +1,7 @@
 {
  "program": "S (EMT 246 program S), docs/model_s_results.md \u00a717, \u00a738.1",
  "device_rate_hz": 26373.626373626375,
- "units": "direct-tap units: the AMPL-90 cluster tap = 1; delays in integer device samples from tap 0; mono in, (L, R) out; the input impulse at sample 0, tap 0 at sample 0",
+ "units": "direct-tap units: the fitted cluster gains listed in direct_path (the AMPL-90 value is about 1.135, not 1; the absolute level is the fit's because the per-capture gains are fitted, so preserve the direct/reverb ratio rather than forcing the cluster tap to 1); delays in integer device samples from tap 0; mono in, (L, R) out; the input impulse at sample 0, tap 0 at sample 0",
  "signal_path": "input -> tap injection -> four parallel loops (filter G_i in the feedback, delay P_i) -> sum -> AP(20) -> AP(72) -> AP(230, damping b) -> output; the direct path (four taps per channel) adds in parallel. The reverb level does not move with AMPL; the direct path is x AMPL/90",
  "measurement_side": "not in this spec and not in the reference IRs: the 20 Hz-11 kHz analysis band (q1.LFBAND), the chain3 capture-chain kernel, the shared sub-100 Hz capture transfer (tools/lowband_joint.py), and the deconvolution's band-limit window on the direct taps. The plugin's own analogue chain (converter filters, sample-and-hold, 20 Hz high-pass, L half a sample late) is separate and follows this spec",
  "baseline": {
@@ -13,7 +13,8 @@
   "fold_set": "analysis/loop_cv/hfcells_chain3_cap0.8475_apml",
   "compact_fit": "diffuser_tied_fix-0.707107_ap230new_chain3",
   "ap230_table": "ap230_mltable.json",
-  "ap230_g": -0.7071067812
+  "ap230_g": -0.70710678,
+  "ap230_table_g": -0.7071067812
  },
  "direct_path": {
   "value": {
@@ -49,7 +50,7 @@
    "onset": "tap 0 at sample 0; the model's band-limited atom is measurement-side"
   },
   "label": "S",
-  "source": "\u00a717, \u00a721 (chain2 refit: L = R within 0.1 %), \u00a738.1"
+  "source": "\u00a717, \u00a721 (cluster law: L = R within 0.1 %), \u00a738.1"
  },
  "injection": {
   "value": {
@@ -336,7 +337,7 @@
     }
    ],
    "magnitude": 0.29886218862027125,
-   "format": "a sum of signed impulses of magnitude `magnitude` at `delay` samples from tap 0, one per loop and channel, added to the loop input",
+   "format": "a sum of signed impulses of magnitude `magnitude` at `delay` samples from tap 0, five per loop and channel (40 taps), added to the loop input",
    "note": "fitted, held out by RT; the same shape in every setting, scaled by one magnitude"
   },
   "label": "S (fitted, held out) / H (the physical injection)",
@@ -351,7 +352,7 @@
     1587
    ],
    "form": "y_i[n] = x_i[n] + G_i * (z^-P_i y_i)[n]; G_i is the loop filter in the feedback, stable, 0-3 first-order sections (shelf, gain, one-pole)",
-   "loop_filter": "settings.<key>.loops[i]: gain, sections (exact form) and b / a (direct form, a[0] = 1); shelf(x) = (b0 + b1 z^-1) / (1 - pole z^-1) with b0, b1 from (dc_gain, nyquist_gain, pole) as model_s.shelf; onepole = (1 - pole) / (1 - pole z^-1)"
+   "loop_filter": "settings.<key>.loops[i]: gain, sections (exact form) and b / a (direct form, a[0] = 1); b / a already include the scalar gain, while `sections` do not; dc_gain is the total G_i(0); at_1khz is [|G_i|, arg G_i (rad)] at +1 kHz and excludes the z^-P_i loop delay; shelf(x) = (b0 + b1 z^-1) / (1 - pole z^-1) with b0, b1 from (dc_gain, nyquist_gain, pole) as model_s.shelf; onepole = (1 - pole) / (1 - pole z^-1)"
   },
   "label": "S",
   "source": "\u00a717, \u00a722, \u00a732"
@@ -370,7 +371,7 @@
    ],
    "ap230": {
     "M": 230,
-    "g": -0.7071067812,
+    "g": -0.70710678,
     "b_steps": [
      0.0006883655763122664,
      0.169859,
@@ -378,6 +379,7 @@
      0.499595
     ],
     "form": "H = (-g + z^-M F) / (1 - g z^-M F), F = (1 - b) + b z^-1",
+    "g_note": "use g (the model's FINAL_DIFF g230); the table file's g230 is provenance",
     "b_per_setting": "settings.<key>.ap230_b"
    },
    "form": "all-passes in series, g = -1/sqrt(2); order immaterial (LTI)"
@@ -417,8 +419,8 @@
    "f_ref": 6400.0,
    "g": "10^(-3 P / (fs hi RT))",
    "shelf_dc": "10^(-3 P / fs (1/(dc RT) - 1/(hi RT)))",
-   "hf_pole": "one-pole at f_ref, T = 10^(-3 P / (fs RT) k (1/HF - 1)), p = min(p_law + c max(0, p_law - p0), P_MAX)",
-   "dc_floor": "g r0 >= DC_MIN; the cells' dc_min / beta / gamma and the folds' lfdc / hfdp / pramp / lfrt",
+   "hf_pole": "one-pole at f_ref, T = 10^(-3 P / (fs RT) k (1/HF_e - 1)), HF_e = max(HF, HFRT_MIN / RT), p = min(p_law + c max(0, p_law - p0), P_MAX); the cells' hf_poles / hf_dp override p",
+   "dc_floor": "g r0 >= DC_MIN; the cells' dc_min / beta / gamma and the folds' lfdc / hfdp / pramp / lfrt; the floor_form branch: dd = max(x, fd - c) + c exp(-max(x - fd + c, 0) / tau)",
    "cells": "analysis/loop_cv/hfcells_chain3_cap0.8475_apml/cells.json (dc, dc_min, beta, gamma, gamma_dc, hf_poles, lf_gain, lf_dc, or floor_form)",
    "folds": "analysis/loop_cv/hfcells_chain3_cap0.8475_apml/fold_<RT>.json (gamma, lfdc, hfdp, pramp, lfrt)"
   },
@@ -20338,24 +20340,24 @@
     "ampl": 90,
     "null_vs_model_db": {
      "0-50": [
-      -271.80236652213324,
-      -272.12551276817425
+      -287.1030165548573,
+      -288.8525382790059
      ],
      "50-150": [
-      -256.97684649674045,
-      -259.18706521710806
+      -272.0474460152063,
+      -273.3049403233433
      ],
      "150-300": [
-      -226.30824647782492,
-      -229.56261079251522
+      -242.47516709889905,
+      -246.98050283342207
      ],
      "300-600": [
-      -190.39983805811642,
-      -192.66356124280856
+      -208.2545534485412,
+      -210.36657041691242
      ],
      "600-1000": [
-      -114.37639983205588,
-      -116.50534386860241
+      -133.6944258583096,
+      -135.50201939513053
      ]
     }
    },
@@ -20365,24 +20367,24 @@
     "ampl": 90,
     "null_vs_model_db": {
      "0-50": [
-      -271.65705935010584,
-      -271.89274339014355
+      -286.5166017781768,
+      -288.3630674743191
      ],
      "50-150": [
-      -257.8506473472179,
-      -259.6834691079815
+      -268.95519407840675,
+      -269.72003730826685
      ],
      "150-300": [
-      -241.67378159548593,
-      -243.57491618402292
+      -256.3870560616589,
+      -258.40651396865087
      ],
      "300-600": [
-      -221.50109923855558,
-      -223.56474027629417
+      -239.33966510246557,
+      -241.19517515425542
      ],
      "600-1000": [
-      -181.3021850779681,
-      -183.654512740066
+      -200.75959246034816,
+      -202.8171259319433
      ]
     }
    },
@@ -20392,24 +20394,24 @@
     "ampl": 90,
     "null_vs_model_db": {
      "0-50": [
-      -153.33085708395834,
-      -152.47974048558802
+      -281.0162657680375,
+      -283.5736461237784
      ],
      "50-150": [
-      -149.1333709521773,
-      -148.96906608955956
+      -261.5315272230399,
+      -262.29497975143494
      ],
      "150-300": [
-      -149.04214353865777,
-      -149.04548535591974
+      -252.07811225377407,
+      -252.3503183914761
      ],
      "300-600": [
-      -149.3757368358266,
-      -149.11072585382357
+      -246.05839870854058,
+      -246.18565025614427
      ],
      "600-1000": [
-      -149.1309049005513,
-      -149.23391544771343
+      -237.7131927578986,
+      -238.1647240170825
      ]
     }
    },
@@ -20419,24 +20421,24 @@
     "ampl": 90,
     "null_vs_model_db": {
      "0-50": [
-      -210.44037523551194,
-      -208.28931121298808
+      -283.3432902432684,
+      -285.7761563346127
      ],
      "50-150": [
-      -203.07013058014047,
-      -204.4186624250354
+      -268.51062398565034,
+      -269.76585640358655
      ],
      "150-300": [
-      -195.03543280017809,
-      -194.23844502189
+      -250.9908148441806,
+      -251.77884915871073
      ],
      "300-600": [
-      -191.50666029322485,
-      -192.27035275800876
+      -239.22299417474528,
+      -241.54631797793118
      ],
      "600-1000": [
-      -188.8502113145139,
-      -189.0026699995825
+      -215.65018324798172,
+      -216.8744234013765
      ]
     }
    },
@@ -20446,24 +20448,24 @@
     "ampl": 90,
     "null_vs_model_db": {
      "0-50": [
-      -170.164491639853,
-      -169.71223567575888
+      -279.21537918364254,
+      -281.85959460611747
      ],
      "50-150": [
-      -165.68728937471334,
-      -165.8661685972821
+      -260.56669618172134,
+      -261.42193229503937
      ],
      "150-300": [
-      -165.52917447866582,
-      -165.56670920731975
+      -251.51325316396094,
+      -251.83981041850458
      ],
      "300-600": [
-      -165.64880402118857,
-      -165.6736927688413
+      -245.388331189067,
+      -245.4084681673059
      ],
      "600-1000": [
-      -165.6957354015199,
-      -165.73967280193855
+      -239.88463480363475,
+      -239.87514341081453
      ]
     }
    },
@@ -20473,24 +20475,24 @@
     "ampl": 90,
     "null_vs_model_db": {
      "0-50": [
-      -82.68095618261017,
-      -80.28553951646157
+      -279.0902793401153,
+      -282.1382235675435
      ],
      "50-150": [
-      -75.96650967454421,
-      -76.17650452726377
+      -260.87405126559696,
+      -261.8103583934321
      ],
      "150-300": [
-      -72.42242566314228,
-      -71.52743751386238
+      -251.96007763207558,
+      -252.26347363196695
      ],
      "300-600": [
-      -69.41686933719298,
-      -68.91774493916189
+      -246.25298413306237,
+      -246.3945617122477
      ],
      "600-1000": [
-      -63.939725231108106,
-      -63.77346465401672
+      -241.44734019637644,
+      -241.76621754090573
      ]
     }
    },
@@ -20500,24 +20502,24 @@
     "ampl": 90,
     "null_vs_model_db": {
      "0-50": [
-      -87.98734117379706,
-      -88.74684154997104
+      -278.4547677848591,
+      -281.5350100253311
      ],
      "50-150": [
-      -83.18983669774893,
-      -82.73934909608643
+      -261.0084395517679,
+      -262.02458299873376
      ],
      "150-300": [
-      -80.3077791399786,
-      -77.6813156769469
+      -253.17613750721648,
+      -253.41690448398106
      ],
      "300-600": [
-      -76.16604264198914,
-      -76.08748952243529
+      -249.00327814448818,
+      -249.2637107609009
      ],
      "600-1000": [
-      -72.45979171027516,
-      -71.59550982153112
+      -246.62494465641643,
+      -247.05481180495383
      ]
     }
    },
@@ -20527,24 +20529,24 @@
     "ampl": 90,
     "null_vs_model_db": {
      "0-50": [
-      -173.84216390987018,
-      -172.87622786673037
+      -283.2310035885758,
+      -285.2404249596011
      ],
      "50-150": [
-      -168.46188663344748,
-      -168.17162298430156
+      -264.2062819323442,
+      -264.7397191755274
      ],
      "150-300": [
-      -164.13156048230488,
-      -164.35117570141713
+      -257.7719606016072,
+      -257.90628499843586
      ],
      "300-600": [
-      -161.54573463057008,
-      -161.82028122584356
+      -254.89211618874145,
+      -255.47214955434103
      ],
      "600-1000": [
-      -160.89669879338058,
-      -160.6709542003401
+      -248.34144633982277,
+      -249.0412023144353
      ]
     }
    },
@@ -20554,33 +20556,36 @@
     "ampl": 30,
     "null_vs_model_db": {
      "0-50": [
-      -153.33085708395834,
-      -152.47974048558802
+      -274.9296846917448,
+      -277.0783866658427
      ],
      "50-150": [
-      -149.1333709521773,
-      -148.96906608955956
+      -261.53154357055854,
+      -262.29483461895046
      ],
      "150-300": [
-      -149.04214353865777,
-      -149.04548535591974
+      -252.07811224158957,
+      -252.35031840210777
      ],
      "300-600": [
-      -149.3757368358266,
-      -149.11072585382357
+      -246.05839870854058,
+      -246.18565025614419
      ],
      "600-1000": [
-      -149.1309049005513,
-      -149.23391544771343
+      -237.7131927578986,
+      -238.1647240170825
      ]
     }
    }
   },
-  "note": "device rate, float32, (L, R), input impulse at sample 0, tap 0 at sample 0, direct-tap units. A port must null these sample for sample (float precision). They are the unit structure without the measurement band; nulling against the library model instead needs the band applied, where simulate() is at -71 dB or better (2.0_1.4_1.0: -63.8 dB, the model's 2.48 s FFT grid wraps its tail)"
+  "wav_sample_rate_hz": 26374,
+  "note": "device rate (the exact device_rate_hz; the WAV header is the integer wav_sample_rate_hz), float32, (L, R), input impulse at sample 0, tap 0 at sample 0, direct-tap units: use the listed fitted gains (the AMPL-90 tap is about 1.135, not 1). A port must null these sample for sample (float precision). They are the unit structure without the measurement band or capture-chain terms; the validation null is the reverb path only, because the direct taps' band-limited atoms are measurement-side"
  },
  "validation": {
   "loop_filter_max_rel_error": 2.866631202025759e-15,
-  "simulate_vs_model_worst_null_db": -63.77346465401672,
-  "simulate_note": "time-domain simulate() against q1.Joint.render with the measurement band applied to both, reference settings, 0-1000 ms; the band is library-side"
+  "simulate_vs_model_worst_null_db": -133.6944258583096,
+  "simulate_scope": "reverb path only: the direct path is substituted from q1.Joint.cluster in the check; the reference IRs use the exact taps and gains in direct_path",
+  "simulate_note": "time-domain simulate()'s reverb path against q1.Joint.render with the measurement band applied to both, reference settings, 0-1000 ms; the band and cluster atoms are library-side",
+  "grid_note": "production q1.grid_n(rt) gives Joint.render 2^16 samples (2.48 s) for RT <= 1.4 and 2^17 above, but this validation builds Joint.render on 2^22 samples so the check is not limited by its circular grid. The reference IRs come from simulate(), which is linear and has no such limit"
  }
 }

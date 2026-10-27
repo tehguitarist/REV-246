@@ -67,9 +67,10 @@ def render_ir(rt, lf=None, hf=None, seed=0, secs=None, fs_out=None, ampl=AMPL_RE
     static_params(); q = X_STATIC.copy()
     if lf is not None: q[9] = lf
     if hf is not None: q[10] = hf
-    kern = E.kernels([r for r in E.RTS if r >= 1.0])
     if chain == "device":
         k = np.zeros(18); k[16:18] = L_KERNEL; kern = [k, k.copy()]
+    else:
+        kern = E.kernels([r for r in E.RTS if r >= 1.0])
     prm = dict(DEF) | ADOPTED | dict(f=LFO_RATE[lfo], ampl_scale=ampl / AMPL_REF)
     if law == "random":
         prm = dict(DEF) | ADOPTED_13 | dict(f=LFO_RATE[lfo], ampl_scale=ampl / AMPL_REF)

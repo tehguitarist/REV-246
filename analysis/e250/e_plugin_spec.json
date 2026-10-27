@@ -1,12 +1,12 @@
 {
- "program": "E (the EMT 250 program on the 246), docs/EMT250_program.md \u00a711-15",
+ "program": "E (the EMT 250 program on the 246), docs/EMT250_program.md \u00a711-17",
  "device_rate_hz": 26373.626373626375,
  "k0": 64,
  "delays": "integer device samples; positions after R's first direct tap at index k0",
  "rev_gain_db": {
   "value": 0.5,
-  "label": "the reverb's level against the direct tap; the loops.static_read_gain values already include it",
-  "source": "\u00a716.5, \u00a717.5, \u00a717.7"
+  "label": "the reverb's level against the direct tap; already included in loops.static_read_gain and moving_reads.reads amplitudes - do not apply it again to either",
+  "source": "\u00a717.6-17.7"
  },
  "direct_path": {
   "value": {
@@ -76,16 +76,16 @@
  },
  "loop_filter": {
   "value": {
-   "law": "the 246's own: tools/ml_lines.line_coefs(P, rt, lf, hf) / line_resp (shelf + HF pole, HF floor)",
+   "law": "the 246's own: tools/ml_lines.line_coefs(P, rt, lf, hf) then line_resp (shelf + HF pole, HF floor); the panel's LF / HF multiply the loop law",
    "altiverb_family": {
     "lf": 1.49,
     "hf": 0.69,
-    "note": "LF from the 63-500 Hz decay (\u00a716), HF from the 2-12.4 kHz decay (\u00a717), held out"
+    "note": "adopted LF 1.49 / HF 0.69; LF from the 63-500 Hz decay (\u00a716.5), HF from the 2-12.4 kHz decay (\u00a717.3), held out. Earlier \u00a711.2 / \u00a712.4 / \u00a713.6 / \u00a715 values (1.44 / 0.72 and 1.38 / 0.74) are superseded"
    },
    "decay_error_held_out": "0.6-2.1 % per octave, 63 Hz-12.4 kHz (\u00a717)"
   },
   "label": "S",
-  "source": "\u00a711.2, \u00a716-17"
+  "source": "\u00a711.2, \u00a716.5, \u00a717.3"
  },
  "moving_reads": {
   "value": {
@@ -156,6 +156,11 @@
     }
    ],
    "meaning": "nine fixed reads on the loop lines, taken BEFORE the loop filter (v[t] = u[t] - line[t - P], line = G{v}; the static reads take line, after G; \u00a717) (centre = output delay after R's direct tap, loop, signed R and L amplitudes, direct tap = 1), each read at centre + A x triangle(f_j t + phase_j), triangle in [-1, 1], phase independent per read and realisation, rate f_j = f x (1 +- fsd) per read; L reads the same address with its own amplitude, mdel samples later, or mdel + dl_same for the reads whose L and R signs agree (\u00a716.7); integer addresses, no interpolation",
+   "triangle": "wav = 4 abs(frac(f_j t + phase_j) - 0.5) - 1, in [-1, 1]",
+   "speed_spread": "f_j = f x U(1 - fsd, 1 + fsd) per read and realisation (fsd 0.5); phases are independent (common false)",
+   "one_pole": "after summing the reads and before L's offset: y[n] = (1 - mlp) x[n] + mlp y[n-1], mlp = 0.07, applied to both the R and L moving sums",
+   "l_gain": "reads[].L is the final L output amplitude: do NOT multiply L's moving path by gL again. The 1.114 gL applies to the direct path and the static reverb only; the L moving offset is mdel (314), or 315 for reads whose R and L signs agree",
+   "provenance": "the static reads and fixed_reads.json were fitted with render_mean, which omits dl_same and the mlp one-pole; validate the moving part with e_sim.render, not render_mean",
    "superseded_random_reads": {
     "law": "lfo",
     "wave": "tri",
@@ -240,14 +245,17 @@
      "per_loop": 6,
      "gain": 0.28,
      "lo": 300,
-     "hi": 3600
+     "hi": 3600,
+     "share": 0.5
     },
+    "filter_position": "the plugin-faithful reads take the loop line AFTER the loop filter; the adopted fixed reads take v before it",
+    "lfo": "the common triangle's 0.5535 Hz holds with lfo='time'; lfo='samples' adds 0.0005",
     "dwell_s": 0.1,
-    "note": "\u00a714.4-14.5: the UAD plugin's structure; fits E's statistics worse (250 vs 182), a listening alternative"
+    "note": "\u00a714.4-14.5: the UAD plugin's structure; a listening alternative. Its old comparison (250 vs 182) was against the superseded random-read law; the adopted fixed-read law is about 86-91"
    }
   },
   "label": "S (reads, amplitudes, depth: E's low band, held out; speed spread: E's statistics) / H (triangle shape and rate: the UAD plugin)",
-  "source": "\u00a716"
+  "source": "\u00a716-17"
  },
  "output_kernel": {
   "value": {
@@ -255,8 +263,9 @@
     0.77,
     0.23
    ],
+   "taps_offset": 16,
    "rate": "device",
-   "note": "L's output kernel; E has it, the LP lever does not cause it"
+   "note": "L's output kernel, applied to BOTH output channels in the 'device' chain at sample offset 16 (taps 16 and 17); the static reference IRs compensate this 16-sample delay so R's direct tap is at k0. E has it, the LP lever does not cause it"
   },
   "label": "S",
   "source": "\u00a714.1"
@@ -286,9 +295,9 @@
    "source": "\u00a70"
   },
   "LF_HF": {
-   "value": "the 246's LF x / HF x controls through the loop law",
-   "label": "S",
-   "source": "\u00a711.2"
+   "value": "the 246's LF x / HF x controls through the loop law; adopted family values LF 1.49 / HF 0.69",
+   "label": "S (shape) / H (same code)",
+   "source": "\u00a711.2, \u00a716.5, \u00a717.3"
   },
   "AMPL": {
    "value": {
@@ -349,7 +358,8 @@
    "analysis/e250/ref/e_static_rt2.5.wav",
    "analysis/e250/ref/e_static_rt4.5.wav"
   ],
-  "static_ir_note": "render_ir(rt, moving=False, chain='device'), lf / hf the family's, AMPL 80, DELAY 0, LP open; device rate, (L, R)",
+  "wav_sample_rate_hz": 26374,
+  "static_ir_note": "render_ir(rt, moving=False, chain='device'), adopted LF 1.49 / HF 0.69, AMPL 80, DELAY 0, LP open; device rate (the exact device_rate_hz; the WAV header is the integer wav_sample_rate_hz), (L, R), R's tap at index k0; lengths int(secs*FS) with secs = min(3 RT + 0.5, 4.0), so the RT 4.5 reference is truncated at 0.89 RT",
   "targets": {
    "e_ratio": [
     -15.715453576478803,
@@ -446,6 +456,6 @@
     0.017076906945322747
    ]
   },
-  "targets_note": "e_sim.stats of the eight RT >= 1.0 Altiverb presets (leave-one-out residuals); a plugin's E, rendered at those RTs through e_sim.capture's sweep method and the same function, should land within ~1.3-2 x the data's own half-vs-half cost (100)"
+  "targets_note": "e_sim.stats of the eight RT >= 1.0 Altiverb presets; the adopted fixed-read generator lands at about 86-91 (lower is better) against the data's own half-vs-half cost of 100. lobes and lr use leave-one-out residuals; e_ratio and frac use the static model residual"
  }
 }

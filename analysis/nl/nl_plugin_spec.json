@@ -38,7 +38,7 @@
      3
     ]
    },
-   "note": "plain taps, no diffuser, gains on the EARLY law at their tick (4 ms)"
+   "note": "plain taps, no diffuser, gains on the EARLY law at law_tick x 4 ms"
   },
   "label": "S",
   "source": "\u00a79.2-9.3"
@@ -85,7 +85,36 @@
     12192,
     12255
    ],
-   "R_delay": "L - 221",
+   "R_delay": [
+    464,
+    1009,
+    1546,
+    2302,
+    2596,
+    3526,
+    3614,
+    4600,
+    4681,
+    5554,
+    5767,
+    6476,
+    6784,
+    7366,
+    7732,
+    8224,
+    8611,
+    9050,
+    9421,
+    9844,
+    10162,
+    10606,
+    10834,
+    11336,
+    11437,
+    11971,
+    12034
+   ],
+   "R_offset": -221,
    "L_sign": [
     1,
     -1,
@@ -210,6 +239,7 @@
     "value": 1,
     "note": "the whole AP(124) branch (main taps and late) sits this many samples after the table positions re the front taps: the captures' modal offset; with it R's first tap (464 + 1) is where its direct term was measured (465), so no special case is needed"
    },
+   "R_first_direct": 465,
    "R_first_tap": "in captures whose branch is jittered its direct term stays at 465 (\u00a79.4); none at branch = 1"
   },
   "label": "S",
@@ -233,7 +263,7 @@
  "early_law": {
   "value": {
    "tick_s": 0.004,
-   "stage_s": 0.036000000000000004,
+   "stage_s": 0.036,
    "positive": "stage j at tau = 16 + 36 j ms, front taps at their tick; gain -60 tau / EARLY dB",
    "negative": "last stage at tau_end = SPAN + 12 ms, others 36 ms apart before it; gain +60 (tau - tau_end) / |EARLY| dB",
    "flat": "EARLY 10: 0 dB everywhere"
@@ -339,7 +369,7 @@
   "value": {
    "table": null,
    "form": "none: the plugin's N output is flat to the 12.8 kHz analysis edge",
-   "note": "the 1.0 / 1.85 / 3.0 dB roll-off at 12 / 12.3 / 12.6 kHz that 11.3 first adopted as an EQ is the harness's own 96 kHz -> device-rate resampler (resample_poly 25/91, Kaiser 5; -0.22 / -0.90 / -1.50 / -2.33 / -3.65 dB at 11.5 / 12 / 12.25 / 12.5 / 12.8 kHz, nl_structure.resampler_gain), not a property of the unit: refitted after the clock warp was fixed it matches that filter to 0.05 dB up to 12 kHz. The LOW PASS therefore needs no special 12 kHz shape on N. (The plugin's low-band CaptureEq is the separate model_s_results 27 transfer.) The band-edge term above 10 kHz that the bench applies per capture run (NonLin_program 11.6, hf_corr_g5.json) belongs to the capture chain, not to this spec."
+   "note": "the -0.24 / -1.03 / -1.85 / -3.0 dB roll-off at 11.5 / 12 / 12.3 / 12.6 kHz that 11.3 first adopted as an EQ is the harness's own 96 kHz -> device-rate resampler (resample_poly 25/91, Kaiser 5; -0.22 / -0.90 / -1.50 / -2.33 / -3.65 dB at 11.5 / 12 / 12.25 / 12.5 / 12.8 kHz, nl_structure.resampler_gain), not a property of the unit: refitted after the clock warp was fixed it matches that filter to 0.05 dB up to 12 kHz. The LOW PASS therefore needs no special 12 kHz shape on N. (The plugin's low-band CaptureEq is the separate model_s_results 27 transfer.) The band-edge term above 10 kHz that the bench applies per capture run (NonLin_program 11.6, hf_corr_g5.json) belongs to the capture chain, not to this spec."
   },
   "label": "S",
   "source": "\u00a711.3, \u00a711.6"
@@ -519,10 +549,10 @@
    "strength": 0.7,
    "use": "kernel = delta + strength * (taps - delta), per channel (the stored taps are the fitted, strength 1 kernel)",
    "applies_to": "the whole AP(124) branch (main taps, R's first-tap direct term, late section); not the front taps",
-   "reference_irs": "kernel-free: analysis/nl/ref/*.wav come from simulate(), which omits this kernel. Null a kernel-on port with the kernel bypassed, or expect about -55 dB against these files; the port's own reference should be rendered with the kernel and BK_PAD samples of latency",
+   "reference_irs": "kernel-free: analysis/nl/ref/*.wav come from simulate(), which omits this kernel. Null a kernel-on port with the kernel bypassed, or expect about -59 dB worst on these six settings (-62 dB median) against these files; the port's own reference should be rendered with the kernel and BK_PAD samples of look-ahead (nl_model.render applies it zero-latency via a -BK_PAD roll)",
    "latency_samples": 40,
-   "status": "adopted (27 Oct 2026; refitted and set to strength 0.7 under the long-kernel clock warp, NonLin_program 11.5-11.6): 0.05-0.15 / 0.15-0.3 / 0.3-0.6 s medians -58.7 / -57.6 / -52.2 dB (1,044 captures held out; the 0.65 kernel on the old warp gave -58.4 / -57.3 / -52.0), no channel-window worse than the previous adopted bench by more than +0.07 dB (0.0-0.6 s); against the same bench without the kernel the worst loss is +0.81 dB (22 channel-windows over +0.5 at 0.05-0.15 s); strength 0.5 keeps that within +0.5 dB",
-   "note": "deviations from a unit tap are <= 0.0007 (-63 dB): inaudible, only for null-level fidelity; centred, so a plugin needs BK_PAD samples of look-ahead or the same delay on the front taps"
+   "status": "adopted (27 Oct 2026; refitted and set to strength 0.7 under the long-kernel clock warp, NonLin_program 11.5-11.6): 0.05-0.15 / 0.15-0.3 / 0.3-0.6 s medians -58.7 / -57.6 / -52.2 dB (1,044 captures held out; the 0.65 kernel on the old warp gave -58.4 / -57.3 / -52.0), no channel-window worse than the previous adopted bench by more than +0.07 dB (0.0-0.6 s); against the same bench without the kernel the worst loss is +0.81 dB (22 channel-windows over +0.5 at 0.05-0.15 s, plus 2+2 at 0.15-0.3 / 0.3-0.6 s); the strength-0.5 screen used a 151-capture subset and was not benched in full; the medians mix L and R",
+   "note": "deviations from a unit tap are <= 0.00073 (-62.8 dB): inaudible, only for null-level fidelity; centred, so a plugin needs BK_PAD samples of look-ahead or the same delay on the front taps"
   },
   "label": "S (measured, held out) / H (cause: the main taps' read)",
   "source": "\u00a711.5"
@@ -603,21 +633,28 @@
    "source": "\u00a70"
   }
  },
- "per_capture_only": "branch offset o (0 in the plugin), clock, gain",
- "cost_per_sample": "per channel: 3 front + up to 27 main taps, 3 + 1 all-passes (124 shared, 180/188, 314), 3 loops, 12 reads",
+ "per_capture_only": "branch offset o = 1 in the plugin/reference IRs (0 = the bench frame), front-tap trim shift, clock, gain",
+ "cost_per_sample": "per channel: 3 front + up to 27 main taps, 4 all-passes total (AP124 shared; AP180 L / AP188 R; AP314), 3 loops, 12 reads",
  "references": {
-  "0.0_10.0_1.0": "analysis/nl/ref/nl_0.0_10.0_1.0.wav",
-  "0.2_1.0_1.0": "analysis/nl/ref/nl_0.2_1.0_1.0.wav",
-  "0.5_-1.0_2.0": "analysis/nl/ref/nl_0.5_-1.0_2.0.wav",
-  "0.3_3.0_0.0": "analysis/nl/ref/nl_0.3_3.0_0.0.wav",
-  "0.4_-3.0_0.6": "analysis/nl/ref/nl_0.4_-3.0_0.6.wav",
-  "0.1_0.3_1.4": "analysis/nl/ref/nl_0.1_0.3_1.4.wav",
-  "check": "simulate() = the bench model to -136 dB on these settings"
+  "files": {
+   "0.0_10.0_1.0": "analysis/nl/ref/nl_0.0_10.0_1.0.wav",
+   "0.2_1.0_1.0": "analysis/nl/ref/nl_0.2_1.0_1.0.wav",
+   "0.5_-1.0_2.0": "analysis/nl/ref/nl_0.5_-1.0_2.0.wav",
+   "0.3_3.0_0.0": "analysis/nl/ref/nl_0.3_3.0_0.0.wav",
+   "0.4_-3.0_0.6": "analysis/nl/ref/nl_0.4_-3.0_0.6.wav",
+   "0.1_0.3_1.4": "analysis/nl/ref/nl_0.1_0.3_1.4.wav"
+  },
+  "wav_sample_rate_hz": 26374,
+  "note": "device rate (the exact device_rate_hz; the WAV header is the integer 26,374 Hz), float32, (L, R), input impulse at sample 0, main-tap units; kernel-free and branch = 1. Null them with the adopted branch read kernel bypassed, or render the port's own reference with the kernel and BK_PAD samples of look-ahead"
+ },
+ "validation": {
+  "simulate_vs_model_worst_null_db": -136.24351785513983,
+  "note": "simulate() = the bench model to -136 dB on these settings (nl_model.render, band=False, proc=False, branch = 1)"
  },
  "not_resolved": [
-  "the -45 dB dense residual of the early section (\u00a79.5)",
-  "late gains below about -55 dB run 6-12 dB above the law (\u00a711)",
-  "SPAN and LATE steps between the library's, DELAY, LOW PASS",
+  "the remaining early-section residual after the deconvolution response and branch read kernel (\u00a79.5, \u00a711)",
+  "late gains below about -55 dB run 6-12 dB above the law (\u00a710.1; \u00a711.6 reports 3-5 dB below)",
+  "SPAN steps between 0.1, LATE beyond 2.0, DELAY, LOW PASS",
   "the per-capture branch offset's cause (\u00a79.4)"
  ]
 }

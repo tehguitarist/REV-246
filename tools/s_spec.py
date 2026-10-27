@@ -5,18 +5,21 @@ IRs to check a port against (docs/model_s_results.md §17, §38.1; docs/NEXT_STE
 
 Writes analysis/s/s_plugin_spec.json (every delay, coefficient, table and tap of the adopted baseline, each with its
 label and source section) and analysis/s/ref/s_<LF>_<RT>_<HF>[_amp<N>].wav (device rate 26,373.6 Hz, float32, (L, R),
-the input impulse at sample 0, tap 0 at sample 0, direct-tap units: the AMPL-90 cluster tap = 1).
+the input impulse at sample 0, tap 0 at sample 0, direct-tap units: the listed fitted cluster gains, whose AMPL-90
+value is about 1.135, not 1).
 
 The model is the adopted baseline: EMT_KERNEL=chain3, EMT_PMAX=0.8475, EMT_HFRT_MIN=0.12, the AP230 table
 ap230_mltable.json, the loop_cv fold set hfcells_chain3_cap0.8475_apml and pulse_check's default compact fit. The
 resolved loop filters are checked against q2.final_G's PB / R_i for every setting, and simulate() is checked against
 q1.Joint.render with the measurement band applied (the band is library-side and not part of the spec).
 
-    simulate(n, setting) -> the unit at device rate, (n, 2): direct taps + [tap injection -> four loops -> AP20 -> AP72
-    -> AP230(damping b)] -> sum. No analysis band (q1.LFBAND), no capture-chain kernel, no sub-100 Hz capture transfer,
-    no output kernel: those belong to the 96 kHz library, not to the unit. The plugin's own analogue chain (converter
-    filters, sample-and-hold, 20 Hz high-pass, L half a sample late) is separate and follows this spec.
+    simulate(n, loops, cluster_gains, b230, ampl=90) -> the unit at device rate, (n, 2): direct taps + [tap injection ->
+    four loops -> AP20 -> AP72 -> AP230(damping b)] -> sum. No analysis band (q1.LFBAND), no capture-chain kernel, no
+    sub-100 Hz capture transfer, no output kernel: those belong to the 96 kHz library, not to the unit. The plugin's own
+    analogue chain (converter filters, sample-and-hold, 20 Hz high-pass, L half a sample late) is separate and follows
+    this spec.
 """
+import contextlib
 import copy
 import json
 import os
@@ -28,7 +31,13 @@ os.environ["EMT_HFRT_MIN"] = "0.12"
 os.environ.pop("EMT_AP230", None)
 os.environ.pop("EMT_COMPACT", None)
 os.environ.pop("PULSE_CV", None)
+os.environ.pop("PULSE_OUT", None)
 os.environ.pop("EMT_DCFLOOR", None)
+os.environ.pop("EMT_XCORR", None)
+os.environ.pop("EMT_XCORR_FOLD", None)
+os.environ.pop("Q2_CLEAN", None)
+os.environ.pop("Q2_HP", None)
+os.environ.pop("Q2_CHAIN", None)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -47,6 +56,19 @@ FS = q1.FS
 P = [int(v) for v in q1.P]
 S0 = q1.S0
 PRE = q1.PRE
+VALIDATION_GRID = 1 << 22       # validation-only Joint grid; production stays q1.grid_n (2.48 / 4.97 s)
+
+
+@contextlib.contextmanager
+def _validation_grid():
+    old = q1.grid_n
+    q1.grid_n = lambda rt: VALIDATION_GRID
+    try:
+        yield
+    finally:
+        q1.grid_n = old
+
+
 OUT = os.path.join(ROOT, "analysis", "s")
 REF = os.path.join(OUT, "ref")
 AP_G = -0.70710678
@@ -206,7 +228,7 @@ def simulate(n, loops, cluster_gains, b230, ampl=90):
         for c in (0, 1):
             u = np.zeros(n)
             for (loop, ch, delay, sign, _) in TAPS:
-                if loop == i and ch == c:
+                if loop == i and ch == c and delay + S0 < n:
                     u[delay + S0] += sign * ALPHA
             zi, yy, vv = np.zeros(len(a) - 1), y[:, c, i], np.zeros(n)
             for start in range(0, n, Pi):
@@ -251,21 +273,24 @@ def _check(key, loops, b230):
     return G, worst
 
 
-def _check_sim(key, loops, b230, G, n):
-    """simulate() against Joint.render with the measurement band (q1.LFBAND) applied the way the model applies it."""
-    J = q1.Joint([dict(G, files=[dict(y=np.zeros((G["N"], 2)), w=np.ones(G["N"]), amp=90)])])
-    model = J.render(V, G, G["N"], 90)
+def _check_sim(key, loops, b230, G, n, ampl=90):
+    """The reverb path of simulate() against Joint.render with the measurement band (q1.LFBAND) applied. The direct
+    path is substituted from J.cluster (the model's band-limited atoms are measurement-side); the reference IRs carry
+    the exact taps and gains in direct_path instead. The caller may build G on a longer validation grid; production
+    q1.grid_n is 2^16 / 2^17 and the reference IRs come from simulate(), not Joint."""
+    J = q1.Joint([dict(G, files=[dict(y=np.zeros((G["N"], 2)), w=np.ones(G["N"]), amp=ampl)])])
+    model = J.render(V, G, G["N"], ampl)
     gains = np.array([100.0 * V[:4], 100.0 * V[4:8]])
-    sim = simulate(n, loops, gains, b230)
+    sim = simulate(n, loops, gains, b230, ampl=ampl)
     w = 2 * np.pi * np.fft.rfftfreq(n)
     band = np.abs(sosfreqz(q1.LFBAND, worN=w)[1]) ** 2
     plain = np.zeros((n, 2))
     for c in (0, 1):
         for t, gain in zip(ms.CLUSTER[c], gains[c]):
             if t < n:
-                plain[t, c] += gain
+                plain[t, c] += (ampl / 90) * gain
     reverb = np.fft.irfft(np.fft.rfft(sim - plain, axis=0) * band[:, None], n, axis=0)
-    check = reverb + J.cluster(V[:8])[PRE:PRE + n]
+    check = reverb + J.cluster(V[:8])[PRE:PRE + n] * (ampl / 90)
     ref = model[PRE:PRE + n]
     return {f"{a}-{b}": [float(10 * np.log10(np.sum((check[int(a / 1000 * FS):int(b / 1000 * FS), c]
                                                     - ref[int(a / 1000 * FS):int(b / 1000 * FS), c]) ** 2)
@@ -287,9 +312,10 @@ def spec():
     for key, ampl in REF_SETTINGS:
         b230 = _b230(key)
         loops = [dict(loop) for loop in settings[key]["loops"]]
-        G = pc.setting_G(_lab(key), b230, copy.deepcopy(LAW0), FOLDS[_lab(key)["rt"]], CELLS.get(key))
+        with _validation_grid():
+            G = pc.setting_G(_lab(key), b230, copy.deepcopy(LAW0), FOLDS[_lab(key)["rt"]], CELLS.get(key))
         n = G["N"] - PRE
-        nulls = _check_sim(key, loops, b230, G, n)
+        nulls = _check_sim(key, loops, b230, G, n, ampl)
         worst_sim = max([worst_sim] + [v for cc in nulls.values() for v in cc])
         name = f"s_{key}" + (f"_amp{ampl}" if ampl != 90 else "")
         refs[name] = dict(file=f"analysis/s/ref/{name}.wav", setting=key, ampl=ampl, null_vs_model_db=nulls)
@@ -297,8 +323,10 @@ def spec():
     return {
         "program": "S (EMT 246 program S), docs/model_s_results.md §17, §38.1",
         "device_rate_hz": FS,
-        "units": "direct-tap units: the AMPL-90 cluster tap = 1; delays in integer device samples from tap 0; mono in, "
-                 "(L, R) out; the input impulse at sample 0, tap 0 at sample 0",
+        "units": "direct-tap units: the fitted cluster gains listed in direct_path (the AMPL-90 value is about 1.135, "
+                 "not 1; the absolute level is the fit's because the per-capture gains are fitted, so preserve the "
+                 "direct/reverb ratio rather than forcing the cluster tap to 1); delays in integer device samples from "
+                 "tap 0; mono in, (L, R) out; the input impulse at sample 0, tap 0 at sample 0",
         "signal_path": "input -> tap injection -> four parallel loops (filter G_i in the feedback, delay P_i) -> sum -> "
                        "AP(20) -> AP(72) -> AP(230, damping b) -> output; the direct path (four taps per channel) adds in "
                        "parallel. The reverb level does not move with AMPL; the direct path is x AMPL/90",
@@ -309,33 +337,39 @@ def spec():
                             "sample late) is separate and follows this spec",
         "baseline": {"kernel": "chain3", "p_max": q2.P_MAX, "hrt_min": q2.HFRT_MIN, "dc_min": q2.DC_MIN,
                      "beta": q2.FINAL_BETA, "fold_set": os.path.relpath(pc.CV, ROOT),
-                     "compact_fit": pc.COMPACT, "ap230_table": lf_.AP230, "ap230_g": AP230["g230"]},
+                     "compact_fit": pc.COMPACT, "ap230_table": lf_.AP230, "ap230_g": float(AP_G),
+                     "ap230_table_g": float(AP230["g230"])},
         "direct_path": lab(dict(taps={"L": list(ms.CLUSTER[0]), "R": list(ms.CLUSTER[1])},
                                 gains={"L": gains[0].tolist(), "R": gains[1].tolist()},
                                 ampl="direct taps x AMPL / 90; the reverb does not move with AMPL (S's linear cluster law)",
                                 onset="tap 0 at sample 0; the model's band-limited atom is measurement-side"),
-                           "S", "§17, §21 (chain2 refit: L = R within 0.1 %), §38.1"),
+                           "S", "§17, §21 (cluster law: L = R within 0.1 %), §38.1"),
         "injection": lab(dict(taps=[dict(loop=i, channel="LR"[c], delay=int(t) + S0, sign=int(sg), tap=j) for i, c, t, sg, j in TAPS],
                               magnitude=float(ALPHA), format="a sum of signed impulses of magnitude `magnitude` at `delay` samples "
-                                                             "from tap 0, one per loop and channel, added to the loop input",
+                                                             "from tap 0, five per loop and channel (40 taps), added to the loop input",
                               note="fitted, held out by RT; the same shape in every setting, scaled by one magnitude", ),
                          "S (fitted, held out) / H (the physical injection)", "§16-17, §22, §38.1"),
         "loops": lab(dict(P=P, form="y_i[n] = x_i[n] + G_i * (z^-P_i y_i)[n]; G_i is the loop filter in the feedback, "
                                    "stable, 0-3 first-order sections (shelf, gain, one-pole)",
                           loop_filter="settings.<key>.loops[i]: gain, sections (exact form) and b / a (direct form, a[0] = 1); "
+                                      "b / a already include the scalar gain, while `sections` do not; dc_gain is the total "
+                                      "G_i(0); at_1khz is [|G_i|, arg G_i (rad)] at +1 kHz and excludes the z^-P_i loop delay; "
                                       "shelf(x) = (b0 + b1 z^-1) / (1 - pole z^-1) with b0, b1 from (dc_gain, nyquist_gain, pole) "
                                       "as model_s.shelf; onepole = (1 - pole) / (1 - pole z^-1)"),
                      "S", "§17, §22, §32"),
         "diffuser": lab(dict(allpasses=[dict(M=20, g=AP_G), dict(M=72, g=AP_G)],
-                             ap230=dict(M=230, g=float(AP230["g230"]), b_steps=[float(v) for v in AP230["steps"]],
+                             ap230=dict(M=230, g=float(AP_G), b_steps=[float(v) for v in AP230["steps"]],
                                         form="H = (-g + z^-M F) / (1 - g z^-M F), F = (1 - b) + b z^-1",
+                                        g_note="use g (the model's FINAL_DIFF g230); the table file's g230 is provenance",
                                         b_per_setting="settings.<key>.ap230_b"),
                              form="all-passes in series, g = -1/sqrt(2); order immaterial (LTI)"),
                         "S", "§10, §17, §25.14, §38.1"),
         "loop_filter_law": lab(dict(law={str(k): v for k, v in law["lf"].items()}, a=law["a"], f_ref=law["f_ref"],
                                     g="10^(-3 P / (fs hi RT))", shelf_dc="10^(-3 P / fs (1/(dc RT) - 1/(hi RT)))",
-                                    hf_pole="one-pole at f_ref, T = 10^(-3 P / (fs RT) k (1/HF - 1)), p = min(p_law + c max(0, p_law - p0), P_MAX)",
-                                    dc_floor="g r0 >= DC_MIN; the cells' dc_min / beta / gamma and the folds' lfdc / hfdp / pramp / lfrt",
+                                    hf_pole="one-pole at f_ref, T = 10^(-3 P / (fs RT) k (1/HF_e - 1)), HF_e = max(HF, HFRT_MIN / RT), "
+                                            "p = min(p_law + c max(0, p_law - p0), P_MAX); the cells' hf_poles / hf_dp override p",
+                                    dc_floor="g r0 >= DC_MIN; the cells' dc_min / beta / gamma and the folds' lfdc / hfdp / pramp / lfrt; "
+                                             "the floor_form branch: dd = max(x, fd - c) + c exp(-max(x - fd + c, 0) / tau)",
                                     cells="analysis/loop_cv/hfcells_chain3_cap0.8475_apml/cells.json (dc, dc_min, beta, gamma, "
                                           "gamma_dc, hf_poles, lf_gain, lf_dc, or floor_form)",
                                     folds="analysis/loop_cv/hfcells_chain3_cap0.8475_apml/fold_<RT>.json (gamma, lfdc, hfdp, "
@@ -354,16 +388,24 @@ def spec():
         "not_resolved": ["the LOW PASS response and its steps (no library data)", "DELAY steps (always 0 in the library)",
                          "the law between the library's LF / RT / HF steps (H: nearest fold and sampled cell)",
                          "the direct taps' and injection's physical cause (fitted; S's AMPL is a linear cluster law)"],
-        "references": dict(files=refs,
-                           note="device rate, float32, (L, R), input impulse at sample 0, tap 0 at sample 0, direct-tap "
-                                "units. A port must null these sample for sample (float precision). They are the unit "
-                                "structure without the measurement band; nulling against the library model instead needs "
-                                "the band applied, where simulate() is at -71 dB or better (2.0_1.4_1.0: -63.8 dB, the "
-                                "model's 2.48 s FFT grid wraps its tail)"),
+        "references": dict(files=refs, wav_sample_rate_hz=int(round(FS)),
+                           note="device rate (the exact device_rate_hz; the WAV header is the integer "
+                                "wav_sample_rate_hz), float32, (L, R), input impulse at sample 0, tap 0 at sample 0, "
+                                "direct-tap units: use the listed fitted gains (the AMPL-90 tap is about 1.135, not 1). "
+                                "A port must null these sample for sample (float precision). They are the unit structure "
+                                "without the measurement band or capture-chain terms; the validation null is the reverb "
+                                "path only, because the direct taps' band-limited atoms are measurement-side"),
         "validation": dict(loop_filter_max_rel_error=worst_filter,
                            simulate_vs_model_worst_null_db=worst_sim,
-                           simulate_note="time-domain simulate() against q1.Joint.render with the measurement band "
-                                         "applied to both, reference settings, 0-1000 ms; the band is library-side"),
+                           simulate_scope="reverb path only: the direct path is substituted from q1.Joint.cluster in "
+                                          "the check; the reference IRs use the exact taps and gains in direct_path",
+                           simulate_note="time-domain simulate()'s reverb path against q1.Joint.render with the "
+                                         "measurement band applied to both, reference settings, 0-1000 ms; the band "
+                                         "and cluster atoms are library-side",
+                           grid_note="production q1.grid_n(rt) gives Joint.render 2^16 samples (2.48 s) for RT <= 1.4 "
+                                     "and 2^17 above, but this validation builds Joint.render on 2^22 samples so the "
+                                     "check is not limited by its circular grid. The reference IRs come from simulate(), "
+                                     "which is linear and has no such limit"),
     }
 
 

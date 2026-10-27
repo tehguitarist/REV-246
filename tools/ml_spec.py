@@ -145,9 +145,11 @@ def spec(M):
         "device_rate_hz": FS,
         "units": "direct-tap units (unit cluster gain); delays in integer device samples from tap 0; mono in, (L, R) out; "
                  "the input impulse at sample 0",
-        "signal_path": "input -> tap injection -> four coupled lines (filter G_j in the feedback, delay P_j, coupling F) "
-                       "-> sum -> diffuser (all-passes, the last damped by b) -> output kernel; the direct path (four "
-                       "taps per channel) adds in parallel",
+        "signal_path": "static/reference path: input -> tap injection -> four coupled lines (filter G_j in the feedback, "
+                       "delay P_j, coupling F) -> sum -> diffuser (all-passes, the last damped by b) -> output kernel; the "
+                       "direct path (four taps per channel) adds in parallel. The plugin's time-varying path is the "
+                       "read-out form in modulation.application: the diffused input feeds the lines and each channel's "
+                       "taps read u_i; with theta = 0 the two forms are equivalent (ml_variance.core, about -174 dB)",
         "measurement_side": "not in this spec and not in the reference IRs: the 100 Hz-10 kHz analysis band (ml.BAND), "
                             "the capture clock ratio and shift (ml_lines.warp), the per-capture cluster and reverb gains, "
                             "the file fades and usable ends, and the chain3 capture-chain kernel. The plugin's own "
@@ -158,11 +160,18 @@ def spec(M):
                      "hrt_min": mll.HFRT_MIN, "l22_hf": mll.L22_HF, "p_max": mll.P_MAX, "dc_min": mll.DC_MIN, "beta": mll.BETA},
         "lines": lab(dict(P=list(M.P), form="x_j[n] = t_j[n] + G_j * (sum_k F[j,k] x_k)[n - P_j]; the four filters are in "
                                           "settings.<key>.lines (gain, shelf DC gain, HF pole), the shelf pole is the "
-                                          "S law's a = 0.916883 and the Nyquist gain 1",
+                                          "S law's a = 0.916883 and the shelf's Nyquist gain is 1 (the HF one-pole's is "
+                                          "(1 - p) / (1 + p))",
+                           filter_form="G_j = gain * (b0 + b1 z^-1)/(1 - a z^-1) * (1 - p)/(1 - p z^-1), "
+                                       "b0 = (r0 (1 - a) + (1 + a))/2, b1 = (r0 (1 - a) - (1 + a))/2, r0 = shelf_dc; "
+                                       "p = hf_pole and p = 0 bypasses the HF one-pole",
                            law="S's line law at the line's own length: g = 10^(-3 P / (fs hi RT)), shelf DC = 10^(-3 P / fs "
-                               "(1/(dc RT) - 1/(hi RT))), HF one-pole at f_ref with T = 10^(-3 P / (fs RT) k (1/HF - 1)); "
-                               "the caps P_MAX / DC_MIN / BETA and the HF pole curve; L's RT 2.2 floor 0.40 and HFRT_MIN "
-                               "0.12 x the program scale (x2 M, x4 L)",
+                               "(1/(dc RT) - 1/(hi RT))), HF one-pole at f_ref with T = 10^(-3 P / (fs RT) k (1/HF_e - 1)), "
+                               "HF_e = max(HF, HFRT_MIN x program scale / RT); the DC floor lifts g by 10^(-beta lift / 20) "
+                               "and sets the shelf to dc_min / g when g r0 < DC_MIN; the p_max cap is used only when the "
+                               "pole curve is off (ML_POLE_CURVE=0) or a non-default p_max is passed (the adopted curve "
+                               "maps and caps at its own knots / DROP_BACK). L's RT 2.2 floor 0.40 and HFRT_MIN 0.12 x the "
+                               "program scale (x2 M, x4 L)",
                            law_tables={str(k): v for k, v in mll.LAW["lf"].items()}, a=mll.LAW["a"], f_ref=mll.LAW["f_ref"],
                            pole_curve=dict(knots=json.load(open(os.path.join(ROOT, "analysis", "lowband",
                                                                               "chain3_pole_cells_allf.json")))["knots"],
@@ -171,7 +180,8 @@ def spec(M):
                                            fold=json.load(open(os.path.join(ROOT, "analysis", "lowband",
                                                                            "chain3_pole_cells_allf.json")))["fold"],
                                            drop_back=mll.DROP_BACK)),
-                      "S at the library's steps / H between them (nearest RT fold, nearest sampled cell)", "§8, §16, §25.17-20"),
+                       "S at the library's steps / H between them (LF log-interpolated between S's steps; RT and HF "
+                       "continuous; b from the nearest (RT, HF) cell)", "§8, §8.3, §8.7, §16, §25.20"),
         "coupling": lab(dict(F=M.F.tolist(), form="y = h * [C + D * 1^T (I - Lambda F)^-1 T], Lambda = diag(G_j z^-P_j); "
                                                   "F is orthogonal (the bipartite matrix, entries +-1/sqrt(2))"),
                         "S", "§7.3, §9"),
@@ -184,20 +194,23 @@ def spec(M):
                                     for ch in (0, 1) for p, sg, i in zip(np.round(M.pos[ch]), M.sgn[ch], M.loop[ch])],
                               note="the first-pass/read taps, one sum per channel and line; fitted on 6 training "
                                    "settings, held out by setting and AMPL"),
-                         "S", "§7.2-7.4, §22"),
+                         "S", "§7.2-7.4"),
         "diffuser": lab(dict(delays=list(cc.DIFF[prog]), g=float(cc.G_AP),
                              damping="the last all-pass's two-tap loop filter (1 - b) + b z^-1, b per setting in "
-                                     "settings.<key>.b; the step comes from the setting's (RT, HF) cell "
-                                     "(analysis/ml_lines/b_steps.json), one table for M and L",
+                                     "settings.<key>.b; the step comes from the setting's (RT, HF) cell in "
+                                     "analysis/ml_lines/b_steps.json, and the value from the shared table in "
+                                     "analysis/ml_lines/b_steps_ml.json",
                              form="all-passes H = (-g + z^-M F)/(1 - g z^-M F) in series"),
                         "S", "§7.4, §19, §22"),
         "output_kernel": lab(dict(taps=[float(v) for v in M.h], centre=int(M.kh),
                                   note="causal: the kernel's centre tap k_h lands at the cluster tap 0's time, so the "
                                        "reference IRs place cluster tap 0 at sample k_h"),
                              "S", "§7.5, §18, §25"),
-        "modulation": lab(dict(rate_hz=0.83, amplitude_rad=0.21, rms_rad=0.15, measured_rms="0.11-0.14 rad (a = 0.155-0.198)",
-                               form="theta(t) = amplitude sin(2 pi rate t + phase); phase random per capture, a sine "
-                                    "shape is H",
+        "modulation": lab(dict(rate_hz=0.83, amplitude_rad=0.21, rms_rad=0.15,
+                               measured_rms="0.14-0.16 rad (a about 0.21), S by two methods; the stored sim default is "
+                                            "theta_a = 0.155, and ML_THETA_RMS=0.15 gives the adopted depth",
+                               form="theta(t) = amplitude sin(2 pi rate t + phase); phase random per capture; a sine "
+                                    "shape is H, the depth is S",
                                coupling="one angle of both 2x2 blocks: F(theta) = F R(theta) per block, R = [[cos, -sin], "
                                         "[sin, cos]]; F stays orthogonal",
                                application="read-out form: u_i = x + sum_j F(theta)_ji v_j, v_j = G_j u_j delayed P_j; "
@@ -206,7 +219,7 @@ def spec(M):
                                status="always on in the plugin; the static reference IRs are theta = 0. Check the moving "
                                       "part statistically: Tomkin's AMPL pairs decorrelate like theta renders from the "
                                       "first recirculation to 2-4 s (ml_structure.md §9.5-9.7)"),
-                        "S (rate, one angle) / H (sine shape, exact depth and phase)", "§9, §11"),
+                         "S (rate, depth, one angle) / H (sine shape and phase)", "§9.5-9.7"),
         "settings": settings,
         "controls": {
             "RT": lab(dict(values_s=sorted({rt for _, rt, _ in (tuple(map(float, k.split("_"))) for k in M.b)})),
@@ -221,15 +234,17 @@ def spec(M):
             "DELAY": lab("a pure delay of the whole output; the library is all DELAY 0", "H", "operation card"),
             "LOW_PASS": lab("the panel's LOW PASS has no varying files in the library; response unknown", "H", "§7"),
         },
-        "not_resolved": ["theta's shape, exact depth and phase (the sine and 0.15 rad rms are H; 0.11-0.14 rms measured)",
+        "not_resolved": ["theta's shape and phase (the sine is H; the 0.15 rad rms depth is S)",
                          "the LOW PASS response and DELAY steps (no library data)",
-                         "the law between the library's LF / RT / HF steps (H: nearest fold and sampled cell)",
+                         "the law between the library's LF / RT / HF steps (H: LF log-interpolated, RT / HF continuous; "
+                         "b nearest (RT, HF) cell)",
                          "the absolute AMPL scale (per-capture gains are fitted, so the model does not fix it)"],
-        "references": dict(files=refs,
-                           note="device rate, float32, (L, R), input impulse at sample 0, direct-tap units, the output "
-                                "kernel causal so cluster tap 0 is at sample k_h. A port must null these sample for sample "
-                                "(float precision). They are the static (theta = 0) network without the measurement band, "
-                                "where simulate() is at -130 dB or better against ml_lines.Model.parts"),
+        "references": dict(files=refs, wav_sample_rate_hz=int(round(FS)),
+                           note="device rate (the exact device_rate_hz; the WAV header is the integer "
+                                "wav_sample_rate_hz), float32, (L, R), input impulse at sample 0, direct-tap units, the "
+                                "output kernel causal so cluster tap 0 is at sample k_h. A port must null these sample for "
+                                "sample (float precision). They are the static (theta = 0) network without the measurement "
+                                "band, where simulate() is at -130 dB or better against ml_lines.Model.parts"),
         "validation": dict(simulate_vs_model_worst_null_db=worst,
                            simulate_note="time-domain simulate() against ml_lines.Model.parts(band=False) at the reference "
                                          "settings, 0-1000 ms, aligned for the causal output kernel"),

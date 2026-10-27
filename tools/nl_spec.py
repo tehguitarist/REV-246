@@ -16,7 +16,12 @@ from scipy.signal import lfilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-os.environ.setdefault("NL_KERNEL", "0")
+os.environ["NL_KERNEL"] = "0"          # references are the kernel-free device network
+os.environ["NL_BK"] = "0"              # no branch read kernel in the references
+os.environ["NL_WARP2"] = "1"           # the adopted long-kernel warp's kernel metadata
+os.environ["NL_BK_ALPHA"] = "0.7"
+os.environ["NL_BK_LP"] = "11000"
+os.environ.pop("NL_BK_FILE", None)
 import nl_early as ne  # noqa: E402
 import nl_late as nlt  # noqa: E402
 import nl_model as nm  # noqa: E402
@@ -29,7 +34,9 @@ REF = os.path.join(nl.OUT, "ref")
 
 
 def delay(x, d):
-    return np.r_[np.zeros(d), x[:len(x) - d]] if d > 0 else x.copy()
+    if d <= 0:
+        return x.copy()
+    return np.r_[np.zeros(min(d, len(x))), x[:max(len(x) - d, 0)]]
 
 
 def ap(x, M, g=ne.G_AP):
@@ -82,19 +89,21 @@ def spec():
         "units": "a main tap = 1; delays in integer device samples from the input; mono in, (L, R) out",
         "front_taps": lab(dict(L=dict(delay=list(ne.FRONT[0]), amp=list(ne.FRONT_AMP[0]), law_tick=list(ne.FRONT_TICKS[0])),
                                R=dict(delay=list(ne.FRONT[1]), amp=list(ne.FRONT_AMP[1]), law_tick=list(ne.FRONT_TICKS[1])),
-                               note="plain taps, no diffuser, gains on the EARLY law at their tick (4 ms)"), "S", "§9.2-9.3"),
+                               note="plain taps, no diffuser, gains on the EARLY law at law_tick x 4 ms"), "S", "§9.2-9.3"),
         "branch_input": lab(dict(allpass=dict(D=ne.AP_IN, g=ne.G_AP), form="(-g + z^-D) / (1 - g z^-D)"), "S", "§9.2"),
-        "main_taps": lab(dict(L_delay=list(ne.TAPS), R_delay="L - 221", L_sign=ne.SIGNS[0], R_sign=ne.SIGNS[1],
+        "main_taps": lab(dict(L_delay=list(ne.TAPS), R_delay=[t + ne.R_OFF for t in ne.TAPS], R_offset=ne.R_OFF,
+                              L_sign=ne.SIGNS[0], R_sign=ne.SIGNS[1],
                               stages=ne.STAGES, out_allpass=dict(L=ne.AP_OUT[0], R=ne.AP_OUT[1], g=ne.G_AP),
                               branch_delay=dict(value=BRANCH, note="the whole AP(124) branch (main taps and late) sits this many samples after "
                                                 "the table positions re the front taps: the captures' modal offset; with it R's first tap (464 + 1) "
                                                 "is where its direct term was measured (465), so no special case is needed"),
+                              R_first_direct=ne.R_FIRST_DIRECT,
                               R_first_tap="in captures whose branch is jittered its direct term stays at 465 (§9.4); none at branch = 1"),
                          "S", "§9.2"),
         "span": lab(dict(stages_running={str(k): v for k, v in ne.N_STAGES.items()},
                          between_steps="H: a stage runs if its last tap is at least 15-33 ms before SPAN"),
                     "C (library steps) / H (between them)", "§9.2"),
-        "early_law": lab(dict(tick_s=ne.TICK, stage_s=9 * ne.TICK,
+        "early_law": lab(dict(tick_s=ne.TICK, stage_s=round(9 * ne.TICK, 6),
                               positive="stage j at tau = 16 + 36 j ms, front taps at their tick; gain -60 tau / EARLY dB",
                               negative="last stage at tau_end = SPAN + 12 ms, others 36 ms apart before it; gain +60 (tau - tau_end) / |EARLY| dB",
                               flat="EARLY 10: 0 dB everywhere"), "S", "§9.3"),
@@ -106,7 +115,7 @@ def spec():
                                 for P, q in nlt.READS.items()},
                          read_amp=nm.LATE_AMP, late_0="LATE 0: no late section at all (gated)"), "S", "§10"),
         "output_eq": lab(dict(table=None, form="none: the plugin's N output is flat to the 12.8 kHz analysis edge",
-                              note="the 1.0 / 1.85 / 3.0 dB roll-off at 12 / 12.3 / 12.6 kHz that 11.3 first adopted as an EQ is the harness's own "
+                               note="the -0.24 / -1.03 / -1.85 / -3.0 dB roll-off at 11.5 / 12 / 12.3 / 12.6 kHz that 11.3 first adopted as an EQ is the harness's own "
                                    "96 kHz -> device-rate resampler (resample_poly 25/91, Kaiser 5; -0.22 / -0.90 / -1.50 / -2.33 / -3.65 dB at "
                                    "11.5 / 12 / 12.25 / 12.5 / 12.8 kHz, nl_structure.resampler_gain), not a property of the unit: refitted after "
                                    "the clock warp was fixed it matches that filter to 0.05 dB up to 12 kHz. The LOW PASS therefore needs no "
@@ -117,17 +126,18 @@ def spec():
                                        centre=nm.BK_PAD, band_limit_hz=nm.BK_LP, strength=float(nm.BK_ALPHA),
                                        use="kernel = delta + strength * (taps - delta), per channel (the stored taps are the fitted, strength 1 kernel)",
                                        applies_to="the whole AP(124) branch (main taps, R's first-tap direct term, late section); not the front taps",
-                                       reference_irs="kernel-free: analysis/nl/ref/*.wav come from simulate(), which omits this kernel. Null a "
-                                                     "kernel-on port with the kernel bypassed, or expect about -55 dB against these files; the "
-                                                     "port's own reference should be rendered with the kernel and BK_PAD samples of latency",
+                                        reference_irs="kernel-free: analysis/nl/ref/*.wav come from simulate(), which omits this kernel. Null a "
+                                                      "kernel-on port with the kernel bypassed, or expect about -59 dB worst on these six settings "
+                                                      "(-62 dB median) against these files; the port's own reference should be rendered with the kernel "
+                                                      "and BK_PAD samples of look-ahead (nl_model.render applies it zero-latency via a -BK_PAD roll)",
                                        latency_samples=nm.BK_PAD,
                                        status="adopted (27 Oct 2026; refitted and set to strength 0.7 under the long-kernel clock warp, NonLin_program 11.5-11.6): "
                                               "0.05-0.15 / 0.15-0.3 / 0.3-0.6 s medians -58.7 / -57.6 / -52.2 dB (1,044 captures held out; the 0.65 kernel on the old warp "
-                                              "gave -58.4 / -57.3 / -52.0), no channel-window worse than the previous adopted bench by more than +0.07 dB (0.0-0.6 s); against "
-                                              "the same bench without the kernel the worst loss is +0.81 dB (22 channel-windows over +0.5 at 0.05-0.15 s); strength 0.5 "
-                                              "keeps that within +0.5 dB",
-                                       note="deviations from a unit tap are <= 0.0007 (-63 dB): inaudible, only for null-level fidelity; centred, "
-                                            "so a plugin needs BK_PAD samples of look-ahead or the same delay on the front taps"),
+                                               "gave -58.4 / -57.3 / -52.0), no channel-window worse than the previous adopted bench by more than +0.07 dB (0.0-0.6 s); against "
+                                               "the same bench without the kernel the worst loss is +0.81 dB (22 channel-windows over +0.5 at 0.05-0.15 s, plus 2+2 at "
+                                               "0.15-0.3 / 0.3-0.6 s); the strength-0.5 screen used a 151-capture subset and was not benched in full; the medians mix L and R",
+                                        note="deviations from a unit tap are <= 0.00073 (-62.8 dB): inaudible, only for null-level fidelity; centred, "
+                                             "so a plugin needs BK_PAD samples of look-ahead or the same delay on the front taps"),
                                   "S (measured, held out) / H (cause: the main taps' read)", "§11.5"),
         "controls": {
             "DELAY": lab("a pure delay ahead of everything (card: DELAY precedes the early section); the library is all DELAY 0",
@@ -141,11 +151,18 @@ def spec():
                                      "C (these values) / H (beyond 2.0)", "§1, §10"),
             "LOW PASS": lab("applies to N as to the other programs (card: 2-12 kHz)", "C (card) / H (response)", "§0"),
         },
-        "per_capture_only": "branch offset o (0 in the plugin), clock, gain",
-        "cost_per_sample": "per channel: 3 front + up to 27 main taps, 3 + 1 all-passes (124 shared, 180/188, 314), 3 loops, 12 reads",
-        "references": {f"{s}_{e}_{l}": f"analysis/nl/ref/nl_{s}_{e}_{l}.wav" for s, e, l in REF_SETTINGS},
-        "not_resolved": ["the -45 dB dense residual of the early section (§9.5)", "late gains below about -55 dB run 6-12 dB above the law (§11)",
-                         "SPAN and LATE steps between the library's, DELAY, LOW PASS", "the per-capture branch offset's cause (§9.4)"],
+        "per_capture_only": "branch offset o = 1 in the plugin/reference IRs (0 = the bench frame), front-tap trim shift, clock, gain",
+        "cost_per_sample": "per channel: 3 front + up to 27 main taps, 4 all-passes total (AP124 shared; AP180 L / AP188 R; AP314), 3 loops, 12 reads",
+        "references": dict(files={f"{s}_{e}_{l}": f"analysis/nl/ref/nl_{s}_{e}_{l}.wav" for s, e, l in REF_SETTINGS},
+                           wav_sample_rate_hz=int(round(FS)),
+                           note="device rate (the exact device_rate_hz; the WAV header is the integer 26,374 Hz), float32, (L, R), "
+                                "input impulse at sample 0, main-tap units; kernel-free and branch = 1. Null them with the adopted "
+                                "branch read kernel bypassed, or render the port's own reference with the kernel and BK_PAD samples of "
+                                "look-ahead"),
+        "validation": {},
+        "not_resolved": ["the remaining early-section residual after the deconvolution response and branch read kernel (§9.5, §11)",
+                         "late gains below about -55 dB run 6-12 dB above the law (§10.1; §11.6 reports 3-5 dB below)",
+                         "SPAN steps between 0.1, LATE beyond 2.0, DELAY, LOW PASS", "the per-capture branch offset's cause (§9.4)"],
     }
 
 
@@ -163,7 +180,9 @@ def main():
         print(key, f"time-domain simulate vs frequency-domain model: {null:.1f} dB")
         sf.write(os.path.join(REF, f"nl_{key[0]}_{key[1]}_{key[2]}.wav"), y.astype(np.float32), int(round(FS)), subtype="FLOAT")
     s = spec()
-    s["references"]["check"] = f"simulate() = the bench model to {worst:.0f} dB on these settings"
+    s["validation"] = dict(simulate_vs_model_worst_null_db=float(worst),
+                           note=f"simulate() = the bench model to {worst:.0f} dB on these settings "
+                                "(nl_model.render, band=False, proc=False, branch = 1)")
     json.dump(s, open(SPEC, "w"), indent=1)
     print("wrote", SPEC)
 
