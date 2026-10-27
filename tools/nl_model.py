@@ -47,7 +47,8 @@ BK_ALPHA = os.environ.get("NL_BK_ALPHA", str(BK_ALPHA_DEFAULT))
 BENCH = os.path.join(nl.OUT, "bench" + ("" if nl.WIDE else "_narrow") + ("" if EQ else "_noeq") + ("_warp2" if WARP2 else "")
                      + ("_bk" if os.environ.get("NL_BK") == "1" else "")
                      + ("_kf" if os.environ.get("NL_BK") == "1" and os.path.basename(BK_FILE) != "branch_kernel.json" else "")
-                     + (f"_a{float(BK_ALPHA):g}" if os.environ.get("NL_BK") == "1" and float(BK_ALPHA) != 1.0 else ""))
+                     + (f"_a{float(BK_ALPHA):g}" if os.environ.get("NL_BK") == "1" and float(BK_ALPHA) != 1.0 else "")
+                     + (f"_lb{os.environ.get('NL_LOWBAND', '2')}" if os.environ.get("NL_LOWBAND", "2") != "0" else ""))   # NL_LOWBAND (default 2, adopted): tools/lowband_joint.py
 
 
 def late_db(span, early):

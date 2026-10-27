@@ -48,6 +48,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "harness"))
+import lowband_joint  # noqa: E402
 import pulse_check as pc  # noqa: E402
 from core import _band_window, to_device_grid  # noqa: E402
 from defects import DEFECTS  # noqa: E402
@@ -88,6 +89,7 @@ def apply_f(x, H):
     return np.fft.irfft(np.fft.rfft(x, N, axis=0) * (H[:, None] if H.ndim == 1 else H), N, axis=0)[:len(x)]
 
 
+SML_LOWBAND = os.environ.get("SML_LOWBAND") == "1"   # S: the shared sub-100 Hz transfer in full_model (results in s_lowband/, gate_<tag> as usual)
 T_REV = os.environ.get("SML_TREV") == "1"         # tfix: the transfer on the reverb (loop paths) only, not the cluster
 T_PATH = os.environ.get("SML_TPATH", "")           # tfix: "first" = on each loop path's first pass only (not the recirculations)
 
@@ -101,6 +103,9 @@ def full_model(J, v, G, n, amp, mdl, T=None):
     c = mdl - r
     N = 1 << int(np.ceil(np.log2(n + 8192)))
     Pc, Pr = pipeline(N, False)[:, None] * np.ones((1, 2)), pipeline(N, True)[:, None] * np.ones((1, 2))
+    if SML_LOWBAND:                                  # the shared sub-100 Hz transfer of the captures (tools/lowband_joint.py), on the cluster and the reverb
+        H_lb = lowband_joint.response(np.fft.rfftfreq(N, 1 / FS), 1)
+        Pc, Pr = Pc * H_lb, Pr * H_lb
     if T is not None and T_PATH == "first":          # the transfer on each loop path's first pass only (X_i PB, before any
         rf = J.reverb(dict(G, R=[G["PB"]] * len(G["R"])), F_, X_)[:n]   # recirculation; S's first-pass FIR is zero)
         return apply_f(c, Pc) + apply_f(r - rf, Pr) + apply_f(rf, Pr * t_response(T, N))
@@ -362,7 +367,7 @@ def s_stage(workers, only=None, tfix=False, sub=None):
     from concurrent.futures import ProcessPoolExecutor
     d = os.path.join(OUT, (("s_tfixrev" if T_REV else "s_tfix") + (f"_{T_FORM}" if T_FORM else "") + (f"_{T_PATH}" if T_PATH else "") + ("_refit" if T_REFIT else "")) if tfix
                      else ("s_xcorr" + os.environ.get("SML_XTAG", "")) if os.environ.get("EMT_XCORR") else "s")
-    d = os.path.join(OUT, sub) if sub else d
+    d = os.path.join(OUT, sub) if sub else (d + "_lowband" if SML_LOWBAND else d)
     os.makedirs(d, exist_ok=True)
     Ts = {f: fold_T(f) for f in TFOLDS} if tfix else None
     if os.environ.get("SML_SHF") == "1":            # shf scoring: the correction of the other take on every capture

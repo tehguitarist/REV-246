@@ -96,7 +96,12 @@ def processing_response(f):
         win = win * np.sin(np.pi / 2 * np.clip((ff - core.F_LO[0]) / (core.F_LO[1] - core.F_LO[0]), 0, 1)) ** 2
     R = g2 / (g2 + EPS_REL * np.max(np.abs(G), 0) ** 2) * win[:, None]
     R = R / R[np.argmin(np.abs(ff - 1000))]          # unit at 1 kHz (the normalisation is the tap gain's)
-    return np.stack([np.interp(f, ff, R[:, c]) for c in (0, 1)], 1)
+    out = np.stack([np.interp(f, ff, R[:, c]) for c in (0, 1)], 1)
+    lb = int(os.environ.get("NL_LOWBAND", "2"))      # the measured low-band transfer of the captures (tools/lowband_joint.py; complex, so no longer zero phase); 2 = adopted, 0 = off
+    if lb:
+        import lowband_joint
+        out = out * lowband_joint.response(f, lb)
+    return out
 
 
 @functools.lru_cache(maxsize=1)
