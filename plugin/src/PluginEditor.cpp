@@ -1,6 +1,7 @@
 #include "PluginEditor.h"
 
 #include "ui/Design.h"
+#include "ui/HelpText.h"
 
 #include <array>
 #include <cmath>
@@ -39,23 +40,6 @@ constexpr const char* watchedParams[] = {P::id::program, P::id::mix, P::id::pan,
 
 // Holding the DELAY lever for more than a second speeds it up to this many steps (ms) per press, as on the unit.
 constexpr int delayHoldStep = 10;
-
-const char* joyHelp(P::Program p, P::Joy j)
-{
-    const bool n = p == P::Program::n;
-    switch (j)
-    {
-    case P::Joy::lowpass: return "Lowpass: the output low-pass filter, 2 to 12 kHz. Press the lever up or down (hold to repeat), "
-                                 "or use the wheel or drag on the display.";
-    case P::Joy::delay: return "Reflections delay: 0 to 999 ms before the first reflections. Hold for more than a second to speed up.";
-    case P::Joy::ampl: return n ? "Span: how long the early section lasts, 0 to 0.5 s." : "Reflections amplitude: the early reflections' level, 0 to 100 %.";
-    case P::Joy::lf: return n ? "Early RT: the early section's decay slope (negative rises)." : "Decay LF: the multiplier on the decay time at low frequencies.";
-    case P::Joy::rt: return n ? "RT is not used in the non-linear program." : "Decay RT: the reverberation time, in seconds (at 1 kHz).";
-    case P::Joy::hf: return n ? "Late RT: the late section's decay time." : "Decay HF: the multiplier on the decay time at high frequencies.";
-    case P::Joy::count:
-    default: return "";
-    }
-}
 
 // A bottom-bar slot of the given width and left edge, on the bar's button row.
 juce::Rectangle<float> barSlot(float width, float left = 0.0f) { return {left, D::barRowTop, width, D::barRowHeight}; }
@@ -210,7 +194,7 @@ void Rev246Editor::setUpProgramControls()
     {
         const auto& art = programArt[i];
         auto button = std::make_unique<rv::ui::ProgramButton>(images, art.button, art.out, art.in);
-        button->setTooltip(P::programLongName((P::Program)i));
+        button->setTooltip(rv::ui::help::program((P::Program)i));
         button->onClick = [this, i] { selectProgram(i); };
         programButtons.push_back(std::move(button));
         leds.push_back(std::make_unique<rv::ui::Led>(images, art.led, art.ledOn, art.ledOff));
@@ -237,7 +221,7 @@ void Rev246Editor::setUpJoy(int i)
 
 void Rev246Editor::setUpDisplays()
 {
-    programDisplay.setTooltip("Programme: S short, M medium, L long, E the 250 mode, N non-linear.");
+    programDisplay.setTooltip("Programme display: use the wheel or drag to change the program (S short, M medium, L long, E the EMT 250 program, N non-linear), or press the buttons.");
     lowpassDisplay.setTooltip("Lowpass frequency in kHz.");
 
     // Wheel / drag on a display field nudges its value, like the lever below it; Option/Alt-click resets it;
@@ -274,7 +258,7 @@ void Rev246Editor::setUpBarButtons()
         helpButton.setOn(on);
     };
 
-    linkButton.setTooltip("Link (default on): moving the INPUT or OUTPUT fader moves the other by the same number of dB the opposite way, keeping the overall gain.");
+    linkButton.setTooltip(rv::ui::help::link());
     linkButton.onToggle = [this](bool on) { setToggle(P::id::link, on); };
 
     transformerButton.setTooltip("Transformer (default on): the unit with its optional input and output transformers "
@@ -289,9 +273,6 @@ void Rev246Editor::setUpBarButtons()
                             "processing. Only affects the reverb path.");
     formatButton.onToggle = [this](bool on) { setToggle(P::id::sixteenBit, on); };
 
-    stereoButton.setTooltip("Original: the stereo input is summed to the unit's mono input at -6 dB, then panned. "
-                            "TRUE ST: left and right each go through a separate reverb. The original unit is mono in, "
-                            "stereo out, so Original is the default. Only applies with a stereo input and stereo output.");
     stereoButton.onToggle = [this](bool on) { setToggle(P::id::trueStereo, on); };
 
     meterCalIndex = proc.getMeterCal();
@@ -309,13 +290,10 @@ void Rev246Editor::setUpBarButtons()
 
 void Rev246Editor::setUpKnobsAndFaders()
 {
-    panKnob.helpText = "Pan: where the dry signal sits in the stereo field. Double-click or Option/Alt-click to centre; Shift for fine.";
-    widthKnob.helpText = "Width: 0 = mono, 100 = unchanged, 200 = extra wide. Above 100 the bass stays mono. "
-                         "Option/Alt-click for 100; double-click to type; Shift for fine.";
     widthKnob.onDoubleClick = [this] { promptWidthValue(); };
-    mixFader.helpText = "Mix: dry to reverb, 0 to 100 %. Double-click or Option/Alt-click for 100 %; Shift for fine.";
-    inputFader.helpText = "Input level, +12 dB to -infinity. Double-click or Option/Alt-click for 0 dB; Shift for fine.";
-    outputFader.helpText = "Output level, +12 dB to -infinity. Double-click or Option/Alt-click for 0 dB; Shift for fine.";
+    mixFader.helpText = rv::ui::help::mix();
+    inputFader.helpText = rv::ui::help::input();
+    outputFader.helpText = rv::ui::help::output();
 
     // With LINK on, the other gain fader follows; both gains' host gestures stay open until the drag ends.
     inputFader.onUserMove = [this](float o, float n) { if (isOn(P::id::link)) moveLinked(outputFader, o, n); };
@@ -581,8 +559,23 @@ void Rev246Editor::refreshAll()
     stereoButton.setOn(useTrueStereo);
     stereoButton.setLabel(useTrueStereo ? "TRUE ST" : "ORIGINAL");
 
+    refreshStateTips(useTrueStereo);
     refreshJoys(prog);
     presetBar.refresh();
+}
+
+// The tooltips of the controls whose meaning depends on the bus layout and the stereo choice. Rebuilt only when one of
+// those changes, because refreshAll() runs on every parameter change.
+void Rev246Editor::refreshStateTips(bool useTrueStereo)
+{
+    const int key = (stereoAvailable ? 1 : 0) | (widthAvailable ? 2 : 0) | (useTrueStereo ? 4 : 0);
+    if (key == shownTipKey)
+        return;
+    shownTipKey = key;
+    const rv::ui::help::Routing routing{stereoAvailable, widthAvailable, useTrueStereo};
+    stereoButton.setTooltip(rv::ui::help::stereoMode(routing));
+    panKnob.helpText = rv::ui::help::pan(routing);
+    widthKnob.helpText = rv::ui::help::width(routing);
 }
 
 // The levers, funnels and displays. Any parameter change (a MIX drag, say) refreshes the editor, so this skips the
@@ -605,8 +598,8 @@ void Rev246Editor::refreshJoys(P::Program prog)
         funnels[(size_t)i]->setFraction((float)step / (float)P::joyMaxStep((Joy)i));
         funnels[(size_t)i]->setDimmed(!values[(size_t)i].used);
         joysticks[(size_t)i]->setDimmed(!values[(size_t)i].used);
-        joysticks[(size_t)i]->setTooltip(joyHelp(prog, (Joy)i));
-        funnels[(size_t)i]->setTooltip(joyHelp(prog, (Joy)i));
+        joysticks[(size_t)i]->setTooltip(rv::ui::help::joy(prog, (Joy)i));
+        funnels[(size_t)i]->setTooltip(rv::ui::help::joy(prog, (Joy)i));
     }
     lowpassDisplay.setText(0, values[0].text);
     reflectionsDisplay.setText(0, values[1].text);

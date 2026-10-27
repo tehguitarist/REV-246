@@ -50,6 +50,7 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     void parameterChanged(const juce::String&, float) override { needsRefresh = true; } // any thread: only flags
     void timerCallback() override;
     void refreshAll();
+    void refreshStateTips(bool useTrueStereo);
     void refreshJoys(Program);
 
     // Construction steps, in the order the constructor runs them.
@@ -132,6 +133,7 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     juce::Component::SafePointer<juce::AlertWindow> valueDialog; // the open typed-entry dialog, closed with the editor
     std::atomic<bool> needsRefresh{true};
     bool linkedGestureOpen = false;
+    int shownTipKey = -1;                        // what refreshStateTips() last built
     int shownProgram = -1;                       // what refreshJoys() last drew: it only redraws on a change
     std::array<int, rv::params::numJoys> shownSteps{};
     bool stereoAvailable = false; // a stereo in / stereo out bus layout (the stereo button's enable state)

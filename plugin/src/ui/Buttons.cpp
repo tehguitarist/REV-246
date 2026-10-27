@@ -1,5 +1,7 @@
 #include "ui/Buttons.h"
 
+#include "ui/HelpText.h"
+
 namespace rv::ui
 {
 ProgramButton::ProgramButton(ScaledImages& i, layout::Slot slot, layout::Image out, layout::Image in)
@@ -62,7 +64,7 @@ void PowerButton::setOn(bool s)
 
 juce::String PowerButton::getTooltip()
 {
-    return on ? "Power: on. Press to bypass the plugin." : "Power: bypassed. Press to switch the plugin on.";
+    return help::power(on);
 }
 
 void PowerButton::paint(juce::Graphics& g)

@@ -111,7 +111,7 @@
 | `src/dsp/Transformer.h`, `CaptureEq.h` | The optional TRANSFORMER stage: low-band EQ and guessed transformer distortion (see below) |
 | `src/params/` | Parameter IDs (permanent), the joystick step tables (placeholders), the fader scales |
 | `src/presets/` | Preset manager: factory presets (one per programme) and user presets as `.r246preset` XML |
-| `src/PluginEditor.*`, `src/ui/` | The panel; `ui/Layout.h` is generated, `ui/Design.h` holds measured constants |
+| `src/PluginEditor.*`, `src/ui/` | The panel; `ui/Layout.h` is generated, `ui/Design.h` holds measured constants, `ui/HelpText.h` the tooltip texts (program- and layout-aware) |
 | `ui-layout.csv` | The cleaned-up positions from `../ui/Asset positioning.csv` (centres, design space 3495 x 1530) |
 | `tools/build_assets.sh` | Resamples `../ui/*.png` (never modified) to `assets/images/` and regenerates `src/ui/Layout.h` |
 | `installer/` | macOS `.pkg`, Windows NSIS `.exe`, Linux `.deb` builders |
@@ -123,7 +123,14 @@
 The plugin accepts mono in / mono out, mono in / stereo out and stereo in / stereo out. The unit's own algorithm is mono
 in / stereo out, so:
 
-- **Mono out** uses the left side of the reverb (one read-out is enough; the real output taps can revisit this).
+- **Mono out** currently uses the left side of the placeholder engine. Plan once the real read-outs exist: fold the
+  two outputs down as `(L + R) / sqrt(2)` after each channel's output stage. In the Tomkin library L and R are
+  uncorrelated (|rho| < 0.05 in every window from 0 to 1.5 s, S/M/L/N) and carry the same energy to within about 1 dB, so
+  either side alone is as loud as a side of the stereo image, but the fold-down is what the unit gives on a mono bus,
+  with both read-outs' reflections, at the same level (power sum). A plain `(L + R) / 2` would be 3 dB down. Neither
+  channel is better as a single output: the R/L difference is the 0.49-sample (19 µs) lead of R and the capture
+  chain's noise floor, neither of which the plugin models. The second read-out costs a few taps, because the loops
+  are shared, so a separate mono engine is not worth building.
 - **Mono in / stereo out** is the unit's native path.
 - **Stereo in / stereo out** defaults to **ORIGINAL**: the input is summed to the unit's mono input at -6 dB (0.5 x L+R,
   so correlated channels keep their level rather than gaining 6 dB), then the mono reverb feeds both outputs. The

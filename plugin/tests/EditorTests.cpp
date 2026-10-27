@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "ui/HelpText.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -135,4 +136,22 @@ TEST_CASE("snapshot")
     juce::File(path).deleteFile();
     juce::FileOutputStream out{juce::File(path)};
     juce::PNGImageFormat().writeImageToStream(img, out);
+}
+
+TEST_CASE("the tooltips follow the program and the bus layout")
+{
+    namespace help = rv::ui::help;
+    using rv::params::Joy;
+    using rv::params::Program;
+    CHECK(help::joy(Program::s, Joy::ampl).contains("Reflections amplitude"));
+    CHECK(help::joy(Program::n, Joy::ampl).contains("Span"));
+    CHECK(help::joy(Program::n, Joy::rt).contains("not used"));
+    CHECK(help::joy(Program::l, Joy::rt).contains("Valid: 2"));
+
+    help::Routing mono;
+    mono.stereoToStereo = mono.stereoOut = false;
+    CHECK(help::width(mono).contains("needs a stereo output"));
+    CHECK(help::pan(mono).contains("no effect"));
+    CHECK(help::stereoMode(mono).contains("needs a stereo input"));
+    CHECK(help::width(help::Routing{}).contains("0 = mono"));
 }

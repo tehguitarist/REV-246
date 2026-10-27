@@ -203,8 +203,8 @@ void Rev246Processor::processChunk(juce::AudioBuffer<float>& buffer)
     if (trueStereo)
         engines[1].process(b.engineIn1, b.wetL1, b.wetR1, n);
 
-    // Mono out has no read-out of its own: use the left side of the reverb. (Revisit when the algorithm's output
-    // taps are implemented, docs/model_s_results.md.) In true stereo the two sides come from the two engines.
+    // Mono out uses the left side of the reverb for now; with the real read-outs it becomes the (L + R) / sqrt(2)
+    // fold-down (docs/DEVELOPMENT.md, Channel modes). In true stereo the two sides come from the two engines.
     processTransformerOutputs(b, n, trueStereo, stereoOut);
 
     // Stereo width on the wet path. The late-tail decorrelator from the design is not in the chain yet: the placeholder
