@@ -463,6 +463,7 @@ def takefit_stage(workers, only=None):
 # ---------- stage ml ----------
 ML_WINS = ("cluster_gap", "first_pass", "recirc1")
 ML_TFIX = os.environ.get("SML_TFIX") == "1"
+ML_LOWBAND = os.environ.get("ML_LOWBAND") == "1"      # M / L: the shared sub-100 Hz transfer on the model (results in ml_lowband/)
 
 
 def _ml_job(a):
@@ -480,6 +481,8 @@ def _ml_job(a):
     C, R = (sosfiltfilt(ml.BAND, x, axis=0) for x in (Craw, Rraw))
     N = 1 << int(np.ceil(np.log2(n + 4096)))
     P = pipeline(N, True)
+    if ML_LOWBAND:                                  # the shared sub-100 Hz transfer of the captures (tools/lowband_joint.py), per channel
+        P = P[:, None] * lowband_joint.response(np.fft.rfftfreq(N, 1 / FS), 1)
     if ML_TFIX:                                     # S's fixed transfer (both folds averaged) on the M / L model: the chain?
         P = P[:, None] * t_response(0.5 * (fold_T("A") + fold_T("B")), N)
     rows = []
@@ -537,7 +540,7 @@ def ml_stage(progs, every, workers, only=None):
     from concurrent.futures import ProcessPoolExecutor
     import ml_carryover as cc
     import ml_lines as mlines
-    d = os.path.join(OUT, ("ml_tfix" if ML_TFIX else "ml") + mlines.SUFFIX + ("_kf" if os.environ.get("ML_KFIX_FILE") else ""))   # ML_HK / ML_FP / ML_KFIX_FILE: own folder
+    d = os.path.join(OUT, ("ml_tfix" if ML_TFIX else ("ml_lowband" if ML_LOWBAND else "ml")) + mlines.SUFFIX + ("_kf" if os.environ.get("ML_KFIX_FILE") else ""))   # ML_HK / ML_FP / ML_KFIX_FILE: own folder
     os.makedirs(d, exist_ok=True)
     jobs = []
     for p in progs:
@@ -1063,10 +1066,13 @@ GATE_TOL = 0.5                                       # dB a band-window median m
 def gate_stage(workers, tag):
     """pulse_check's gate keys (16 S settings, 8 M / L groups) scored in BANDS: S nulls per band at 50-150 / 150-300 /
     300-600 ms, M / L per band in cluster / gap and first pass, L and R. --tag ref writes the reference (the adopted model);
-    any other tag is PASS / FAIL against it: no band-window median worse by more than GATE_TOL. Run beside
+    any other tag is PASS / FAIL against it: no band-window median worse by more than GATE_TOL. S and M / L run with the shared
+    sub-100 Hz transfer (tools/lowband_joint.py) on, as adopted. Run beside
     pulse_check --stage gate after any model change (its nulls are 100 Hz-10 kHz only). -> analysis/fullband/gate_<tag>/"""
-    global OUT
+    global OUT, SML_LOWBAND, ML_LOWBAND
     from concurrent.futures import ProcessPoolExecutor
+    SML_LOWBAND = ML_LOWBAND = True                  # the gate scores the adopted model: the shared sub-100 Hz transfer on S and M / L (27 October 2026)
+    os.environ["SML_LOWBAND"] = os.environ["ML_LOWBAND"] = "1"
     base = OUT
     OUT = os.path.join(base, f"gate_{tag}")
     try:
