@@ -1151,7 +1151,8 @@ def diffuser_stage(workers, score, maxfev, ext=1700, g460=0.445, gfix=None, ap23
             sc = list(ex.map(_score_job, jobs))
         sub = [dict(key=k, amp=amp, held_out=k not in train, diffuser=name, **lab[k], **r) for k, amp, r in sc]
         rows += sub
-        json.dump(dict(diff=dd, train=train, test=test, split="rt", params=9 + (3 if name == "refit" and gfix is None else 0) + (1 if name == "refit" and dtap else 0), rows=sub, hist=hist),
+        json.dump(dict(diff=dd, train=train, test=test, split="rt", ext=ext,
+                       params=9 + (3 if name == "refit" and gfix is None else 0) + (1 if name == "refit" and dtap else 0), rows=sub, hist=hist),
                   open(os.path.join(OUT, tag + ("" if name == "refit" else "_q1diff") + ".json"), "w"), indent=0)
     np.save(os.path.join(OUT, tag + ".npy"), v)
     print(f"[{tag}] g20 {diff['g20']:+.4f}  g72 {diff['g72']:+.4f}  g230 {diff['g230']:+.4f}  dtap {diff.get('dtap', 0.0):+.4f}; training cost {10 * np.log10(c0):.2f} -> "
@@ -1532,14 +1533,18 @@ FINAL_BETA = 0.019
 def final_injection(ext=1700, compact=None):
     """The final model's parameter vector: cluster gains and tap magnitude of the compact fit (a diffuser-stage run name
     in OUT, default COMPACT), taps without comb partners."""
+    name = compact or COMPACT
+    fit_path = os.path.join(OUT, name + ".json")
+    if os.path.exists(fit_path):
+        # The fit's Joint layout is set by the --ext it was made with; a fit recording another ext would otherwise be
+        # read into the wrong layout. Older fits have no field but were all made at diffuser_stage's 1700 default.
+        ext = int(json.load(open(fit_path)).get("ext", ext))
     q1.EXT = ext
     law = q1.fit_laws(json.load(open(os.path.join(Q1, "loops.json"))))
     law["lf"] = {float(k): x for k, x in law["lf"].items()}
-    # The compact fit's JSON does not record --ext: all adopted fits use 1700 (diffuser_stage's default). A fit made with
-    # another --ext would be read into the wrong Joint layout here; store ext in the fit before relying on that.
     G = branch_spectra(dict(lf=1.0, rt=1.4, hf=1.0), law, [0.0], 0.0, FINAL_DIFF)
     J = q1.Joint([dict(G, files=[dict(y=np.zeros((4096, 2)), w=np.ones(4096), amp=0)])])
-    v_c = np.load(os.path.join(OUT, (compact or COMPACT) + ".npy"))
+    v_c = np.load(os.path.join(OUT, name + ".npy"))
     cl = v_c[:8]                                          # cluster gains of the compact fit
     M_c = tied_map(J, tap_table(), 0.445, "tied")
     a = float(np.linalg.lstsq(M_c[:, 8:].toarray(), v_c - M_c[:, :8] @ cl, rcond=None)[0][0])   # its tap magnitude
