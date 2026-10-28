@@ -2,6 +2,7 @@
 side carries it. Results: docs/model_s_results.md §27.
 
     EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/unit_transfer.py --stage measure|report
+    EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/unit_transfer.py --stage fullband
 
   measure  CLA and the five Altiverb S presets against the S model exactly as pulse_check's units stage (all-RT constants,
            nothing refitted; per IR clock, shift, gain and the 14-number channel FIR on the cluster-only region), in
@@ -16,6 +17,12 @@ side carries it. Results: docs/model_s_results.md §27.
            unit / model per sixth octave 40 Hz-2 kHz over 50-600 ms (complex ratio and coherence, per channel).
            chain3's (and chain2's) own response per sixth octave, normalised the same way -> analysis/unit_transfer/.
   report   tables -> analysis/unit_transfer/report.log
+  fullband the same comparison over the plugin's whole band, 20 Hz-12.3 kHz. The in-band fit is the committed units
+           stage unchanged, so its 100 Hz-10 kHz numbers reproduce units.json / measure.json exactly; bands through
+           10-11 kHz are scored from it, and 11-12.3 kHz from the unfiltered capture against the model with the
+           pipeline's band window (a unit-chain indicator, not a model fit). Nulls are per band (20-40 ... 11-12.3 kHz)
+           and window, per channel, for the plain model and the TRANSFORMER-type transfer variants (bq_CLA,
+           bq_Altiverb RT 1.6, np_CLA) -> fullband.json / fullband.log.
 """
 import argparse, glob, json, os, sys
 
@@ -203,6 +210,7 @@ def compact_stage():
 
 
 VARIANTS = ["plain", "chain3", "np_CLA", "bq_CLA", "bq_Altiverb RT 1.6"]
+FB_VARIANTS = ["plain", "np_CLA", "bq_CLA", "bq_Altiverb RT 1.6"]
 
 
 def measure_stage(variants):
@@ -271,16 +279,131 @@ def report_stage():
     open(os.path.join(OUT, "report.log"), "w").write("\n".join(out) + "\n")
 
 
+def band_nulls(y, m, te, bands=None):
+    """Null (dB) per full band and window, per channel, each band relative to its own energy."""
+    import sml_fullband as fb
+    n = min(len(y), len(m))
+    out = {}
+    for (a, b), sos in zip(fb.BANDS, fb.SOS):
+        if bands is not None and f"{a}-{b}" not in bands:
+            continue
+        yb, mb = sosfiltfilt(sos, y[:n], axis=0), sosfiltfilt(sos, m[:n], axis=0)
+        row = {}
+        for w0, w1 in fb.WINS:
+            i0, i1 = PRE + int(w0 / 1000 * FS), min(PRE + int(w1 / 1000 * FS), PRE + int(te * FS), n)
+            if i1 - i0 < int(0.05 * FS):
+                row[f"{w0}-{w1}"] = None
+                continue
+            row[f"{w0}-{w1}"] = [float(10 * np.log10(np.sum((yb[i0:i1, c] - mb[i0:i1, c]) ** 2) / np.sum(yb[i0:i1, c] ** 2)))
+                                 for c in (0, 1)]
+        out[f"{a}-{b}"] = row
+    return out
+
+
+def fullband_stage(variants):
+    """CLA and the Altiverb S presets against the S model over 20 Hz-12.3 kHz, plain and through the transfer variants.
+
+    The in-band fit is the committed units stage unchanged (LFBAND capture, clock / gain, 7-tap channel FIR), so its
+    numbers reproduce analysis/pulse/units.json and analysis/unit_transfer/measure.json. Bands through 10-11 kHz are
+    scored from that fit; 11-12.3 kHz is scored from the unfiltered capture against the same model with the capture
+    pipeline's band window, since LFBAND carries nothing there. That top band is a unit-chain indicator, not a
+    model fit: the S model is calibrated to Tomkin's chain, and the other units' top octave differs."""
+    import altiverb_predict as av
+    import sml_fullband as fb
+    from core import _band_window
+    os.makedirs(OUT, exist_ok=True)
+    q1.EXT = 1700
+    v, law, _ = q2.final_injection(compact=pc.COMPACT)
+    ap = json.load(open(os.path.join(q2.OUT, pc.lf_.AP230)))
+    fold = json.load(open(os.path.join(ROOT, "analysis", "loop_cv", "fold_all.json")))
+    if os.environ.get("EMT_PMAX"):                  # the fold's ramp median exists only for the capped fold sets
+        fold["pramp"] = [float(np.median([json.load(open(p))["pramp"][0] for p in
+                                          glob.glob(os.path.join(ROOT, "analysis", "loop_cv", f"cap{os.environ['EMT_PMAX']}_folds", "fold_*.json"))])), 0.62]
+    irs = [("CLA", 1.0, av.cla_h())] + [(f"Altiverb RT {k}", rt, av.altiverb_h(k)[0]) for k, rt in av.PRESETS.items()]
+    res = {"bands": fb.BNAME, "wins": [f"{a}-{b}" for a, b in fb.WINS], "irs": {}}
+    for name, rt, h in irs:
+        G = pc.setting_G(dict(lf=1.0, rt=rt, hf=0.9), ap["steps"][0], law, fold, None)
+        hs = h * (np.sign(h[PRE].sum()) or 1.0)
+        yb = sosfiltfilt(q1.LFBAND, hs, axis=0)     # the clock / gain fit keeps the in-band method
+        n = min(len(yb) - 600, G["N"])
+        J = q1.Joint([dict(G, files=[dict(y=np.zeros((n, 2)), w=np.ones(n), amp=80)])])
+        m0 = J.render(v, G, n, 80)
+        N = 1 << int(np.ceil(np.log2(n + 8192)))
+        Hwin = _band_window(np.fft.rfftfreq(N, 1 / FS))[:, None] * np.ones((1, 2))
+        top = {fb.BNAME[-1]}
+        res["irs"][name] = {"rt": rt}
+        for vn in variants:
+            H = variant_H(vn)
+            mdl = m0 if H is None else through(m0, H)
+            eg, shg, gain = av.fit_clock(yb, mdl, starts=[98.4] if name == "CLA" else [42.8])
+            y = q1.apply_clock(yb, eg, shg)[:n] / gain      # the in-band fit, exactly as the units stage
+            mdl2, fir = av.channel_fir(y, mdl)
+            eg2, shg2, gain2 = av.fit_clock(yb, mdl2, starts=[eg])
+            y2 = q1.apply_clock(yb, eg2, shg2)[:n] / gain2  # in-band score
+            yf = q1.apply_clock(hs, eg2, shg2)[:n] / gain2  # top band: unfiltered capture
+            te = min(1.5, q2.comp_end(y2, np.ones_like(y2)))
+            mw = fb.apply_f(mdl2, Hwin)                     # top band: the model with the pipeline's window
+            null = band_nulls(y2, mdl2, te, [b for b in fb.BNAME if b not in top])
+            null.update(band_nulls(yf, mw, te, top))
+            res["irs"][name][vn] = dict(eps_ppm=eg2, gain_db=float(20 * np.log10(gain2)), t_end=te,
+                                        null=null, fir=[np.round(x, 4).tolist() for x in fir],
+                                        null_narrow=q1.nulls(y2, mdl2, te, q2.W_COMP[:6], narrow=True),
+                                        null_oct=oct_nulls(y2, mdl2, te))
+            print(f"{name} {vn}: t_end {te:.2f} s, null R 50-150 ms at 20-40 / 270-400 / 11-12.3 kHz "
+                  + " ".join(f"{res['irs'][name][vn]['null'][b]['50-150'][1]:.1f}" for b in ("20-40", "270-400", "11000-12300")),
+                  flush=True)
+    json.dump(res, open(os.path.join(OUT, "fullband.json"), "w"))
+
+
+def fullband_report():
+    R = json.load(open(os.path.join(OUT, "fullband.json")))
+    units = [u for u in R["irs"] if "rt" in R["irs"][u] and "plain" in R["irs"][u]]
+    lines = ["# CLA / Altiverb against the S model over the full band (tools/unit_transfer.py --stage fullband)", "",
+             "Null R, dB, median of L / R over the six units; per band and window; the plain model and the",
+             "TRANSFORMER-type transfer variants (bq.json's 10 numbers, and the non-parametric CLA transfer).",
+             "No repeat capture: the in-band unit-to-unit floor is about -35 dB; 11-12.3 kHz is a capture-chain floor.",
+             ""]
+    for vn in ["plain"] + [v for v in FB_VARIANTS if v != "plain"]:
+        lines.append(f"## {vn}")
+        lines.append("band         " + " ".join(f"{w:>10}" for w in R["wins"]))
+        for b in R["bands"]:
+            xs = []
+            for w in R["wins"]:
+                v = [np.mean(R["irs"][u][vn]["null"][b][w]) for u in units if R["irs"][u][vn]["null"][b][w]]
+                xs.append(np.median(v) if v else np.nan)
+            lines.append(f"{b:12s} " + " ".join(f"{x:10.1f}" for x in xs))
+        lines.append("")
+    for vn in [v for v in FB_VARIANTS if v != "plain"]:
+        lines.append(f"## improvement over plain, {vn}: median over units of (null variant - null plain), dB")
+        lines.append("band         " + " ".join(f"{w:>10}" for w in R["wins"]))
+        for b in R["bands"]:
+            xs = []
+            for w in R["wins"]:
+                d = [np.mean(R["irs"][u][vn]["null"][b][w]) - np.mean(R["irs"][u]["plain"]["null"][b][w])
+                     for u in units if R["irs"][u][vn]["null"][b][w] and R["irs"][u]["plain"]["null"][b][w]]
+                xs.append(np.median(d) if d else np.nan)
+            lines.append(f"{b:12s} " + " ".join(f"{x:+10.1f}" for x in xs))
+        lines.append("")
+    open(os.path.join(OUT, "fullband.log"), "w").write("\n".join(lines) + "\n")
+    print("\n".join(lines))
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["measure", "compact", "report"], required=True)
+    ap.add_argument("--stage", choices=["measure", "compact", "report", "fullband"], required=True)
     ap.add_argument("--variants", default="plain,chain3", help="measure: comma-separated, from " + ", ".join(VARIANTS))
     o = ap.parse_args()
     if o.stage == "measure":
         measure_stage(o.variants.split(","))
-    if o.stage == "compact":
+        report_stage()
+    elif o.stage == "compact":
         compact_stage()
-    report_stage()
+        report_stage()
+    elif o.stage == "fullband":
+        fullband_stage(FB_VARIANTS)
+        fullband_report()
+    else:
+        report_stage()
 
 
 if __name__ == "__main__":

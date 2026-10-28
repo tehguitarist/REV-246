@@ -2783,6 +2783,38 @@ EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/unit_transfer.py --stag
 - **With its own transfer the S model reaches −53.8 dB on CLA at 50–150 ms (R)**, −49.3 at 150–300, nothing digital refitted, only the 66 transfer values (in-sample for those). Against CLA's noise floor that is still far from §2's ~−70 dB stretch target, but the algorithm itself is at library accuracy on another unit in the first 150 ms. L stays 3–5 dB behind (its channel FIR, §26.2).
 - **Not changed:** any S, M or L model constant (the transfer is outside the algorithm), the gate (it doesn't apply the transfer). Cross-unit nulls in this document are quoted with and without it from here on.
 
+### 27.1 The full band, 20 Hz–12.3 kHz, on the units (`unit_transfer.py --stage fullband`, 28 October 2026) **[S: the in-band unit nulls are unchanged (max |Δ| 0.0000 dB from §27 and `pulse_check --stage units`); S: the 10-number bq transfer improves 20–400 Hz by roughly 4–20 dB but costs 1.3–1.8 dB at 400–800 Hz (1.5–4.0 dB at 800–1600 on CLA); S: the non-parametric CLA transfer improves 20–800 Hz and is neutral above 1.6 kHz (max +0.1 dB), so it is the only whole-band form tried here; H: 11–12.3 kHz is a shared 48 kHz capture-chain floor (≈ −3.6 dB), not a model error]**
+
+```
+EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 8 -- \
+    .venv/bin/python tools/unit_transfer.py --stage fullband        # analysis/unit_transfer/fullband.{json,log}
+```
+
+The in-band path is the committed `units` stage unchanged (LFBAND capture, clock / gain, 14-number channel FIR on the cluster-only region), so every 100 Hz–10 kHz number reproduces `analysis/pulse/units.json` and §27's `measure.json` exactly (max |Δ| 0.0000 dB, all six units, every variant and window). Bands through 10–11 kHz are scored from that fit; 11–12.3 kHz is scored from the unfiltered capture against the same model with the capture pipeline's band window, since `LFBAND` carries nothing there. The captures are the same six: CLA and the five Altiverb S presets.
+
+**Plain S model, null R (median of L / R over the six units), 50–150 ms:** 20–40 −2.6, 40–80 −10.7, 80–160 −17.6, 160–270 −22.8, 270–400 −28.9, 400–800 −36.7, 800–1600 −42.8, 1600–3200 −44.1, 3200–6400 −44.8, 6400–10000 −35.0, 10–11 kHz −29.2, 11–12.3 kHz −3.6 dB. The full band/window table is in `fullband.log`.
+
+**Transfer variants, median (variant − plain), 50–150 ms, dB** (negative = better):
+
+| band | bq_CLA | bq_Altiverb RT 1.6 | np_CLA |
+|---|---|---|---|
+| 20–40 | −4.3 | −4.8 | −1.8 |
+| 40–80 | −10.3 | −20.8 | −11.0 |
+| 80–160 | −15.6 | −17.4 | −13.4 |
+| 160–270 | −15.9 | −13.9 | −18.3 |
+| 270–400 | −5.6 | −6.1 | −12.9 |
+| 400–800 | **+1.3** | **+1.5** | **−6.8** |
+| 800–1600 | +0.5 | +0.6 | −0.4 |
+| 1600–3200 | −0.4 | −0.4 | +0.1 |
+| 3200 Hz–11 kHz | 0.0 | 0.0 | 0.0 |
+| 11–12.3 kHz | 0.0 | 0.0 | 0.0 |
+
+Per unit, the 10-number `bq` at 400–800 costs +1.33 dB (CLA) and +1.48…+1.62 dB (Altiverb), and at 800–1600 +4.02 dB (CLA) and +0.56…+0.88 dB (Altiverb). The 10-number form is therefore **not** a whole-band correction: it helps below 400 Hz and hurts just above it. The non-parametric CLA transfer (`np_CLA`, 66 values) improves every band from 20 to 800 Hz and is neutral above 1.6 kHz (its largest worsening is +0.1 dB at 1600–3200 Hz), so it is the only form tried here that meets a whole-band bar. The §27 prediction that "a third peak would close" the 400–600 Hz gap is confirmed in direction: the compact form's 400–800 error is phase, not just level.
+
+**Top octave.** 11–12.3 kHz sits at ≈ −3.6 dB for every unit and variant, and 10–11 kHz separates CLA (−46.8 dB) from the Altiverb (−28…−29 dB). The S model reaches the cross-take repeat level on Tomkin through 12.8 kHz (§41.5), so this is the other captures' shared 48 kHz chain/top-octave transfer (**H**), not a model error; it is not a fit target.
+
+**Not changed:** any model constant; the base model and Tomkin are untouched. The 10-number `bq` stays the optional TRANSFORMER stage's form (it is a coloration, not a whole-band model correction), and the whole-band candidate for that stage is the non-parametric transfer (66 values), which is not wired in. The gate is unaffected (it does not apply the transfer).
+
 ## 28. The stepped S captures are a capture-processing slip at 100 ms file time; the HF cells re-chosen without them (`tools/loop_read/stepband.py`, `loop_cv.py --retake --tag stepfree`) **[S: a sample slip in 13 files at 99.9 ms from the file's start, not the unit; S: the excess at those settings was mostly the slip; baseline: three HF cells re-chosen on step-free captures (8 settings), all 128 unchanged]**
 
 ```
