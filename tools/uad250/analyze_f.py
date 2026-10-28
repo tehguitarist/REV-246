@@ -68,15 +68,11 @@ def demod_delay(y, x, f):
     def an(a):
         z = hilbert(bandpass(a, f * 0.9, f * 1.1), axis=0)[:, 0]
         return np.abs(z), np.unwrap(np.angle(z * np.exp(-2j * np.pi * f * np.arange(len(z)) / R)))
-    ay, py = an(y)
-    ax, px = an(x)
+    _, py = an(y)
+    _, px = an(x)
     d = -(py - px) / (2 * np.pi * f)
     ifv = f + np.gradient(py) / (2 * np.pi) * R
-    return d, ifv, ay
-
-
-def smooth(v, n):
-    return np.convolve(v, np.ones(n) / n, "same")
+    return d, ifv
 
 
 def f2(v):
@@ -115,7 +111,7 @@ def one(name):
     elif name.startswith("predelay_"):
         t = ev[0]["t"]
         f = 1000.0
-        d, ifv, a = demod_delay(y, x, f)
+        d, ifv = demod_delay(y, x, f)
         i0, i1 = int((t - 0.8) * R), int((t + 0.8) * R)
         db = np.median(d[int((t - 0.6) * R):int((t - 0.05) * R)])
         da = np.median(d[int((t + 0.1) * R):int((t + 0.6) * R)])
@@ -125,7 +121,7 @@ def one(name):
 
     elif name.startswith("delay_L"):
         t = ev[0]["t"]
-        _, ifv, _ = demod_delay(y, x, 1000.0)
+        d, ifv = demod_delay(y, x, 1000.0)
         i0, i1 = int((t - 0.2) * R), int((t + 1.0) * R)
         base = np.median(ifv[int((t - 0.15) * R):int((t - 0.01) * R)])
         print(f"   1 kHz IF before {base:.1f} Hz, during 0.2 s after min/max {ifv[i0:i1].min():.1f} / {ifv[i0:i1].max():.1f} Hz; "
