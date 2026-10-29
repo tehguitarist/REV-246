@@ -129,3 +129,52 @@ if (RV_BUILD_TESTS)
     target_compile_options(REV246Tests PRIVATE ${RV_WARNING_FLAGS})
     add_test(NAME REV246Tests COMMAND REV246Tests)
 endif()
+
+# --- DSP tests -----------------------------------------------------------------------------------
+# A light runner for the reverb engine and its program cores (docs/ENGINE.md, Tests): no editor, no processor, only
+# the JUCE modules the DSP and the parameter tables need, so it builds in a fraction of the full runner's time and memory. RV_DSP_TESTS picks
+# the test files by prefix (tests/dsp/<prefix>*.cpp; empty = all), so a core can be built and tested alone.
+option(RV_BUILD_DSP_TESTS "Build the DSP test runner (tests/dsp/, Catch2 v3)" OFF)
+set(RV_DSP_TESTS "" CACHE STRING "Prefixes of the tests/dsp/*.cpp files to build, separated by ';' (empty = all)")
+if (RV_BUILD_DSP_TESTS)
+    if (NOT TARGET Catch2::Catch2)
+        include(FetchContent)
+        FetchContent_Declare(Catch2
+            GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+            GIT_TAG v3.16.0
+            GIT_SHALLOW TRUE)
+        FetchContent_MakeAvailable(Catch2)
+    endif()
+    enable_testing()
+
+    set(RV_DSP_TEST_SOURCES tests/dsp/main.cpp)
+    if (RV_DSP_TESTS STREQUAL "")
+        file(GLOB RV_DSP_FOUND CONFIGURE_DEPENDS tests/dsp/*Tests.cpp)
+        list(APPEND RV_DSP_TEST_SOURCES ${RV_DSP_FOUND})
+    else()
+        foreach (prefix IN LISTS RV_DSP_TESTS)
+            file(GLOB RV_DSP_FOUND CONFIGURE_DEPENDS tests/dsp/${prefix}*Tests.cpp)
+            list(APPEND RV_DSP_TEST_SOURCES ${RV_DSP_FOUND})
+        endforeach()
+    endif()
+
+    juce_add_console_app(REV246DspTests PRODUCT_NAME "REV246DspTests")
+    target_sources(REV246DspTests PRIVATE src/params/Parameters.cpp ${RV_DSP_TEST_SOURCES})
+    target_include_directories(REV246DspTests PRIVATE src tests)
+    target_compile_definitions(REV246DspTests PRIVATE
+        _USE_MATH_DEFINES
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_STANDALONE_APPLICATION=1
+        RV_REPO_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/.."
+    )
+    target_link_libraries(REV246DspTests PRIVATE
+        juce::juce_audio_formats
+        juce::juce_audio_processors
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags
+        Catch2::Catch2
+    )
+    target_compile_options(REV246DspTests PRIVATE ${RV_WARNING_FLAGS})
+    add_test(NAME REV246DspTests COMMAND REV246DspTests)
+endif()
