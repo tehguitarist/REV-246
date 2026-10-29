@@ -111,7 +111,8 @@ engine also adds analogue hiss calibrated to the spec's 73 dB S/N (H: the intern
   0-2.0 s by 0.2, SPAN: 0-0.5 s).
 - LOW PASS: a guessed device-rate low-pass on the reverb path (H), 12 kHz = exact bypass.
 - N's branch read kernel: on, as the spec adopts it; NL_BK=1 (the main taps' read kernel) stays off.
-- E's LFO: 0.553 Hz sine (the spec's adopted default).
+- E's moving reads: as the spec adopts them (`e_sim.ADOPTED`): rates 0.553 Hz x (1 +- 0.5) per read, a triangle
+  (E's data cannot tell it from a sine; the plan's "sine" was a misreading, corrected 30 October).
 - 16-bit mode adds the analogue hiss (73 dB S/N); FLOAT stays clean.
 - Resampling: the bridge adds no error above -90 dB to the modelled chain over 20 Hz-12.8 kHz; its latency is
   reported.

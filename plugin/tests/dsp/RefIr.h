@@ -34,7 +34,10 @@ inline StereoIr loadWav(const std::string& relative)
 {
     StereoIr ir;
     juce::WavAudioFormat wav;
-    std::unique_ptr<juce::AudioFormatReader> reader(wav.createReaderFor(repoFile(relative).createInputStream().release(), true));
+    auto stream = repoFile(relative).createInputStream(); // null for a missing file: return an empty IR, not a crash
+    if (stream == nullptr)
+        return ir;
+    std::unique_ptr<juce::AudioFormatReader> reader(wav.createReaderFor(stream.release(), true));
     if (reader == nullptr)
         return ir;
     const auto n = (int)reader->lengthInSamples;
