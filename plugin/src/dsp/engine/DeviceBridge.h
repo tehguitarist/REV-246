@@ -60,7 +60,7 @@ class DeviceBridge
     // are split).
     void prepare(double hostRate, int maxBlock)
     {
-        namespace gen = gen::bridge;
+        namespace spec = gen::bridge;
         hostRateHz = hostRate;
         chunk = std::max(1, maxBlock);
         // The sampling grid: host samples per device sample = num / den exactly.
@@ -79,17 +79,17 @@ class DeviceBridge
         const auto phiHalf = halfWidth * hostT;
 
         std::vector<BridgeFilter::Mode> in, out;
-        for (size_t j = 0; j < gen::inPoleRe.size(); ++j)
-            in.push_back({{gen::inPoleRe[j], gen::inPoleIm[j]}, {gen::inResRe[j], gen::inResIm[j]}, gen::inWeight[j]});
-        for (size_t j = 0; j < gen::outPoleRe.size(); ++j)
-            out.push_back({{gen::outPoleRe[j], gen::outPoleIm[j]}, {gen::outResRe[j], gen::outResIm[j]}, gen::outWeight[j]});
+        for (size_t j = 0; j < spec::inPoleRe.size(); ++j)
+            in.push_back({{spec::inPoleRe[j], spec::inPoleIm[j]}, {spec::inResRe[j], spec::inResIm[j]}, spec::inWeight[j]});
+        for (size_t j = 0; j < spec::outPoleRe.size(); ++j)
+            out.push_back({{spec::outPoleRe[j], spec::outPoleIm[j]}, {spec::outResRe[j], spec::outResIm[j]}, spec::outWeight[j]});
 
         const auto devT = 1.0 / deviceRate;
         // The S&H lag's gain at 1 kHz is taken out on the output side, so the chain is unity there.
         const auto w1k = juce::MathConstants<double>::twoPi * 1000.0 * devT;
         const auto lag1k = (1.0 - shPole) / std::abs(std::complex<double>(1.0 - shPole * std::cos(w1k), shPole * std::sin(w1k)));
         // The correction's high-pass: bilinear, corner prewarped (as chain_fix.json's fit).
-        const auto k = std::tan(juce::MathConstants<double>::pi * gen::fixHighPassHz * devT);
+        const auto k = std::tan(juce::MathConstants<double>::pi * spec::fixHighPassHz * devT);
         hpGain = 1.0 / (1.0 + k);
         hpPole = (1.0 - k) / (1.0 + k);
         inFilter.build(in, hostT, hostT, phiHalf, beta, std::max(64, (int)std::ceil(hostT / tableStep)), 1.0);

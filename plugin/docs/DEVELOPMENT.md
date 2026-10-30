@@ -79,7 +79,7 @@
   when the A/D is out of range (`ReverbEngine::takeOverload`; in float mode too: where it would clip), as the unit's
   REG LED did.
 - Latency: the engine's (`ReverbEngine::latency`, `docs/ENGINE.md`): the same for every program, both modes and both
-  engines (111 / 117 / 211 samples at 44.1 / 48 / 96 kHz). The dry and power-off signals are delayed to match.
+  engines (140 / 148 / 272 samples at 44.1 / 48 / 96 kHz). The dry and power-off signals are delayed to match.
 - Display fields other than the program display open a typed-entry dialog on double-click. `params::joyStepFromValue`
   validates the text for the current program and returns a step; `joyInputHint` supplies the unit/range/list shown in
   the dialog. Discrete controls (N's EARLY and LATE included) require an exact step, while RT (S/M/L/E) accepts any

@@ -117,8 +117,9 @@ Where it clips follows **CAL**: CAL sets what 0 VU means in dBFS, and the conver
 sine (at the default -18 dBFS, that's a sine peaking at -9 dBFS). **OVL** lights whenever the converter clips, and in
 FLOAT mode it lights where it would have clipped.
 
-REV-246 reports about 2.5 ms of latency (the conversion to and from the original's own sample rate needs that much
-look-ahead), and your DAW compensates for it. It is the same in every programme and in FLOAT and 16-BIT, so switching
+REV-246 reports about 3 ms of latency (2.8-3.2 ms: the programs share one time grid, set by the one that needs the most
+look-ahead, plus the modelled output filter's correction and the conversion to and from the original's own sample
+rate), and your DAW compensates for it. It is the same in every programme and in FLOAT and 16-BIT, so switching
 never shifts the timing.
 
 **XFMR.** The original could be ordered with balanced input and output transformers, which the manual says raise the

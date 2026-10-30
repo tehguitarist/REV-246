@@ -95,7 +95,7 @@ class AnalogueHiss
                 x ^= x << 13;
                 x ^= x >> 17;
                 x ^= x << 5;
-                const double u = (double)(int32_t)x * (1.0 / 2147483648.0); // [-1, 1)
+                const double u = (double)((std::int64_t)x - (x >> 31 ? 4294967296LL : 0)) * (1.0 / 2147483648.0); // x as two's complement: [-1, 1)
                 const double y = b0 * u + s.z1;                            // transposed direct form II
                 s.z1 = b1 * u - a1 * y + s.z2;
                 s.z2 = b2 * u - a2 * y;

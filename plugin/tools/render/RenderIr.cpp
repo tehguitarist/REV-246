@@ -31,11 +31,14 @@
 #include <juce_core/juce_core.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <sstream>
@@ -254,7 +257,7 @@ int render(const Args& a)
         }
 
     // The file starts at the input's first sample (pre-roll dropped).
-    std::vector<float> ol(l.begin() + (long)pre, l.end()), orr(r.begin() + (long)pre, r.end());
+    std::vector<float> ol(l.begin() + (std::ptrdiff_t)pre, l.end()), orr(r.begin() + (std::ptrdiff_t)pre, r.end());
     if (!writeWav(out, (int)std::lround(fileRate), ol, orr))
     {
         std::fprintf(stderr, "cannot write %s\n", out.c_str());

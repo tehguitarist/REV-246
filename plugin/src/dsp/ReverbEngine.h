@@ -128,7 +128,7 @@ class OutputDelay
         fade = 0;
     }
 
-    void setDelay(int samples) { target = std::clamp(samples, 0, size - 2); }
+    void setDelay(int samples) { target = std::clamp(samples, 0, std::max(0, size - 2)); }
     int delay() const { return target; }
 
     void process(float* l, float* r, int n)
@@ -312,7 +312,11 @@ class ReverbEngine
             c->setModulation(on);
     }
     int maxDeviceBlock() const { return bridge.maxDeviceBlock(); }
-    void processDeviceRate(const float* devIn, float* devL, float* devR, int nDev) { processDevice(devIn, devL, devR, nDev); }
+    void processDeviceRate(const float* devIn, float* devL, float* devR, int nDev)
+    {
+        juce::ScopedNoDenormals noDenormals;
+        processDevice(devIn, devL, devR, nDev);
+    }
 
     // `in` is the mono input; writes `n` samples of the wet signal per channel. Real-time safe.
     void process(const float* in, float* outL, float* outR, int n)

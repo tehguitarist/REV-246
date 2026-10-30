@@ -22,6 +22,13 @@ mono in -> input analogue chain -> [A/D clip, 16-bit mode] -> alignment -> Progr
 - **Mono in, stereo out.** One core per engine; L and R come out at the same device instants. L's half-sample lag
   (the timing PROM's S&H pulses) is the output side's job: evaluate L's interpolation 0.5037 device samples later (the
   library's L - R offset, `../../analysis/plugin_check/REPORT.md` §4: 0.5 plus a fixed L / R chain-delay difference).
+- **No oversampling anywhere** (31 October 2026). The host -> device conversion is exact for the band-limited signal
+  the host samples stand for, and the unit's own input filter is the anti-alias filter: whatever it passes above
+  13.19 kHz folds, as in the unit. The output side reads the analogue output filter's response after the captures'
+  anti-alias sinc, so it adds no images. The A/D clip and the 16-bit cut are non-linear at the device rate, as the
+  unit's were (their folding is part of the sound). The one non-linear stage at the host rate, XFMR, distorts the core
+  flux (the integral of the signal), so its harmonics fall steeply with frequency (0.0001 % at 1 kHz): what could
+  fold from the top octave is far below -120 dB.
 - **The chain correction** (`../../analysis/plugin_check/REPORT_chainfix.md`): the netlists miss the measured chain
   (chain3) in the output filter's skirt above 8 kHz (up to 70°) and by about a degree in the mid band. Per channel, on
   the device samples before the S&H lag, the bridge runs a first-order 1.8 Hz high-pass (H: Tomkin's 6.25 Hz total over
@@ -59,6 +66,7 @@ mono in -> input analogue chain -> [A/D clip, 16-bit mode] -> alignment -> Progr
 | `src/dsp/ReverbEngine.h` | the engine: bridge, the five cores, alignment, program crossfade, DELAY (`OutputDelay`), LOW PASS (`DeviceLowPass`), hiss | phase 4 |
 | `src/dsp/AdcCalibration.h` | the A/D full scale for a CAL setting (`adcFullScaleForZeroVu`) | phase 4 |
 | `tests/dsp/EngineTests.cpp` | the engine end to end at host rates | phase 4 |
+| `tools/render/RenderIr.cpp` | offline renders for the hardware check (`tools/plugin_check.py`), through the engine's offline hooks (`setModulation`, `processDeviceRate`) | phase 5 |
 
 Cores are header-only (or header + one `.cpp` listed in both CMake source lists if one is truly needed). Each part
 touches only its own files; shared files (`ProgramCore.h`, `RefIr.h`, `CMakeLists.txt`, `common.py`) change only in
@@ -73,8 +81,9 @@ the integration step, so the parts can be written in parallel.
   steps. The resolved settings in the spec (S's 128, M's 160, L's 180, ...) are test vectors for that law.
 - `process()` is mono in, (L, R) out, float I/O. Internal state may be float or double, whichever the null bar needs;
   say which and why in the header.
-- Every write into recirculating storage (loop and all-pass delay lines) goes through `ProgramCore::store()`, the
-  one place the 16-bit mode will quantise (phase 3). Non-recirculating taps need not.
+- Every write into recirculating storage (loop and all-pass delay lines) goes through `ProgramCore`'s storage cut
+  (`store()`, or `storeAcc()` / `runShelfPole16()` / `cut16()` for a value held in the accumulator), where the
+  16-bit mode quantises. Non-recirculating taps need not.
 - `latency()` reports any look-ahead (N's centred branch read kernel). Time variance starts from a fixed phase at
   `reset()`, so renders are repeatable.
 - Code reads like the surrounding plugin code: short comments that say what and why, with the spec section in

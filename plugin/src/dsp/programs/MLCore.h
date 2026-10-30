@@ -208,7 +208,7 @@ class MLCore final : public ProgramCore
             }
 
             // theta: a quadrature LFO at 0.83 Hz (renormalised every sample), cos / sin of theta by series (|theta|
-            // <= 0.22 rad: error below 1e-14).
+            // <= 0.184 rad, 0.13 rms: error below 1e-14).
             double c = 1.0, s = 0.0;
             if (modActive)
             {

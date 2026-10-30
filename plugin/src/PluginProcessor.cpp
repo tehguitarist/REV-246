@@ -136,6 +136,8 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
     panRight.setCurrentAndTargetValue(pan.right);
     powerOn.setCurrentAndTargetValue(isOn(*pPower) ? 1.0f : 0.0f);
     transformerOn.setCurrentAndTargetValue(isOn(*pTransformer) ? 1.0f : 0.0f);
+    routeGain.reset(sampleRate, 0.5 * rampSeconds);
+    routeGain.setCurrentAndTargetValue(1.0f);
     // processBlock works in chunks of at most this many samples, so it never has to grow the scratch buffer.
     scratch.setSize(numScratchChannels, maxBlock, false, false, true);
     // VU meter: a first-order RMS integrator. The classic VU reaches 99% in ~300 ms, so tau = 300 ms / ln 100.
@@ -184,16 +186,23 @@ void Rev246Processor::processChunk(juce::AudioBuffer<float>& buffer)
     const bool stereoIn = getTotalNumInputChannels() > 1, stereoOut = getTotalNumOutputChannels() > 1;
     // The original mode (the default, and the only option outside stereo in / stereo out) sums the input to the
     // unit's mono input. True stereo runs one engine per input channel.
-    const bool trueStereo = stereoIn && stereoOut && isOn(*pTrueStereo);
+    const bool wantTrueStereo = stereoIn && stereoOut && isOn(*pTrueStereo);
 
-    // A new routing has no usable state in the second engine: start it silent rather than with an old tail.
-    if (trueStereo != lastTrueStereo)
+    // A routing change dips the processed signal to silence first (routeGain) and happens at the chunk where the dip
+    // has ended. A new routing has no usable state in the second engine: start it silent rather than with an old tail.
+    if (wantTrueStereo == lastTrueStereo)
+        routeGain.setTargetValue(1.0f); // (also: switched back during the dip)
+    else if (routeGain.getTargetValue() > 0.0f)
+        routeGain.setTargetValue(0.0f);
+    else if (!routeGain.isSmoothing())
     {
         engines[1].reset();
         transformers[1].reset();
         engineKey = {}; // a reset may drop the settings: send them again
-        lastTrueStereo = trueStereo;
+        lastTrueStereo = wantTrueStereo;
+        routeGain.setTargetValue(1.0f);
     }
+    const bool trueStereo = lastTrueStereo;
 
     applyParameters();
 
@@ -249,8 +258,9 @@ void Rev246Processor::applyParameters()
         s.rt = joyNumber(program, Joy::rt, stepOf(Joy::rt));
         s.hfX = joyNumber(program, Joy::hf, stepOf(Joy::hf));
         s.sixteenBit = key.sixteenBit;
-        for (auto& e : engines)
-            e.setSettings(s);
+        engines[0].setSettings(s);
+        if (lastTrueStereo) // engine 1 idles otherwise; a switch to true stereo resets it and sends them again
+            engines[1].setSettings(s);
     }
 
     inGain.setTargetValue(gainLinearFromPosition(pIn->load()));
@@ -351,14 +361,15 @@ void Rev246Processor::mixOutput(juce::AudioBuffer<float>& buffer, const BlockBuf
         const auto outputGain = outGain.getNextValue();
         const auto power = powerOn.getNextValue();
         const auto panL = panLeft.getNextValue(), panR = panRight.getNextValue();
+        const auto route = routeGain.getNextValue();
         const auto dryMono = monoSumGain * (b.dryInL[i] + b.dryInR[i]);
         if (stereoOut)
         {
             // True stereo keeps the dry signal's channels; the original mode pans the mono sum as before.
             const auto dryL = trueStereo ? b.dryInL[i] * panL : dryMono * panL;
             const auto dryR = trueStereo ? b.dryInR[i] * panR : dryMono * panR;
-            const auto processedL = ((1.0f - mix) * dryL + mix * wetL[i]) * outputGain;
-            const auto processedR = ((1.0f - mix) * dryR + mix * wetR[i]) * outputGain;
+            const auto processedL = ((1.0f - mix) * dryL + mix * wetL[i]) * outputGain * route;
+            const auto processedR = ((1.0f - mix) * dryR + mix * wetR[i]) * outputGain * route;
             // Power off: the host's signal, delayed only.
             outL[i] = power * processedL + (1.0f - power) * b.dryInL[i];
             outR[i] = power * processedR + (1.0f - power) * b.dryInR[i];

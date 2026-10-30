@@ -142,6 +142,8 @@ class StereoWidener
 
         width.reset(sampleRate, 0.03);
         width.setCurrentAndTargetValue(100.0f);
+        engage.reset(sampleRate, 0.02);
+        engage.setCurrentAndTargetValue(0.0f);
         resetFilters();
     }
 
@@ -150,14 +152,18 @@ class StereoWidener
     {
         w = juce::jlimit(0.0f, 200.0f, w);
         if (snap)
+        {
             width.setCurrentAndTargetValue(w);
+            engage.setCurrentAndTargetValue(w > 100.0f ? 1.0f : 0.0f);
+        }
         else
             width.setTargetValue(w);
     }
 
     void process(float* l, float* r, int n) noexcept
     {
-        if (!width.isSmoothing() && juce::exactlyEqual(width.getTargetValue(), 100.0f))
+        if (!width.isSmoothing() && juce::exactlyEqual(width.getTargetValue(), 100.0f) && !engage.isSmoothing()
+            && engage.getCurrentValue() <= 0.0f)
         {
             releaseFilters();
             return;
@@ -168,7 +174,8 @@ class StereoWidener
         {
             const auto c = std::min(kChunk, n - pos);
             const auto w = width.skip(c);
-            processChunk(l + pos, r + pos, c, w);
+            engage.setTargetValue(w > 100.0f || width.getTargetValue() > 100.0f ? 1.0f : 0.0f);
+            processChunk(l + pos, r + pos, c, w, engage.skip(c));
             pos += c;
         }
     }
@@ -177,7 +184,6 @@ class StereoWidener
     static constexpr int kChunk = 32;          // control-rate update interval (samples)
     static constexpr float kSqrt2 = juce::MathConstants<float>::sqrt2;
     static constexpr float kButterworthQ = 0.70710678f; // 1/sqrt2: two of these in cascade make an LR4
-    static constexpr float kEngage = 0.05f;    // crossfade into the crossover over the first 5% above 100
 
     struct LR4 // Linkwitz-Riley 4th order = two cascaded Butterworth biquads
     {
@@ -198,11 +204,10 @@ class StereoWidener
         float process(float x) noexcept { return b.processSample(a.processSample(x)); }
     };
 
-    // The Mid/Side gains for one width: the high band (all of it when xb = 0) and the low band, and the weight xb of
-    // the crossover path.
+    // The Mid/Side gains for one width: the high band (all of it on the broadband path) and the low band.
     struct Gains
     {
-        float gmH = 1.0f, gsH = 1.0f, gmL = 1.0f, gsL = 1.0f, xb = 0.0f;
+        float gmH = 1.0f, gsH = 1.0f, gmL = 1.0f, gsL = 1.0f;
     };
 
     static Gains gainsFor(float w) noexcept
@@ -220,12 +225,13 @@ class StereoWidener
         const auto thL = thH * (1.0f - u);
         g.gmL = kSqrt2 * std::cos(thL);
         g.gsL = kSqrt2 * std::sin(thL);
-
-        g.xb = juce::jlimit(0.0f, 1.0f, u / kEngage); // 0 = broadband only
         return g;
     }
 
-    void processChunk(float* l, float* r, int n, float w) noexcept
+    // xb: the weight of the crossover path against the broadband one. It fades in time (20 ms) when the width leaves
+    // 100 upwards and back once it returns, never with the width itself: the two LR4 halves sum to an all-pass that is
+    // -1 at the crossover, so a blend held at xb = 0.5 would notch the wet there.
+    void processChunk(float* l, float* r, int n, float w, float xb) noexcept
     {
         if (! juce::exactlyEqual(w, cachedWidth)) // the trig only changes while the width moves
         {
@@ -233,7 +239,6 @@ class StereoWidener
             cachedWidth = w;
         }
         const auto gmH = cachedGains.gmH, gsH = cachedGains.gsH, gmL = cachedGains.gmL, gsL = cachedGains.gsL;
-        const auto xb = cachedGains.xb;
 
         if (xb <= 0.0f)
             releaseFilters();
@@ -277,7 +282,7 @@ class StereoWidener
     }
 
     LR4 mLo, mHi, sLo, sHi;
-    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> width;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> width, engage;
     Gains cachedGains;
     float cachedWidth = -1.0f; // outside 0..200: nothing cached
     bool filtersDirty = false;

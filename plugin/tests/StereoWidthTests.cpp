@@ -160,3 +160,23 @@ TEST_CASE("the late decorrelator is a no-op at amount 0")
     CHECK(l == originalL);
     CHECK(r == originalR);
 }
+
+TEST_CASE("stereo width just above 100 keeps the crossover frequency")
+{
+    // The crossover path fades in over time, not with the width: the LR4 halves sum to an all-pass that is -1 at 150 Hz,
+    // so a width-driven blend held half way (the old 102.5) notched the wet there.
+    const double rate = 48000.0;
+    for (const auto width : {101.0f, 102.5f, 104.0f})
+    {
+        rv::dsp::StereoWidener w;
+        w.prepare(rate);
+        w.setWidth(width);
+        std::vector<float> l(48000), r(48000);
+        for (size_t i = 0; i < l.size(); ++i) // a 150 Hz mid (L = R) signal
+            l[i] = r[i] = 0.25f * (float)std::sin(2.0 * juce::MathConstants<double>::pi * 150.0 * (double)i / rate);
+        const auto in = rms(l, 24000);
+        w.process(l.data(), r.data(), (int)l.size());
+        INFO("width " << width);
+        CHECK(std::abs(20.0f * std::log10(rms(l, 24000) / in)) < 0.5f);
+    }
+}

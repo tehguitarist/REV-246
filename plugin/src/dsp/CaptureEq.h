@@ -9,7 +9,7 @@
 namespace rv::dsp
 {
 // The optional "commercial capture" low-band stage (docs/model_s_results.md §27): CLA's and the Altiverb's IRs share
-// a minimum-phase transfer below ~400 Hz (+3 dB at 40-60 Hz, -0.7 dB at 160 Hz, ripple to 400 Hz) that is in neither
+// a minimum-phase transfer below ~400 Hz (+3 dB at 40-60 Hz, -0.6 dB at 160 Hz, ripple to 400 Hz) that is in neither
 // Tomkin's library nor the stock unit; possibly the manual's transformer option (EMT246_unit_facts.md §2b). Part
 // of the TRANSFORMER stage (Transformer.h), on by default.
 //

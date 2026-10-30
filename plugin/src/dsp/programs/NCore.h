@@ -9,7 +9,7 @@
 //   late         the branch line at the feed -> AP(314) -> three flat loops (1108 / 1254 / 1386) at RT = LATE ->
 //                four signed reads per loop and channel. One late section for both channels: R's feed is 220
 //                samples earlier, which is the same loops read 220 samples nearer
-//   kernel       the branch read kernel (adopted, spec branch_read_kernel): a centred 77-tap FIR per channel on the
+//   kernel       the branch read kernel (adopted, spec branch_read_kernel): a centred 81-tap FIR per channel on the
 //                whole branch (main taps and late, not the front taps); its look-ahead is latency(), the front taps
 //                carry the same delay. setBranchKernel(false) is for the null tests (the reference IRs omit it)
 //
@@ -24,7 +24,7 @@
 // §36.5's scaling A): loop l at 1 - g_l, the input and late all-passes at 1 - |g|, each output all-pass at
 // (1 - |g|) / sum |main tap gains| of its channel, never finer than the A/D's word (k <= 1).
 // Cost per sample: 6 front + up to 54 main taps, 4 all-passes (2 MACs each), 3 loops, 24 reads, and with the kernel
-// 154 MACs more: about 100 MACs without it, about 250 with it.
+// 162 MACs more: about 100 MACs without it, about 260 with it.
 
 #include "dsp/engine/ProgramCore.h"
 #include "dsp/generated/n_spec.h"
@@ -78,7 +78,8 @@ class NCore final : public ProgramCore
         for (size_t i = 0; i < gen::n::libStages.size(); ++i)
             if (gen::n::libStages[i] == ns)
                 return gen::n::libFeed[i];
-        return gen::n::mainDelayL[(size_t)gen::n::stageEnd[(size_t)(ns - 1)]] - 1;
+        jassert(ns > 0); // ns = 0 is a library step (libStages)
+        return gen::n::mainDelayL[(size_t)gen::n::stageEnd[(size_t)std::max(0, ns - 1)]] - 1;
     }
 
     // The EARLY law (spec early_law). EARLY > 0: stage j at tau = 16 + 36 j ms, gain -60 tau / EARLY dB, front taps at
@@ -139,6 +140,7 @@ class NCore final : public ProgramCore
             loops[l].allocate((size_t)loopDelay[l]);
         for (auto& k : kernelHist)
             k.assign(kernelRing, 0.0);
+        static_assert(bkTapsL.size() == bkTapsR.size());
         for (size_t ch = 0; ch < 2; ++ch)           // delta + strength (taps - delta)
         {
             const auto& t = ch == 0 ? bkTapsL : bkTapsR;

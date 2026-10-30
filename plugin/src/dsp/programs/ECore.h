@@ -31,7 +31,7 @@
 // steady full-scale input |v| <= 1 / (1 - max|G|)), all-pass j at 1 - |g_j|.
 // Cost per sample: 6 direct taps, 3 all-passes (2 MACs), 3 loops x 2 runs of G (4 MACs) + the static read, 9 moving
 // reads (2 MACs, a phase step and the triangle, one rounding), the one-poles and the kernel: about 90
-// multiply-adds; measured 23 ns per device sample (0.06 % of one core) on an Apple-silicon Mac, Release.
+// multiply-adds (measured cost: docs/ENGINE.md, Cost).
 
 #include "dsp/engine/ProgramCore.h"
 #include "dsp/generated/e_spec.h"

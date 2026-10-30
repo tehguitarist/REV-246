@@ -332,13 +332,14 @@ TEST_CASE("the programs share one time grid: E's direct tap arrives with M's fir
 
 TEST_CASE("the output is the same for any block size")
 {
+    // 4096 is longer than the prepared 512: the engine splits it itself.
     for (const auto p : programs)
     {
         INFO(name(p));
         auto x = noise(48000, 0.1f, 3);
         std::fill(x.begin() + 4800, x.end(), 0.0f);
         Stereo ref;
-        for (const int block : {512, 1, 37, 300})
+        for (const int block : {512, 1, 37, 300, 4096})
         {
             ReverbEngine e;
             start(e, 48000.0, 512, settingsFor(p, 10.0, 8, 6.0));

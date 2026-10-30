@@ -36,7 +36,8 @@ class ProgramCore
     // Clears all state (delay lines, filters, modulation phase back to its start). Real-time safe.
     virtual void reset() = 0;
     // Recomputes the coefficients for new panel values. Real-time safe: no allocation, no locks; a few hundred
-    // transcendental calls are fine. Takes effect from the next sample; the engine handles any crossfade.
+    // transcendental calls are fine. Takes effect from the next sample, with no smoothing (as the unit's coefficient
+    // loads; docs/ENGINE.md, The engine).
     virtual void setSettings(const Settings& s) = 0;
     // Processes `n` device-rate samples. Real-time safe.
     virtual void process(const float* in, float* outL, float* outR, int n) = 0;
@@ -60,8 +61,7 @@ class ProgramCore
 
     // How a stored value is cut to 16 bits. `toZero` (magnitude truncation, not in s_loops_fx.c) is the default (user,
     // 30 October): floor and nearest leave frozen tails louder than the unit's noise spec. `floor` is s_loops_fx.c's
-    // truncation (mode 1, the TMS32010's SACH); `nearest` its rounding (mode 2, + half an LSB first); `toZero` magnitude truncation (not in
-    // s_loops_fx.c). floor and nearest are bit-exact against s_loops_fx.c (tests/dsp/SixteenBitTests.cpp). Measured
+    // truncation (mode 1, the TMS32010's SACH); `nearest` its rounding (mode 2, + half an LSB first). floor and nearest are bit-exact against s_loops_fx.c (tests/dsp/SixteenBitTests.cpp). Measured
     // there: with floor or nearest a loop can end in a dead band that holds a frozen, loop-periodic pattern for ever
     // after the input stops (S at HF 1.0, M / L / E at long RT); toZero always decays to 0. Which one the unit used is
     // H. Real-time safe.
@@ -78,8 +78,8 @@ class ProgramCore
     // ---- 16-bit storage (docs/ENGINE.md, 16-bit; tools/loop_read/c/s_loops_fx.c; model_s_results §36.5) ----
     // The unit stores every intermediate result as a 16-bit word (unit facts §2, C: 32-bit accumulate, 16-bit
     // storage). As s_loops_fx.c: products are summed in the (wide) accumulator, and each stored value is the
-    // accumulator cut to 16 bits by truncation (floor: the TMS32010's SACH; S, §36.5: only truncation reproduces the
-    // spec's 15 dB REVERB noise penalty at a no-overflow scaling) and saturated at -32768...32767 (s_loops_fx.c's
+    // accumulator cut to 16 bits (setStorageCut: toZero by default; floor is the TMS32010's SACH, and S, §36.5: only
+    // truncation reproduces the spec's 15 dB REVERB noise penalty at a no-overflow scaling) and saturated at -32768...32767 (s_loops_fx.c's
     // store(); H: that the firmware runs the TMS32010 in overflow (saturation) mode rather than letting words wrap).
     //
     // A storage group's internal gain k (the stored word = k x the A/D word for the same signal) is the core's
