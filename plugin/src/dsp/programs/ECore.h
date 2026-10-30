@@ -24,6 +24,11 @@
 // Precision: the recirculating storage (the all-passes' and the loops' delay lines, written through
 // ProgramCore::store) and the input line are float; every coefficient, filter state and sum is double. The reference
 // IRs are float32 renders of a double model; tests/dsp/ETests.cpp reports where float storage puts the null.
+// 16-bit mode (Settings::sixteenBit; S's scheme, model_s_results §36.5, ProgramCore): the all-pass and loop writes and
+// the feedback filter's two stored outputs (shelf with the gain folded in, then HF one-pole: ProgramCore::ShelfPole16)
+// are truncated, saturated 16-bit words; the static read's filter (not recirculating), the moving reads and every
+// coefficient stay double (H). Scaling (H, the no-overflow rule of §36.5's scaling A): loop k at 1 - max|G_k| (for a
+// steady full-scale input |v| <= 1 / (1 - max|G|)), all-pass j at 1 - |g_j|.
 // Cost per sample: 6 direct taps, 3 all-passes (2 MACs), 3 loops x 2 runs of G (4 MACs) + the static read, 9 moving
 // reads (2 MACs, a phase step and the triangle, one rounding), the one-poles and the kernel: about 90
 // multiply-adds; measured 23 ns per device sample (0.06 % of one core) on an Apple-silicon Mac, Release.
@@ -109,6 +114,8 @@ class ECore final : public ProgramCore
         std::fill(lateLine.begin(), lateLine.end(), 0.0);
         fbState = {};
         statState = {};
+        for (auto& f : loop16)
+            f.s1 = 0.0;
         pos = 0;
         movR = movL = 0.0;
         prevStat = 0.0;
@@ -125,6 +132,7 @@ class ECore final : public ProgramCore
 
     void setSettings(const Settings& s) override
     {
+        const bool was16 = quantise;
         quantise = s.sixteenBit;
         const double rt = std::clamp(s.rt, rtMin, rtMax);
         const double lf = std::clamp(s.lfX, 0.01, 100.0), hf = std::clamp(s.hfX, 0.01, 100.0);
@@ -136,7 +144,21 @@ class ECore final : public ProgramCore
             const double b0 = (c.r0 * (1.0 - a) + (1.0 + a)) / 2.0, b1 = (c.r0 * (1.0 - a) - (1.0 + a)) / 2.0;
             const double gp = c.g * (1.0 - c.p);
             loop[k] = {gp * b0, gp * b1, a + c.p, -a * c.p};
+            // 16-bit mode: the same G as shelf (gain folded in) then one-pole; scaling as the header says
+            auto& f = loop16[k];
+            f = {c.g * b0, c.g * b1, a, c.p, f.s1};
+            double peak = 0.0;
+            for (int j = 0; j < gridPoints; ++j)
+            {
+                const double cw = gridCos(j);
+                peak = std::max(peak, sectionPower(f.c0, f.c1, -a, cw) * sectionPower(1.0 - c.p, 0.0, -c.p, cw));
+            }
+            setGridGain(gridLoop0 + (int)k, std::max(1.0 - std::sqrt(peak), 1e-6));
+            if (quantise && !was16) // switching to 16-bit: the shelf's output one sample back, from the shared history
+                f.s1 = c.p < 1.0 ? (fbState[k][0] - c.p * fbState[k][1]) / (1.0 - c.p) : 0.0;
         }
+        for (size_t j = 0; j < apLine.size(); ++j)
+            setGridGain((int)j, 1.0 - std::abs(gen::e::apGain[j]));
         const double ampl = std::max(s.amplPercent, 0.0) / gen::e::amplRef; // direct taps x AMPL / 80 (spec controls.AMPL, H)
         for (size_t j = 0; j < directR.size(); ++j)
         {
@@ -172,7 +194,7 @@ class ECore final : public ProgramCore
                 const auto mask = line.size() - 1;
                 const double wd = line[(pos - (uint32_t)g::apDelay[j]) & mask];
                 const double w = u + g::apGain[j] * wd;
-                line[pos & mask] = store((float)w);
+                line[pos & mask] = store(w, (int)j);
                 u = wd - g::apGain[j] * w;
             }
 
@@ -185,7 +207,8 @@ class ECore final : public ProgramCore
                 const auto& c = loop[k];
                 const auto at = [&](int d) { return (double)v[(pos - (uint32_t)d) & mask]; };
                 auto& f = fbState[k];
-                const double fb = c.b0 * at(g::loopLength[k]) + c.b1 * at(g::loopLength[k] + 1) + c.a1 * f[0] + c.a2 * f[1];
+                const double fb = quantise ? runShelfPole16(loop16[k], at(g::loopLength[k]), at(g::loopLength[k] + 1), f[0], gridLoop0 + (int)k)
+                                           : c.b0 * at(g::loopLength[k]) + c.b1 * at(g::loopLength[k] + 1) + c.a1 * f[0] + c.a2 * f[1];
                 f[1] = f[0];
                 f[0] = fb;
                 auto& s = statState[k];
@@ -193,7 +216,7 @@ class ECore final : public ProgramCore
                 s[1] = s[0];
                 s[0] = line;
                 stat += g::staticReadGain[k] * line;
-                v[pos & mask] = store((float)(u - fb));
+                v[pos & mask] = store(u - fb, gridLoop0 + (int)k);
             }
 
             // moving reads of v, R now and L (its final amplitude) 314 later; one-pole on both sums
@@ -306,6 +329,9 @@ class ECore final : public ProgramCore
     std::array<std::vector<float>, (size_t)numLoops> vLine;
     std::vector<double> lateLine;
     std::array<Biquad, (size_t)numLoops> loop{};
+    std::array<ShelfPole16, (size_t)numLoops> loop16{}; // 16-bit mode's form of the feedback filter
+    static constexpr int gridLoop0 = (int)gen::e::apDelay.size(); // grids: all-pass j = j, loop k = gridLoop0 + k
+    static_assert(gridLoop0 + numLoops <= maxGrids, "one storage grid per all-pass and loop");
     std::array<std::array<double, 2>, (size_t)numLoops> fbState{}, statState{};
     std::array<double, gen::e::directTaps.size()> directR{}, directL{};
     std::array<double, (size_t)numReads> phase{}, phaseStep{};

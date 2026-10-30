@@ -25,6 +25,12 @@ namespace rv::dsp
 // states, coefficients and sums are double. Against the float32 reference IRs the null is -140 dB or lower in every
 // window (STests.cpp), set by float storage on both sides, far below the -100 dB bar.
 //
+// 16-bit mode (Settings::sixteenBit; model_s_results §36.5, tools/loop_read/c/s_loops_fx.c): Q15 coefficients (the
+// loop gain folded into the first section, as s_loops_fx.c's c0 / c1), every section's output and every delay write
+// a truncated, saturated 16-bit word. Scaling: the loops at §36.5's scaling A, k = 1 / sum_i 1 / (1 - max|G_i|) (no
+// loop write or loop-sum can overflow for a full-scale steady input; S for the scheme, H that the unit scales so);
+// the all-passes at k = 1 - |g| (their state's peak gain is 1 / (1 - |g|): the same no-overflow rule, H).
+//
 // Cost per device sample: 3 all-passes (8 multiplies with AP230's damping), 4 loops (gain + 3 first-order sections,
 // 10 multiplies each), 40 signed read-out taps (adds, then one multiply per channel for the injection magnitude), 8
 // direct taps (10 multiplies with AMPL): about 60 multiplies and 56 delay-line reads, the 2 x TMS32010's 50-70 taps.
@@ -79,12 +85,14 @@ class SCore final : public ProgramCore
         quantise = s.sixteenBit;
         coefs = law(s.lfX, s.rt, s.hfX);
         directScale = s.amplPercent / gen::s::amplReference;
+        setFixedPoint();
     }
 
     void process(const float* in, float* outL, float* outR, int n) override
     {
         namespace g = gen::s;
-        const double ag = g::allpassGain, b = coefs.ap230b, f0 = 1.0 - b;
+        const auto& cf = quantise ? coefs16 : coefs; // 16-bit: Q15, the gain folded into the first section
+        const double ag = quantise ? ag16 : g::allpassGain, b = cf.ap230b, f0 = quantise ? ap230f016 : 1.0 - b;
         for (int i = 0; i < n; ++i)
         {
             const double x = in[i];
@@ -97,7 +105,7 @@ class SCore final : public ProgramCore
                 auto& a = aps[k];
                 const auto mask = apSize[k] - 1;
                 const double d = a[(pos - (size_t)g::allpassDelay[k]) & mask];
-                const float q = store((float)(v + ag * d));
+                const float q = store(v + ag * d, gridAp);
                 a[pos & mask] = q;
                 v = d - ag * q;
             }
@@ -106,7 +114,7 @@ class SCore final : public ProgramCore
                 const auto mask = apSize[2] - 1;
                 const auto m = (size_t)g::allpassDelay[2];
                 const double d = f0 * a[(pos - m) & mask] + b * a[(pos - m - 1) & mask];
-                const float q = store((float)(v + ag * d));
+                const float q = store(v + ag * d, gridAp);
                 a[pos & mask] = q;
                 v = d - ag * q;
             }
@@ -115,17 +123,17 @@ class SCore final : public ProgramCore
             for (size_t l = 0; l < (size_t)numLoops; ++l)
             {
                 auto& line = lines[l];
-                const auto& lf = coefs.loops[l];
+                const auto& lf = cf.loops[l];
                 double y = lf.gain * line[(pos - (size_t)g::loopDelay[l]) & lineMask];
                 for (int k = 0; k < lf.count; ++k)
                 {
                     const auto& sec = lf.sections[(size_t)k];
                     auto& z = sectionState[l][(size_t)k];
-                    const double o = sec.b0 * y + z; // transposed direct form II
+                    const double o = storeAcc(sec.b0 * y + z, gridLoop); // transposed direct form II
                     z = sec.b1 * y - sec.a1 * o;
                     y = o;
                 }
-                line[pos & lineMask] = store((float)(v + y));
+                line[pos & lineMask] = store(v + y, gridLoop);
             }
 
             // Read-out taps (the spec's injection) and the direct path.
@@ -267,6 +275,41 @@ class SCore final : public ProgramCore
     }
 
   private:
+    // The 16-bit mode's coefficients and scaling (see the header comment). Real-time safe; runs on every setSettings()
+    // so the grids are ready when the mode is switched.
+    void setFixedPoint()
+    {
+        coefs16 = coefs;
+        double inv = 0.0;
+        for (size_t l = 0; l < (size_t)numLoops; ++l)
+        {
+            auto& f = coefs16.loops[l];
+            f.sections[0].b0 *= f.gain; // the gain folded into the first section (s_loops_fx.c's c0, c1)
+            f.sections[0].b1 *= f.gain;
+            f.gain = 1.0;
+            double peak = 0.0;
+            for (int j = 0; j < gridPoints; ++j)
+            {
+                const double c = gridCos(j);
+                double pw = 1.0;
+                for (int k = 0; k < f.count; ++k)
+                    pw *= sectionPower(f.sections[(size_t)k].b0, f.sections[(size_t)k].b1, f.sections[(size_t)k].a1, c);
+                peak = std::max(peak, pw);
+            }
+            inv += 1.0 / std::max(1.0 - std::sqrt(peak), 1e-6);
+            for (int k = 0; k < f.count; ++k)
+            {
+                auto& sec = f.sections[(size_t)k];
+                sec = {q15(sec.b0), q15(sec.b1), q15(sec.a1)};
+            }
+        }
+        coefs16.ap230b = q15(coefs.ap230b);
+        ap230f016 = q15(1.0 - coefs.ap230b);
+        ag16 = q15(gen::s::allpassGain);
+        setGridGain(gridLoop, 1.0 / inv);                          // §36.5 scaling A
+        setGridGain(gridAp, 1.0 - std::abs(gen::s::allpassGain)); // H
+    }
+
     // Index of the nearest step (log or linear distance, ties to the upper step); a value within 1e-6 relative of a
     // step snaps to it exactly, and `onStep` stays true only while every value has snapped.
     template <size_t N>
@@ -342,6 +385,9 @@ class SCore final : public ProgramCore
     std::vector<float> history;
     std::array<std::array<double, 3>, numLoops> sectionState{};
     Coefs coefs = law(1.0, 1.0, 1.0);
+    Coefs coefs16 = coefs; // 16-bit mode
+    double ag16 = 0.0, ap230f016 = 1.0;
+    static constexpr int gridAp = 0, gridLoop = 1;
     double directScale = 1.0;
     size_t pos = 0;
 };

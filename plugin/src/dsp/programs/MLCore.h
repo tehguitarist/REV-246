@@ -19,6 +19,14 @@
 // only rounding inside the loops, and doubles elsewhere keep the shelf (pole 0.917) and HF pole (up to 0.85) from
 // adding their own rounding to it. Cost: about 160 (M) / 240 (L) multiply-adds per device sample, the output kernel
 // (2 x 21 / 2 x 61 taps) the largest part.
+//
+// 16-bit mode (Settings::sixteenBit; S's scheme, model_s_results §36.5, ProgramCore): the all-pass and line writes
+// and each line filter's two stored outputs (shelf, then HF one-pole: ProgramCore::ShelfPole16) are truncated,
+// saturated 16-bit words; coefficients, coupling and LFO stay double (H: their format is unknown, §36.4 shows the
+// loops need no more than Q12). Scaling (H, the no-overflow rule of §36.5's scaling A): the lines at
+// k = (1 - max_j max|G_j|) / 2 (the coupling is orthogonal, so for a steady full-scale input |u_j| <= ||u|| <= 2 /
+// (1 - max|G|)), the all-passes at k = 1 - |g|. The float filter and the 16-bit cascade keep one input / output
+// history, so switching the mode carries the filter state over.
 
 #include "dsp/engine/ProgramCore.h"
 #include "dsp/generated/ml_spec.h"
@@ -115,6 +123,9 @@ class MLCore final : public ProgramCore
             std::fill(h.begin(), h.end(), 0.0);
         for (auto& f : filt)
             f.s1 = f.s2 = 0.0;
+        for (auto& f : filt16)
+            f.s1 = 0.0;
+        hist = {};
         pos = 0;
         modActive = modulationOn;
         // theta's start phase is fixed (0: theta starts at 0 and rising), so renders repeat (H: the unit's is random).
@@ -131,8 +142,11 @@ class MLCore final : public ProgramCore
         // AMPL scales the cluster only; AMPL 90 = the reference IRs' unit cluster (H: the absolute scale is not
         // resolved, spec controls.AMPL; the same convention as S's AMPL / 90).
         clusterGain = s.amplPercent / 90.0;
+        const bool was16 = quantise;
         quantise = s.sixteenBit;
         applyCoefs(law(program(), lfX, rtS, hfX));
+        if (quantise != was16)
+            carryFilterState();
     }
 
     // M or L comes from the constructor / setProgram(), not from Settings::program (one core per program).
@@ -166,7 +180,7 @@ class MLCore final : public ProgramCore
                 if (k == 2)
                     f = b0 * f + b * (double)buf[(pos - d - 1) & apMask];
                 const double w = x + g * f;
-                buf[pos & apMask] = store((float)w);
+                buf[pos & apMask] = store(w, gridAp);
                 x = f - g * w;
             }
 
@@ -175,10 +189,18 @@ class MLCore final : public ProgramCore
             for (size_t j = 0; j < 4; ++j)
             {
                 const double d = lineBuf[j * lineSize + ((pos - (uint32_t)t.lineDelay[j]) & lineMask)];
-                auto& f = filt[j];
-                const double y = f.b0 * d + f.s1;
-                f.s1 = f.b1 * d - f.a1 * y + f.s2;
-                f.s2 = -f.a2 * y;
+                auto& h = hist[j];
+                double y;
+                if (quantise)
+                    y = runShelfPole16(filt16[j], d, h.x1, h.y1, gridLine);
+                else
+                {
+                    auto& f = filt[j];
+                    y = f.b0 * d + f.s1;
+                    f.s1 = f.b1 * d - f.a1 * y + f.s2;
+                    f.s2 = -f.a2 * y;
+                }
+                h = {d, y, h.y1};
                 v[j] = y;
             }
 
@@ -206,7 +228,7 @@ class MLCore final : public ProgramCore
                 u[blk.cols[1]] = x - s * w0 + c * w1;
             }
             for (size_t j = 0; j < 4; ++j)
-                lineBuf[j * lineSize + (pos & lineMask)] = store((float)u[j]);
+                lineBuf[j * lineSize + (pos & lineMask)] = store(u[j], gridLine);
 
             // Read taps, the cluster, then the output kernel (causal: its centre lands on the cluster's tap 0).
             for (int ch = 0; ch < 2; ++ch)
@@ -432,6 +454,38 @@ class MLCore final : public ProgramCore
             filt[j].a1 = -(a + l.hfPole);
             filt[j].a2 = a * l.hfPole;
         }
+        // 16-bit mode: the same G_j as shelf (gain folded in) then one-pole, and the scaling (see the header comment)
+        double peak = 0.0;
+        for (size_t j = 0; j < 4; ++j)
+        {
+            const auto& l = c.lines[j];
+            auto& f = filt16[j];
+            f.c0 = l.gain * (l.shelfDc * (1.0 - a) + (1.0 + a)) / 2.0;
+            f.c1 = l.gain * (l.shelfDc * (1.0 - a) - (1.0 + a)) / 2.0;
+            f.a = a;
+            f.p = l.hfPole;
+            for (int k = 0; k < gridPoints; ++k)
+            {
+                const double cw = gridCos(k);
+                peak = std::max(peak, sectionPower(f.c0, f.c1, -a, cw) * sectionPower(1.0 - f.p, 0.0, -f.p, cw));
+            }
+        }
+        setGridGain(gridLine, std::max(1.0 - std::sqrt(peak), 1e-6) / 2.0);
+        setGridGain(gridAp, 1.0 - std::abs(gen::ml::allpassG));
+    }
+
+    // On a mode switch: the new form's filter state from the shared history (x[-1], y[-1], y[-2]).
+    void carryFilterState()
+    {
+        for (size_t j = 0; j < 4; ++j)
+        {
+            const auto& h = hist[j];
+            auto& f = filt[j];
+            f.s1 = f.b1 * h.x1 - f.a1 * h.y1 - f.a2 * h.y2; // transposed DF II: s1[n-1], s2[n-1]
+            f.s2 = -f.a2 * h.y1;
+            auto& q = filt16[j];
+            q.s1 = q.p < 1.0 ? (h.y1 - q.p * h.y2) / (1.0 - q.p) : 0.0; // the shelf's output one sample back
+        }
     }
 
     struct Biquad
@@ -443,6 +497,13 @@ class MLCore final : public ProgramCore
     double lfX = 1.0, rtS = 1.0, hfX = 0.9, clusterGain = 80.0 / 90.0;
     Coefs coefs;
     std::array<Biquad, 4> filt{};
+    std::array<ShelfPole16, 4> filt16{}; // 16-bit mode's form of the same filters
+    struct History
+    {
+        double x1 = 0.0, y1 = 0.0, y2 = 0.0; // a line filter's last input and last two outputs, in either mode
+    };
+    std::array<History, 4> hist{};
+    static constexpr int gridAp = 0, gridLine = 1;
 
     std::vector<float> lineBuf;            // four line buffers of lineSize, u_j (recirculating: store())
     std::array<std::vector<float>, 3> apBuf; // the all-passes' internal signal (recirculating: store())

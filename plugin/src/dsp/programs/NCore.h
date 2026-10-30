@@ -19,6 +19,10 @@
 // Precision: the recirculating storage (the four all-passes' and the three loops' delay lines, written through
 // ProgramCore::store) and the branch line are float; every sum and coefficient is double. The reference IRs are
 // float32 renders of a double model, so float storage sets the null floor (tests/dsp/NTests.cpp reports it).
+// 16-bit mode (Settings::sixteenBit; S's scheme, model_s_results §36.5, ProgramCore): the all-pass and loop writes are
+// truncated, saturated 16-bit words (the loops are flat gains: no filter state). Scaling (H, the no-overflow rule of
+// §36.5's scaling A): loop l at 1 - g_l, the input and late all-passes at 1 - |g|, each output all-pass at
+// (1 - |g|) / sum |main tap gains| of its channel, never finer than the A/D's word (k <= 1).
 // Cost per sample: 6 front + up to 54 main taps, 4 all-passes (2 MACs each), 3 loops, 24 reads, and with the kernel
 // 154 MACs more: about 100 MACs without it, about 250 with it.
 
@@ -145,6 +149,9 @@ class NCore final : public ProgramCore
         apOut[0].d = apOutDelayL;
         apOut[1].d = apOutDelayR;
         apLate.d = apLateDelay;
+        apIn.grid = apLate.grid = gridApIn;
+        apOut[0].grid = gridApOut0;
+        apOut[1].grid = gridApOut0 + 1;
         prepared = true;
         reset();
     }
@@ -168,6 +175,8 @@ class NCore final : public ProgramCore
     {
         using namespace gen::n;
         quantise = s.sixteenBit;
+        const double apK = 1.0 - std::abs(apG);
+        setGridGain(gridApIn, apK); // also the late all-pass
         const double span = std::clamp(s.amplPercent, 0.0, 0.5);
         const double late = std::clamp(s.hfX, 0.0, 2.0);
         const auto law = earlyLaw(span, s.lfX);
@@ -192,6 +201,13 @@ class NCore final : public ProgramCore
             tapGain[0][(size_t)i] = mainSignL[(size_t)i] * g;
             tapGain[1][(size_t)i] = mainSignR[(size_t)i] * g;
         }
+        for (size_t ch = 0; ch < 2; ++ch)
+        {
+            double sum = 0.0;
+            for (int i = 0; i < nTaps; ++i)
+                sum += std::abs(tapGain[ch][(size_t)i]);
+            setGridGain(gridApOut0 + (int)ch, std::min(1.0, apK / std::max(sum, 1e-12)));
+        }
 
         const bool lateNow = late > 0.0;
         if (lateWasOn && !lateNow)                  // gated: nothing may ring when it comes back
@@ -207,7 +223,10 @@ class NCore final : public ProgramCore
             lateFeed = feedFor(law.stages) + branchDelay;
             lateGain = std::pow(10.0, law.lateDb / 20.0);
             for (size_t l = 0; l < (size_t)numLoops; ++l)
+            {
                 loopG[l] = loopGain(loopDelay[l], late);
+                setGridGain(gridLoop0 + (int)l, std::max(1.0 - loopG[l], 1e-6));
+            }
             for (size_t r = 0; r < (size_t)numReads; ++r)
             {
                 readPos[0][r] = readDelay[r];
@@ -249,7 +268,7 @@ class NCore final : public ProgramCore
                 for (size_t l = 0; l < (size_t)numLoops; ++l)
                 {
                     const double line = v + loopG[l] * loops[l].at((unsigned)loopDelay[l] - 1);
-                    loops[l].push(store((float)line));
+                    loops[l].push(store(line, gridLoop0 + (int)l));
                 }
                 // the reads, loop-major as generated
                 for (size_t ch = 0; ch < 2; ++ch)
@@ -324,12 +343,15 @@ class NCore final : public ProgramCore
     struct AllPass : Ring
     {
         int d = 0;
+        int grid = 0; // its 16-bit storage grid
     };
+    static constexpr int gridApIn = 0, gridApOut0 = 1, gridLoop0 = 3; // storage grids (ProgramCore)
+    static_assert(gridLoop0 + numLoops <= maxGrids, "one storage grid per loop");
 
     double allpass(AllPass& a, double x)
     {
         const double wd = a.at((unsigned)a.d - 1);
-        const float w = store((float)(x + gen::n::apG * wd));
+        const float w = store(x + gen::n::apG * wd, a.grid);
         a.push(w);
         return -gen::n::apG * w + wd;
     }
