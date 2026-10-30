@@ -948,7 +948,9 @@ def e_stage(rts):
     in place of e_sim's render; 'imp' kind only. -> analysis/plugin_check/e/rt_<rt>.json, e_pulse.json."""
     sys.path.insert(0, os.path.join(HERE, "e250"))
     import e_pulse as ep
-    al = 54                                          # ReverbEngine's alignment: E's own origin is not delayed (lateness 54)
+    # E's R direct tap must sit at e_pulse's K0 = 64. Renders up to 30 October have it there; from 31 October the engine
+    # advances E by 54 device samples (ProgramCore::setAdvance, plugin/docs/ENGINE.md), so it is at 10 and is put back.
+    E_ADVANCE = 54
 
     def render(kind, rt, seed, i1, kern):
         """The plugin's device-rate E (its output kernel [0.77, 0.23], e_sim's chain='device') moved to the bench's
@@ -956,6 +958,9 @@ def e_stage(rts):
         L's output kernel, tap at index 16) applied, as e_sim.render(chain='altiverb') does."""
         from scipy.signal import lfilter
         x, _ = sf.read(rpath("dev", "E", f"{rt}", seed % 100), always_2d=True, dtype="float64")
+        first = int(np.argmax(np.abs(x[:200, 1]) > 1e-3 * np.abs(x[:200, 1]).max()))
+        if first < ep.K0 - E_ADVANCE // 2:                 # an advanced render (31 October build or later)
+            x = np.vstack([np.zeros((E_ADVANCE, 2)), x])
         core = lfilter([1.0], [0.77, 0.23], x, axis=0)        # R's direct tap at k0 = 64 = e_pulse's K0
         y = np.stack([np.convolve(core[:, c], kern[c])[16:16 + len(core)] for c in (0, 1)], 1)
         n = i1 + int(0.2 * ep.FS)
