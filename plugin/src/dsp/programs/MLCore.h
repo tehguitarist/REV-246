@@ -72,6 +72,9 @@ constexpr int longestLineRead()
 class MLCore final : public ProgramCore
 {
   public:
+    // L's next library RT step above 2.2: where its 0.40 HF floor has blended into the general one (law(), H).
+    static constexpr double l22BlendEnd = 2.6;
+
     // One line's per-pass filter: gain, shelf DC gain r0, HF pole p (spec lines.filter_form; p = 0 bypasses).
     struct LineFilter
     {
@@ -264,10 +267,16 @@ class MLCore final : public ProgramCore
         double hi = 0.0, dc = 0.0, k = 0.0;
         lfLaw(lf, hi, dc, k);
         // The HF control saturates: RT x HF >= 0.12 s x the program scale (x2 M, x4 L); L at its RT 2.2 step acts as
-        // max(HF, 0.40) [§8.6, model_s_results §29].
+        // max(HF, 0.40) [§8.6, model_s_results §29]. Off the library's steps (H): L keeps the 0.40 floor below 2.2
+        // (its lowest library RT; the panel's 2.0 would otherwise be darker than 2.2) and blends it in log RT to the
+        // general floor at the next library step, 2.6, so neither the panel's steps nor typed values jump.
         hf = std::max(hf, g::hfrtMin * t.scale / rt);
-        if (t.scale == 4 && std::abs(rt - 2.2) < 1e-6)
-            hf = std::max(hf, g::l22Hf);
+        if (t.scale == 4 && rt < l22BlendEnd)
+        {
+            const double w = std::clamp(std::log(rt / 2.2) / std::log(l22BlendEnd / 2.2), 0.0, 1.0);
+            const double general = g::hfrtMin * t.scale / l22BlendEnd;
+            hf = std::max(hf, std::exp((1.0 - w) * std::log(g::l22Hf) + w * std::log(general)));
+        }
         const double rtHi = hi * rt, rtDc = dc * rt;
         for (size_t j = 0; j < 4; ++j)
         {
