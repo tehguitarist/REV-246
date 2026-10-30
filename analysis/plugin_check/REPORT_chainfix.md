@@ -189,3 +189,36 @@ At 44.1 and 48 kHz, all 6 programs (modulation on and off) match 96 kHz to −88
 - auval was not run.
 - The E stage was not rerun: its device-rate renders don't pass through the bridge.
 - loff was not rerun. The new alignment shows L − R after the cache read at −0.00005 device samples (before: −0.0067).
+
+## 6. Full validation (30 October 2026, `PLUGIN_CHECK_TAG=fix`, nothing in post)
+
+Whole library, same fits and hold-outs as `REPORT.md` (S: RT-step folds; M / L: all after the first pass predicted). Summaries: `summary_{s,ml,n}_fix.json`, `loff_fix.json`, `rates_fix.json`. Medians, dB, R (L).
+
+**S (127 settings, 491 captures), shift-free fit, 3 numbers per capture**
+
+| Window (ms) | Plugin | Bench | Repeat | Excess | ≤ −50 dB |
+|---|---|---|---|---|---|
+| 0–50 | −52.4 (−52.9) | −51.5 | n/a | – | 442 / 491 |
+| 50–150 | −55.8 (−55.8) | −53.0 | −57.2 | +1.4 | 472 / 491 |
+| 150–300 | −53.4 (−53.4) | −51.4 | −54.5 | +1.1 | 381 / 491 |
+| 300–600 | −49.4 (−49.4) | −46.7 | −47.6 | −1.8 | 213 / 484 |
+| 600–1000 | −42.6 (−42.3) | −39.6 | −40.0 | −2.6 | 59 / 414 |
+
+**M / L (modulation on; 6 numbers per capture fitted on cluster + gap + first pass)**
+
+| | Plugin | Bench | Repeat | ≤ −50 dB |
+|---|---|---|---|---|
+| M cluster + gap | −62.5 (−63.7) | −53.7 | −54.8 | 417 / 458 |
+| M first pass | −50.0 (−55.4) | −48.2 | −49.0 | 226 / 457 |
+| L cluster + gap | −57.3 (−56.7) | −52.6 | −52.6 | 178 / 179 |
+| L first pass | −55.0 (−56.9) | −45.6 | −54.1 | 359 / 359 |
+| M recirc 1 / 2 / 3 | −18.3 / −12.8 / −8.9 | static −20.8 / −16.0 / −12.6 | −19.7 / −13.7 / −9.8 | time-variant: statistics |
+| L recirc 1 / 2 / 3 | −14.6 / −12.1 / −9.5 | static −19.1 / −15.9 / −12.7 | −17.6 / −13.4 / −10.0 | time-variant: statistics |
+
+- Cluster + gap and first pass are inside the per-capture fit window, and chain3 itself was fitted on cluster-only regions, so these windows are **not held out**; beating the repeat floor by 5–8 dB there reflects that (the repeat pair carries two captures' noise and the capture-side slow term). Not evidence on its own.
+- EDC decay-time ratio median 0.00 in every octave (90th percentile ≤ 7.6 % M, ≤ 4.8 % L).
+- Decorrelation: the plugin decorrelates 0.8–5.6 dB (median ≈ 2.6) more than the Python sweep simulation at the same θ = 0.15 rad rms, which itself matches Tomkin's pairs (median −0.4 dB here; `ml_structure.md` §9.7). A port difference, under investigation.
+
+**N (every 4th capture, 261):** 86 / 256 captures reach −50 dB at 0.05–0.15 s; 75 of the 261 have the bench's branch offset +1, which the plugin fixes, so the rest are the open branch-offset item. All-capture medians are −32 dB for that reason.
+
+**L offset after the fix:** residual library-vs-plugin offset leaves an L-channel limit of −61 dB at 10–12.3 kHz (−64 at 6.4–10 kHz), below the bar.
