@@ -6,7 +6,18 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 
 ---
 
-## 0. Start here (hand-over, updated 28 October 2026)
+## 0. Start here (hand-over, updated 30 October 2026)
+
+### Plugin engine built 30 October 2026 (phases 0-4 of the engine plan); paused for the user's session limit
+
+**Done and pushed** (`27c4b286`...`5b6f8964`; contract and decisions in `plugin/docs/ENGINE.md`): the program cores S, M/L, E, N at the device rate (every reference IR nulls at -136...-141 dB, the float32 floor; laws reproduce every resolved spec setting), the host <-> device bridge with the analogue chain (<= -108.5 dB error vs the modelled chain, 20 Hz-12.8 kHz, 44.1-192 kHz), 16-bit storage (S bit-exact with `s_loops_fx.c`; cut toward zero, user's choice) and the analogue hiss (91 dB S/N re nominal, user's choice; data sheet 88 dB), and the engine in the plugin (program crossfade, DELAY, LOW PASS (H), one latency for every program: 117 samples at 48 kHz, step tables with every library RT a panel step, AdcClipper retired). Both test runners and auval pass; 0.5-0.9 % of a core per engine at 48 kHz.
+
+**Resume here (in order):**
+1. Phase 5: full-chain renders through the plugin at 44.1/48/96 kHz against the Tomkin 96 kHz IRs, held out, excess over noise floor, parameter count (CLAUDE.md bar); settle the bridge's two H items there (coupling corners 0.72/0.16 Hz vs the netlists' 0.62/0.157; L's offset 0.5 vs the library's ~0.506 device samples); CPU profile; then one manual CI run (ask the user first: Actions minutes).
+2. Small fixes found in phase 4: L's HF floor 0.40 applies only at exactly RT 2.2 in `MLCore.h`, so L's panel steps 2.0 / 2.2 / 2.6 jump at HF 0.1-0.3 (proposal: `max(HF, 0.40)` for RT <= 2.2, H); `DeviceBridge.h` line ~35 comment still names AdcClipper; HF parameter range is now 0-10 (N's 11 LATE steps), which shifts automation mapping (pre-release, flagged).
+3. User decisions pending: whether LF 1.5 should be an LF step (E's Altiverb family is LF 1.49; the factory E preset uses 1.4).
+4. Phase 6: 10b review of the plugin C++ and docs; research-side tidy-up: make the S and E specs self-contained (their generators also read `analysis/loop_cv/...` fold/cell files and `analysis/q1/laws.json` etc.).
+5. Then the final optimisation pass.
 
 ### 10a: first pass and the S / M / L spec generators done 28 October 2026
 
