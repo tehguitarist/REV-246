@@ -29,8 +29,10 @@ constexpr float faderTopY = 218.f, faderBottomY = 1238.f; // the travel's ends i
 // Step tables. Counts and ranges are the data sheet's (C, docs/EMT246_unit_facts.md section 3); the values are the
 // Tomkin library's where it has them (C: real panel steps) and guesses in between (H).
 constexpr std::array<double, 8> lowpassStepsKHz{2, 3, 4, 5, 6, 8, 10, 12}; // H between the observed 2 / 8 / 10 / 12
-// LF x (H; holds every library LF of S / M / L: 0.1, 0.4, 1.0, 2.0).
-constexpr std::array<double, 16> lfStepsX{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.4, 1.6, 1.8, 2.0};
+// LF x (data sheet 0.1-2.0, 16 steps; 0.1-1.2 as before and every library LF of S / M / L: 0.1, 0.4, 1.0, 2.0 (H).
+// Values above 1.2 are H except 1.5, a step on the EMT 250's front panel and the Altiverb family's fitted 1.49;
+// 1.3 and 1.8 fill the gaps. Decided 30 Oct, docs/EMT250_program.md section 19).
+constexpr std::array<double, 16> lfStepsX{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.8, 2.0};
 constexpr int hfStepCount = 10;       // HF x 0.1 ... 1.0 in S / M / L / E (holds every library HF)
 constexpr int delayMaxStepMs = 999;   // DELAY: 0 ... 999 ms in 1 ms steps
 constexpr int amplMaxStep = 10;       // AMPL: 0 ... 100 % (N: span 0 ... 0.5 s) in 11 steps
@@ -39,13 +41,13 @@ constexpr int amplMaxStep = 10;       // AMPL: 0 ... 100 % (N: span 0 ... 0.5 s)
 // (S, M, L: C; E: H); the steps between them (H) split the widest gaps in log RT, each at the geometric mean of its
 // neighbours rounded to the display's precision (0.1 s below 10 s, whole seconds above), until there are 16. Library
 // steps: S 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; M 0.6 0.8 1.2 1.8 2.6 3.0 4.0 5.0; L 2.2 2.6 3.6 4.5 6 8 10 15 20
-// (analysis/ml/ml_plugin_spec.json); E 0.4 1.0 1.5 2.0 2.5 3.0 3.6 4.0 4.5 (the Altiverb family's, e_plugin_spec
-// controls.RT). The default step is S's 1.0 s (index 8).
+// (analysis/ml/ml_plugin_spec.json); E the EMT 250's 16 front-panel steps 0.4-4.5 (C for the 250's panel, H that the 246's E uses
+// them; docs/EMT250_program.md section 19; every Altiverb-family E step is among them). The default step is S's 1.0 s (index 8).
 using RtTable = std::array<double, 16>;
 constexpr RtTable rtStepsS{0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.5};
 constexpr RtTable rtStepsM{0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.3, 1.5, 1.8, 2.2, 2.6, 3.0, 3.5, 4.0, 5.0};
 constexpr RtTable rtStepsL{2.0, 2.2, 2.6, 3.1, 3.6, 4.0, 4.5, 5.2, 6.0, 6.9, 8.0, 10.0, 12.0, 15.0, 17.0, 20.0};
-constexpr RtTable rtStepsE{0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.2, 1.5, 1.7, 2.0, 2.5, 3.0, 3.6, 4.0, 4.5, 5.0};
+constexpr RtTable rtStepsE{0.4, 0.6, 0.8, 1.0, 1.2, 1.5, 1.8, 2.0, 2.2, 2.5, 2.8, 3.0, 3.3, 3.6, 4.0, 4.5};
 constexpr int rtDefaultStep = 8; // 1.0 s in S
 
 // N (analysis/nl/nl_plugin_spec.json controls). EARLY RT in the LF slot: its 16 values (S), 10 = flat. LATE RT in the
@@ -252,7 +254,7 @@ juce::String joyInputHint(Program p, Joy j)
             }
             return "Valid: " + valid + " s (10 = flat).";
         }
-        return "Valid: 0.1 to 1.2 x in 0.1 steps, then 1.4, 1.6, 1.8 and 2.0 x.";
+        return "Valid: 0.1 to 1.2 x in 0.1 steps, then 1.3, 1.5, 1.8 and 2.0 x.";
     case Joy::rt:
         if (n)
             return "RT is not used in the non-linear program.";

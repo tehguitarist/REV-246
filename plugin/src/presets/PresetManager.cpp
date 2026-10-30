@@ -119,7 +119,7 @@ juce::ValueTree PresetManager::factoryState(int program) const
             child.setProperty(valueProperty, value, nullptr);
     };
     set(params::id::program, program);
-    // E: the Altiverb family's LF x 1.49 / HF x 0.69 (e_plugin_spec controls.LF_HF), at the nearest panel steps (1.4,
+    // E: the Altiverb family's LF x 1.49 / HF x 0.69 (e_plugin_spec controls.LF_HF), at the nearest panel steps (1.5,
     // 0.7). Every other value is a step index, so every preset sits on its program's table.
     if (program == (int)params::Program::e)
     {

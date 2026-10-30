@@ -55,7 +55,7 @@ TEST_CASE("every factory preset sits on its program's step tables; E has the Alt
     }
     REQUIRE(p.presets.load("Init E"));
     auto value = [&](Joy j) { return joyNumber(Program::e, j, juce::roundToInt(p.apvts.getRawParameterValue(joyId(j))->load())); };
-    CHECK(std::equal_to<double>{}(value(Joy::lf), 1.4)); // the step nearest the family's 1.49
+    CHECK(std::equal_to<double>{}(value(Joy::lf), 1.5)); // the step nearest the family's 1.49
     CHECK(std::abs(value(Joy::hf) - 0.7) < 1e-12); // 0.69
     REQUIRE(p.presets.load("Init S"));
     CHECK(std::equal_to<double>{}(joyNumber(Program::s, Joy::rt, juce::roundToInt(p.apvts.getRawParameterValue(id::rt)->load())), 1.0));

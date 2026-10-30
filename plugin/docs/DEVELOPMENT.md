@@ -37,7 +37,7 @@
 - IDs in `src/params/Parameters.h` are permanent. The joystick step tables (`src/params/Parameters.cpp`): step counts
   and ranges are the data sheet's (`../docs/EMT246_unit_facts.md`); the Tomkin library's values are steps (C: RT
   S 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5, M 0.6 0.8 1.2 1.8 2.6 3.0 4.0 5.0, L 2.2 2.6 3.6 4.5 6 8 10 15 20; E's the
-  Altiverb family's 0.4 1.0 1.5 2.0 2.5 3.0 3.6 4.0 4.5; every library LF and HF); the rest are guesses (H): RT fills
+  EMT 250 panel's 0.4-4.5 (16 steps; H that the 246's E uses them); LF x 0.1-1.2, 1.3, 1.5, 1.8, 2.0 (above 1.2 H); every library LF and HF); the rest are guesses (H): RT fills
   the widest log gaps at their geometric means, rounded to 0.1 s. N's columns are its spec's: EARLY RT's 16 values
   in the LF slot (10 = flat), LATE RT 0-2.0 s by 0.2 in the HF slot, SPAN 0-0.5 s by 0.05 in the AMPL slot. LATE has
   11 values, so the HF parameter runs 0-10 and S / M / L / E stop at step 9 (`joyMaxStep(Program, Joy)`; a higher step
@@ -83,7 +83,7 @@
 - Initial/factory defaults: S, the CLA reference levers (LP 12 kHz, DELAY 10 ms, AMPL 80 %, LF x1.0, RT 1.0 s, HF
   x0.9), MIX 100 %, INPUT/OUTPUT 0 dB, LINK on, 16-bit on, XFMR on, WIDTH 100, ORIGINAL stereo mode and power on.
   Factory presets ("Init S" ... "Init N", one per programme) reset the stored settings to these defaults, with the
-  programme set (and E's LF / HF at the Altiverb family's x1.49 / x0.69, the nearest steps: 1.4 / 0.7), but leave the
+  programme set (and E's LF / HF at the Altiverb family's x1.49 / x0.69, the nearest steps: 1.5 / 0.7), but leave the
   preferences (`power`, `link`, `transformer`, `trueStereo`) as they are. Every value is a step of its programme's
   table (`tests/StateTests.cpp`).
 - Preset saving: SAVE always opens the Save As dialog prefilled with the current name. Factory names are rejected

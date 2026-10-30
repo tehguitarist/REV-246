@@ -65,7 +65,7 @@ TEST_CASE("the RT tables hold the library's steps and the data sheet's ranges")
         {Program::s, 0.2, 2.5, {0.3, 0.6, 0.8, 1.0, 1.4, 1.8, 2.2, 2.5}},
         {Program::m, 0.5, 5.0, {0.6, 0.8, 1.2, 1.8, 2.6, 3.0, 4.0, 5.0}},
         {Program::l, 2.0, 20.0, {2.2, 2.6, 3.6, 4.5, 6.0, 8.0, 10.0, 15.0, 20.0}},
-        {Program::e, 0.4, 5.0, {0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.6, 4.0, 4.5}},
+        {Program::e, 0.4, 4.5, {0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.6, 4.0, 4.5}},
     };
     for (const auto& c : cases)
     {
@@ -124,10 +124,10 @@ TEST_CASE("typed values map to exact steps where the control has a visible table
     CHECK(*ampl == 8);
     CHECK_FALSE(joyStepFromValue(Program::s, Joy::ampl, 75.0).has_value());
 
-    auto lf = joyStepFromValue(Program::s, Joy::lf, 1.4);
+    auto lf = joyStepFromValue(Program::s, Joy::lf, 1.5);
     REQUIRE(lf.has_value());
-    CHECK(*lf == 12);
-    CHECK_FALSE(joyStepFromValue(Program::s, Joy::lf, 1.3).has_value());
+    CHECK(*lf == 13);
+    CHECK_FALSE(joyStepFromValue(Program::s, Joy::lf, 1.4).has_value());
 
     auto hf = joyStepFromValue(Program::s, Joy::hf, 0.9);
     REQUIRE(hf.has_value());
@@ -175,7 +175,7 @@ TEST_CASE("the typed-entry hints describe the S/M/L/E and N differences")
 {
     CHECK(joyInputHint(Program::s, Joy::ampl).contains("10 %"));
     CHECK(joyInputHint(Program::n, Joy::ampl).contains("0.05"));
-    CHECK(joyInputHint(Program::s, Joy::lf).contains("1.4"));
+    CHECK(joyInputHint(Program::s, Joy::lf).contains("1.5"));
     CHECK(joyInputHint(Program::n, Joy::lf).contains("-3.0"));
     CHECK(joyInputHint(Program::n, Joy::lf).contains("10 = flat"));
     CHECK(joyInputHint(Program::s, Joy::rt).contains("nearest"));
