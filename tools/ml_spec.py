@@ -206,9 +206,8 @@ def spec(M):
                                   note="causal: the kernel's centre tap k_h lands at the cluster tap 0's time, so the "
                                        "reference IRs place cluster tap 0 at sample k_h"),
                              "S", "§7.5, §18, §25"),
-        "modulation": lab(dict(rate_hz=0.83, amplitude_rad=0.21, rms_rad=0.15,
-                               measured_rms="0.14-0.16 rad (a about 0.21), S by two methods; the stored sim default is "
-                                            "theta_a = 0.155, and ML_THETA_RMS=0.15 gives the adopted depth",
+        "modulation": lab(dict(rate_hz=0.83, amplitude_rad=0.18, rms_rad=0.13,
+                               measured_rms="0.13 rad (0.11-0.144, bootstrap over groups), against Tomkin's AMPL pairs with 12 evenly spaced sim phases (analysis/plugin_check/theta_depth.json, ml_structure.md 9.8); the earlier 0.15 (9.7) came from 6 random phases per group that happened to understate the decorrelation",
                                form="theta(t) = amplitude sin(2 pi rate t + phase); phase random per capture; a sine "
                                     "shape is H, the depth is S",
                                coupling="one angle of both 2x2 blocks: F(theta) = F R(theta) per block, R = [[cos, -sin], "
@@ -234,7 +233,7 @@ def spec(M):
             "DELAY": lab("a pure delay of the whole output; the library is all DELAY 0", "H", "operation card"),
             "LOW_PASS": lab("the panel's LOW PASS has no varying files in the library; response unknown", "H", "§7"),
         },
-        "not_resolved": ["theta's shape and phase (the sine is H; the 0.15 rad rms depth is S)",
+        "not_resolved": ["theta's shape and phase (the sine is H; the 0.13 rad rms depth is S)",
                          "the LOW PASS response and DELAY steps (no library data)",
                          "the law between the library's LF / RT / HF steps (H: LF log-interpolated, RT / HF continuous; "
                          "b nearest (RT, HF) cell)",

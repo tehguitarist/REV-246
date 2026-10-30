@@ -47,8 +47,8 @@ inline constexpr std::array<double, 4> dampingTable{{
     0.0, 0.169859, 0.329683, 0.499595}};
 // theta(t) = amplitude sin(2 pi rate t + phase); amplitude = rms x sqrt(2), the adopted depth [§9.5-9.7]
 inline constexpr double thetaRateHz = 0.83;
-inline constexpr double thetaRms = 0.15;
-inline constexpr double thetaAmplitude = 0.21213203435596426;
+inline constexpr double thetaRms = 0.13;
+inline constexpr double thetaAmplitude = 0.18384776310850237;
 
 namespace m
 {
