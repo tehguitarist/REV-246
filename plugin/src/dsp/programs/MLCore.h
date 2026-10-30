@@ -112,7 +112,7 @@ class MLCore final : public ProgramCore
             b.assign((size_t)apSize, 0.0f);
         inHist.assign((size_t)inSize, 0.0f);
         for (auto& h : outHist)
-            h.assign((size_t)kernelSize, 0.0);
+            h.assign(2 * (size_t)kernelSize, 0.0); // doubled, so the kernel reads its history contiguously
         reset();
     }
 
@@ -241,12 +241,11 @@ class MLCore final : public ProgramCore
                     rev += t.tapSign[(size_t)ch][k]
                            * (double)lineBuf[(size_t)t.tapLoop[(size_t)ch][k] * lineSize
                                              + ((pos - (uint32_t)t.tapDelay[(size_t)ch][k]) & lineMask)];
+                // Newest first at w = ~pos (it runs down as pos runs up): h[w + k] is k samples back.
                 auto& h = outHist[(size_t)ch];
-                h[pos & kernelMask] = clusterGain * cl[(size_t)ch] + rev;
-                double y = 0.0;
-                for (int k = 0; k < t.kernelTaps; ++k)
-                    y += t.kernel[k] * h[(pos - (uint32_t)k) & kernelMask];
-                (ch == 0 ? outL : outR)[i] = (float)y;
+                const auto w = (size_t)(~pos & kernelMask);
+                h[w] = h[w + kernelSize] = clusterGain * cl[(size_t)ch] + rev;
+                (ch == 0 ? outL : outR)[i] = (float)dotProduct(t.kernel, h.data() + w, t.kernelTaps);
             }
         }
     }

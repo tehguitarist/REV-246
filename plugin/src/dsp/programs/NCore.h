@@ -139,7 +139,7 @@ class NCore final : public ProgramCore
         for (size_t l = 0; l < (size_t)numLoops; ++l)
             loops[l].allocate((size_t)loopDelay[l]);
         for (auto& k : kernelHist)
-            k.assign(kernelRing, 0.0);
+            k.assign(2 * kernelRing, 0.0); // doubled, so the kernel reads its history contiguously
         static_assert(bkTapsL.size() == bkTapsR.size());
         for (size_t ch = 0; ch < 2; ++ch)           // delta + strength (taps - delta)
         {
@@ -283,15 +283,12 @@ class NCore final : public ProgramCore
             }
             if (kernelOn)
             {
-                kernelPos = (kernelPos + 1) & (kernelRing - 1);
+                kernelPos = (kernelPos + kernelRing - 1) & (kernelRing - 1); // newest first: h[kernelPos + k] is k back
                 for (size_t ch = 0; ch < 2; ++ch)
                 {
                     auto& h = kernelHist[ch];
-                    h[kernelPos] = y[ch];
-                    double acc = 0.0;
-                    for (size_t k = 0; k < kernelLen; ++k)
-                        acc += kernel[ch][k] * h[(kernelPos - k) & (kernelRing - 1)];
-                    y[ch] = acc;
+                    h[kernelPos] = h[kernelPos + kernelRing] = y[ch];
+                    y[ch] = dotProduct(kernel[ch].data(), h.data() + kernelPos, (int)kernelLen);
                 }
             }
             double l = y[0], r = y[1];

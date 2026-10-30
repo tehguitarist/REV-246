@@ -136,12 +136,16 @@ class BridgeFilter
         const auto alpha = pos - ph;
         const auto* r0 = table.data() + (size_t)(ph * taps);
         const auto* r1 = r0 + taps;
-        double s0 = 0.0, s1 = 0.0;
-        for (int k = 0; k < taps; ++k)
+        // Two partial sums per row (taps is even): independent add chains (see dotProduct, ProgramCore.h).
+        double s0a = 0.0, s0b = 0.0, s1a = 0.0, s1b = 0.0;
+        for (int k = 0; k < taps; k += 2)
         {
-            s0 += x[k] * r0[k];
-            s1 += x[k] * r1[k];
+            s0a += x[k] * r0[k];
+            s0b += x[k + 1] * r0[k + 1];
+            s1a += x[k] * r1[k];
+            s1b += x[k + 1] * r1[k + 1];
         }
+        const auto s0 = s0a + s0b, s1 = s1a + s1b;
         return s0 + alpha * (s1 - s0);
     }
 
@@ -156,13 +160,57 @@ class BridgeFilter
         }
     }
 
+    // The tail's per-mode read-out weights at one fractional position: c_j e^(p_j u unit).
+    struct Weights
+    {
+        std::array<double, maxModes> re{}, im{};
+    };
+
     // The tail's contribution at fractional position u (as for head()).
     double tail(const State& s, double u) const
+    {
+        Weights w;
+        tailWeights(u, w);
+        return tail(s, w);
+    }
+
+    double tail(const State& s, const Weights& w) const
+    {
+        double acc = 0.0;
+        for (int j = 0; j < numModes; ++j)
+            acc += w.re[(size_t)j] * s.re[(size_t)j] - w.im[(size_t)j] * s.im[(size_t)j];
+        return acc;
+    }
+
+    // e^(p_j du unit) per mode: the weights at u + du are the weights at u times these (not real-time).
+    Weights shift(double du) const
+    {
+        Weights f;
+        for (int j = 0; j < numModes; ++j)
+        {
+            const auto e = std::exp(std::complex<double>(zRe[(size_t)j], zIm[(size_t)j]) * (double)expSteps * du);
+            f.re[(size_t)j] = e.real();
+            f.im[(size_t)j] = e.imag();
+        }
+        return f;
+    }
+
+    // out = w x f per mode (complex).
+    void shifted(const Weights& w, const Weights& f, Weights& out) const
+    {
+        for (int j = 0; j < numModes; ++j)
+        {
+            const auto r = w.re[(size_t)j] * f.re[(size_t)j] - w.im[(size_t)j] * f.im[(size_t)j];
+            out.im[(size_t)j] = w.re[(size_t)j] * f.im[(size_t)j] + w.im[(size_t)j] * f.re[(size_t)j];
+            out.re[(size_t)j] = r;
+        }
+    }
+
+    void tailWeights(double u, Weights& w) const
     {
         const auto pos = u * expSteps;
         const auto k = std::min((int)pos, expSteps - 1);
         const auto d = pos - k;
-        double acc = 0.0;
         for (int j = 0; j < numModes; ++j)
         {
             // e^(z d), z = p unit / steps, |z d| < 0.005: Taylor to the 3rd order (error < 3e-11 relative).
@@ -173,10 +221,9 @@ class BridgeFilter
             er = 1.0 + zr * tr - zi * ti; // 1 + z (...)
             ei = zr * ti + zi * tr;
             const auto* c = expTable.data() + (size_t)((j * (expSteps + 1) + k) * 2);
-            const auto cr = c[0] * er - c[1] * ei, ci = c[0] * ei + c[1] * er;
-            acc += cr * s.re[(size_t)j] - ci * s.im[(size_t)j];
+            w.re[(size_t)j] = c[0] * er - c[1] * ei;
+            w.im[(size_t)j] = c[0] * ei + c[1] * er;
         }
-        return acc;
     }
 
   private:

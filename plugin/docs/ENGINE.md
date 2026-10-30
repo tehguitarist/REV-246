@@ -187,32 +187,45 @@ a running tail, and a held lever steps every few milliseconds. Changes during a 
 the cutoff prewarped, on the whole reverb output (the operation card draws it after the reflections). 12 kHz is open:
 an exact bypass. Into and out of open it fades over 10 ms; between two cutoffs the coefficients switch at once.
 
-**Cost** (31 October 2026, before the optimisation pass; Apple-silicon Mac, Release, block 512, 10 s of noise, best
-of 3, % of one core in real time). Hidden test cases, run on demand: `REV246DspTests "[.profile]"` (per stage) and
+**Cost** (31 October 2026, after the optimisation pass; Apple-silicon Mac, Release, block 512, 10 s of noise, best of
+3, % of one core in real time). Hidden test cases, run on demand: `REV246DspTests "[.profile]"` (per stage) and
 `REV246Tests "[.profile]"` (the whole `processBlock`).
 
-Whole processor (one engine: stereo in / stereo out on the original summed path; TRUE ST doubles the engine part):
+Whole processor (one engine: stereo in / stereo out on the original summed path; TRUE ST doubles the engine part),
+before the pass in brackets:
 
 | Program | 44.1 kHz float / 16-bit | 48 kHz float / 16-bit | 96 kHz float / 16-bit |
 |---|---|---|---|
-| S | 1.12 / 1.20 | 1.12 / 1.21 | 1.48 / 1.61 |
-| M | 0.92 / 1.01 | 0.93 / 1.02 | 1.29 / 1.42 |
-| L | 1.10 / 1.19 | 1.12 / 1.21 | 1.47 / 1.60 |
-| E | 0.82 / 0.90 | 0.82 / 0.92 | 1.17 / 1.32 |
-| N | 1.12 / 1.20 | 1.13 / 1.22 | 1.48 / 1.62 |
+| S | 0.52 / 0.65 (1.12 / 1.20) | 0.54 / 0.67 (1.12 / 1.21) | 0.81 / 0.99 (1.48 / 1.61) |
+| M | 0.58 / 0.67 (0.92 / 1.01) | 0.60 / 0.70 (0.93 / 1.02) | 0.88 / 1.02 (1.29 / 1.42) |
+| L | 0.64 / 0.72 (1.10 / 1.19) | 0.66 / 0.74 (1.12 / 1.21) | 0.94 / 1.06 (1.47 / 1.60) |
+| E | 0.53 / 0.62 (0.82 / 0.90) | 0.55 / 0.64 (0.82 / 0.92) | 0.82 / 0.96 (1.17 / 1.32) |
+| N | 0.69 / 0.78 (1.12 / 1.20) | 0.71 / 0.80 (1.13 / 1.22) | 0.98 / 1.12 (1.48 / 1.62) |
 
 XFMR on and off are the same within 0.01 %: the stage always runs (warm state for the toggle's crossfade), so XFMR off
-costs as much as on. Per stage:
+costs as much as on. Per stage (before the pass in brackets):
 
 | Stage | Cost |
 |---|---|
-| bridge alone (analogue chain, correction, rate conversion; identity core) | 0.64 % (44.1, 48 kHz), 0.89 % (96 kHz) |
-| core S / M / L / E / N, float (device rate) | 0.37 / 0.18 / 0.36 / 0.07 / 0.40 % |
-| the same, 16-bit | 0.41 / 0.22 / 0.40 / 0.12 / 0.45 % |
+| bridge alone (analogue chain, correction, rate conversion; identity core) | 0.36 % at 44.1 / 48 kHz, 0.54 % at 96 kHz (0.64, 0.89) |
+| core S / M / L / E / N, float (device rate) | 0.06 / 0.13 / 0.18 / 0.07 / 0.26 % (0.37 / 0.18 / 0.36 / 0.07 / 0.40) |
+| the same, 16-bit | 0.15 / 0.17 / 0.22 / 0.12 / 0.31 % (0.41 / 0.22 / 0.40 / 0.12 / 0.45) |
 | processor around the engine (gains, XFMR, width, meters, dry delay) | about 0.1 % (0.2 % at 96 kHz) |
 
-So the bridge is 55-80 % of an engine, the core 10-40 %; 16-bit mode adds about 0.04 % in the core (the cut) and
-about 0.05 % for the hiss. A program crossfade runs two cores for 30 ms.
+The bridge is now 50-70 % of an engine. A program crossfade runs two cores for 30 ms.
+
+**The optimisation pass** (31 October 2026; each step nulled against renders of every program at 44.1 / 48 / 96 kHz,
+float and 16-bit, from the build before it: worst -193 dB, i.e. float rounding; every DSP test bar unchanged):
+- Long dot products in four (two) partial sums instead of one running sum, which the compiler may not reorder without
+  fast-math (`dotProduct`, `ProgramCore.h`): the correction FIR, the bridge's head rows, M / L's and N's output
+  kernels (their histories doubled so the kernel reads contiguously).
+- S's read-out taps summed per channel in registers: the old `acc[tapChannel[t]] +=` sent every add through memory
+  in one dependency chain (S's core 0.37 -> 0.06 %).
+- The bridge's L read-out: its tail weights are R's times a fixed per-mode factor (L is a constant 0.5037 device
+  samples later), one complex product per mode instead of a second table lookup and series.
+- Not done: the 2-biquad + 33-tap correction (`REPORT_chainfix.md` §2) would save under 0.02 % now that the 65-tap FIR
+  costs about 0.035 %, for an accuracy loss (-51 dB at 11-12.3 kHz); skipping XFMR while off saves nothing measurable;
+  the 16-bit cut sits in S's loop recursion (its serial chain), so its 0.09 % stays.
 
 ## Decisions taken for the build (30 October 2026)
 

@@ -96,6 +96,8 @@ class DeviceBridge
         outFilter.build(out, devT, hostT, phiHalf, beta, std::max(64, (int)std::ceil(devT / tableStep)), 1.0 / lag1k);
         wi = inFilter.halfTaps();
         wo = outFilter.halfTaps();
+        shiftL = outFilter.shift(-(double)halfNum / (double)num);
+        shiftWrapL = outFilter.shift(1.0 - (double)halfNum / (double)num);
         // The output at host m reads device samples up to floor((m - delay) / r) + wo; the input side has made those once
         // host sample floor(n r) + wi has arrived. So delay >= wi + wo r.
         delay = wi + (int)std::ceil((double)wo * r - 1e-9);
@@ -246,15 +248,20 @@ class DeviceBridge
         for (int i = 0; i < len; ++i)
         {
             // R at device position outJ + outRem / num; L half a device sample earlier in the sequence (= later output).
-            outR[i] = (float)readOut(1, outJ, (double)outRem / (double)num);
+            // L's tail weights are R's shifted by that fixed offset (one complex product per mode, not a second lookup).
+            outFilter.tailWeights((double)outRem / (double)num, weightsR);
+            outR[i] = (float)readOut(1, outJ, (double)outRem / (double)num, weightsR);
             auto remL = outRem - halfNum;
             auto jL = outJ;
             if (remL < 0)
             {
                 remL += num;
                 --jL;
+                outFilter.shifted(weightsR, shiftWrapL, weightsL);
             }
-            outL[i] = (float)readOut(0, jL, (double)remL / (double)num);
+            else
+                outFilter.shifted(weightsR, shiftL, weightsL);
+            outL[i] = (float)readOut(0, jL, (double)remL / (double)num, weightsL);
             outRem += den;
             outJ += outRem / num;
             outRem %= num;
@@ -271,22 +278,18 @@ class DeviceBridge
         s.pos = (s.pos + fixRing - 1) & (fixRing - 1);
         s.ring[(size_t)s.pos] = s.ring[(size_t)(s.pos + fixRing)] = y;
         const auto& h = c == 0 ? gen::bridge::fixFirL : gen::bridge::fixFirR;
-        const auto* r = s.ring.data() + s.pos;
-        double acc = 0.0;
-        for (int i = 0; i < correctionTaps; ++i)
-            acc += h[(size_t)i] * r[i];
-        return acc;
+        return dotProduct(h.data(), s.ring.data() + s.pos, correctionTaps);
     }
 
     // Channel c (0 = L, 1 = R) at device position j + v.
-    double readOut(int c, std::int64_t j, double v)
+    double readOut(int c, std::int64_t j, double v, const BridgeFilter::Weights& w)
     {
         jassert(j + wo < devPushed); // latency covers the head's look-ahead
         auto& ring = yRing[c];
         auto& st = outState[c];
         while (tailOut[c] < j - wo)
             outFilter.push(st, ring.at(++tailOut[c]));
-        return outFilter.head(ring.from(j - wo + 1), v) + outFilter.tail(st, v);
+        return outFilter.head(ring.from(j - wo + 1), v) + outFilter.tail(st, w);
     }
 
     static constexpr int fixRing = 128; // a power of two >= correctionTaps; doubled so the FIR reads contiguously
@@ -299,6 +302,7 @@ class DeviceBridge
     };
 
     BridgeFilter inFilter, outFilter;
+    BridgeFilter::Weights weightsR, weightsL, shiftL, shiftWrapL; // L's tail weights = R's x shiftL (x shiftWrapL past a device sample)
     std::array<Fix, 2> fix{}; // [0] = L, [1] = R
     double hpGain = 1.0, hpPole = 0.0;
     BridgeFilter::State inState, outState[2];

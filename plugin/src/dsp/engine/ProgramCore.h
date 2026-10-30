@@ -10,6 +10,24 @@ namespace rv::dsp
 // The unit's sample rate: 19.2 MHz / 728. Every program core runs here; all its delays are integer device samples.
 inline constexpr double deviceRate = 19.2e6 / 728.0;
 
+// sum a[k] b[k], k < n, in four partial sums: one running sum is a chain of dependent adds the compiler may not
+// reorder (without fast-math), about 4x slower for the FIR kernels this is used for.
+inline double dotProduct(const double* a, const double* b, int n)
+{
+    double s0 = 0.0, s1 = 0.0, s2 = 0.0, s3 = 0.0;
+    int k = 0;
+    for (; k + 4 <= n; k += 4)
+    {
+        s0 += a[k] * b[k];
+        s1 += a[k + 1] * b[k + 1];
+        s2 += a[k + 2] * b[k + 2];
+        s3 += a[k + 3] * b[k + 3];
+    }
+    for (; k < n; ++k)
+        s0 += a[k] * b[k];
+    return (s0 + s1) + (s2 + s3);
+}
+
 // The reverb's settings as the panel shows them, already converted from step indices to values.
 struct Settings
 {

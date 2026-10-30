@@ -137,11 +137,23 @@ class SCore final : public ProgramCore
             }
 
             // Read-out taps (the spec's injection) and the direct path.
+            // The taps are sorted by channel (L first); two partial sums per channel keep the adds independent.
             double acc[2] = {0.0, 0.0};
-            for (size_t t = 0; t < g::tapDelay.size(); ++t)
+            for (size_t ch = 0, t0 = 0; ch < 2; ++ch)
             {
-                const double r = lines[(size_t)g::tapLoop[t]][(pos - (size_t)g::tapDelay[t]) & lineMask];
-                acc[g::tapChannel[t]] += g::tapSign[t] > 0 ? r : -r;
+                const auto t1 = ch == 0 ? numLTaps : g::tapDelay.size();
+                double s0 = 0.0, s1 = 0.0;
+                size_t t = t0;
+                for (; t + 2 <= t1; t += 2)
+                {
+                    s0 += (double)g::tapSign[t] * lines[(size_t)g::tapLoop[t]][(pos - (size_t)g::tapDelay[t]) & lineMask];
+                    s1 += (double)g::tapSign[t + 1]
+                          * lines[(size_t)g::tapLoop[t + 1]][(pos - (size_t)g::tapDelay[t + 1]) & lineMask];
+                }
+                if (t < t1)
+                    s0 += (double)g::tapSign[t] * lines[(size_t)g::tapLoop[t]][(pos - (size_t)g::tapDelay[t]) & lineMask];
+                acc[ch] = s0 + s1;
+                t0 = t1;
             }
             double dl = 0.0, dr = 0.0;
             for (size_t t = 0; t < g::directLDelay.size(); ++t)
@@ -374,6 +386,19 @@ class SCore final : public ProgramCore
         return std::max(out, 0.0);
     }
 
+    static constexpr size_t numLTaps = []() {
+        size_t k = 0;
+        while (k < gen::s::tapChannel.size() && gen::s::tapChannel[k] == 0)
+            ++k;
+        return k;
+    }();
+    static constexpr bool tapsSorted = []() {
+        for (size_t k = numLTaps; k < gen::s::tapChannel.size(); ++k)
+            if (gen::s::tapChannel[k] != 1)
+                return false;
+        return true;
+    }();
+    static_assert(tapsSorted, "s_spec.h lists the read-out taps L first (tools/plugin_codegen/s.py)");
     static constexpr size_t lineSize = 2048; // > every P_i and read-out tap (max 1853)
     static constexpr size_t lineMask = lineSize - 1;
     static constexpr std::array<size_t, 3> apSize{32, 128, 256};
