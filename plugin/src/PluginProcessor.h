@@ -1,6 +1,5 @@
 #pragma once
 
-#include "dsp/AdcClipper.h"
 #include "dsp/ReverbEngine.h"
 #include "dsp/StereoWidth.h"
 #include "dsp/Transformer.h"
@@ -43,7 +42,7 @@ class Rev246Processor : public juce::AudioProcessor
     const juce::String getName() const override { return JucePlugin_Name; }
     bool acceptsMidi() const override { return false; }
     bool producesMidi() const override { return false; }
-    double getTailLengthSeconds() const override { return 20.0; } // L's longest RT
+    double getTailLengthSeconds() const override { return 21.0; } // L's longest RT plus the longest DELAY
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }
     void setCurrentProgram(int) override {}
@@ -62,7 +61,7 @@ class Rev246Processor : public juce::AudioProcessor
     bool takeInputClip() { return inputClip.exchange(false, std::memory_order_relaxed); }
 
     // The meter calibration (an index into design::meterCalDbFs), kept in the UI state. It is the unit's input
-    // alignment, so it also places the 16-bit mode's A/D full scale: 6 dB over 0 VU for a sine (AdcClipper).
+    // alignment, so it also places the A/D's full scale: 6 dB over 0 VU for a sine (dsp/AdcCalibration.h).
     int getMeterCal() const { return meterCal.load(std::memory_order_relaxed); }
     void setMeterCal(int index);
 
@@ -94,21 +93,20 @@ class Rev246Processor : public juce::AudioProcessor
     std::array<rv::dsp::ReverbEngine, 2> engines;
     std::array<rv::dsp::Transformer, 2> transformers;
     rv::dsp::StereoWidener stereoWidener;
-    std::array<rv::dsp::AdcClipper, 2> clippers; // one A/D per engine
-    // 20 ms ramps (set in prepareToPlay). The three "On" ones are crossfade weights, 0 or 1 at rest: power (processed
-    // against bypassed), the transformer stage and the 16-bit mode's A/D clipping.
-    juce::LinearSmoothedValue<float> inGain, outGain, mixAmount, panLeft, panRight, powerOn, transformerOn, sixteenBitOn;
+    // 20 ms ramps (set in prepareToPlay). The two "On" ones are crossfade weights, 0 or 1 at rest: power (processed
+    // against bypassed) and the transformer stage.
+    juce::LinearSmoothedValue<float> inGain, outGain, mixAmount, panLeft, panRight, powerOn, transformerOn;
     juce::AudioBuffer<float> scratch; // BlockBuffers' channels; sized in prepareToPlay, so a block never allocates
     std::atomic<float> inputVu{0.0f};
     std::atomic<bool> inputClip{false};
     std::atomic<int> meterCal{0};
-    std::atomic<float> adcFullScale{1.0f}; // the A/D's clip level, linear peak
+    std::atomic<float> adcFullScale{1.0f}; // the A/D's full scale, linear peak
     float vuLevel = 0.0f;      // the VU integrator's state (linear RMS), audio thread only
     double vuTauSamples = 1.0; // VU time constant in samples (tau * sample rate), set in prepareToPlay
     bool lastTrueStereo = false; // engine 1's state is reset when the routing turns true stereo on or off
     EngineKey engineKey;
-    // The reported latency is the A/D stage's (AdcClipper::latency, in both modes so it never changes with 16-BIT):
-    // the dry and bypassed signals are delayed by the same amount, in a ring per input channel.
+    // The reported latency is the engine's (ReverbEngine::latency: the same for every program and both modes): the dry
+    // and bypassed signals are delayed by the same amount, in a ring per input channel.
     std::array<std::vector<float>, 2> dryDelay;
     size_t dryPos = 0;
 
@@ -116,8 +114,9 @@ class Rev246Processor : public juce::AudioProcessor
 
     void processChunk(juce::AudioBuffer<float>&);
     void applyParameters();
-    void processInputStage(const float* inL, const float* inR, const BlockBuffers&, int n, bool trueStereo);
-    void processTransformerOutputs(const BlockBuffers&, int n, bool trueStereo, bool stereoOut);
+    // Returns the block's input peak (after INPUT), for OVL.
+    float processInputStage(const float* inL, const float* inR, const BlockBuffers&, int n, bool trueStereo);
+    void processTransformerOutputs(const BlockBuffers&, int n, bool trueStereo);
     void mixOutput(juce::AudioBuffer<float>&, const BlockBuffers&, bool trueStereo, bool stereoOut);
 
     std::atomic<float>*pProgram, *pMix, *pPan, *pIn, *pOut, *pPower, *pTransformer, *pTrueStereo, *pSixteenBit, *pStereoWidth;

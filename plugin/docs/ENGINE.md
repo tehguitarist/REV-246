@@ -1,6 +1,6 @@
 # The reverb engine
 
-How the real algorithm replaces the placeholder in `src/dsp/ReverbEngine.h`. The research side (what each program
+How the real algorithm runs in the plugin (`src/dsp/ReverbEngine.h`). The research side (what each program
 is and why) is in `../../docs/`; this file is the plugin side's contract: the signal path, who owns which file, and
 the tests every part must pass. The rules in `DEVELOPMENT.md` apply throughout (cross-platform C++, no `M_PI`,
 real-time code allocation- and lock-free, warnings are errors in spirit).
@@ -9,10 +9,11 @@ real-time code allocation- and lock-free, warnings are errors in spirit).
 
 ```
 host rate                         device rate (19.2 MHz / 728 = 26,373.6 Hz)                       host rate
-mono in -> input analogue chain -> [A/D clip, 16-bit mode] -> ProgramCore -> (L, R) -> output chain -> wet L, R
-           (input filter,          sampled at the device       S / M / L / E / N     S&H lag per channel,
-            coupling high-passes)  instants                    + engine: DELAY,      output filter, L half a
-                                                                LOW PASS             device sample late
+mono in -> input analogue chain -> [A/D clip, 16-bit mode] -> alignment -> ProgramCore -> DELAY -> LOW PASS
+           (input filter,          sampled at the device      delay        S / M / L / E / N
+            coupling high-passes)  instants                                (two in a program crossfade)
+        -> (L, R) -> output chain -> [hiss, 16-bit mode] -> wet L, R
+                     (S&H lag per channel, output filter, L half a device sample late)
 ```
 
 - **Device rate inside, host rate outside.** Each program core runs at the device rate with integer delays, exactly
@@ -20,13 +21,15 @@ mono in -> input analogue chain -> [A/D clip, 16-bit mode] -> ProgramCore -> (L,
   chain (`../../docs/NEXT_STEPS.md` §4 and §11, `../../tools/analog/`), so the cores never see the host rate.
 - **Mono in, stereo out.** One core per engine; L and R come out at the same device instants. L's half-sample lag
   (the timing PROM's S&H pulses) is the output side's job: evaluate L's interpolation half a device sample later.
-- **The A/D clip moves to the device rate.** Once the bridge produces the input filter's output at the device
-  instants, the 16-bit mode clips it there (full scale from CAL, as `AdcClipper` does now) and the reinjection scheme
-  in `AdcClipper.h` is no longer needed. The bridge exposes the clip and an overload flag; the processor wiring is the
-  integration step's.
+- **The A/D clips at the device rate**, on the input filter's output at the device instants (`DeviceBridge`): in
+  16-bit mode a hard clip at full scale, in both modes the overload flag that lights OVL. Full scale follows CAL
+  (`src/dsp/AdcCalibration.h`: a sine 6 dB over 0 VU), and the same number scales the cores' 16-bit storage and the
+  hiss. (The host-rate `AdcClipper` and its reinjection scheme, which stood in for this before the bridge, are
+  retired.)
 - **Engine-level controls**, not the cores': DELAY (a pure delay of the whole output, device samples), LOW PASS (a
-  guessed device-rate low-pass on the reverb path, H, with 12 kHz an exact bypass), program switching (crossfade),
-  the mono fold-down `(L + R) / sqrt(2)`, and the latency report (bridge + core look-ahead + the A/D stage).
+  guessed device-rate low-pass on the reverb path, H, with 12 kHz an exact bypass), program switching (crossfade) and
+  the latency report (bridge + the common alignment). The mono fold-down `(L + R) / sqrt(2)` is the processor's,
+  after each channel's output stage.
 - **Always on:** the analogue chain and the time variance (M / L's theta, E's moving reads). Only the null tests
   switch the time variance off (`ProgramCore::setModulation(false)`).
 
@@ -35,7 +38,10 @@ mono in -> input analogue chain -> [A/D clip, 16-bit mode] -> ProgramCore -> (L,
 | Path | What | Built in |
 |---|---|---|
 | `src/dsp/engine/ProgramCore.h` | `Settings`, `deviceRate`, the core interface | phase 0 |
-| `src/dsp/engine/DeviceBridge.h` | host <-> device conversion and the analogue chain | phase 1 |
+| `src/dsp/engine/DeviceBridge.h` | host <-> device conversion, the analogue chain, the A/D clip and overload flag | phase 1 |
+| `src/dsp/engine/BridgeFilter.h` | the bridge's exact band-limited discretisation of one analogue filter (tables + one recursion per pole) | phase 1 |
+| `src/dsp/generated/bridge_spec.h` | the analogue chain's poles and residues (from `tools/plugin_codegen/bridge.py`) | phase 1 |
+| `src/dsp/engine/AnalogueHiss.h` | the 16-bit mode's analogue hiss on the wet outputs (host rate) | phase 3 |
 | `src/dsp/programs/SCore.h` | program S | phase 2 |
 | `src/dsp/programs/MLCore.h` | programs M and L (one class, a program flag) | phase 2 |
 | `src/dsp/programs/ECore.h` | program E (the EMT 250 algorithm) | phase 2 |
@@ -43,7 +49,9 @@ mono in -> input analogue chain -> [A/D clip, 16-bit mode] -> ProgramCore -> (L,
 | `src/dsp/generated/<prog>_spec.h` | constant tables from the spec JSON (committed) | phase 2 |
 | `tools/plugin_codegen/<prog>.py` | the generator for that header; `common.py` holds the shared writer | phase 2 |
 | `tests/dsp/<Prog>Tests.cpp` | that part's tests; `RefIr.h` holds the shared helpers | phases 1, 2 |
-| `src/dsp/ReverbEngine.h` | dispatch, engine-level controls, 16-bit wiring | phase 4 |
+| `src/dsp/ReverbEngine.h` | the engine: bridge, the five cores, alignment, program crossfade, DELAY (`OutputDelay`), LOW PASS (`DeviceLowPass`), hiss | phase 4 |
+| `src/dsp/AdcCalibration.h` | the A/D full scale for a CAL setting (`adcFullScaleForZeroVu`) | phase 4 |
+| `tests/dsp/EngineTests.cpp` | the engine end to end at host rates | phase 4 |
 
 Cores are header-only (or header + one `.cpp` listed in both CMake source lists if one is truly needed). Each part
 touches only its own files; shared files (`ProgramCore.h`, `RefIr.h`, `CMakeLists.txt`, `common.py`) change only in
@@ -102,17 +110,91 @@ count; `../../CLAUDE.md`) is phase 5 and runs through the bridge at host rates.
 
 Float by default. With `Settings::sixteenBit` the cores' `store()` quantises as the unit's 16-bit storage did; the
 reference is `../../tools/loop_read/c/s_loops_fx.c` and `../../docs/model_s_results.md` §36.5. In 16-bit mode the
-engine also adds analogue hiss calibrated to the spec's 73 dB S/N (H: the internal scaling is unknown). Phase 3.
+engine also adds analogue hiss at 91 dB S/N re nominal (the user's choice, 3 dB better than the data sheet's 88 dB
+pass-through figure: a very good unit), about -109 dBFS rms at the default CAL. The REVERB programs' total (spec
+73 dB) is a check, not a target: its extra 15 dB is the 16-bit storage noise the cores make by themselves.
+
+The cut is **magnitude truncation (toward zero)**, the user's choice of 30 October (H for the unit). The scheme is
+bit-exact with `s_loops_fx.c` in its floor and rounding modes (`ProgramCore::setStorageCut`), but with those a loop
+can fall into a dead band that holds a loop-periodic pattern for ever after the input stops (up to -28 dB re nominal
+at L RT 20, -41...-52 dB in S at HF 1.0; idle S/N 47-72 dB, noisier than the spec). Toward zero keeps the decays'
+16-bit grit (-11...-48 dB against float at 50-300 ms) and always decays to silence, so idle noise is the hiss alone.
+Measurements: `tests/dsp/SixteenBitTests.cpp`.
+
+## The engine (`ReverbEngine`)
+
+One per mono input; it owns a `DeviceBridge`, the five cores (S, M, L as two `MLCore`s, E, N), all prepared up front
+for their worst case, so nothing allocates after `prepare()` (EngineTests counts allocations in `process()`: zero).
+Per device block the input goes into a ring; each running core reads it through its alignment delay; the output goes
+through DELAY and LOW PASS; the bridge turns it into host-rate L and R; in 16-bit mode the hiss is added.
+
+**One time grid, one latency.** Every program comes out on the same grid, so the reported latency is the same for all
+of them, both modes and both engines, and a program switch never shifts the timing. Two cores are late against the
+common origin: N by its branch kernel's look-ahead (`NCore::latency()`, 40 device samples), and E because the spec
+puts E's R direct tap (k0 = 64) with M's first cluster tap (at M's kernel centre, 10) at DELAY 0
+(`e_plugin_spec.json` controls.onset, `../../docs/EMT250_program.md` §17.8, S): 54 samples. So every core's input is
+delayed to land 54 device samples late (S / M / L by 54, N by 14, E by 0), and
+
+  latency = bridge latency + round(54 x host rate / device rate) host samples
+
+(the fraction left, under half a host sample, is not compensated). On R: L is another half device sample later.
+
+| Host rate | Bridge | Alignment | Reported latency |
+|---|---|---|---|
+| 44.1 kHz | 21 | 90 | 111 samples (2.52 ms) |
+| 48 kHz | 19 | 98 | 117 samples (2.44 ms) |
+| 96 kHz | 14 | 197 | 211 samples (2.20 ms) |
+
+The modelled analogue chain adds its own peak delay on top (about 0.17 ms: S's cluster tap 0 peaks 8 samples after
+the latency at 44.1 kHz), as the unit does; it is part of the sound, not of the latency.
+
+**Program switch.** The new core is reset and its *input* fades in over 30 ms while the old core keeps running and its
+*output* fades out (equal power, the gains a sin / cos of a sin^2 ramp so neither has a kink). Fading the new core's
+input rather than its output matters: a reset core fed an abrupt signal clicks at each of its internal taps as the
+onset reaches them (S -> M under a 200 Hz sine: 2-8 kHz peak 7.6x the steady level with an output fade, 1.2x with the
+smooth input fade, i.e. at the floor). A switch requested during a fade waits for it to end (at most 30 ms).
+
+**Settings within a program apply at once**, as the unit's coefficient loads did: the cores' filters are first- and
+second-order sections with fixed poles inside the unit circle at every setting, so a coefficient step cannot blow up,
+and the unit had no smoothing either. Stepping LF, RT, HF and AMPL through every step every 5.3 ms under noise
+peaks at 1.0-1.5x the default's level (N and E most, from their louder settings), never anything like a blow-up. N's
+SPAN and LATE switch whole stages and clear the late loops at LATE 0, which clicks as the unit's would.
+
+**DELAY** is an integer number of device samples, `round(ms x 26.3736)`, after the core. A change crossfades from
+the old read position to the new over 10 ms (sin^2 / cos^2): the unit's read pointer would jump, a click per step in
+a running tail, and a held lever steps every few milliseconds. Changes during a fade are taken in turn.
+
+**LOW PASS** (H, `e_plugin_spec.json` controls.LOW_PASS): a 2nd-order Butterworth at the device rate, bilinear with
+the cutoff prewarped, on the whole reverb output (the operation card draws it after the reflections). 12 kHz is open:
+an exact bypass. Into and out of open it fades over 10 ms; between two cutoffs the coefficients switch at once.
+
+**Cost** (one engine incl. the bridge, 16-bit on, block 512, Apple-silicon Mac, Release; `EngineTests`, "cost"):
+
+| Program | 48 kHz | 96 kHz |
+|---|---|---|
+| S | 0.9 % | 1.1 % |
+| M | 0.6 % | 0.9 % |
+| L | 0.8 % | 1.1 % |
+| E | 0.5 % | 0.8 % |
+| N | 0.8 % | 1.1 % |
+
+of one core; a program crossfade runs two cores for 30 ms.
 
 ## Decisions taken for the build (30 October 2026)
 
-- Panel steps between the library's: the data sheet's 16 geometric RT steps, with each spec's law between the
-  library steps (H). The default RT step is exactly 1.0 s. N's tables come from its spec (EARLY: 16 values, LATE:
-  0-2.0 s by 0.2, SPAN: 0-0.5 s).
+- Panel steps: the library's RT values are steps (C); the range ends are the data sheet's; between them (H) the widest
+  gaps in log RT are split at the geometric mean, rounded to the display's 0.1 s, until there are 16 (tables in
+  `src/params/Parameters.cpp`). Each spec's law runs between the library steps. The default RT step is exactly 1.0 s.
+  N's tables come from its spec (EARLY: 16 values, LATE: 0-2.0 s by 0.2, SPAN: 0-0.5 s); LATE's 11 values make the HF
+  parameter 0-10, with S / M / L / E stopping at step 9.
 - LOW PASS: a guessed device-rate low-pass on the reverb path (H), 12 kHz = exact bypass.
 - N's branch read kernel: on, as the spec adopts it; NL_BK=1 (the main taps' read kernel) stays off.
 - E's moving reads: as the spec adopts them (`e_sim.ADOPTED`): rates 0.553 Hz x (1 +- 0.5) per read, a triangle
   (E's data cannot tell it from a sine; the plan's "sine" was a misreading, corrected 30 October).
-- 16-bit mode adds the analogue hiss (73 dB S/N); FLOAT stays clean.
+- 16-bit mode adds the analogue hiss at 91 dB S/N re nominal (about -109 dBFS rms at the default CAL); FLOAT stays
+  clean. The REVERB programs' 73 dB total is a check, not a target.
 - Resampling: the bridge adds no error above -90 dB to the modelled chain over 20 Hz-12.8 kHz; its latency is
   reported.
+- (Integration, 30 October) One latency for every program: all cores aligned to the latest (E's onset, 54 device
+  samples). Program switch: 30 ms, the new core's input faded in, the old core's output out. Settings within a
+  program: at once. DELAY changes: a 10 ms crossfade. The A/D clip moved into the bridge; `AdcClipper` retired.

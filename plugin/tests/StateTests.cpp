@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
+#include <functional>
 
 TEST_CASE("state round-trips")
 {
@@ -33,6 +34,31 @@ TEST_CASE("factory presets load and are not user-overwritable")
     CHECK_FALSE(p.presets.isModified());
     p.apvts.getParameter(rv::params::id::mix)->setValueNotifyingHost(0.9f);
     CHECK(p.presets.isModified());
+}
+
+TEST_CASE("every factory preset sits on its program's step tables; E has the Altiverb family's LF / HF")
+{
+    using namespace rv::params;
+    Rev246Processor p;
+    for (int program = 0; program < numPrograms; ++program)
+    {
+        REQUIRE(p.presets.load(rv::PresetManager::factoryName(program)));
+        INFO("program " << program);
+        CHECK(juce::roundToInt(p.apvts.getRawParameterValue(id::program)->load()) == program);
+        for (int j = 0; j < numJoys; ++j)
+        {
+            const auto raw = p.apvts.getRawParameterValue(joyId((Joy)j))->load();
+            CHECK(std::equal_to<float>{}(raw, std::round(raw)));
+            CHECK((int)raw >= 0);
+            CHECK((int)raw <= joyMaxStep((Program)program, (Joy)j));
+        }
+    }
+    REQUIRE(p.presets.load("Init E"));
+    auto value = [&](Joy j) { return joyNumber(Program::e, j, juce::roundToInt(p.apvts.getRawParameterValue(joyId(j))->load())); };
+    CHECK(std::equal_to<double>{}(value(Joy::lf), 1.4)); // the step nearest the family's 1.49
+    CHECK(std::abs(value(Joy::hf) - 0.7) < 1e-12); // 0.69
+    REQUIRE(p.presets.load("Init S"));
+    CHECK(std::equal_to<double>{}(joyNumber(Program::s, Joy::rt, juce::roundToInt(p.apvts.getRawParameterValue(id::rt)->load())), 1.0));
 }
 
 TEST_CASE("presets leave the stereo mode alone")

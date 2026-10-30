@@ -60,7 +60,7 @@ class TransformerCore
 //
 // Level: the cores are calibrated with a peak of 1 = +12 dBu, the A/D's full scale (nominal +6 dBu plus its 6 dB
 // headroom; the unit is unity gain in and out, so the outputs share the reference). The A/D's full scale follows the
-// meter calibration (AdcClipper::fullScaleForZeroVu), so setFullScale moves the cores' drive with it.
+// meter calibration (adcFullScaleForZeroVu, dsp/AdcCalibration.h), so setFullScale moves the cores' drive with it.
 class Transformer
 {
   public:

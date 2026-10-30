@@ -21,8 +21,8 @@ through the original's width to extra wide, with the bass kept mono as it widens
 
 > REV-246 is an independent project. It is not affiliated with or endorsed by EMT or any other manufacturer.
 
-**Status:** pre-release. The panel, presets, installers and plugin plumbing are in place; the reverb engine is still
-being finalised, so there is no download yet. When there is, the latest one will be here:
+**Status:** pre-release. The reverb engine, panel, presets and installers are in place; the engine is being checked
+against the hardware's impulse responses before the first release, so there is no download yet. When there is, the latest one will be here:
 **[Download the latest release](https://github.com/tehguitarist/REV-246/releases/latest)**.
 
 ## Features
@@ -101,15 +101,13 @@ neither store nor change them.
 
 ## Accuracy options
 
-<!-- TODO: the FLOAT / 16-BIT button and parameter exist, but the placeholder engine has no loops to quantise yet;
-     the real algorithm applies the setting when it lands. -->
-
 Both options are off or on independently, both default on, and both only change the reverb path.
 
 **16-bit.** The original stored the intermediate results in its reverb loops as 16-bit words, and truncating them at
 that depth costs a little noise and grit: its service data put the reverb around 15 dB noisier than the unit's own
-straight-through path. With **16-BIT** selected, REV-246 will quantise its loops the same way (the placeholder engine
-has no loops yet). **16-BIT** is the default; switch to **FLOAT** for a cleaner tail.
+straight-through path. With **16-BIT** selected, REV-246 quantises its loops the same way, and adds a little analogue
+hiss: very quiet, below the original's own specification, and only in 16-BIT mode. **16-BIT** is the default; switch
+to **FLOAT** for a cleaner tail.
 
 In 16-bit mode the input also clips where the original's A/D converter did. That converter left only 6 dB of headroom
 above the 0 mark on its meter, and it clipped hard: past full scale it simply holds the last code. Its input filter
@@ -119,8 +117,9 @@ Where it clips follows **CAL**: CAL sets what 0 VU means in dBFS, and the conver
 sine (at the default -18 dBFS, that's a sine peaking at -9 dBFS). **OVL** lights whenever the converter clips, and in
 FLOAT mode it lights where it would have clipped.
 
-REV-246 reports about 1.4 ms of latency (the converter stage needs that much look-ahead), and your DAW compensates
-for it. It is the same in FLOAT and 16-BIT, so switching between them never shifts the timing.
+REV-246 reports about 2.5 ms of latency (the conversion to and from the original's own sample rate needs that much
+look-ahead), and your DAW compensates for it. It is the same in every programme and in FLOAT and 16-BIT, so switching
+never shifts the timing.
 
 **XFMR.** The original could be ordered with balanced input and output transformers, which the manual says raise the
 harmonic distortion slightly. **XFMR** is on by default; with it on, the wet path gains the low-frequency colour and

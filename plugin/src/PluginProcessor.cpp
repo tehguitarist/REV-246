@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 
 #include "PluginEditor.h"
+#include "dsp/AdcCalibration.h"
 #include "ui/Design.h"
 
 #include <algorithm>
@@ -14,6 +15,7 @@ constexpr float vuRiseSeconds = 0.3f; // VU: 99% of a step in ~300 ms
 // instead of gaining 6 dB. The equal-power alternative, 1/sqrt(2), would keep uncorrelated stereo at its power but
 // add 3 dB to centred material; input headroom matters more here, so use the conservative sum.
 constexpr float monoSumGain = 0.5f;
+constexpr float monoFoldGain = 0.70710678f; // 1 / sqrt(2): the mono output's (L + R) fold-down of the wet
 constexpr float ovlPeak = 0.999f; // linear: an input sample at or above this lights OVL (full scale to within a code)
 constexpr float switchOnThreshold = 0.5f; // a bool parameter's raw value is 0 or 1
 
@@ -95,7 +97,7 @@ void Rev246Processor::applyMeterCal(int index)
 {
     index = juce::jlimit(0, rv::design::numMeterCal - 1, index);
     meterCal.store(index, std::memory_order_relaxed);
-    adcFullScale.store(rv::dsp::AdcClipper::fullScaleForZeroVu(rv::design::meterCalDbFs[index]), std::memory_order_relaxed);
+    adcFullScale.store(rv::dsp::adcFullScaleForZeroVu(rv::design::meterCalDbFs[index]), std::memory_order_relaxed);
 }
 
 void Rev246Processor::setMeterCal(int index)
@@ -124,9 +126,7 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
         t.prepare(sampleRate);
     stereoWidener.prepare(sampleRate);
     stereoWidener.setWidth(pStereoWidth->load(), true);
-    for (auto& c : clippers)
-        c.prepare(sampleRate);
-    for (auto* s : {&inGain, &outGain, &mixAmount, &panLeft, &panRight, &powerOn, &transformerOn, &sixteenBitOn})
+    for (auto* s : {&inGain, &outGain, &mixAmount, &panLeft, &panRight, &powerOn, &transformerOn})
         s->reset(sampleRate, rampSeconds);
     inGain.setCurrentAndTargetValue(rv::params::gainLinearFromPosition(pIn->load()));
     outGain.setCurrentAndTargetValue(rv::params::gainLinearFromPosition(pOut->load()));
@@ -136,7 +136,6 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
     panRight.setCurrentAndTargetValue(pan.right);
     powerOn.setCurrentAndTargetValue(isOn(*pPower) ? 1.0f : 0.0f);
     transformerOn.setCurrentAndTargetValue(isOn(*pTransformer) ? 1.0f : 0.0f);
-    sixteenBitOn.setCurrentAndTargetValue(isOn(*pSixteenBit) ? 1.0f : 0.0f);
     // processBlock works in chunks of at most this many samples, so it never has to grow the scratch buffer.
     scratch.setSize(numScratchChannels, maxBlock, false, false, true);
     // VU meter: a first-order RMS integrator. The classic VU reaches 99% in ~300 ms, so tau = 300 ms / ln 100.
@@ -145,8 +144,11 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
     inputVu.store(0.0f);
     inputClip.store(false);
     lastTrueStereo = isStereoToStereo() && isOn(*pTrueStereo);
-    engineKey = {}; // the engines are prepared afresh: send them their settings again
-    const auto latency = clippers[0].latency();
+    engineKey = {}; // the engines are prepared afresh: send them their settings, and start in the current program
+    applyParameters(); // rather than crossfading into it from the default one
+    for (auto& e : engines)
+        e.reset();
+    const auto latency = engines[0].latency(); // the same for every program, both modes and both engines
     for (auto& d : dryDelay)
         d.assign((size_t)latency, 0.0f);
     dryPos = 0;
@@ -189,7 +191,6 @@ void Rev246Processor::processChunk(juce::AudioBuffer<float>& buffer)
     {
         engines[1].reset();
         transformers[1].reset();
-        clippers[1].reset();
         engineKey = {}; // a reset may drop the settings: send them again
         lastTrueStereo = trueStereo;
     }
@@ -197,20 +198,24 @@ void Rev246Processor::processChunk(juce::AudioBuffer<float>& buffer)
     applyParameters();
 
     const BlockBuffers b(scratch);
-    processInputStage(buffer.getReadPointer(0), buffer.getReadPointer(stereoIn ? 1 : 0), b, n, trueStereo);
+    const auto inputPeak = processInputStage(buffer.getReadPointer(0), buffer.getReadPointer(stereoIn ? 1 : 0), b, n,
+                                             trueStereo);
 
     engines[0].process(b.engineIn0, b.wetL0, b.wetR0, n);
     if (trueStereo)
         engines[1].process(b.engineIn1, b.wetL1, b.wetR1, n);
 
-    // Mono out uses the left side of the reverb for now; with the real read-outs it becomes the (L + R) / sqrt(2)
-    // fold-down (docs/DEVELOPMENT.md, Channel modes). In true stereo the two sides come from the two engines.
-    processTransformerOutputs(b, n, trueStereo, stereoOut);
+    // OVL: a full-scale input, or the A/D out of range (the unit's REG LED; in float mode, where it would clip).
+    const bool over0 = engines[0].takeOverload(), over1 = engines[1].takeOverload();
+    if (inputPeak >= ovlPeak || over0 || (trueStereo && over1))
+        inputClip.store(true, std::memory_order_relaxed);
 
-    // Stereo width on the wet path. The late-tail decorrelator from the design is not in the chain yet: the placeholder
-    // engine has no early/late split, and its allpass delay (~8 ms) would also land on the early part. When the engine
-    // exposes the late tail, run rv::dsp::LateDecorrelator on that tail before this widener (DEVELOPMENT.md, Open
-    // items).
+    // Both read-outs through the output stage; a mono output folds them down after it (mixOutput). In true stereo the
+    // two sides come from the two engines.
+    processTransformerOutputs(b, n, trueStereo);
+
+    // Stereo width on the wet path. The late-tail decorrelator from the design is not in the chain: the engine has no
+    // early/late split, and its allpass delay (~8 ms) would also land on the early part (DEVELOPMENT.md, Open items).
     stereoWidener.setWidth(pStereoWidth->load());
     if (stereoOut)
         stereoWidener.process(b.wetL0, trueStereo ? b.wetR1 : b.wetR0, n);
@@ -226,8 +231,9 @@ void Rev246Processor::applyParameters()
     EngineKey key;
     key.program = juce::jlimit(0, numPrograms - 1, juce::roundToInt(pProgram->load()));
     key.sixteenBit = isOn(*pSixteenBit);
-    for (int i = 0; i < numJoys; ++i)
-        key.steps[(size_t)i] = juce::jlimit(0, joyMaxStep((Joy)i), juce::roundToInt(pJoy[(size_t)i]->load()));
+    for (int i = 0; i < numJoys; ++i) // a step past the program's last (N's longer HF column) reads as the last
+        key.steps[(size_t)i] = juce::jlimit(0, joyMaxStep((Program)key.program, (Joy)i),
+                                            juce::roundToInt(pJoy[(size_t)i]->load()));
     if (!(key == engineKey)) // the settings follow from the key alone; the engines only hear about a change
     {
         engineKey = key;
@@ -252,10 +258,9 @@ void Rev246Processor::applyParameters()
     mixAmount.setTargetValue(pMix->load());
     powerOn.setTargetValue(isOn(*pPower) ? 1.0f : 0.0f);
     transformerOn.setTargetValue(isOn(*pTransformer) ? 1.0f : 0.0f);
-    sixteenBitOn.setTargetValue(key.sixteenBit ? 1.0f : 0.0f);
     const auto fullScale = adcFullScale.load(std::memory_order_relaxed);
-    for (auto& c : clippers)
-        c.setFullScale(fullScale);
+    for (auto& e : engines)
+        e.setFullScale(fullScale);
     for (auto& t : transformers)
         t.setFullScale(fullScale);
     const auto pan = panGains(pPan->load());
@@ -264,12 +269,12 @@ void Rev246Processor::applyParameters()
 }
 
 // The unit has one mono input: sum (monoSumGain times), apply INPUT, and read the level there. Then the optional input
-// transformer, then the A/D: in 16-bit mode its clipping (AdcClipper). Both stages always run so their state is warm
-// when switched on, and the A/D also feeds the OVL LED in float mode; off, a stage's crossfade weight is exactly 0.
-// The A/D stage delays the wet path by the plugin's latency in either mode; the dry and bypassed signals get the same
-// delay here (b.dryIn*).
-void Rev246Processor::processInputStage(const float* inL, const float* inR, const BlockBuffers& b, int n,
-                                        bool trueStereo)
+// transformer; the A/D (its clip in 16-bit mode and the overload flag) is inside the engine, at the device rate, after
+// its analogue input chain. The transformer always runs so its state is warm when switched on; off, its crossfade
+// weight is exactly 0. The engine delays the wet path by the plugin's latency; the dry and bypassed signals get the
+// same delay here (b.dryIn*).
+float Rev246Processor::processInputStage(const float* inL, const float* inR, const BlockBuffers& b, int n,
+                                         bool trueStereo)
 {
     float peak = 0.0f, sumSq = 0.0f;
     const auto ringSize = dryDelay[0].size();
@@ -278,7 +283,6 @@ void Rev246Processor::processInputStage(const float* inL, const float* inR, cons
     {
         const auto g = inGain.getNextValue();
         const auto transformerMix = transformerOn.getNextValue();
-        const auto q = sixteenBitOn.getNextValue();
         const auto l = inL[i], r = inR[i];
         b.dryInL[i] = dryDelay[0][ringPos];
         b.dryInR[i] = dryDelay[1][ringPos];
@@ -294,14 +298,14 @@ void Rev246Processor::processInputStage(const float* inL, const float* inR, cons
             auto left = l * g, right = r * g;
             left += transformerMix * (transformers[0].processInput(left) - left);
             right += transformerMix * (transformers[1].processInput(right) - right);
-            b.engineIn0[i] = clippers[0].process(left, q);
-            b.engineIn1[i] = clippers[1].process(right, q);
+            b.engineIn0[i] = left;
+            b.engineIn1[i] = right;
         }
         else
         {
             auto mono = monoInput;
             mono += transformerMix * (transformers[0].processInput(mono) - mono);
-            b.engineIn0[i] = clippers[0].process(mono, q);
+            b.engineIn0[i] = mono;
         }
     }
     dryPos = ringPos;
@@ -310,16 +314,13 @@ void Rev246Processor::processInputStage(const float* inL, const float* inR, cons
     const auto a = 1.0f - std::exp(-(float)n / (float)vuTauSamples);
     vuLevel = a * rms + (1.0f - a) * vuLevel;
     inputVu.store(vuLevel, std::memory_order_relaxed);
-    // OVL: a full-scale input, or the A/D clipping (the unit's REG LED; in float mode, where it would clip).
-    const bool over0 = clippers[0].takeOverload(), over1 = clippers[1].takeOverload();
-    if (peak >= ovlPeak || over0 || (trueStereo && over1))
-        inputClip.store(true, std::memory_order_relaxed);
+    return peak;
 }
 
 // The transformer stage's outputs: the captures' low band and the output transformers, crossfaded with the dry-through
-// wet by the stage's weight. In true stereo each channel has its own transformer, and engine 0's left / engine 1's
-// right are the two sides used. With a mono output only the left side exists, and the right is left alone.
-void Rev246Processor::processTransformerOutputs(const BlockBuffers& b, int n, bool trueStereo, bool stereoOut)
+// wet by the stage's weight, on both read-outs (a mono output folds them down afterwards). In true stereo each
+// channel has its own transformer, and engine 0's left / engine 1's right are the two sides used.
+void Rev246Processor::processTransformerOutputs(const BlockBuffers& b, int n, bool trueStereo)
 {
     auto& transformerL = transformers[0];
     auto& transformerR = trueStereo ? transformers[1] : transformers[0];
@@ -329,12 +330,9 @@ void Rev246Processor::processTransformerOutputs(const BlockBuffers& b, int n, bo
     {
         const auto w = b.transformerWeight[i];
         const auto xl = transformerL.processOutput(0, wetL[i]);
+        const auto xr = transformerR.processOutput(1, wetR[i]);
         wetL[i] += w * (xl - wetL[i]);
-        if (stereoOut)
-        {
-            const auto xr = transformerR.processOutput(1, wetR[i]);
-            wetR[i] += w * (xr - wetR[i]);
-        }
+        wetR[i] += w * (xr - wetR[i]);
     }
 }
 
@@ -367,8 +365,10 @@ void Rev246Processor::mixOutput(juce::AudioBuffer<float>& buffer, const BlockBuf
         }
         else
         {
-            // A mono output cannot carry the pan, so the dry is the mono sum.
-            const auto processed = ((1.0f - mix) * dryMono + mix * wetL[i]) * outputGain;
+            // A mono output cannot carry the pan, so the dry is the mono sum. The wet is the unit's two read-outs folded
+            // down at equal power: they are uncorrelated, so each keeps its level (DEVELOPMENT.md, Channel modes).
+            const auto wetMono = (wetL[i] + wetR[i]) * monoFoldGain;
+            const auto processed = ((1.0f - mix) * dryMono + mix * wetMono) * outputGain;
             outL[i] = power * processed + (1.0f - power) * b.dryInL[i];
         }
     }

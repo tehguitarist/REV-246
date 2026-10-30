@@ -1,5 +1,6 @@
 #include "presets/PresetManager.h"
 
+#include "dsp/generated/e_spec.h"
 #include "params/Parameters.h"
 
 #include <cmath>
@@ -113,8 +114,18 @@ juce::ValueTree PresetManager::factoryState(int program) const
             if (!isPreference(r->paramID))
                 if (auto child = state.getChildWithProperty(idProperty, r->paramID); child.isValid())
                     child.setProperty(valueProperty, r->convertFrom0to1(r->getDefaultValue()), nullptr);
-    if (auto child = state.getChildWithProperty(idProperty, params::id::program); child.isValid())
-        child.setProperty(valueProperty, program, nullptr);
+    auto set = [&state](const char* paramId, int value) {
+        if (auto child = state.getChildWithProperty(idProperty, paramId); child.isValid())
+            child.setProperty(valueProperty, value, nullptr);
+    };
+    set(params::id::program, program);
+    // E: the Altiverb family's LF x 1.49 / HF x 0.69 (e_plugin_spec controls.LF_HF), at the nearest panel steps (1.4,
+    // 0.7). Every other value is a step index, so every preset sits on its program's table.
+    if (program == (int)params::Program::e)
+    {
+        set(params::id::lf, params::joyNearestStep(params::Program::e, params::Joy::lf, dsp::gen::e::familyLf));
+        set(params::id::hf, params::joyNearestStep(params::Program::e, params::Joy::hf, dsp::gen::e::familyHf));
+    }
     return parametersOnly(state);
 }
 

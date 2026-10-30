@@ -1,4 +1,6 @@
 #include "PluginProcessor.h"
+#include "TestEngine.h"
+#include "dsp/AdcCalibration.h"
 #include "dsp/Transformer.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -100,39 +102,43 @@ TEST_CASE("the transformer is on by default and leaves the output alone when off
     Rev246Processor p;
     CHECK(p.apvts.getRawParameterValue(rv::params::id::transformer)->load() >= 0.5f);
 
-    // Mix 100 %: the output is the wet path. The placeholder engine passes the mono input, so off the output must be
-    // exactly mono x INPUT x OUTPUT (the default fader positions are within 0.05 dB of unity, not exactly 1), delayed by
-    // the plugin's latency; on must change it.
-    auto run = [](bool eqOn) {
+    // Mix 100 %: the output is the wet path. Off, it must be the engine's (S, float: linear) response to the mono input
+    // x INPUT, times OUTPUT (the default fader positions are within 0.05 dB of unity, not exactly 1), to float
+    // rounding; on must change it. Returns the largest difference relative to the peak.
+    auto input = [](int n) { return 0.3f * std::sin(0.02f * (float)n); }; // ~150 Hz
+    constexpr int blocks = 16;
+    std::vector<float> mono((size_t)(blocks * 256));
+    for (size_t n = 0; n < mono.size(); ++n)
+        mono[n] = input((int)n);
+    const auto g = rv::params::gainLinearFromPosition(rv::params::defaultGainPosition);
+    const auto engine = rv::test::runEngine(mono);
+    auto run = [&](bool eqOn) {
         Rev246Processor proc;
         proc.apvts.getParameter(rv::params::id::mix)->setValueNotifyingHost(1.0f);
         proc.apvts.getParameter(rv::params::id::sixteenBit)->setValueNotifyingHost(0.0f); // isolate the transformer
         proc.apvts.getParameter(rv::params::id::transformer)->setValueNotifyingHost(eqOn ? 1.0f : 0.0f);
         proc.prepareToPlay(48000.0, 256);
         juce::MidiBuffer midi;
-        const auto latency = proc.getLatencySamples();
-        auto input = [](int n) { return n < 0 ? 0.0f : 0.3f * std::sin(0.02f * (float)n); }; // ~150 Hz
-        float maxDiff = 0.0f;
-        for (int block = 0; block < 8; ++block)
+        float maxDiff = 0.0f, peak = 0.0f;
+        for (int block = 0; block < blocks; ++block)
         {
             juce::AudioBuffer<float> b(2, 256);
             for (int ch = 0; ch < 2; ++ch)
                 for (int i = 0; i < 256; ++i)
                     b.setSample(ch, i, input(block * 256 + i));
             proc.processBlock(b, midi);
-            const auto g = rv::params::gainLinearFromPosition(rv::params::defaultGainPosition);
             if (block >= 4) // after the 20 ms ramps
                 for (int ch = 0; ch < 2; ++ch)
                     for (int i = 0; i < 256; ++i)
                     {
-                        const auto x = input(block * 256 + i - latency);
-                        const auto expected = 0.5f * (x + x) * g * g;
+                        const auto expected = engine[(size_t)ch][(size_t)(block * 256 + i)] * g * g;
+                        peak = std::max(peak, std::abs(expected));
                         maxDiff = std::max(maxDiff, std::abs(b.getSample(ch, i) - expected));
                     }
         }
-        return maxDiff;
+        return maxDiff / peak;
     };
-    CHECK_FALSE(run(false) > 0.0f); // exactly the input
+    CHECK(run(false) < 1e-5f); // the engine's own output
     CHECK(run(true) > 1e-3f);
 }
 
@@ -181,7 +187,7 @@ TEST_CASE("the transformer's drive follows the A/D full scale")
         }
         return std::abs(h3c) / std::abs(h1);
     };
-    const auto fs = rv::dsp::AdcClipper::fullScaleForZeroVu(-18.0f);
+    const auto fs = rv::dsp::adcFullScaleForZeroVu(-18.0f);
     const auto atFullScale = h3(1.0f, 1.0f);
     CHECK(std::abs(h3(fs, fs) / atFullScale - 1.0) < 1e-3); // the same distortion at the A/D's full scale
     CHECK(h3(1.0f, fs) < 0.5 * atFullScale);                // the old, fixed calibration drove it far less there

@@ -26,38 +26,48 @@ constexpr std::array<Tick, 11> gainTicks{{{12.f, 218.f},
                                           {-100.f, 1238.f}}}; // the bottom is -infinity
 constexpr float faderTopY = 218.f, faderBottomY = 1238.f; // the travel's ends in the same design pixels
 
-// Step tables (H until the unit's exact tables are known; the counts and ranges are from the data sheet).
-constexpr std::array<double, 8> lowpassStepsKHz{2, 3, 4, 5, 6, 8, 10, 12};
+// Step tables. Counts and ranges are the data sheet's (C, docs/EMT246_unit_facts.md section 3); the values are the
+// Tomkin library's where it has them (C: real panel steps) and guesses in between (H).
+constexpr std::array<double, 8> lowpassStepsKHz{2, 3, 4, 5, 6, 8, 10, 12}; // H between the observed 2 / 8 / 10 / 12
+// LF x (H; holds every library LF of S / M / L: 0.1, 0.4, 1.0, 2.0).
 constexpr std::array<double, 16> lfStepsX{0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.4, 1.6, 1.8, 2.0};
-constexpr int rtStepCount = 16;       // RT, all programs
-constexpr int hfStepCount = 10;       // HF x 0.1 ... 1.0; also N's late RT
+constexpr int hfStepCount = 10;       // HF x 0.1 ... 1.0 in S / M / L / E (holds every library HF)
 constexpr int delayMaxStepMs = 999;   // DELAY: 0 ... 999 ms in 1 ms steps
 constexpr int amplMaxStep = 10;       // AMPL: 0 ... 100 % (N: span 0 ... 0.5 s) in 11 steps
-constexpr int nEarlyRtZeroStep = 8;   // N's EARLY RT runs -4.0 ... +3.5 s in 0.5 s steps, zero at this step
 
-struct RtRange
-{
-    double lo, hi;
-};
-// S, M and L from the data sheet (16 steps); E and N are guesses.
-constexpr RtRange rtRange(Program p)
+// RT: 16 steps per program. The library's RT values are real panel steps (C); the range ends are the data sheet's
+// (S, M, L: C; E: H); the steps between them (H) split the widest gaps in log RT, each at the geometric mean of its
+// neighbours rounded to the display's precision (0.1 s below 10 s, whole seconds above), until there are 16. Library
+// steps: S 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; M 0.6 0.8 1.2 1.8 2.6 3.0 4.0 5.0; L 2.2 2.6 3.6 4.5 6 8 10 15 20
+// (analysis/ml/ml_plugin_spec.json); E 0.4 1.0 1.5 2.0 2.5 3.0 3.6 4.0 4.5 (the Altiverb family's, e_plugin_spec
+// controls.RT). The default step is S's 1.0 s (index 8).
+using RtTable = std::array<double, 16>;
+constexpr RtTable rtStepsS{0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.5};
+constexpr RtTable rtStepsM{0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.3, 1.5, 1.8, 2.2, 2.6, 3.0, 3.5, 4.0, 5.0};
+constexpr RtTable rtStepsL{2.0, 2.2, 2.6, 3.1, 3.6, 4.0, 4.5, 5.2, 6.0, 6.9, 8.0, 10.0, 12.0, 15.0, 17.0, 20.0};
+constexpr RtTable rtStepsE{0.4, 0.5, 0.6, 0.7, 0.8, 1.0, 1.2, 1.5, 1.7, 2.0, 2.5, 3.0, 3.6, 4.0, 4.5, 5.0};
+constexpr int rtDefaultStep = 8; // 1.0 s in S
+
+// N (analysis/nl/nl_plugin_spec.json controls). EARLY RT in the LF slot: its 16 values (S), 10 = flat. LATE RT in the
+// HF slot: 0 ... 2.0 s by 0.2 (C), 0 = no late section; 11 values, one more than S / M / L / E's 10 HF steps, so the
+// HF parameter runs 0 ... 10 and the other programs stop at step 9 (joyMaxStep(Program, Joy); a higher step reads as
+// their step 9). SPAN in the AMPL slot: 0 ... 0.5 s by 0.05 (0.1 s steps C, the 0.05 s ones H).
+constexpr std::array<double, 16> nEarlySteps{-3.0, -2.0, -1.0, -0.7, -0.5, -0.2, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 10.0};
+constexpr int nLateSteps = 11;
+constexpr double nLateStepS = 0.2;
+
+const RtTable& rtTable(Program p)
 {
     switch (p)
     {
-    case Program::s: return {0.2, 2.5};
-    case Program::m: return {0.5, 5.0};
-    case Program::l: return {2.0, 20.0};
-    case Program::e: return {0.4, 5.0};
+    case Program::m: return rtStepsM;
+    case Program::l: return rtStepsL;
+    case Program::e: return rtStepsE;
+    case Program::s:
     case Program::n:
     case Program::count:
-    default: return {0.5, 10.0}; // N: LATE RT, on the HF column
+    default: return rtStepsS;
     }
-}
-
-// Step `step` of `steps` geometrically spaced values from r.lo to r.hi.
-double geometricStep(RtRange r, int step, int steps)
-{
-    return r.lo * std::pow(r.hi / r.lo, (double)step / (double)(steps - 1));
 }
 
 // The number as the display prints it: one decimal below 10, whole numbers from 10 up. The display right-aligns it
@@ -78,30 +88,36 @@ const char* joyId(Joy j)
 int joyMaxStep(Joy j)
 {
     static constexpr int maxima[] = {(int)lowpassStepsKHz.size() - 1, delayMaxStepMs, amplMaxStep,
-                                     (int)lfStepsX.size() - 1, rtStepCount - 1, hfStepCount - 1};
+                                     (int)lfStepsX.size() - 1, (int)RtTable{}.size() - 1, nLateSteps - 1};
     return maxima[(int)j];
+}
+
+int joyMaxStep(Program p, Joy j)
+{
+    if (j == Joy::hf && p != Program::n)
+        return hfStepCount - 1;
+    return joyMaxStep(j);
 }
 
 int joyDefaultStep(Joy j)
 {
-    // The CLA reference setting (S): LP 12, DELAY 10 ms, AMPL 80 %, LF x1.0, RT about 1 s, HF x0.9. RT step 8 reads
-    // 0.8 s on the placeholder geometric table (1.0 s falls between steps 9 and 10).
-    static constexpr int defaults[] = {7, 10, 8, 9, 8, 8};
+    // The CLA reference setting (S): LP 12, DELAY 10 ms, AMPL 80 %, LF x1.0, RT 1.0 s, HF x0.9.
+    static constexpr int defaults[] = {7, 10, 8, 9, rtDefaultStep, 8};
     return defaults[(int)j];
 }
 
 double joyNumber(Program p, Joy j, int step) noexcept
 {
-    step = juce::jlimit(0, joyMaxStep(j), step);
+    step = juce::jlimit(0, joyMaxStep(p, j), step);
     const bool n = p == Program::n;
     switch (j)
     {
     case Joy::lowpass: return lowpassStepsKHz[(size_t)step];
     case Joy::delay: return step;
     case Joy::ampl: return n ? step * 0.05 : step * 10.0; // N: SPAN 0 to 0.5 s
-    case Joy::lf: return n ? (step - nEarlyRtZeroStep) * 0.5 : lfStepsX[(size_t)step]; // N: EARLY RT, negative allowed
-    case Joy::rt: return geometricStep(rtRange(p), step, rtStepCount);
-    case Joy::hf: return n ? geometricStep(rtRange(p), step, hfStepCount) : (step + 1) * 0.1; // N: LATE RT
+    case Joy::lf: return n ? nEarlySteps[(size_t)step] : lfStepsX[(size_t)step]; // N: EARLY RT
+    case Joy::rt: return n ? 0.0 : rtTable(p)[(size_t)step];                    // N has no RT
+    case Joy::hf: return n ? step * nLateStepS : (step + 1) * 0.1;               // N: LATE RT
     case Joy::count:
     default: return 0.0;
     }
@@ -110,7 +126,7 @@ double joyNumber(Program p, Joy j, int step) noexcept
 JoyValue joyValue(Program p, Joy j, int step)
 {
     JoyValue v;
-    step = juce::jlimit(0, joyMaxStep(j), step);
+    step = juce::jlimit(0, joyMaxStep(p, j), step);
     v.value = joyNumber(p, j, step);
     const bool n = p == Program::n;
     switch (j)
@@ -146,6 +162,25 @@ JoyValue joyValue(Program p, Joy j, int step)
     return v;
 }
 
+int joyNearestStep(Program p, Joy j, double value)
+{
+    // RT is spaced roughly geometrically, so it is compared in log; every other column linearly.
+    const bool logScale = j == Joy::rt && p != Program::n && value > 0.0;
+    int best = 0;
+    auto bestDistance = std::numeric_limits<double>::max();
+    for (int step = 0; step <= joyMaxStep(p, j); ++step)
+    {
+        const auto v = joyNumber(p, j, step);
+        const auto distance = logScale ? std::abs(std::log(v / value)) : std::abs(v - value);
+        if (distance < bestDistance)
+        {
+            bestDistance = distance;
+            best = step;
+        }
+    }
+    return best;
+}
+
 std::optional<int> joyStepFromValue(Program p, Joy j, double value)
 {
     if (!std::isfinite(value))
@@ -153,30 +188,18 @@ std::optional<int> joyStepFromValue(Program p, Joy j, double value)
     if (j == Joy::rt && p == Program::n)
         return std::nullopt; // RT is blank in the non-linear program
 
-    // The geometric decays are not a table the user can recite, so accept any value in range and use the nearest
-    // step. Everything else has a visible, exact step (whole ms, 10 %, 0.1 x, the lowpass table, ...).
-    const bool nearest = j == Joy::rt || (j == Joy::hf && p == Program::n);
-    if (nearest)
+    // RT's steps are not a table the user can recite, so accept any value in range and use the nearest step.
+    // Everything else has a visible, exact step (whole ms, 10 %, 0.1 x, the lowpass table, N's EARLY / LATE ...).
+    if (j == Joy::rt)
     {
-        const auto range = rtRange(p);
-        if (value < range.lo - 1e-9 || value > range.hi + 1e-9)
+        const auto& t = rtTable(p);
+        if (value < t.front() - 1e-9 || value > t.back() + 1e-9)
             return std::nullopt;
-        int best = 0;
-        auto bestDistance = std::numeric_limits<double>::max();
-        for (int step = 0; step <= joyMaxStep(j); ++step)
-        {
-            const auto distance = std::abs(joyNumber(p, j, step) - value);
-            if (distance < bestDistance)
-            {
-                bestDistance = distance;
-                best = step;
-            }
-        }
-        return best;
+        return joyNearestStep(p, j, value);
     }
 
     constexpr double tolerance = 1e-4; // display precision is at most two decimals
-    for (int step = 0; step <= joyMaxStep(j); ++step)
+    for (int step = 0; step <= joyMaxStep(p, j); ++step)
         if (std::abs(joyNumber(p, j, step) - value) <= tolerance)
             return step;
     return std::nullopt;
@@ -217,19 +240,28 @@ juce::String joyInputHint(Program p, Joy j)
     case Joy::delay: return "Valid: whole numbers from 0 to 999 ms.";
     case Joy::ampl: return n ? "Valid: 0 to 0.5 s in steps of 0.05 s."
                              : "Valid: 0 to 100 % in steps of 10 %.";
-    case Joy::lf: return n ? "Valid: -4.0 to 3.5 s in steps of 0.5 s."
-                           : "Valid: 0.1 to 1.2 x in 0.1 steps, then 1.4, 1.6, 1.8 and 2.0 x.";
+    case Joy::lf:
+        if (n)
+        {
+            juce::String valid;
+            for (size_t i = 0; i < nEarlySteps.size(); ++i)
+            {
+                if (i > 0)
+                    valid << (i + 1 == nEarlySteps.size() ? " or " : ", ");
+                valid << displayNumber(nEarlySteps[i]);
+            }
+            return "Valid: " + valid + " s (10 = flat).";
+        }
+        return "Valid: 0.1 to 1.2 x in 0.1 steps, then 1.4, 1.6, 1.8 and 2.0 x.";
     case Joy::rt:
         if (n)
             return "RT is not used in the non-linear program.";
-        return "Valid: " + displayNumber(rtRange(p).lo) + " to " + displayNumber(rtRange(p).hi)
-               + " s; any value in that range snaps to the nearest of " + juce::String(joyMaxStep(j) + 1)
+        return "Valid: " + displayNumber(rtTable(p).front()) + " to " + displayNumber(rtTable(p).back())
+               + " s; any value in that range snaps to the nearest of " + juce::String(joyMaxStep(p, j) + 1)
                + " steps.";
     case Joy::hf:
         if (n)
-            return "Valid: " + displayNumber(rtRange(p).lo) + " to " + displayNumber(rtRange(p).hi)
-                   + " s; any value in that range snaps to the nearest of " + juce::String(joyMaxStep(j) + 1)
-                   + " steps.";
+            return "Valid: 0 to 2.0 s in steps of 0.2 s (0 = no late reverb).";
         return "Valid: 0.1 to 1.0 in steps of 0.1 (x).";
     case Joy::count:
     default: return {};

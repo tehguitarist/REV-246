@@ -34,8 +34,14 @@
   measured from `main.png` (tick positions, the funnel's curved edges).
 
 ## Parameters
-- IDs in `src/params/Parameters.h` are permanent. The joystick step tables are placeholders (H) until the unit's exact
-  step tables are known; only step counts and ranges are from the data sheet (`../docs/EMT246_unit_facts.md`).
+- IDs in `src/params/Parameters.h` are permanent. The joystick step tables (`src/params/Parameters.cpp`): step counts
+  and ranges are the data sheet's (`../docs/EMT246_unit_facts.md`); the Tomkin library's values are steps (C: RT
+  S 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5, M 0.6 0.8 1.2 1.8 2.6 3.0 4.0 5.0, L 2.2 2.6 3.6 4.5 6 8 10 15 20; E's the
+  Altiverb family's 0.4 1.0 1.5 2.0 2.5 3.0 3.6 4.0 4.5; every library LF and HF); the rest are guesses (H): RT fills
+  the widest log gaps at their geometric means, rounded to 0.1 s. N's columns are its spec's: EARLY RT's 16 values
+  in the LF slot (10 = flat), LATE RT 0-2.0 s by 0.2 in the HF slot, SPAN 0-0.5 s by 0.05 in the AMPL slot. LATE has
+  11 values, so the HF parameter runs 0-10 and S / M / L / E stop at step 9 (`joyMaxStep(Program, Joy)`; a higher step
+  left over from N reads as their 1.0).
 - The buses allow mono in / mono out, mono in / stereo out and stereo in / stereo out. The reverb engine is mono in /
   stereo out, so a mono output takes its left side. For stereo in / stereo out, `trueStereo` (default off, the
   ORIGINAL / TRUE ST button) selects between the original summed path (0.5 x L+R into one engine) and two engines,
@@ -53,36 +59,33 @@
 - `stereoWidth` (default 100, the WIDTH halo) is a sound setting and part of presets. `src/dsp/StereoWidth.h` holds
   the level-matched M/S `StereoWidener` (100 is a bit-exact bypass, 0 mono, 200 wide, bass mono above 100) and the
   `LateDecorrelator` for the late tail. The widener runs on the whole wet (pure M/S gains do not smear transients); the
-  decorrelator is not in the chain yet because the placeholder engine has no early/late split. See the open item below.
-- `sixteenBit` (default on, the FLOAT / 16-BIT button) is a sound setting and part of presets. It is passed to the
-  engine as `Settings::sixteenBit`; the placeholder has no loops yet, so the real algorithm applies the 16-bit storage
-  quantisation when it lands. It also switches on the A/D's clipping (`src/dsp/AdcClipper.h`, one per engine, after
-  the input transformer; always running, 20 ms crossfade). The unit's converter is a SAR, which sticks at the end of
-  its range: a hard clip of each held sample at the device rate, on the input filter's output (+5.1 dB at 10-11.5 kHz,
-  so HF clips early). The stage runs the input filter beside the signal (matched-z from the transcribed netlist's
-  poles and zeros, one extra zero tuned per rate: within 0.17 dB to 12.6 kHz), samples it at the device instants
-  (Kaiser sinc), clips, and reinjects each error through g0 = IFT{taper / H}, the input filter's band-limited inverse.
-  Its output is the input delayed by `latency()` (about 1.4 ms) plus those corrections (times 0 in float mode), so
-  below full scale it is an exact delay. That delay is the plugin's reported latency, the same in both modes (so
-  16-BIT never changes it and its crossfade has no comb); the dry and power-off signals are delayed to match. When the
-  real engine lands, add its own latency (resampling) to the report. **The engine must apply the input filter after this stage**
-  (as part of its analogue chain); once the engine runs that chain at the device rate, clip there and drop the
-  reinjection. What survives the scheme: the clip error to the taper's floor (-35 dB of it for a sine; error above
-  11.5 kHz is lost). Cost 0.15 % of a core idle, 0.8 % clipping hard at 48 kHz (2 % at 192 kHz). Design and checks:
-  `../tools/analog/adc_clip.py`; tests: `tests/AdcClipperTests.cpp`.
+  decorrelator is not in the chain because the engine has no early/late split. See the open item below.
+- `sixteenBit` (default on, the FLOAT / 16-BIT button) is a sound setting and part of presets. It reaches the engine as
+  `Settings::sixteenBit`, and switches three things at once: the cores' 16-bit storage (`ProgramCore::store()`), the
+  A/D's hard clip, and the analogue hiss (`src/dsp/engine/AnalogueHiss.h`, 91 dB S/N re nominal, about -109 dBFS rms at
+  the default CAL). The A/D is inside the engine (`src/dsp/engine/DeviceBridge.h`): the unit's converter is a SAR,
+  which sticks at the end of its range, so in 16-bit mode each held sample of the input filter's output is clipped at
+  the device rate (the input filter lifts 10-11.5 kHz by up to 5.1 dB, so HF clips early; the clip's harmonics fold
+  around 13.2 kHz). Switching it is instant, like the unit's coefficient loads; it never changes the latency.
 - The A/D's full scale follows the meter calibration (`Rev246Processor::setMeterCal`, the CAL button; UI state, kept
   with the session, not in presets): the calibration stands for the unit's input alignment, and its full scale is a
-  sine 6 dB over 0 VU (unit facts §2). OVL lights at +6 VU, on a full-scale input, or when the A/D clips (in float
-  mode too: where it would clip), as the unit's REG LED did.
+  sine 6 dB over 0 VU (unit facts §2; `src/dsp/AdcCalibration.h`). The engine passes it to the bridge's clip, the
+  cores' 16-bit storage and the hiss (`ReverbEngine::setFullScale`). OVL lights at +6 VU, on a full-scale input, or
+  when the A/D is out of range (`ReverbEngine::takeOverload`; in float mode too: where it would clip), as the unit's
+  REG LED did.
+- Latency: the engine's (`ReverbEngine::latency`, `docs/ENGINE.md`): the same for every program, both modes and both
+  engines (111 / 117 / 211 samples at 44.1 / 48 / 96 kHz). The dry and power-off signals are delayed to match.
 - Display fields other than the program display open a typed-entry dialog on double-click. `params::joyStepFromValue`
   validates the text for the current program and returns a step; `joyInputHint` supplies the unit/range/list shown in
-  the dialog. Discrete controls require an exact step, while the geometric RT (S/M/L/E) and HF (N) accept any value in
-  range and snap to the nearest step. RT in N is rejected with an information dialog. The same `setJoyStep` path is
+  the dialog. Discrete controls (N's EARLY and LATE included) require an exact step, while RT (S/M/L/E) accepts any
+  value in range and snaps to the nearest step (in log). RT in N is rejected with an information dialog. The same `setJoyStep` path is
   used, so the levers, funnels and displays refresh.
 - Initial/factory defaults: S, the CLA reference levers (LP 12 kHz, DELAY 10 ms, AMPL 80 %, LF x1.0, RT 1.0 s, HF
   x0.9), MIX 100 %, INPUT/OUTPUT 0 dB, LINK on, 16-bit on, XFMR on, WIDTH 100, ORIGINAL stereo mode and power on.
-  Factory presets reset the stored settings to these defaults but leave the preferences (`power`, `link`, `transformer`,
-  `trueStereo`) as they are.
+  Factory presets ("Init S" ... "Init N", one per programme) reset the stored settings to these defaults, with the
+  programme set (and E's LF / HF at the Altiverb family's x1.49 / x0.69, the nearest steps: 1.4 / 0.7), but leave the
+  preferences (`power`, `link`, `transformer`, `trueStereo`) as they are. Every value is a step of its programme's
+  table (`tests/StateTests.cpp`).
 - Preset saving: SAVE always opens the Save As dialog prefilled with the current name. Factory names are rejected
   with a message; a chosen name that matches an existing user preset asks Yes/No before overwriting. No returns to the
   name dialog. A modified preset's name is shown italic with a trailing `*`.
@@ -105,11 +108,12 @@
 | Path | What it is |
 |---|---|
 | `src/PluginProcessor.*` | Parameters, channel handling (mono/mono, mono/stereo, stereo/stereo), power (bypass), pan, mix, gains, input level for the meter |
-| `src/dsp/ReverbEngine.h` | The model's interface (placeholder body) |
-| `src/dsp/AdcClipper.h` | The A/D's clipping in 16-bit mode (see `sixteenBit` above) |
+| `src/dsp/ReverbEngine.h` | The reverb engine: device bridge, the five programme cores, crossfade, DELAY, LOW PASS (`docs/ENGINE.md`) |
+| `src/dsp/engine/`, `src/dsp/programs/`, `src/dsp/generated/` | The bridge and analogue chain, the cores, and their generated tables |
+| `src/dsp/AdcCalibration.h` | The A/D's full scale for a CAL setting |
 | `src/dsp/StereoWidth.h` | The wet stereo width: level-matched M/S, bass mono above 100, and the late-tail decorrelator |
 | `src/dsp/Transformer.h`, `CaptureEq.h` | The optional TRANSFORMER stage: low-band EQ and guessed transformer distortion (see below) |
-| `src/params/` | Parameter IDs (permanent), the joystick step tables (placeholders), the fader scales |
+| `src/params/` | Parameter IDs (permanent), the joystick step tables, the fader scales |
 | `src/presets/` | Preset manager: factory presets (one per programme) and user presets as `.r246preset` XML |
 | `src/PluginEditor.*`, `src/ui/` | The panel; `ui/Layout.h` is generated, `ui/Design.h` holds measured constants, `ui/HelpText.h` the tooltip texts (program- and layout-aware) |
 | `ui-layout.csv` | The cleaned-up positions from `../ui/Asset positioning.csv` (centres, design space 3495 x 1530) |
@@ -123,14 +127,13 @@
 The plugin accepts mono in / mono out, mono in / stereo out and stereo in / stereo out. The unit's own algorithm is mono
 in / stereo out, so:
 
-- **Mono out** currently uses the left side of the placeholder engine. Plan once the real read-outs exist: fold the
-  two outputs down as `(L + R) / sqrt(2)` after each channel's output stage. In the Tomkin library L and R are
-  uncorrelated (|rho| < 0.05 in every window from 0 to 1.5 s, S/M/L/N) and carry the same energy to within about 1 dB, so
-  either side alone is as loud as a side of the stereo image, but the fold-down is what the unit gives on a mono bus,
-  with both read-outs' reflections, at the same level (power sum). A plain `(L + R) / 2` would be 3 dB down. Neither
-  channel is better as a single output: the R/L difference is the 0.49-sample (19 µs) lead of R and the capture
-  chain's noise floor, neither of which the plugin models. The second read-out costs a few taps, because the loops
-  are shared, so a separate mono engine is not worth building.
+- **Mono out** folds the two read-outs down as `(L + R) / sqrt(2)` after each channel's output stage (the transformer
+  stage runs on both). In the Tomkin library L and R are uncorrelated (|rho| < 0.05 in every window from 0 to 1.5 s,
+  S/M/L/N) and carry the same energy to within about 1 dB, so either side alone is as loud as a side of the stereo
+  image, but the fold-down is what the unit gives on a mono bus, with both read-outs' reflections, at the same level
+  (power sum; the engine's fold-down is within 0.1 dB of the sides' mean in every programme, `EngineTests`). A plain
+  `(L + R) / 2` would be 3 dB down. The second read-out costs a few taps, because the loops are shared, so a separate
+  mono engine is not worth building.
 - **Mono in / stereo out** is the unit's native path.
 - **Stereo in / stereo out** defaults to **ORIGINAL**: the input is summed to the unit's mono input at -6 dB (0.5 x L+R,
   so correlated channels keep their level rather than gaining 6 dB), then the mono reverb feeds both outputs. The

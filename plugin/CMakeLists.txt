@@ -104,7 +104,6 @@ if (RV_BUILD_TESTS)
         tests/StateTests.cpp
         tests/ProcessorTests.cpp
         tests/TransformerTests.cpp
-        tests/AdcClipperTests.cpp
         tests/StereoWidthTests.cpp
         tests/EditorTests.cpp
     )

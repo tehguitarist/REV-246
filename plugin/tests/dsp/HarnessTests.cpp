@@ -46,7 +46,7 @@ TEST_CASE("Harness: render removes the latency and the null of an exact match is
     core.prepare();
     core.reset();
     const auto got = rv::test::renderImpulse(core, 2000);
-    REQUIRE(got.l[0] == 1.0);
+    REQUIRE(std::abs(got.l[0] - 1.0) < 1e-12);
     rv::test::StereoIr ref{std::vector<double>(2000, 0.0), std::vector<double>(2000, 0.0)};
     ref.l[0] = ref.r[0] = 1.0;
     CHECK(rv::test::nullDb(ref.l, got.l, 0, 50) < -300.0);

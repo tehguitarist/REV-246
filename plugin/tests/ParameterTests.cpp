@@ -4,6 +4,8 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <cmath>
+#include <functional>
+#include <vector>
 
 using namespace rv::params;
 using Catch::Matchers::WithinAbs;
@@ -13,7 +15,7 @@ TEST_CASE("the gain scale hits the printed ticks")
     CHECK_THAT(gainDbFromPosition(defaultGainPosition), WithinAbs(0.0, 0.05));
     CHECK_THAT(gainDbFromPosition(1.0f), WithinAbs(12.0, 1e-4));
     CHECK(gainDbFromPosition(0.0f) <= -99.0f);
-    CHECK(gainLinearFromPosition(0.0f) == 0.0f);
+    CHECK(std::equal_to<float>{}(gainLinearFromPosition(0.0f), 0.0f));
     for (float db : {12.f, 6.f, 0.f, -5.f, -17.f, -50.f})
         CHECK_THAT(gainDbFromPosition(gainPositionFromDb(db)), WithinAbs(db, 1e-3));
 }
@@ -43,7 +45,65 @@ TEST_CASE("step ranges")
     CHECK(joyMaxStep(Joy::lowpass) == 7);  // 8 LP steps
     CHECK(joyMaxStep(Joy::ampl) == 10);    // 11 AMPL steps
     CHECK(joyMaxStep(Joy::lf) == 15);      // 16 LF steps
-    CHECK(joyMaxStep(Joy::hf) == 9);       // 10 HF steps
+    CHECK(joyMaxStep(Joy::rt) == 15);      // 16 RT steps
+    CHECK(joyMaxStep(Joy::hf) == 10);      // the parameter: N's 11 LATE values
+    for (const auto p : {Program::s, Program::m, Program::l, Program::e})
+        CHECK(joyMaxStep(p, Joy::hf) == 9); // 10 HF steps
+    CHECK(joyMaxStep(Program::n, Joy::hf) == 10);
+    CHECK(joyValue(Program::s, Joy::hf, 10).text == "1.0"); // past S's last HF step reads as it
+}
+
+TEST_CASE("the RT tables hold the library's steps and the data sheet's ranges")
+{
+    struct Case
+    {
+        Program p;
+        double lo, hi;
+        std::vector<double> library;
+    };
+    const std::vector<Case> cases{
+        {Program::s, 0.2, 2.5, {0.3, 0.6, 0.8, 1.0, 1.4, 1.8, 2.2, 2.5}},
+        {Program::m, 0.5, 5.0, {0.6, 0.8, 1.2, 1.8, 2.6, 3.0, 4.0, 5.0}},
+        {Program::l, 2.0, 20.0, {2.2, 2.6, 3.6, 4.5, 6.0, 8.0, 10.0, 15.0, 20.0}},
+        {Program::e, 0.4, 5.0, {0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.6, 4.0, 4.5}},
+    };
+    for (const auto& c : cases)
+    {
+        INFO("program " << (int)c.p);
+        CHECK(std::equal_to<double>{}(joyNumber(c.p, Joy::rt, 0), c.lo));
+        CHECK(std::equal_to<double>{}(joyNumber(c.p, Joy::rt, joyMaxStep(Joy::rt)), c.hi));
+        for (int step = 1; step <= joyMaxStep(Joy::rt); ++step)
+            CHECK(joyNumber(c.p, Joy::rt, step) > joyNumber(c.p, Joy::rt, step - 1));
+        for (const auto v : c.library)
+        {
+            const auto step = joyStepFromValue(c.p, Joy::rt, v);
+            REQUIRE(step.has_value());
+            CHECK(std::equal_to<double>{}(joyNumber(c.p, Joy::rt, *step), v)); // an exact step, not a neighbour
+        }
+    }
+    CHECK(std::equal_to<double>{}(joyNumber(Program::s, Joy::rt, joyDefaultStep(Joy::rt)), 1.0));
+}
+
+TEST_CASE("the LF and HF tables hold every library value of S, M, L and E")
+{
+    for (const auto v : {0.1, 0.4, 1.0, 2.0})
+        CHECK(joyStepFromValue(Program::s, Joy::lf, v).has_value());
+    for (const auto v : {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0})
+        CHECK(joyStepFromValue(Program::m, Joy::hf, v).has_value());
+}
+
+TEST_CASE("N's columns are its spec's values")
+{
+    const std::vector<double> early{-3.0, -2.0, -1.0, -0.7, -0.5, -0.2, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 10.0};
+    for (int step = 0; step <= joyMaxStep(Joy::lf); ++step)
+        CHECK(std::equal_to<double>{}(joyNumber(Program::n, Joy::lf, step), early[(size_t)step]));
+    for (int step = 0; step <= joyMaxStep(Program::n, Joy::hf); ++step)
+        CHECK(std::abs(joyNumber(Program::n, Joy::hf, step) - 0.2 * step) < 1e-12);
+    for (int step = 0; step <= joyMaxStep(Joy::ampl); ++step)
+        CHECK(std::abs(joyNumber(Program::n, Joy::ampl, step) - 0.05 * step) < 1e-12);
+    CHECK(joyValue(Program::n, Joy::lf, 3).text == "-0.7");
+    CHECK(joyValue(Program::n, Joy::lf, 15).text == "10");
+    CHECK(joyValue(Program::n, Joy::hf, 10).text == "2.0");
 }
 
 TEST_CASE("typed values map to exact steps where the control has a visible table")
@@ -84,15 +144,21 @@ TEST_CASE("the non-linear program uses its own typed-value ranges")
 
     auto early = joyStepFromValue(Program::n, Joy::lf, -3.0);
     REQUIRE(early.has_value());
-    CHECK(*early == 2);
+    CHECK(*early == 0);
     CHECK_FALSE(joyStepFromValue(Program::n, Joy::lf, -3.25).has_value());
+    CHECK_FALSE(joyStepFromValue(Program::n, Joy::lf, -4.0).has_value());
 
     CHECK_FALSE(joyStepFromValue(Program::n, Joy::rt, 1.0).has_value()); // RT is not used
 
-    auto late = joyStepFromValue(Program::n, Joy::hf, 10.0);
+    auto late = joyStepFromValue(Program::n, Joy::hf, 1.2);
     REQUIRE(late.has_value());
-    CHECK(*late == 9);
-    CHECK_FALSE(joyStepFromValue(Program::n, Joy::hf, 20.0).has_value());
+    CHECK(*late == 6);
+    auto lateMax = joyStepFromValue(Program::n, Joy::hf, 2.0);
+    REQUIRE(lateMax.has_value());
+    CHECK(*lateMax == 10);
+    CHECK_FALSE(joyStepFromValue(Program::n, Joy::hf, 1.3).has_value());
+    CHECK_FALSE(joyStepFromValue(Program::n, Joy::hf, 2.2).has_value());
+    CHECK_FALSE(joyStepFromValue(Program::s, Joy::hf, 1.1).has_value());
 }
 
 TEST_CASE("the geometric RT accepts a range and picks the nearest step")
@@ -110,11 +176,12 @@ TEST_CASE("the typed-entry hints describe the S/M/L/E and N differences")
     CHECK(joyInputHint(Program::s, Joy::ampl).contains("10 %"));
     CHECK(joyInputHint(Program::n, Joy::ampl).contains("0.05"));
     CHECK(joyInputHint(Program::s, Joy::lf).contains("1.4"));
-    CHECK(joyInputHint(Program::n, Joy::lf).contains("-4.0"));
+    CHECK(joyInputHint(Program::n, Joy::lf).contains("-3.0"));
+    CHECK(joyInputHint(Program::n, Joy::lf).contains("10 = flat"));
     CHECK(joyInputHint(Program::s, Joy::rt).contains("nearest"));
     CHECK(joyInputHint(Program::n, Joy::rt).contains("not used"));
     CHECK(joyInputHint(Program::s, Joy::hf).contains("0.1"));
-    CHECK(joyInputHint(Program::n, Joy::hf).contains("nearest"));
+    CHECK(joyInputHint(Program::n, Joy::hf).contains("0.2 s"));
     CHECK(joyInputName(Program::s, Joy::ampl).contains("amplitude"));
     CHECK(joyInputName(Program::n, Joy::ampl).contains("span"));
 }

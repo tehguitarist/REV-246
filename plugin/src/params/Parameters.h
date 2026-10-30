@@ -8,8 +8,8 @@
 // new version number instead of changing an old one.
 //
 // The six joystick parameters are step indices, like the hardware's remote levers; what a step means depends on the
-// program (`valueText`, `stepValue`). The tables below are PLACEHOLDERS (H) until the unit's exact step tables are
-// known (docs/EMT246_unit_facts.md, open question 3); only the step counts and ranges are from the data sheet.
+// program (`joyValue`, `joyNumber`). The step counts and ranges are the data sheet's; the values are the Tomkin
+// library's where it has them (real panel steps, C) and guesses between them (H): see the tables in Parameters.cpp.
 namespace rv::params
 {
 inline constexpr int parameterVersion = 1; // juce::ParameterID version hint for every parameter below
@@ -68,7 +68,8 @@ inline constexpr int numPrograms = (int)Program::count;
 inline constexpr int numJoys = (int)Joy::count;
 
 const char* joyId(Joy);
-int joyMaxStep(Joy); // the highest step index (all start at 0)
+int joyMaxStep(Joy);          // the parameter's highest step index (all start at 0), over every program
+int joyMaxStep(Program, Joy); // this program's highest step (HF: 9 in S / M / L / E, 10 in N); higher reads as it
 int joyDefaultStep(Joy);
 
 // What a joystick's value reads as: the display text (3 characters, a '.' after a digit lights its point) and the
@@ -85,9 +86,11 @@ JoyValue joyValue(Program, Joy, int step);
 double joyNumber(Program, Joy, int step) noexcept;
 
 // Manual entry (double-click a display field). The value text is in the field's unit. Discrete controls accept only an
-// exact step; the geometric RT/HF-N controls accept any value in range and pick the nearest step. Nullopt means the
+// exact step; RT (S / M / L / E) accepts any value in range and picks the nearest step. Nullopt means the
 // value is not usable (including RT in the non-linear program, which has no RT).
 std::optional<int> joyStepFromValue(Program, Joy, double value);
+// The program's step nearest to `value` (RT in log, the rest linearly), for any value.
+int joyNearestStep(Program, Joy, double value);
 juce::String joyInputName(Program, Joy); // "lowpass frequency in kHz", etc.
 juce::String joyInputHint(Program, Joy); // the valid values / range for the dialog
 

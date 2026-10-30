@@ -3,6 +3,7 @@
 #include "ui/Design.h"
 #include "ui/HelpText.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <iterator>
@@ -384,7 +385,7 @@ void Rev246Editor::selectProgram(int index)
 
 void Rev246Editor::setJoyStep(Joy j, int step)
 {
-    step = juce::jlimit(0, P::joyMaxStep(j), step);
+    step = juce::jlimit(0, P::joyMaxStep(program(), j), step); // N's HF column has one step more than the others
     if (step != joyStep(j))
         setParamValue(param(P::joyId(j)), (float)step);
 }
@@ -392,12 +393,13 @@ void Rev246Editor::setJoyStep(Joy j, int step)
 void Rev246Editor::stepJoy(Joy j, int direction, int hold)
 {
     const int amount = (j == Joy::delay && hold > 0) ? delayHoldStep : 1; // the unit speeds up when a lever is held
-    setJoyStep(j, joyStep(j) + direction * amount);
+    // From the step shown: a step past this program's last (left by N's longer HF column) reads as the last.
+    setJoyStep(j, std::min(joyStep(j), P::joyMaxStep(program(), j)) + direction * amount);
 }
 
 void Rev246Editor::setJoy(Joy j, float fraction)
 {
-    setJoyStep(j, juce::roundToInt(juce::jlimit(0.0f, 1.0f, fraction) * (float)P::joyMaxStep(j)));
+    setJoyStep(j, juce::roundToInt(juce::jlimit(0.0f, 1.0f, fraction) * (float)P::joyMaxStep(program(), j)));
 }
 
 void Rev246Editor::resetJoy(Joy j)
@@ -593,9 +595,10 @@ void Rev246Editor::refreshJoys(P::Program prog)
     std::array<P::JoyValue, joyCount> values;
     for (int i = 0; i < joyCount; ++i)
     {
-        const auto step = steps[(size_t)i];
+        const auto last = P::joyMaxStep(prog, (Joy)i);
+        const auto step = std::min(steps[(size_t)i], last);
         values[(size_t)i] = P::joyValue(prog, (Joy)i, step);
-        funnels[(size_t)i]->setFraction((float)step / (float)P::joyMaxStep((Joy)i));
+        funnels[(size_t)i]->setFraction((float)step / (float)last);
         funnels[(size_t)i]->setDimmed(!values[(size_t)i].used);
         joysticks[(size_t)i]->setDimmed(!values[(size_t)i].used);
         joysticks[(size_t)i]->setTooltip(rv::ui::help::joy(prog, (Joy)i));
