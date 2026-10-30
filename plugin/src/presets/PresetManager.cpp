@@ -139,7 +139,11 @@ juce::ValueTree PresetManager::stateFor(const juce::String& name) const
         return {};
     // Only an XML document of the state's own type is a preset: anything else is a stray or damaged file.
     if (auto xml = juce::parseXML(file); xml != nullptr && xml->hasTagName(apvts.state.getType()))
-        return juce::ValueTree::fromXml(*xml);
+    {
+        auto state = juce::ValueTree::fromXml(*xml);
+        params::migrateState(state); // a preset saved by an older build
+        return state;
+    }
     return {};
 }
 
@@ -178,7 +182,8 @@ bool PresetManager::save(const juce::String& rawName)
         return false;
     if (!presetFolder.createDirectory().wasOk())
         return false;
-    const auto state = parametersOnly(apvts.copyState());
+    auto state = parametersOnly(apvts.copyState());
+    state.setProperty(params::stateVersionProperty, params::stateVersion, nullptr);
     const auto xml = state.createXml();
     if (xml == nullptr || !xml->writeTo(file))
         return false;

@@ -90,3 +90,23 @@ TEST_CASE("the 16-bit mode is part of a preset")
     p.apvts.getParameter(rv::params::id::sixteenBit)->setValueNotifyingHost(0.0f);
     CHECK(p.presets.isModified()); // an accuracy setting, unlike the transformer
 }
+
+TEST_CASE("the saved state carries its layout version, and an unversioned state still loads")
+{
+    Rev246Processor a;
+    a.apvts.getParameter(rv::params::id::delay)->setValueNotifyingHost(a.apvts.getParameter(rv::params::id::delay)->convertTo0to1(77.0f));
+    juce::MemoryBlock block;
+    a.getStateInformation(block);
+    const auto xml = juce::AudioProcessor::getXmlFromBinary(block.getData(), (int)block.getSize());
+    REQUIRE(xml != nullptr);
+    CHECK(xml->getIntAttribute(rv::params::stateVersionProperty.toString()) == rv::params::stateVersion);
+
+    // A pre-versioning session (stateVersion absent = 0) loads as the same layout.
+    xml->removeAttribute(rv::params::stateVersionProperty.toString());
+    juce::MemoryBlock old;
+    juce::AudioProcessor::copyXmlToBinary(*xml, old);
+    Rev246Processor b;
+    b.setStateInformation(old.getData(), (int)old.getSize());
+    CHECK(juce::roundToInt(b.apvts.getRawParameterValue(rv::params::id::delay)->load()) == 77);
+    CHECK((int)b.apvts.state.getProperty(rv::params::stateVersionProperty) == rv::params::stateVersion);
+}

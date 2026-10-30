@@ -323,6 +323,16 @@ juce::String gainText(float position)
     return db <= gainOffDb ? juce::String(juce::CharPointer_UTF8("-\xe2\x88\x9e dB")) : juce::String(db, 2) + " dB";
 }
 
+void migrateState(juce::ValueTree state)
+{
+    const int from = state.getProperty(stateVersionProperty, 0);
+    if (from > stateVersion)
+        return;
+    // from 0: nothing to change (0 and 1 share the layout). A future step goes here, e.g.
+    //   if (from < 2) { ... remap the old steps of the parameter that changed ... }
+    state.setProperty(stateVersionProperty, stateVersion, nullptr);
+}
+
 juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
 {
     using namespace juce;

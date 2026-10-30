@@ -96,9 +96,10 @@ class Rev246Processor : public juce::AudioProcessor
     // 20 ms ramps (set in prepareToPlay). The two "On" ones are crossfade weights, 0 or 1 at rest: power (processed
     // against bypassed) and the transformer stage.
     juce::LinearSmoothedValue<float> inGain, outGain, mixAmount, panLeft, panRight, powerOn, transformerOn;
-    // The ORIGINAL / TRUE ST switch: the processed signal dips to silence (10 ms), the routing changes there, and it
-    // comes back (10 ms). A crossfade would need both routings at once, i.e. a third engine.
-    juce::LinearSmoothedValue<float> routeGain;
+    // The ORIGINAL / TRUE ST switch: the wet dips to silence (10 ms), the routing changes there, and it comes back
+    // (10 ms); a wet crossfade would need both routings at once, i.e. a third engine. The dry needs no engine, so it
+    // crossfades between its two forms (the panned mono sum, the input's own channels) over 20 ms (dryStereo).
+    juce::LinearSmoothedValue<float> routeGain, dryStereo;
     juce::AudioBuffer<float> scratch; // BlockBuffers' channels; sized in prepareToPlay, so a block never allocates
     std::atomic<float> inputVu{0.0f};
     std::atomic<bool> inputClip{false};

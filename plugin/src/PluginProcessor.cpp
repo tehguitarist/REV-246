@@ -138,6 +138,7 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
     transformerOn.setCurrentAndTargetValue(isOn(*pTransformer) ? 1.0f : 0.0f);
     routeGain.reset(sampleRate, 0.5 * rampSeconds);
     routeGain.setCurrentAndTargetValue(1.0f);
+    dryStereo.reset(sampleRate, rampSeconds);
     // processBlock works in chunks of at most this many samples, so it never has to grow the scratch buffer.
     scratch.setSize(numScratchChannels, maxBlock, false, false, true);
     // VU meter: a first-order RMS integrator. The classic VU reaches 99% in ~300 ms, so tau = 300 ms / ln 100.
@@ -146,6 +147,7 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
     inputVu.store(0.0f);
     inputClip.store(false);
     lastTrueStereo = isStereoToStereo() && isOn(*pTrueStereo);
+    dryStereo.setCurrentAndTargetValue(lastTrueStereo ? 1.0f : 0.0f);
     engineKey = {}; // the engines are prepared afresh: send them their settings, and start in the current program
     applyParameters(); // rather than crossfading into it from the default one
     for (auto& e : engines)
@@ -188,8 +190,10 @@ void Rev246Processor::processChunk(juce::AudioBuffer<float>& buffer)
     // unit's mono input. True stereo runs one engine per input channel.
     const bool wantTrueStereo = stereoIn && stereoOut && isOn(*pTrueStereo);
 
-    // A routing change dips the processed signal to silence first (routeGain) and happens at the chunk where the dip
-    // has ended. A new routing has no usable state in the second engine: start it silent rather than with an old tail.
+    // A routing change dips the wet to silence first (routeGain) and happens at the chunk where the dip has ended; the
+    // dry crossfades to its new form at once (dryStereo). A new routing has no usable state in the second engine: start
+    // it silent rather than with an old tail.
+    dryStereo.setTargetValue(wantTrueStereo ? 1.0f : 0.0f);
     if (wantTrueStereo == lastTrueStereo)
         routeGain.setTargetValue(1.0f); // (also: switched back during the dip)
     else if (routeGain.getTargetValue() > 0.0f)
@@ -366,10 +370,12 @@ void Rev246Processor::mixOutput(juce::AudioBuffer<float>& buffer, const BlockBuf
         if (stereoOut)
         {
             // True stereo keeps the dry signal's channels; the original mode pans the mono sum as before.
-            const auto dryL = trueStereo ? b.dryInL[i] * panL : dryMono * panL;
-            const auto dryR = trueStereo ? b.dryInR[i] * panR : dryMono * panR;
-            const auto processedL = ((1.0f - mix) * dryL + mix * wetL[i]) * outputGain * route;
-            const auto processedR = ((1.0f - mix) * dryR + mix * wetR[i]) * outputGain * route;
+            const auto st = dryStereo.getNextValue(); // 0 or 1 at rest: exactly one form, no rounding from the blend
+            auto blend = [st, dryMono](float own) { return st >= 1.0f ? own : st <= 0.0f ? dryMono : dryMono + st * (own - dryMono); };
+            const auto dryL = blend(b.dryInL[i]) * panL;
+            const auto dryR = blend(b.dryInR[i]) * panR;
+            const auto processedL = ((1.0f - mix) * dryL + mix * route * wetL[i]) * outputGain;
+            const auto processedR = ((1.0f - mix) * dryR + mix * route * wetR[i]) * outputGain;
             // Power off: the host's signal, delayed only.
             outL[i] = power * processedL + (1.0f - power) * b.dryInL[i];
             outR[i] = power * processedR + (1.0f - power) * b.dryInR[i];
@@ -395,6 +401,7 @@ void Rev246Processor::getStateInformation(juce::MemoryBlock& dest)
     auto state = apvts.copyState();
     auto ui = state.getOrCreateChildWithName(UiProps::node, nullptr);
     ui.setProperty(UiProps::preset, presets.currentName(), nullptr);
+    state.setProperty(rv::params::stateVersionProperty, rv::params::stateVersion, nullptr);
     if (auto xml = state.createXml())
         copyXmlToBinary(*xml, dest);
 }
@@ -406,6 +413,7 @@ void Rev246Processor::setStateInformation(const void* data, int size)
         return; // not our state (empty, garbage or another plugin's): keep the current settings
 
     const auto tree = juce::ValueTree::fromXml(*xml);
+    rv::params::migrateState(tree); // an older build's session: up to the current layout first
     apvts.replaceState(tree);
     const auto ui = tree.getChildWithName(UiProps::node); // may be absent (older sessions): defaults then
     applyMeterCal((int)ui.getProperty(UiProps::meterCal, rv::design::defaultMeterCal));
