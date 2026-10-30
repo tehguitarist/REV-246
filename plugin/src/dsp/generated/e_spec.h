@@ -51,7 +51,7 @@ inline constexpr double beta = 0.019;
 // HF floor per loop: HF >= hfFloor[k] / RT (HFRT_MIN x round(P / 1321), model_s_results §29)
 inline constexpr std::array<double, 3> hfFloor{{
     0.24, 0.24, 0.24}};
-// The HF pole curve (chain3_pole_cells_allf.json 'all', model_s_results §32.6): piecewise linear below the fold,
+// The HF pole curve (chain3_pole_cells_allf.json 'all', spec loop_law.pole_curve, model_s_results §32.6): piecewise linear below the fold,
 // the drop-back value at or past it
 inline constexpr std::array<double, 12> poleKnots{{
     0.0, 0.15, 0.25, 0.35,
@@ -106,7 +106,7 @@ inline constexpr std::array<double, 9> readPhase{{
 // Output kernel on both channels (spec: output_kernel, §14.1), at k0 and k0 + 1
 inline constexpr std::array<double, 2> outKernel{{
     0.77, 0.23}};
-// Test vectors: ml_lines.line_coefs([P], RT, LF, HF) per loop -> (g, r0, p), for (RT, LF, HF) in lawVectorIn
+// Test vectors: ml_lines.line_coefs([P], RT, LF, HF) per loop -> (g, r0, p), for (RT, LF, HF) in lawVectorIn (spec: law_vectors)
 inline constexpr std::array<double, 63> lawVectorIn{{
     0.4, 1.49, 0.69,
     1.0, 1.49, 0.69,

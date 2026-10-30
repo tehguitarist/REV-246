@@ -157,7 +157,7 @@ class StereoWidener
 
     void process(float* l, float* r, int n) noexcept
     {
-        if (!width.isSmoothing() && width.getTargetValue() == 100.0f)
+        if (!width.isSmoothing() && juce::exactlyEqual(width.getTargetValue(), 100.0f))
         {
             releaseFilters();
             return;

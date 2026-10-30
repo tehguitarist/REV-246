@@ -12,23 +12,23 @@ namespace rv::ui
 class DesignComponent : public juce::Component, public juce::SettableTooltipClient
 {
   public:
-    explicit DesignComponent(juce::Rectangle<float> designBoundsIn) : designBounds(designBoundsIn) {}
+    explicit DesignComponent(juce::Rectangle<float> designBoundsIn) : designRect(designBoundsIn) {}
 
-    juce::Rectangle<float> getDesignBounds() const { return designBounds; }
-    void setDesignBounds(juce::Rectangle<float> r) { designBounds = r; }
+    juce::Rectangle<float> getDesignBounds() const { return designRect; }
+    void setDesignBounds(juce::Rectangle<float> r) { designRect = r; }
 
     // s = editor width / design width. Edges are rounded (not position and size separately), so
     // neighbouring components can't drift apart by a pixel.
     void layoutForScale(float s)
     {
-        scale = s;
-        const auto r = designBounds * s;
+        editorScale = s;
+        const auto r = designRect * s;
         setBounds(juce::Rectangle<int>::leftTopRightBottom(juce::roundToInt(r.getX()), juce::roundToInt(r.getY()),
                                                            juce::roundToInt(r.getRight()),
                                                            juce::roundToInt(r.getBottom())));
     }
 
-    float getScale() const { return scale; }
+    float getScale() const { return editorScale; }
 
     // A switched-off section's controls draw at design::dimmedAlpha but stay usable.
     // Repaints only this component, and only when the state changes.
@@ -41,14 +41,14 @@ class DesignComponent : public juce::Component, public juce::SettableTooltipClie
     }
     bool isDimmed() const { return dimmed; }
 
-    juce::Rectangle<float> toLocal(juce::Rectangle<float> designRect) const
+    juce::Rectangle<float> toLocal(juce::Rectangle<float> r) const
     {
-        return designRect * scale - getPosition().toFloat();
+        return r * editorScale - getPosition().toFloat();
     }
 
     juce::Point<float> toLocal(juce::Point<float> designPoint) const
     {
-        return designPoint * scale - getPosition().toFloat();
+        return designPoint * editorScale - getPosition().toFloat();
     }
 
   protected:
@@ -56,8 +56,8 @@ class DesignComponent : public juce::Component, public juce::SettableTooltipClie
     float contentAlpha() const { return dimmed ? design::dimmedAlpha : 1.0f; }
 
   private:
-    juce::Rectangle<float> designBounds;
-    float scale = 0.5f;
+    juce::Rectangle<float> designRect; // where it sits in the design space
+    float editorScale = 0.5f;          // editor width / design width
     bool dimmed = false;
 };
 } // namespace rv::ui

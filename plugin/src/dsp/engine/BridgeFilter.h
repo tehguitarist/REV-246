@@ -68,7 +68,7 @@ class BridgeFilter
             if (std::abs(r) >= 1.0)
                 continue;
             const auto x = sigma / hostT;
-            const auto sinc = x == 0.0 ? 1.0 : std::sin(pi * x) / (pi * x);
+            const auto sinc = juce::exactlyEqual(x, 0.0) ? 1.0 : std::sin(pi * x) / (pi * x);
             phi[(size_t)g] = sinc * besselI0(beta * std::sqrt(1.0 - r * r)) / i0Beta / hostT;
         }
 

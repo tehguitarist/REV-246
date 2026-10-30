@@ -25,6 +25,8 @@
 // Each render prints one line: out, the engine's latency (host samples, R) and alignment (device samples).
 // The output file starts at the first input sample (the latency is in the file, not removed).
 
+#include "dsp/ReverbEngine.h"
+
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 
@@ -39,21 +41,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-// The null tests switch the cores' time variance off (ProgramCore::setModulation), and the device-domain render calls
-// the engine's device-rate path; both are private to ReverbEngine, which this tool must not change. Opening the
-// engine's private section for this one translation unit gives that access without touching the engine (the standard
-// and JUCE headers above are already included with their own access).
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wkeyword-macro"
-#endif
-#define private public
-#include "dsp/ReverbEngine.h"
-#undef private
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 
 namespace
 {
@@ -213,8 +200,8 @@ int render(const Args& a)
     s.amplPercent = num(a, "ampl", 80.0);
     s.delayMs = num(a, "delay", 0.0);
     s.lowpassKHz = num(a, "lp", 12.0);
-    s.sixteenBit = num(a, "sixteen", 0.0) != 0.0;
-    const bool mod = num(a, "mod", 1.0) != 0.0;
+    s.sixteenBit = num(a, "sixteen", 0.0) > 0.5;
+    const bool mod = num(a, "mod", 1.0) > 0.5;
 
     // Input at the file's rate.
     const auto pre = (size_t)std::llround(num(a, "pre", 0.0) * fileRate);
@@ -245,19 +232,18 @@ int render(const Args& a)
     auto engine = std::make_unique<ReverbEngine>();
     engine->prepare(rate, block);
     engine->setSettings(s);
-    for (auto* c : engine->cores)
-        c->setModulation(mod);
+    engine->setModulation(mod);
     engine->reset(); // start in s.program (no crossfade) with the modulation switch applied
 
     std::vector<float> l(in.size()), r(in.size());
     if (device)
     {
-        // The device-rate path alone: alignment ring, core, DELAY, LOW PASS (ReverbEngine::processDevice).
-        const int chunk = engine->bridge.maxDeviceBlock();
+        // The device-rate path alone: alignment ring, core, DELAY, LOW PASS.
+        const int chunk = engine->maxDeviceBlock();
         for (size_t i = 0; i < in.size(); i += (size_t)chunk)
         {
             const int n = (int)std::min((size_t)chunk, in.size() - i);
-            engine->processDevice(in.data() + i, l.data() + i, r.data() + i, n);
+            engine->processDeviceRate(in.data() + i, l.data() + i, r.data() + i, n);
         }
     }
     else

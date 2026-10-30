@@ -42,6 +42,11 @@
   in the LF slot (10 = flat), LATE RT 0-2.0 s by 0.2 in the HF slot, SPAN 0-0.5 s by 0.05 in the AMPL slot. LATE has
   11 values, so the HF parameter runs 0-10 and S / M / L / E stop at step 9 (`joyMaxStep(Program, Joy)`; a higher step
   left over from N reads as their 1.0).
+- **Pre-release range change (flagged 31 October 2026):** the HF parameter's range grew from 0-9 to 0-10 when N's
+  LATE steps went in. Saved state and presets are unaffected (the APVTS stores the step itself), but a host stores
+  automation as 0-1, so an HF lane recorded with an earlier build lands on a different step (old step k at k/9 now reads
+  round(10k/9)). No build has been released, so nothing is migrated; after the first release a step table's range must
+  not change again (add steps only through a new parameter ID or a versioned state migration).
 - The buses allow mono in / mono out, mono in / stereo out and stereo in / stereo out. The reverb engine is mono in /
   stereo out, so a mono output takes its left side. For stereo in / stereo out, `trueStereo` (default off, the
   ORIGINAL / TRUE ST button) selects between the original summed path (0.5 x L+R into one engine) and two engines,

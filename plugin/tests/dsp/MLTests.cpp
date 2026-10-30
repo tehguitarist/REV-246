@@ -94,10 +94,10 @@ TEST_CASE("ML: the coefficient law reproduces every resolved setting", "[ml]")
                 worstGain = std::max(worstGain, relErr(got.gain, (double)line["gain"]));
                 worstDc = std::max(worstDc, relErr(got.shelfDc, (double)line["shelf_dc"]));
                 const double p = line["hf_pole"];
-                worstPole = std::max(worstPole, p == 0.0 ? std::abs(got.hfPole) : relErr(got.hfPole, p));
+                worstPole = std::max(worstPole, juce::exactlyEqual(p, 0.0) ? std::abs(got.hfPole) : relErr(got.hfPole, p));
             }
             const double b = v["b"];
-            worstB = std::max(worstB, b == 0.0 ? std::abs(c.damping) : relErr(c.damping, b));
+            worstB = std::max(worstB, juce::exactlyEqual(b, 0.0) ? std::abs(c.damping) : relErr(c.damping, b));
             ++count;
         }
     }

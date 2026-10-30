@@ -234,10 +234,10 @@ class SCore final : public ProgramCore
                     gain *= std::pow(10.0, -beta * lift / 20.0);
                 }
                 const double gammaDb = gamma * 60.0 / (Lhi * rt) * P / fs;
-                if (floored && gamma != 0.0 && !gammaDc)
+                if (floored && !juce::exactlyEqual(gamma, 0.0) && !gammaDc)
                     gain *= std::pow(10.0, gammaDb / 20.0);
                 f.sections[(size_t)f.count++] = shelf(std::max(r0, dcMin / gain));
-                if (floored && gamma != 0.0 && gammaDc)
+                if (floored && !juce::exactlyEqual(gamma, 0.0) && gammaDc)
                     gain *= std::pow(10.0, gammaDb / 20.0); // the spec's "gain" section, folded into the scalar
             }
             if (hf < 1.0)

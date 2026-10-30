@@ -2,6 +2,7 @@
 references to check an implementation against (docs/EMT250_program.md §15).
 
     .venv/bin/python tools/memguard.py --limit-gb 3 -- .venv/bin/python tools/e250/e_spec.py
+    .venv/bin/python tools/e250/e_spec.py --embed     # only add loop_law / law_vectors / moving_reads_draw to the committed spec
 
 Writes analysis/e250/e_plugin_spec.json (every constant with its confidence label and source section) and
 analysis/e250/ref/e_static_rt<RT>.wav: Program E's static network (moving reads off), device rate (26,373.6 Hz), float32,
@@ -111,8 +112,60 @@ def spec():
     }
 
 
+LINE_UNIT = 1321          # ml_lines.line_coefs: the HF floor's program-time factor round(min(P) / 1321)
+LAW_VECTORS = [           # (RT, LF, HF): the measured steps at the family values, then off-step panel values
+    *[(rt, 1.49, 0.69) for rt in (0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.6, 4.0, 4.5)],
+    (0.55, 1.49, 0.69), (5.0, 1.49, 0.69), (1.0, 1.0, 0.9), (1.0, 0.1, 0.2), (0.4, 2.0, 0.1), (2.2, 0.4, 1.0),
+    (3.3, 0.7, 0.5), (5.0, 2.0, 1.0), (0.4, 0.1, 0.05), (1.7, 1.2, 1.2), (4.8, 0.25, 0.3), (0.8, 3.0, 0.8),
+]
+
+
+def embed_codegen_data(sp):
+    """Copies what tools/plugin_codegen/e.py needs from outside this spec into it, so the generator reads the spec alone.
+    Adds loop_law (the 246's loop law that loop_filter.law names: analysis/q1/laws.json's LF table, shelf pole and f_ref,
+    ml_lines' coefficient limits and drop-back, the HF pole curve of analysis/lowband/chain3_pole_cells_allf.json),
+    law_vectors (ml_lines.line_coefs per loop at the (RT, LF, HF) test points) and moving_reads_draw (e_sim.e_reads' draws
+    at seed 0: rate and start phase per read). Nothing else in the spec changes. Also run alone against the committed
+    spec: tools/e250/e_spec.py --embed."""
+    for k in ("ML_POLE_CURVE", "ML_HFRT", "ML_L22"):
+        if os.environ.get(k):
+            raise SystemExit(f"{k} is set: the embedded data is the adopted law only")
+    sys.path.insert(0, os.path.join(os.path.dirname(HERE)))
+    import ml_lines as mll
+    lab = lambda v, c, src: dict(value=v, label=c, source=src)
+    law = mll.LAW
+    pc = json.load(open(os.path.join(os.path.dirname(os.path.dirname(HERE)), "analysis", "lowband", "chain3_pole_cells_allf.json")))
+    sp["loop_law"] = lab(dict(a=law["a"], f_ref=law["f_ref"], lf={k: {n: law["lf"][k][n] for n in ("hi", "dc", "k")} for k in law["lf"]},
+                              p_max=mll.P_MAX, dc_min=mll.DC_MIN, beta=mll.BETA, hfrt_min=mll.HFRT_MIN, line_unit=LINE_UNIT,
+                              pole_curve=dict(knots=pc["knots"], values=pc["all"], fold=pc["fold"], drop_back=mll.DROP_BACK)),
+                         "S", "analysis/q1/laws.json (a, f_ref, lf), tools/ml_lines.py (P_MAX, DC_MIN, BETA, HFRT_MIN, DROP_BACK), "
+                              "analysis/lowband/chain3_pole_cells_allf.json (knots, 'all', fold); §14.2, §16.15-16.16, §29, §32.6")
+    out = [[float(v) for v in mll.line_coefs([P], rt, lf, hf)[0]] for rt, lf, hf in LAW_VECTORS for P in sp["loops"]["value"]["P"]]
+    sp["law_vectors"] = lab(dict(inputs=[list(v) for v in LAW_VECTORS], loops_P=sp["loops"]["value"]["P"], outputs=out,
+                                 note="outputs[v * len(loops_P) + k] = (g, r0, p) of loop k at inputs[v] = (RT, LF, HF)"),
+                            "S", "ml_lines.line_coefs([P], RT, LF, HF)[0] per loop; the plugin's test vectors")
+    ad, reads = sp["moving_reads"]["value"]["adopted"], sp["moving_reads"]["value"]["reads"]
+    rng = np.random.default_rng(0)
+    rng.uniform()                                     # the common phase (unused: common = false)
+    rates, phases = [], []
+    for _ in reads:
+        rates.append(float(ad["f"] * rng.uniform(1 - ad["fsd"], 1 + ad["fsd"])))
+        phases.append(float(rng.uniform()))
+    sp["moving_reads_draw"] = lab(dict(seed=0, rate_hz=rates, phase=phases,
+                                       note="e_sim.e_reads' draws in its own order: one common phase, then per read rate f x U(1 - fsd, 1 + fsd) and a start phase"),
+                                  "H (one fixed realisation)", "e_sim.e_reads, numpy default_rng(0); §16-17")
+    return sp
+
+
 def main():
+    if "--embed" in sys.argv:       # add the generator's inputs to the committed spec without regenerating it
+        path = os.path.join(E.OUT, "e_plugin_spec.json")
+        sp = embed_codegen_data(json.load(open(path)))
+        json.dump(sp, open(path, "w"), indent=1)
+        print("embedded loop_law, law_vectors, moving_reads_draw in analysis/e250/e_plugin_spec.json")
+        return
     sp = spec(); os.makedirs(os.path.join(E.OUT, "ref"), exist_ok=True)
+    sp = embed_codegen_data(sp)
     json.dump(sp, open(os.path.join(E.OUT, "e_plugin_spec.json"), "w"), indent=1)
     for rt in REF_RTS:
         y = S.render_ir(rt, moving=False, chain="device", secs=min(3 * rt + 0.5, 4.0)).astype(np.float32)

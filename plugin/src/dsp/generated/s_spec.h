@@ -866,7 +866,7 @@ inline constexpr std::array<double, 128> cellFloorGamma{{
     0.0, 0.0, 0.0, 0.0,
     0.0, 0.0, 0.0, 0.0,
     0.0, 0.0, 0.0, 0.0}};
-// S's HF pole curve, all-data fit (piecewise linear in the law's pole), and its drop-back past the fold point [§32.4, §32.6; from analysis/ml/ml_plugin_spec.json lines.value.pole_curve]
+// S's HF pole curve, all-data fit (piecewise linear in the law's pole), and its drop-back past the fold point [§32.4, §32.6; from analysis/ml/ml_plugin_spec.json lines.value.pole_curve, embedded as hf_pole_curve]
 inline constexpr std::array<double, 12> poleCurveKnots{{
     0.0, 0.15, 0.25, 0.35,
     0.45, 0.55, 0.62, 0.68,

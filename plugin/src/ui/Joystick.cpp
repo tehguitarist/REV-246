@@ -43,7 +43,7 @@ void Joystick::mouseUp(const juce::MouseEvent&)
 void Joystick::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& w)
 {
     const auto delta = w.isReversed ? -w.deltaY : w.deltaY;
-    if (delta != 0.0f && onStep)
+    if (!juce::exactlyEqual(delta, 0.0f) && onStep)
         onStep(delta > 0.0f ? 1 : -1, 0);
 }
 
@@ -125,7 +125,7 @@ void Funnel::mouseUp(const juce::MouseEvent&)
 void Funnel::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDetails& w)
 {
     const auto delta = w.isReversed ? -w.deltaY : w.deltaY;
-    if (delta != 0.0f && onStep)
+    if (!juce::exactlyEqual(delta, 0.0f) && onStep)
         onStep(delta > 0.0f ? 1 : -1);
 }
 

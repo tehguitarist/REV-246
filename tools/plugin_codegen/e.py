@@ -2,40 +2,22 @@
 
     .venv/bin/python -m tools.plugin_codegen.e
 
-Reads analysis/e250/e_plugin_spec.json for the network, and the 246's loop law that the spec names
-(loop_filter.law: tools/ml_lines.line_coefs / line_resp) from its own sources: analysis/q1/laws.json (the LF law and the
-shelf pole), analysis/lowband/chain3_pole_cells_allf.json (the HF pole curve) and ml_lines' coefficient limits. The
-law's constants are written, not tabulated; the C++ evaluates it. ml_lines.line_coefs itself supplies the test vectors
-(per loop g, r0, p at the measured RT steps and at off-step panel values), and e_sim.e_reads' own draw order with
-seed 0 the moving reads' rates and phases (one fixed realisation, the start phase at reset()).
+Reads analysis/e250/e_plugin_spec.json alone. The 246's loop law that the spec names (loop_filter.law:
+tools/ml_lines.line_coefs / line_resp) is embedded in it as loop_law (the LF law, the shelf pole, the coefficient limits
+and the HF pole curve); the law's constants are written, not tabulated, and the C++ evaluates it. The test vectors (per
+loop g, r0, p at the measured RT steps and at off-step panel values) are the spec's law_vectors, and the moving reads'
+rates and phases (one fixed realisation, e_sim.e_reads' draws at seed 0; the start phase at reset()) its
+moving_reads_draw. tools/e250/e_spec.py (embed_codegen_data) computes all three.
 """
-import os
-import sys
-
-import numpy as np
-
-from .common import ROOT, Header, load
-
-sys.path.insert(0, str(ROOT / "tools"))
-sys.path.insert(0, str(ROOT / "tools" / "e250"))
-for _k in ("ML_POLE_CURVE", "ML_HFRT", "ML_L22"):
-    if os.environ.get(_k):
-        raise SystemExit(f"{_k} is set: the generator writes the adopted law only")
-import ml_lines as mll  # noqa: E402
+from .common import Header, load
 
 SPEC = "analysis/e250/e_plugin_spec.json"
-LINE_UNIT = 1321          # ml_lines.line_coefs: the HF floor's program-time factor round(min(P) / 1321)
-LAW_VECTORS = [           # (RT, LF, HF): the measured steps at the family values, then off-step panel values
-    *[(rt, 1.49, 0.69) for rt in (0.4, 1.0, 1.5, 2.0, 2.5, 3.0, 3.6, 4.0, 4.5)],
-    (0.55, 1.49, 0.69), (5.0, 1.49, 0.69), (1.0, 1.0, 0.9), (1.0, 0.1, 0.2), (0.4, 2.0, 0.1), (2.2, 0.4, 1.0),
-    (3.3, 0.7, 0.5), (5.0, 2.0, 1.0), (0.4, 0.1, 0.05), (1.7, 1.2, 1.2), (4.8, 0.25, 0.3), (0.8, 3.0, 0.8),
-]
 
 
 def main():
     sp = load(SPEC)
-    law = mll.LAW
-    pc = load("analysis/lowband/chain3_pole_cells_allf.json")
+    law = sp["loop_law"]["value"]
+    pc = law["pole_curve"]
     h = Header("e", SPEC)
     num = lambda k: sp[k]["value"]
 
@@ -71,17 +53,17 @@ def main():
     h.array("lawLf", [float(k) for k in ks])
     for n in ("hi", "dc", "k"):
         h.array(f"lawLf_{n}", [law["lf"][k][n] for k in ks])
-    h.scalar("pMax", mll.P_MAX)
-    h.scalar("dcMin", mll.DC_MIN)
-    h.scalar("beta", mll.BETA)
+    h.scalar("pMax", law["p_max"])
+    h.scalar("dcMin", law["dc_min"])
+    h.scalar("beta", law["beta"])
     h.comment("HF floor per loop: HF >= hfFloor[k] / RT (HFRT_MIN x round(P / 1321), model_s_results §29)")
-    h.array("hfFloor", [mll.HFRT_MIN * round(P / LINE_UNIT) for P in lp["P"]])
-    h.comment("The HF pole curve (chain3_pole_cells_allf.json 'all', model_s_results §32.6): piecewise linear below the fold,\n"
+    h.array("hfFloor", [law["hfrt_min"] * round(P / law["line_unit"]) for P in lp["P"]])
+    h.comment("The HF pole curve (chain3_pole_cells_allf.json 'all', spec loop_law.pole_curve, model_s_results §32.6): piecewise linear below the fold,\n"
               "the drop-back value at or past it")
     h.array("poleKnots", pc["knots"])
-    h.array("poleCurve", pc["all"])
+    h.array("poleCurve", pc["values"])
     h.scalar("poleFold", pc["fold"])
-    h.scalar("poleDropBack", mll.DROP_BACK)
+    h.scalar("poleDropBack", pc["drop_back"])
     h.scalar("onepoleT2Max", 0.999999)
 
     mv = num("moving_reads")
@@ -101,13 +83,8 @@ def main():
     h.scalar("readRateSpread", ad["fsd"])
     h.scalar("movingLDelay", ad["mdel"], "int")
     h.scalar("movingOnePole", ad["mlp"])
-    # e_sim.e_reads' draws with seed 0: one common phase (unused, common = false), then per read its rate factor and phase
-    rng = np.random.default_rng(0)
-    rng.uniform()
-    rates, phases = [], []
-    for _ in reads:
-        rates.append(ad["f"] * rng.uniform(1 - ad["fsd"], 1 + ad["fsd"]))
-        phases.append(rng.uniform())
+    dr = sp["moving_reads_draw"]["value"]
+    rates, phases = dr["rate_hz"], dr["phase"]
     h.comment("One fixed realisation (H): e_sim.e_reads' draws at seed 0, rate f x U(1 - fsd, 1 + fsd) (Hz) and start phase\n"
               "(cycles) per read; the wave is the spec's triangle 4 |frac(phase) - 0.5| - 1 (e_sim.ADOPTED).")
     h.array("readRateHz", rates)
@@ -117,13 +94,11 @@ def main():
     h.comment("Output kernel on both channels (spec: output_kernel, §14.1), at k0 and k0 + 1")
     h.array("outKernel", ok["fir"])
 
-    h.comment("Test vectors: ml_lines.line_coefs([P], RT, LF, HF) per loop -> (g, r0, p), for (RT, LF, HF) in lawVectorIn")
-    h.array("lawVectorIn", [v for t in LAW_VECTORS for v in t], per_line=3)
-    out = []
-    for rt, lf, hf in LAW_VECTORS:
-        for P in lp["P"]:
-            out += list(mll.line_coefs([P], rt, lf, hf)[0])
-    h.array("lawVectorOut", out, per_line=3)
+    lv = sp["law_vectors"]["value"]
+    assert lv["loops_P"] == lp["P"]
+    h.comment("Test vectors: ml_lines.line_coefs([P], RT, LF, HF) per loop -> (g, r0, p), for (RT, LF, HF) in lawVectorIn (spec: law_vectors)")
+    h.array("lawVectorIn", [v for t in lv["inputs"] for v in t], per_line=3)
+    h.array("lawVectorOut", [v for t in lv["outputs"] for v in t], per_line=3)
     print("wrote", h.write("e_spec.h"))
 
 

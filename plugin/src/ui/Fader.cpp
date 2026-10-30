@@ -94,7 +94,7 @@ std::optional<float> ParameterControl::valueAfterWheel(const juce::MouseEvent& e
                                                        float step, float fineStep) const
 {
     const auto delta = w.isReversed ? -w.deltaY : w.deltaY;
-    if (delta == 0.0f)
+    if (juce::exactlyEqual(delta, 0.0f))
         return std::nullopt;
     return param.getValue() + juce::jlimit(-maxWheelDelta, maxWheelDelta, delta) * (e.mods.isShiftDown() ? fineStep : step);
 }

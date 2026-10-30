@@ -255,7 +255,7 @@ void SegmentDisplay::mouseWheelMove(const juce::MouseEvent& e, const juce::Mouse
     if (i < 0 || !fields[(size_t)i].onNudge)
         return;
     const auto delta = w.isReversed ? -w.deltaY : w.deltaY;
-    if (delta != 0.0f)
+    if (!juce::exactlyEqual(delta, 0.0f))
         fields[(size_t)i].onNudge(delta > 0.0f ? 1 : -1);
 }
 

@@ -7,17 +7,13 @@ steps with their (RT, HF) cell table, the loop-filter law's tables, the RT folds
 The law itself is evaluated in C++ (plugin/src/dsp/programs/SCore.h); the spec's 128 resolved settings are its test
 vectors (plugin/tests/dsp/STests.cpp reads them from the JSON).
 
-The spec names, but does not copy, the fold and cell files its law reads (loop_filter_law.value.folds / cells, under
-baseline.fold_set); they are read from there. The HF pole off the library's steps follows model_s_results §32.6 /
-§32.8 (the all-data pole curve); that curve is S's own, embedded in the M / L spec (lines.value.pole_curve), and is
-read from there.
+The spec is the only input: the RT folds, the per-setting cells and the HF pole curve (model_s_results §32.6 / §32.8,
+the all-data curve) are embedded in it (rt_folds, cells, hf_pole_curve; tools/s_spec.py embed_codegen_data copies them
+from the fold set under baseline.fold_set and the M / L spec).
 """
-import json
-
 from .common import ROOT, Header, load
 
 SPEC = "analysis/s/s_plugin_spec.json"
-ML_SPEC = "analysis/ml/ml_plugin_spec.json"
 # s_spec.py's baseline switches the fold files assume (tools/q2_injection.py with EMT_PMAX=0.8475, EMT_HFRT_MIN=0.12)
 EXPECTED_BASELINE = dict(kernel="chain3", p_max=0.8475, hrt_min=0.12, dc_min=0.18, beta=0.019)
 
@@ -31,7 +27,6 @@ def main():
     base = sp["baseline"]
     for k, v in EXPECTED_BASELINE.items():
         assert base[k] == v, (k, base[k])
-    fold_dir = ROOT / base["fold_set"]
     lfs = sp["controls"]["LF"]["value"]["values_s"]
     rts = sp["controls"]["RT"]["value"]["values_s"]
     hfs = sp["controls"]["HF"]["value"]["values_s"]
@@ -96,9 +91,10 @@ def main():
 
     # The RT folds (fold_<RT>.json): gamma, LF 0.4's DC ratio, the LF-in-RT correction. hfdp / pramp are dead on the
     # baseline (§32.10: every HF < 1 setting has its cell's hf_poles), so they are not carried.
+    folds = sp["rt_folds"]["value"]
     gamma, lfdc, lfdc_on, lfrt_a, lfrt_b, lfrt_on, lfrt_clip = [], [], [], [], [], [], []
     for rt in rts:
-        f = json.loads((fold_dir / f"fold_{rt}.json").read_text())
+        f = folds[str(rt)]
         assert f["lfrt"]["form"] == "a + b RT"
         gamma.append(f["gamma"])
         for lf in lfs:
@@ -110,7 +106,7 @@ def main():
             lfrt_b.append(c[1] if c else 0.0)
             lfrt_on.append(int(c is not None))
             lfrt_clip.append(int(str(lf) in f["lfrt"].get("clip", [])))
-    h.comment(f"RT folds ({base['fold_set']}/fold_<RT>.json), index rt [* 4 + lf]: gamma (dB per 60 dB of decay, "
+    h.comment(f"RT folds ({sp['rt_folds']['source'].split(',')[0]}), index rt [* 4 + lf]: gamma (dB per 60 dB of decay, "
               "per pass x P / fs), LF's DC ratio override, the LF correction rel = a + b RT (clipped at 0 where flagged)")
     h.array("foldGamma", gamma)
     h.array("foldLfDc", lfdc)
@@ -120,7 +116,7 @@ def main():
     h.array("foldLfRtOn", lfrt_on, "int", per_line=16)
     h.array("foldLfRtClip", lfrt_clip, "int", per_line=16)
 
-    cells = json.loads((fold_dir / "cells.json").read_text())
+    cells = sp["cells"]["value"]
     kind, dc, dcmin, beta, cgamma, gdc, gain, cdc, poles_on, poles = [], [], [], [], [], [], [], [], [], []
     ff = {n: [] for n in ("F", "c", "tau", "F0", "beta", "gamma")}
     for lf in lfs:
@@ -141,7 +137,7 @@ def main():
                 fl = c.get("floor_form", {})
                 for n in ff:
                     ff[n].append(fl.get(n, 0.0))
-    h.comment(f"Per-setting cells ({base['fold_set']}/cells.json), index (lf * 8 + rt) * 4 + hf [x 4 + loop]: kind 0 the "
+    h.comment(f"Per-setting cells ({sp['cells']['source'].split(',')[0]}), index (lf * 8 + rt) * 4 + hf [x 4 + loop]: kind 0 the "
               "fold's floor, 1 own DC floor (dc for LF 0.1's law, dc_min, beta, gamma, gamma_dc), 2 floor_form; every "
               "cell's per-loop gain and DC shelf (dB); the HF poles at the cell's own step [§32.2-32.6, §35]")
     h.array("cellKind", kind, "int", per_line=16)
@@ -157,10 +153,9 @@ def main():
     for n, v in ff.items():
         h.array("cellFloor" + n[0].upper() + n[1:], v)
 
-    pc = load(ML_SPEC)["M"]["lines"]["value"]["pole_curve"]
-    assert pc == load(ML_SPEC)["L"]["lines"]["value"]["pole_curve"]
+    pc = sp["hf_pole_curve"]["value"]
     h.comment("S's HF pole curve, all-data fit (piecewise linear in the law's pole), and its drop-back past the fold "
-              f"point [§32.4, §32.6; from {ML_SPEC} lines.value.pole_curve]")
+              "point [§32.4, §32.6; from analysis/ml/ml_plugin_spec.json lines.value.pole_curve, embedded as hf_pole_curve]")
     h.array("poleCurveKnots", pc["knots"])
     h.array("poleCurveValues", pc["values"])
     h.scalar("poleCurveFold", pc["fold"])

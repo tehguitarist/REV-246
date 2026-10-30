@@ -465,6 +465,6 @@ TEST_CASE("Analogue hiss: level, L/R independence, determinism", "[sixteen][hiss
         CHECK(std::equal(l2.begin(), l2.end(), l.begin()));
         std::vector<float> z(512, 0.0f), z2(512, 0.0f);
         h.add(z.data(), z2.data(), 512, false);
-        CHECK(std::all_of(z.begin(), z.end(), [](float v) { return v == 0.0f; }));
+        CHECK(std::all_of(z.begin(), z.end(), [](float v) { return juce::exactlyEqual(v, 0.0f); }));
     }
 }

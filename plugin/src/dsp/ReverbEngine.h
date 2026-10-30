@@ -302,6 +302,18 @@ class ReverbEngine
     params::Program activeProgram() const { return active; }
     bool isCrossfading() const { return fadeLeft > 0 || pendingSwitch; }
 
+    // For offline checks against the reference and hardware IRs (tools/render/RenderIr.cpp), not for the plugin:
+    // the cores' time variance switch (ProgramCore::setModulation; takes effect at the next reset()), and the
+    // device-rate path alone (alignment, core, DELAY, LOW PASS; no bridge, no analogue chain, no hiss), in chunks of
+    // at most maxDeviceBlock() samples.
+    void setModulation(bool on)
+    {
+        for (auto* c : cores)
+            c->setModulation(on);
+    }
+    int maxDeviceBlock() const { return bridge.maxDeviceBlock(); }
+    void processDeviceRate(const float* devIn, float* devL, float* devR, int nDev) { processDevice(devIn, devL, devR, nDev); }
+
     // `in` is the mono input; writes `n` samples of the wet signal per channel. Real-time safe.
     void process(const float* in, float* outL, float* outR, int n)
     {

@@ -2,6 +2,7 @@
 IRs to check a port against (docs/model_s_results.md §17, §38.1; docs/NEXT_STEPS.md §10a).
 
     .venv/bin/python tools/s_spec.py
+    .venv/bin/python tools/s_spec.py --embed     # only add rt_folds / cells / hf_pole_curve to the committed spec
 
 Writes analysis/s/s_plugin_spec.json (every delay, coefficient, table and tap of the adopted baseline, each with its
 label and source section) and analysis/s/ref/s_<LF>_<RT>_<HF>[_amp<N>].wav (device rate 26,373.6 Hz, float32, (L, R),
@@ -409,10 +410,54 @@ def spec():
     }
 
 
+ML_SPEC = os.path.join(ROOT, "analysis", "ml", "ml_plugin_spec.json")
+FOLD_KEYS = ("gamma", "lfdc")                         # fold_<RT>.json fields the plugin generator reads (plus lfrt form / coefs / clip)
+CELL_KEYS = ("dc", "dc_min", "beta", "gamma", "gamma_dc", "lf_gain", "lf_dc", "hf_poles", "floor_form")
+
+
+def embed_codegen_data(sp):
+    """Copies what tools/plugin_codegen/s.py needs from outside this spec into it, so the generator reads the spec alone:
+    the RT folds and per-setting cells under baseline.fold_set (only the fields the generator uses, values unchanged) and
+    S's HF pole curve (the M / L spec's lines.value.pole_curve). Adds rt_folds, cells and hf_pole_curve; nothing else in
+    the spec changes. Also run alone against the committed spec: tools/s_spec.py --embed."""
+    lab = lambda v, c, src: dict(value=v, label=c, source=src)
+    cv = os.path.join(ROOT, sp["baseline"]["fold_set"])
+    rts = sp["controls"]["RT"]["value"]["values_s"]
+    folds = {}
+    for rt in rts:
+        f = json.load(open(os.path.join(cv, f"fold_{rt}.json")))
+        d = {k: f[k] for k in FOLD_KEYS if k in f}
+        d["lfrt"] = {k: f["lfrt"][k] for k in ("form", "coefs", "clip") if k in f["lfrt"]}
+        folds[str(rt)] = d
+    cells_all = json.load(open(os.path.join(cv, "cells.json")))
+    cells = {}
+    for lf in sp["controls"]["LF"]["value"]["values_s"]:
+        for rt in rts:
+            for hf in sp["controls"]["HF"]["value"]["values_s"]:
+                k = f"{lf}_{rt}_{hf}"
+                cells[k] = {n: cells_all[k][n] for n in CELL_KEYS if n in cells_all[k]}
+    ml = json.load(open(ML_SPEC))
+    pc_ = ml["M"]["lines"]["value"]["pole_curve"]
+    assert pc_ == ml["L"]["lines"]["value"]["pole_curve"]
+    sp["rt_folds"] = lab(folds, "S", f"{sp['baseline']['fold_set']}/fold_<RT>.json, key rt (s): gamma, lfdc (LF -> DC ratio), "
+                                     "lfrt (form 'a + b RT', coefs LF -> [a, b], clip); §32.10 (hfdp / pramp are dead on the baseline)")
+    sp["cells"] = lab(cells, "S", f"{sp['baseline']['fold_set']}/cells.json, key lf_rt_hf: dc, dc_min, beta, gamma, gamma_dc, "
+                                  "lf_gain, lf_dc, hf_poles, floor_form where present; §32.2-32.6, §35")
+    sp["hf_pole_curve"] = lab(pc_, "S", "analysis/ml/ml_plugin_spec.json lines.value.pole_curve (knots, values, fold, drop_back), "
+                                        "S's all-data HF pole curve; §32.4, §32.6")
+    return sp
+
+
 def main():
+    if "--embed" in sys.argv:       # add the generator's inputs to the committed spec without regenerating it
+        path = os.path.join(OUT, "s_plugin_spec.json")
+        sp = embed_codegen_data(json.load(open(path)))
+        json.dump(sp, open(path, "w"), indent=1)
+        print("embedded rt_folds, cells, hf_pole_curve in analysis/s/s_plugin_spec.json")
+        return
     _load()
     os.makedirs(REF, exist_ok=True)
-    sp = spec()
+    sp = embed_codegen_data(spec())
     for name, r in sp["references"]["files"].items():
         key, ampl = r["setting"], r["ampl"]
         b230 = _b230(key)

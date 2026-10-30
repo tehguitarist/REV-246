@@ -84,8 +84,9 @@ the integration step, so the parts can be written in parallel.
 
 `tools/plugin_codegen/common.py` writes `src/dsp/generated/*.h` with doubles that round-trip exactly (`repr`). Each
 program's generator reads only its committed spec JSON (`analysis/s/s_plugin_spec.json`,
-`analysis/ml/ml_plugin_spec.json`, `analysis/e250/e_plugin_spec.json`, `analysis/nl/nl_plugin_spec.json`). Laws stay
-laws: generate their constants and evaluate them in C++, rather than tabulating every panel step.
+`analysis/ml/ml_plugin_spec.json`, `analysis/e250/e_plugin_spec.json`, `analysis/nl/nl_plugin_spec.json`). What a law needs from outside (S's RT folds, cells and HF pole curve; E's loop
+law, test vectors and moving-read draw) is embedded in the spec by its tool (`s_spec.py` / `e_spec.py`, `embed_codegen_data`).
+Laws stay laws: generate their constants and evaluate them in C++, rather than tabulating every panel step.
 
 ## Tests
 

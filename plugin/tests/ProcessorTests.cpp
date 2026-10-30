@@ -128,7 +128,7 @@ TEST_CASE("the latency is the engine's, the same in every program and mode, and 
             const auto peak = std::max_element(from, to, [](float a, float b) { return std::abs(a) < std::abs(b); });
             const auto at = (int)(peak - from);
             INFO("rate " << rate << ", mix " << mix << ", peak at " << at << ", latency " << latency);
-            if (mix == 0.0f)
+            if (juce::exactlyEqual(mix, 0.0f))
                 CHECK(at == latency);
             else
             {
