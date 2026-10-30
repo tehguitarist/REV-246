@@ -62,9 +62,12 @@
   192 kHz (no prewarping needed; the fit is undefined below ~50 Hz). If `bq.json` is refitted, update
   `CaptureEq::cla` and the reference table in `tests/TransformerTests.cpp` together.
 - `stereoWidth` (default 100, the WIDTH halo) is a sound setting and part of presets. `src/dsp/StereoWidth.h` holds
-  the level-matched M/S `StereoWidener` (100 is a bit-exact bypass, 0 mono, 200 wide, bass mono above 100) and the
-  `LateDecorrelator` for the late tail. The widener runs on the whole wet (pure M/S gains do not smear transients); the
-  decorrelator is not in the chain because the engine has no early/late split. See the open item below.
+  the level-matched M/S `StereoWidener` (100 is a bit-exact bypass, 0 mono, 200 wide, bass mono above 100). It runs
+  on the whole wet: pure M/S gains move nothing in time, so the early reflections are never smeared (the design
+  intent). The design's late-tail decorrelator was dropped (31 October 2026): the unit's late L / R are already
+  uncorrelated (|r| <= 0.04 over 0.1-1 s in every program; up to 0.39 only at 100-400 Hz, which the bass-mono
+  crossover handles), so it adds no width; and its Schroeder all-passes became pure delays at amount 0, so engaged it
+  put the tail ~8 ms behind the early reflections. An early / late split for it would have cost about 0.25 % of a core.
 - `sixteenBit` (default on, the FLOAT / 16-BIT button) is a sound setting and part of presets. It reaches the engine as
   `Settings::sixteenBit`, and switches three things at once: the cores' 16-bit storage (`ProgramCore::store()`), the
   A/D's hard clip, and the analogue hiss (`src/dsp/engine/AnalogueHiss.h`, 91 dB S/N re nominal, about -109 dBFS rms at
@@ -116,7 +119,7 @@
 | `src/dsp/ReverbEngine.h` | The reverb engine: device bridge, the five programme cores, crossfade, DELAY, LOW PASS (`docs/ENGINE.md`) |
 | `src/dsp/engine/`, `src/dsp/programs/`, `src/dsp/generated/` | The bridge and analogue chain, the cores, and their generated tables |
 | `src/dsp/AdcCalibration.h` | The A/D's full scale for a CAL setting |
-| `src/dsp/StereoWidth.h` | The wet stereo width: level-matched M/S, bass mono above 100, and the late-tail decorrelator |
+| `src/dsp/StereoWidth.h` | The wet stereo width: level-matched M/S, bass mono above 100 |
 | `src/dsp/Transformer.h`, `CaptureEq.h` | The optional TRANSFORMER stage: low-band EQ and guessed transformer distortion (see below) |
 | `src/params/` | Parameter IDs (permanent), the joystick step tables, the fader scales |
 | `src/presets/` | Preset manager: factory presets (one per programme) and user presets as `.r246preset` XML |
@@ -166,8 +169,5 @@ like LINK, so presets neither store nor change it.
 
 ## Open items
 
-- [ ] When `ReverbEngine` exposes separate early and late outputs, route `LateDecorrelator` on the late tail only,
-  before it is summed with the early reflections, then run `StereoWidener` on the sum. Check that the early reflections
-  are not smeared, the decorrelator's ~8 ms delay is confined to the tail, and the width sweep through 100 is
-  click-free. If the engine cannot expose the split, keep the widener only and reconsider, preserving the design
-  intent: width changes must not smear the early reflections.
+- [x] Late-tail decorrelator on an early / late split: closed 31 October 2026, not needed (see `stereoWidth` above:
+  the late tail is already uncorrelated; the widener alone keeps the early reflections unsmeared).

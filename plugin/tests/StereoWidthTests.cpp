@@ -143,24 +143,6 @@ TEST_CASE("stereo width keeps the level of pink noise across 0 to 200")
     }
 }
 
-TEST_CASE("the late decorrelator is a no-op at amount 0")
-{
-    rv::dsp::LateDecorrelator d;
-    d.prepare(48000.0);
-    d.setAmount(0.0f);
-    std::vector<float> l(512), r(512);
-    juce::Random random(91011);
-    for (size_t i = 0; i < l.size(); ++i)
-    {
-        l[i] = random.nextFloat() * 2.0f - 1.0f;
-        r[i] = random.nextFloat() * 2.0f - 1.0f;
-    }
-    const auto originalL = l, originalR = r;
-    d.process(l.data(), r.data(), (int)l.size());
-    CHECK(l == originalL);
-    CHECK(r == originalR);
-}
-
 TEST_CASE("stereo width just above 100 keeps the crossover frequency")
 {
     // The crossover path fades in over time, not with the width: the LR4 halves sum to an all-pass that is -1 at 150 Hz,

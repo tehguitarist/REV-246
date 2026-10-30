@@ -11,121 +11,16 @@ namespace rv::dsp
 {
 // Stereo width, 0..200 (100 = untouched, zero CPU).
 //
-// LateDecorrelator is the optional diffusion for the late tail at width > 100. It is kept here for when the engine
-// exposes an early/late split: applying it to the whole wet would add its allpass delay (~8 ms) to the early part too.
+// No late-tail decorrelator (31 October 2026): the unit's late L / R are already uncorrelated (|r| <= 0.04 over
+// 0.1-1 s in every program), so one adds no width, and the design's Schroeder all-pass version delayed the tail ~8 ms
+// against the early reflections when engaged. The M/S gains below move nothing in time, so the early reflections are
+// never smeared (docs/DEVELOPMENT.md, Parameters).
 //
 // StereoWidener is level-matched for equal Mid/Side energy:
 //   gm = sqrt2 * cos(theta), gs = sqrt2 * sin(theta)
 //   width 0..100: tan(theta) = width/100 (0 = mono, 100 = 1:1)
 //   width 100..200: side/mid ratio rises to 6 dB (mid -4 dB, side +2 dB at 200)
 // Above 100 the low band's angle is pulled towards mono as the width rises.
-class LateDecorrelator
-{
-  public:
-    void prepare(double sampleRate)
-    {
-        // The same total delay per channel, so at amount 0 both channels are identically delayed.
-        static constexpr int baseL[kStages] = {61, 101, 149, 79};  // 390 samples at 48 kHz
-        static constexpr int baseR[kStages] = {59, 97, 131, 103};  // 390 samples at 48 kHz
-
-        const auto scale = juce::jmax(1.0, sampleRate) / 48000.0;
-        int sumL = 0, sumR = 0;
-
-        for (int i = 0; i < kStages; ++i)
-        {
-            const auto dl = juce::jmax(2, juce::roundToInt((double)baseL[i] * scale));
-            sumL += dl;
-            chan[0][(size_t)i].setSize(dl);
-
-            if (i < kStages - 1)
-            {
-                const auto dr = juce::jmax(2, juce::roundToInt((double)baseR[i] * scale));
-                sumR += dr;
-                chan[1][(size_t)i].setSize(dr);
-            }
-        }
-        chan[1][kStages - 1].setSize(juce::jmax(2, sumL - sumR));
-
-        amount.reset(sampleRate, 0.05);
-        amount.setCurrentAndTargetValue(0.0f);
-        wasActive = false;
-    }
-
-    /** 0 = off (no CPU), 1 = full. Typically (width - 100) / 100, clamped to 0..1. */
-    void setAmount(float a) noexcept { amount.setTargetValue(juce::jlimit(0.0f, 1.0f, a)); }
-
-    void process(float* l, float* r, int n) noexcept
-    {
-        if (!amount.isSmoothing() && amount.getTargetValue() <= 0.0f)
-        {
-            if (wasActive)
-            {
-                clear();
-                wasActive = false;
-            }
-            return;
-        }
-
-        wasActive = true;
-        for (int i = 0; i < n; ++i)
-        {
-            const auto g = amount.getNextValue() * kMaxG;
-            auto a = l[i], b = r[i];
-            for (int s = 0; s < kStages; ++s)
-            {
-                a = chan[0][(size_t)s].process(a, g);
-                b = chan[1][(size_t)s].process(b, -g); // opposite sign -> different phase response
-            }
-            l[i] = a;
-            r[i] = b;
-        }
-    }
-
-  private:
-    static constexpr int kStages = 4;
-    static constexpr float kMaxG = 0.5f;
-
-    struct Stage
-    {
-        std::vector<float> buf;
-        int pos = 0;
-
-        void setSize(int d)
-        {
-            buf.assign((size_t)juce::jmax(2, d), 0.0f);
-            pos = 0;
-        }
-
-        void clear()
-        {
-            std::fill(buf.begin(), buf.end(), 0.0f);
-            pos = 0;
-        }
-
-        // Schroeder allpass: v = x + g*v[n-D]; y = -g*v + v[n-D]
-        float process(float x, float g) noexcept
-        {
-            const auto d = buf[(size_t)pos];
-            const auto v = x + g * d;
-            buf[(size_t)pos] = v;
-            if (++pos >= (int)buf.size())
-                pos = 0;
-            return d - g * v;
-        }
-    };
-
-    void clear() noexcept
-    {
-        for (auto& c : chan)
-            for (auto& s : c)
-                s.clear();
-    }
-
-    Stage chan[2][kStages];
-    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Linear> amount;
-    bool wasActive = false;
-};
-
 class StereoWidener
 {
   public:

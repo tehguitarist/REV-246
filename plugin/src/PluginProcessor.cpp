@@ -227,8 +227,7 @@ void Rev246Processor::processChunk(juce::AudioBuffer<float>& buffer)
     // two sides come from the two engines.
     processTransformerOutputs(b, n, trueStereo);
 
-    // Stereo width on the wet path. The late-tail decorrelator from the design is not in the chain: the engine has no
-    // early/late split, and its allpass delay (~8 ms) would also land on the early part (DEVELOPMENT.md, Open items).
+    // Stereo width on the wet path (pure M/S gains: nothing moves in time, so the early reflections are not smeared).
     stereoWidener.setWidth(pStereoWidth->load());
     if (stereoOut)
         stereoWidener.process(b.wetL0, trueStereo ? b.wetR1 : b.wetR0, n);
