@@ -47,6 +47,9 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "rest3":
         done = set(os.listdir(os.path.join(SCR, "n_fix")))
         keys = [k for k in keys if "_".join(str(v) for v in k) + ".json" not in done][::3]
+    elif len(sys.argv) > 1 and sys.argv[1] == "rest":       # resume: every sampled slipped capture not done yet
+        done = set(os.listdir(os.path.join(SCR, "n_fix")))
+        keys = [k for k in keys if "_".join(str(v) for v in k) + ".json" not in done]
     elif len(sys.argv) > 1 and sys.argv[1] != "all":
         keys = keys[:int(sys.argv[1])]
     workers = int(sys.argv[2]) if len(sys.argv) > 2 else 1

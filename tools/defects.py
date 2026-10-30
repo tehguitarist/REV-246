@@ -8,7 +8,11 @@
              (1.0_0.3_0.4 is left with no clean capture: AMPL 30 / 60 SLIPPED, 0 / 90 GLITCH; the tools skip it)
     ML_SLIPPED  five M files with a one-sample lag step (-1.00 file samples, both channels) at 126-139 ms file time,
              before M's first recirculation (ml_structure §23, tools/ml_slip_scan.py), as (program, setting key, AMPL);
-             none in L. Left out of the M / L pulse report and its medians"""
+             none in L. Left out of the M / L pulse report and its medians
+    NL_SLIPPED  N (Non-Lin) captures whose branch sits a whole number n of 96 kHz file samples (-400 <= n < 0) off the unit's
+             +1 device sample: the library's processing slip, not the unit (NonLin_program 9.8-9.9), as {(SPAN, EARLY, LATE): n}.
+             627 captures (137 with a trimmed start) from analysis/nl/branch_slip/nl_slipped.json; n is the file-sample step
+             (the part after about 19 ms of file time is late by -n samples). Not in DEFECTS: undo the slip, do not drop the file"""
 BAD = {("0.1_0.3_0.2", 0), ("1.0_0.6_0.6", 0), ("1.0_0.6_1.0", 0), ("0.4_1.0_0.4", 0)}
 SLIPPED = {("0.1_0.3_0.2", 60), ("0.1_0.3_0.4", 60), ("0.4_0.3_0.2", 60), ("0.4_0.3_0.4", 30), ("0.4_0.3_0.4", 60),
            ("1.0_0.3_0.2", 30), ("1.0_0.3_0.2", 60), ("1.0_0.3_0.4", 30), ("1.0_0.3_0.4", 60), ("1.0_0.6_0.2", 30),
@@ -20,3 +24,16 @@ ML_SLIPPED = {("M", "0.7_3.0_0.4", 10), ("M", "1.2_1.8_0.4", 60), ("M", "2.0_0.6
 NL_DEFECTS = {(0.0, -0.5, 0.0),    # Non-Lin (SPAN, EARLY, LATE): a 0.27-sample slip between front taps 410 and 463 (NonLin_program 9.7)
               (0.1, -1.0, 0.0)}    # a foreign tail: a -52 dB plateau (re the early section) decaying ~17 dB over 5 s, ACF 537,
                                    # in a gated (LATE 0) capture whose neighbours end at 0.55 s (NonLin_program 11.1)
+
+
+def _nl_slipped():
+    import json, os
+    f = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "analysis", "nl", "branch_slip", "nl_slipped.json")
+    try:
+        d = json.load(open(f))
+    except OSError:
+        return {}
+    return {tuple(float(v) for v in k.split("_")): int(r["n"]) for k, r in d.items()}
+
+
+NL_SLIPPED = _nl_slipped()

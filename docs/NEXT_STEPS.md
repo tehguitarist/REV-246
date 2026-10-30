@@ -76,7 +76,7 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 3. **Final optimisation pass** (lighter stages, no or tiny accuracy loss; profile first). Candidate: the 65-tap correction FIR (a 2-biquad + 33-tap form reached -51 dB at 11-12.3 kHz with only 2 samples of delay, `REPORT_chainfix.md` §2).
 4. **One manual CI run** (ask the user first: Actions minutes), after the optimisation.
 5. **Later:** listen in a host (XFMR on / off); factory presets from the guessed Altiverb settings; optionally the 13-number CLA cascade for the XFMR low band.
-- **Optional tidy (N):** restrict the bench's o to 1 + n x 26373.6/96000 with n an integer, add an `NL_SLIPPED` list to `defects`, fix the "modal offset" note in `tools/nl_spec.py`; re-score N with slips undone over the whole library (`analysis/nl/branch_slip/n_deslip.py`, 103 of 165 sampled slipped captures done).
+- ~~**Optional tidy (N)**~~ **done 31 October** (`NonLin_program.md` §9.9): grid bench `NL_OGRID=1` (same integer n in all 814 captures; costs 0.7 dB at 0.05-0.15 s, so the free bench stays the spec bench), `defects.NL_SLIPPED` (627), the spec note fixed, the de-slip re-score over the sampled set finished (R -53.3 / -58.0 / -56.9 / -50.8 dB).
 - **Checks to rerun after any bridge or core change:** `tools/plugin_check.py` with `PLUGIN_CHECK_TAG=fix` (render, align, s about 50 min, ml about 23 min, n about 13 min; peak 5.5 GB), both test runners.
 
 ### 10a: first pass and the S / M / L spec generators done 28 October 2026

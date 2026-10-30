@@ -220,6 +220,37 @@ R (L), dB, medians. Excess over the noise floor. "Before" is the phase 5 result 
 - **For validation**, score N captures with the library's slip undone (one integer per capture), or only the n = 0 class. Don't count the slipped captures' raw nulls against the plugin.
 - **Suggested, not done:** the bench could restrict o to 1 + n / 3.64 with n an integer (a discrete library parameter in place of a continuous one), and `defects` could list the slipped N captures as `NL_SLIPPED`, the way `ML_SLIPPED` does for M.
 
+### 9.9 The branch offset restricted to the grid, the slip list and the full de-slip re-score (31 October 2026)
+
+*Code: `tools/nl_model.py` (`NL_OGRID=1`), `tools/defects.py` (`NL_SLIPPED`), `analysis/nl/branch_slip/` (`n_deslip.py rest`, `all_summ.py`, `grid_cmp.py`, `nl_slipped.json`, `summary.txt`, `all_summary.txt`, `grid_cmp.txt`).*
+
+**1. The bench's o on the grid (C, code).** With `NL_OGRID=1` the bench keeps its free fit, then snaps o to 1 + n x 26,373.6 / 96,000 (n integer, the best of the nearest three, by the same cost) and refits only the clock. Output goes to `analysis/nl/bench_warp2_bk_kf_a0.7_lb2_og_hf_g5/`, all 1,044 captures (the adopted free-o bench is untouched; `NL_OGRID` unset = as before).
+- **n is the same integer in all 814 untrimmed captures with a branch** as in the free fit (the SPAN 0 / LATE 0 captures have no branch to fit). What the grid removes is the free sub-sample part, which was fitting the model's remaining error.
+- **Cost of the restriction (R, median, untrimmed, 814 / 814 / 803 / 750 / 513 / 255 captures per window):** −54.1 to −54.1, −59.6 to −58.9, −57.8 to −57.6, −49.5 to −49.4, −39.1 to −38.9, −28.2 to −28.2 dB for the six windows. Captures at or under −50 dB: 698 to 696, 723 to 719, 616 to 615, 366 to 365, 50 to 42, 0 to 0. The largest loss is 0.7 dB at 0.05–0.15 s (250 captures lose more than 1 dB, H: the free sub-sample part of o absorbs small model error). In return the bench has one integer per capture instead of a continuous offset, and an o that means the unit's +1 plus the library's slip.
+
+**2. `NL_SLIPPED` (tools/defects.py).** A dict {(SPAN, EARLY, LATE): n} of the captures with a slip −400 ≤ n < 0 within 0.1 file sample of the integer: **627 captures** (137 with a trimmed start; 348 with n −1…−7, 279 with n −233…−320; no positive n). Built from `n_slip.json` into `analysis/nl/branch_slip/nl_slipped.json`. Not in `DEFECTS`: the slip can be undone (§9.8 point 6), so the file stays in. The 15 SPAN 0 / LATE 0 captures (no branch)and the 13 "others" below −400 are not in it.
+
+**3. The full de-slip re-score (S, as in §9.8 point 6).** All 165 slipped captures of the sampled set (every 4th of the 1,044, 261 in all; 62 more than the 103 of §9.8) with the slip undone. Parameters per capture: n (one integer from the bench), the front shift (measured), clock, 2 gains, i.e. **3 fitted continuous + 1 integer**. Plugin R (L in the files), dB, medians; "excess" is over the capture noise floor; held out as in §9.8 (the plugin has no free parameter against these windows; n and the fit windows are shared with the bench, so it is a check that the plugin matches the unit once the slip is gone, not a new hold-out).
+
+Untrimmed captures, all sampled N captures (n = 0 ones unchanged):
+
+| Window (s) | captures | before: library slip left in | after: slip undone | excess after |
+|---|---|---|---|---|
+| 0–0.05 | 212 | −10.3 dB, 75 ≤ −50 | **−53.3**, 152 ≤ −50 | +25.5 |
+| 0.05–0.15 | 208 | −33.2, 75 | **−58.0**, 184 | +12.7 |
+| 0.15–0.3 | 205 | −31.0, 72 | **−56.9**, 158 | +10.8 |
+| 0.3–0.6 | 195 | −29.5, 50 | **−50.8**, 98 | +9.1 |
+| 0.6–1.0 | 135 | −29.2, 10 | −40.3, 17 | +6.5 |
+| 1.0–2.0 | 67 | −23.9, 0 | −30.9, 0 | +5.9 |
+
+Trimmed-start captures (46 / 48 / 39 / 33 / 28 / 18): after −46.0 / −53.9 / −59.6 / −58.3 / −50.8 / −38.1 dB, 7 / 29 / 27 / 26 / 15 / 0 at or under −50 dB (before −11.2 / −28.0 / −33.0 / −33.0 / −29.6 / −27.9).
+
+By slip class (untrimmed; `summary.txt`): n −1…−7 (82 captures) −53.0 / −57.9 / −55.8 / −47.7 dB for the first four windows (77 / 75 / 56 / 30 of the 82 / 82 / 79 / 75 at or under −50), the free-o bench −53.3 / −59.6 / −56.3 / −47.8; n −233…−320 (49) −45.0 / −57.2 / −57.8 / −55.0 dB (0 / 44 / 44 / 30 of 49 / 49 / 49 / 48), bench −49.7 / −58.6 / −59.0 / −55.7. The n = 0 reference (75): −56.9 / −60.5 / −57.7 / −51.3 dB. So the 62 added captures change §9.8's numbers by 0.1–0.6 dB.
+
+- **Reading:** over 0.05–0.3 s the plugin with o = +1 reaches −50 dB on 184 / 208 and 158 / 205 untrimmed captures (88 % and 77 %); at 0.3–0.6 s the median is −50.8 dB (98 / 195), limited by the n = −1…−7 group (−47.7), whose unslipped counterpart is also weakest there (the same plugin-side residual as n = 0's −51.3, §11).
+- **0–0.05 s of the large-n class (−45 dB, bench −49.7)** stays the cut limit of §9.8: the 2.4–3.3 ms deleted from the front taps' tails is gone from the capture itself.
+- Run: n_deslip.py rest, 62 captures, 1 worker, 710 s, peak 0.28 GB; grid bench 1,044 captures, 4 workers in two runs, about 1 h, peak 0.4 GB per worker.
+
 ## 10. The late section, decoded (26 October 2026)
 
 *`tools/nl_late.py` (per-frequency excitation solve, renderer), `tools/nl_model.py` (whole program), on the clock-corrected captures.*

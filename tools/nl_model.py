@@ -37,6 +37,8 @@ FS, K0 = nl.FSD, nl.K0
 LATE_AMP = 0.5                                  # read taps in main-tap units (0.2494-0.2500 of the 410 front tap)
 WINDOWS = [(0.0, 0.05), (0.05, 0.15), (0.15, 0.3), (0.3, 0.6), (0.6, 1.0), (1.0, 2.0)]
 BANDS = [(20, 100), (100, 1000), (1000, 5000), (5000, 10000), (10000, 12000)]   # per-band check, 0.05-0.6 s
+OGRID = os.environ.get("NL_OGRID", "0") == "1"   # 1: the branch offset o on the grid 1 + n x FS / 96000 (n an integer: the unit's +1 plus whole 96 kHz file-sample slips, NonLin_program 9.8-9.9); 0 (default): free o as in the adopted bench
+OSTEP = 96000 / FS                              # 96 kHz file samples per device sample
 FADE_GUARD = 0.75                               # s before the file's end (S's 0.70 s fade ramp + a guard)
 NOISE = os.path.join(nl.OUT, "noise" + ("" if nl.WIDE else "_narrow") + ".json")
 EQ = os.environ.get("NL_EQ", "1") == "1"            # the top-end EQ (NonLin_program 11.3), adopted; NL_EQ=0 leaves it out
@@ -52,6 +54,7 @@ BENCH = os.path.join(nl.OUT, "bench" + ("" if nl.WIDE else "_narrow") + ("" if E
                      + ("_kf" if os.environ.get("NL_BK") == "1" and os.path.basename(BK_FILE) != "branch_kernel.json" else "")
                      + (f"_a{float(BK_ALPHA):g}" if os.environ.get("NL_BK") == "1" and float(BK_ALPHA) != 1.0 else "")
                      + (f"_lb{os.environ.get('NL_LOWBAND', '2')}" if os.environ.get("NL_LOWBAND", "2") != "0" else "") + os.environ.get("NL_LOWBAND_TAG", "")   # NL_LOWBAND_TAG: bench folder tag for table tests
+                     + ("_og" if os.environ.get("NL_OGRID") == "1" else "")   # NL_OGRID=1: o restricted to 1 + n x 26373.6/96000, n integer (NonLin_program 9.9)
                      + ("_hf" + ("" if os.path.basename(HF_FILE) == "hf_corr.json" else "_" + os.path.basename(HF_FILE)[len("hf_corr_"):-5]) + (f"{HF_ALPHA:g}" if HF_ALPHA != 1.0 else "") if HF else ""))   # NL_LOWBAND (default 2, adopted): tools/lowband_joint.py
 
 
@@ -263,6 +266,12 @@ def bench_file(key):
                  options={"xatol": 1e-4, "fatol": 1e-7, "maxiter": 200,
                           "initial_simplex": [[best[1], 11.6], [best[1] + 0.02, 11.6], [best[1], 12.1]]})
     o, ppm = float(r.x[0]), float(r.x[1])
+    if OGRID:       # the unit's offset is +1; every other fitted o is the library's whole 96 kHz sample slips (9.8): o = 1 + n x FS / 96000
+        n0 = int(round((o - 1) * OSTEP))
+        ocand = [1 + n / OSTEP for n in (n0 - 1, n0, n0 + 1)]
+        o = min(ocand, key=lambda v: cost([v, ppm]))
+        r = minimize(lambda p: cost([o, p[0]]), [ppm], method="Nelder-Mead", options={"xatol": 1e-4, "fatol": 1e-7, "maxiter": 100})
+        ppm = float(r.x[0])
     y, m, g = resid(o, ppm)
     res = {"o": o, "ppm": ppm, "gain": [float(v) for v in g], "front_shift": fr, "trimmed": trimmed, "windows": {}}
     ib = butter(12, 9500, fs=FS, output="sos")                  # the in-band metric: steep below the band edge

@@ -44,7 +44,7 @@ def ap(x, M, g=ne.G_AP):
     return lfilter(np.r_[-g, np.zeros(M - 1), 1.0], np.r_[1.0, np.zeros(M - 1), -g], x)
 
 
-BRANCH = 1   # the AP(124) branch one sample after the table positions (the captures' modal offset; R's first-tap direct term then coincides with its tap)
+BRANCH = 1   # the AP(124) branch one sample after the table positions (the unit's own offset, +1 in every capture: NonLin_program 9.8; the other fitted values are the library's whole 96 kHz-sample slips; R's first-tap direct term then coincides with its tap)
 
 
 def simulate(x, span, early, late, branch=BRANCH):
@@ -95,7 +95,7 @@ def spec():
                               L_sign=ne.SIGNS[0], R_sign=ne.SIGNS[1],
                               stages=ne.STAGES, out_allpass=dict(L=ne.AP_OUT[0], R=ne.AP_OUT[1], g=ne.G_AP),
                               branch_delay=dict(value=BRANCH, note="the whole AP(124) branch (main taps and late) sits this many samples after "
-                                                "the table positions re the front taps: the captures' modal offset; with it R's first tap (464 + 1) "
+                                                "the table positions re the front taps: the unit's offset (+1 in every capture; the other fitted values are the library's whole 96 kHz-sample slips, NonLin_program 9.8); with it R's first tap (464 + 1) "
                                                 "is where its direct term was measured (465), so no special case is needed"),
                               R_first_direct=ne.R_FIRST_DIRECT,
                               R_first_tap="in captures whose branch is jittered its direct term stays at 465 (§9.4); none at branch = 1"),
