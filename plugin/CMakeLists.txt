@@ -177,3 +177,28 @@ if (RV_BUILD_DSP_TESTS)
     target_compile_options(REV246DspTests PRIVATE ${RV_WARNING_FLAGS})
     add_test(NAME REV246DspTests COMMAND REV246DspTests)
 endif()
+
+# --- Offline render tool ---------------------------------------------------------------------------
+# REV246Render (tools/render/RenderIr.cpp): renders ReverbEngine at a host rate (or its device-rate core path) for given
+# Settings values and writes float32 WAVs, for the phase 5 check against the hardware IRs (../tools/plugin_check.py).
+# No editor, processor or parameter tables. Build it in its own directory:
+#   cmake -S plugin -B plugin/build-render -DCMAKE_BUILD_TYPE=Release -DRV_BUILD_RENDER=ON
+#   cmake --build plugin/build-render --target REV246Render --parallel 3
+option(RV_BUILD_RENDER "Build the offline render tool (tools/render/)" OFF)
+if (RV_BUILD_RENDER)
+    juce_add_console_app(REV246Render PRODUCT_NAME "REV246Render")
+    target_sources(REV246Render PRIVATE tools/render/RenderIr.cpp)
+    target_include_directories(REV246Render PRIVATE src)
+    target_compile_definitions(REV246Render PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
+        JUCE_STANDALONE_APPLICATION=1
+    )
+    # Parameters.h (the Program enum the engine uses) includes JUCE's graphics types, so link as the DSP runner does.
+    target_link_libraries(REV246Render PRIVATE
+        juce::juce_audio_processors
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags
+    )
+    target_compile_options(REV246Render PRIVATE ${RV_WARNING_FLAGS})
+endif()
