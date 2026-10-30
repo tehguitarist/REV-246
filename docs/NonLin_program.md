@@ -122,7 +122,7 @@ SPAN 0.5, EARLY −1.0, the full 0–500 ms envelope is **identical to the displ
 ### 9.2 Structure (S)
 - **Front taps:** three plain taps per channel, no diffuser, the place of S's cluster: **L 41 / 410 / 463, R 41 / 278 / 463**, amplitudes **1 : 2 : 1** in units of a main tap (R's 463 negative).
 - **Main taps:** the input through **AP(124)**, then **27 taps** (`TAPS`: 685, 1230, 1767, 2523, 2817, 3747, 3835, 4821, 4902, 5775, 5988, 6697, 7005, 7587, 7953, 8445, 8832, 9271, 9642, 10065, 10383, 10827, 11055, 11557, 11658, 12192, 12255), then **AP(180) in L and AP(188) in R**. All three all-passes at **g = −1/√2** (S's diffuser gain; free feed-forward and feedback gains land within 2·10⁻⁴ of it, ±1 sample on any delay costs 13–16 dB). Undoing the diffuser leaves 94 % of the early energy in 50 taps.
-- **R's taps are L's 221 samples earlier**, each with its own sign (`SIGNS`). R's first tap is the exception: its direct (feed-forward) term sits at 465 in the front taps' frame, its delayed terms in the main taps' frame (§9.4); with that, R's first-tap residual goes from −18 to −45 dB.
+- **R's taps are L's 221 samples earlier**, each with its own sign (`SIGNS`). R's first tap is the exception: its direct (feed-forward) term sits at 465 in the front taps' frame, its delayed terms in the main taps' frame (§9.4); with that, R's first-tap residual goes from −18 to −45 dB. *(30 October 2026: no special case in the unit. At the modal o = +1 the branch puts that term at 464 + 1 = 465 anyway; in the other captures the library's sample slip (§9.8) falls between 465 and R's next branch arrival at 588, so the term stays with the front taps.)*
 - **Stages:** the taps share gains in pairs, 14 stages (the first a single tap): {685}, {1230, 1767}, {2523, 2817}, … {12192, 12255}. The tap intervals shrink through the train (two interleaved families whose spacing falls by 32 and 69 samples per step), so the density rises with time.
 - **SPAN** switches whole stages: SPAN 0 / 0.1 / 0.2 / 0.3 / 0.4 / 0.5 runs 0 / 2 / 4 / 7 / 10 / 14 stages (last tap 1767, 3835, 7005, 9642, 12255). Each cut falls 480–870 samples before SPAN × fs; consistent with "a stage runs if it ends at least 15–33 ms before SPAN" (H for the steps between the library's).
 
@@ -133,9 +133,9 @@ Law time τ in 4 ms ticks: front taps at L 0 / 4 / 12 ms, R 0 / 8 / 12 ms; one s
 - **EARLY 10 is flat** (0 dB per stage, not 6 dB/s): the top step means "no slope".
 - **The late section is fed at the law's gain of stage min(ns, 13)** for EARLY > 0 (T = 16 / 88 / 160 / 268 / 376 / 484 ms for SPAN 0 … 0.5; measured from the late level 16 / 88 / 160 / 267 / 377 / 487) and at 0 dB for EARLY < 0.
 
-### 9.4 Per-capture branch offset (S as data; H as cause)
+### 9.4 Per-capture branch offset (S as data; cause found in §9.8: the library's sample slip, not the unit)
 - The AP(124) branch (main taps **and** the late section) sits o samples from the front taps, o per capture: modal +1 (§12), else about −63…−64, −84…−87 or −163, mixed at random among captures of one (SPAN, EARLY) that differ only in LATE. R's first-tap direct term (§9.2) does not move with o.
-- **H:** the front taps and the branch run on different processors joined by a buffer whose pointer phase is set at program load (2 × TMS32010). For the model, o is one alignment per capture; the plugin uses o = +1.
+- ~~**H:** the front taps and the branch run on different processors joined by a buffer whose pointer phase is set at program load (2 × TMS32010).~~ **Withdrawn (§9.8):** every o is +1 plus a whole number of 96 kHz file samples, a step in the file at about 19 ms file time. The unit's offset is +1 in every capture; the rest is the library's processing. For the model, o is one alignment per capture; the plugin uses o = +1.
 - **Corrected (§11.4):** the large "offsets" (−486 … −9,316 samples) of steep negative EARLY at long SPAN are **not** device behaviour. Those responses start 40–60 dB down (the front taps and the ramp's first stages), so Tomkin's trim (the file starts at its first loud sample) cut the quiet start away; the front taps are then gone and the "front frame" the alignment finds is arbitrary. Every tap inside the file is at its law gain with the full diffuser, and the tails of the trimmed taps are present after the cut. Only the small offsets are the unit's.
 
 ### 9.5 Held-out score (`nl_early.py --stage law`, `analysis/nl/early_law.json`)
@@ -149,8 +149,76 @@ Structure: 27 tap positions, 2 × 27 signs, 3 front positions per channel with 1
 
 ### 9.7 Defects
 `defects.NL_DEFECTS`:
-- (SPAN 0, EARLY −0.5, LATE 0): a 0.27-sample slip between the front taps 410 and 463 (−15.7 dB against the model; every other file with visible front taps holds 369.00 / 53.00 samples to ±0.2);
+- (SPAN 0, EARLY −0.5, LATE 0): a 0.27-sample slip (one 96 kHz file sample: the library's slip of §9.8) between the front taps 410 and 463 (−15.7 dB against the model; every other file with visible front taps holds 369.00 / 53.00 samples to ±0.2);
 - (SPAN 0.1, EARLY −1.0, LATE 0): a foreign tail, a −52 dB plateau (re the early section) decaying about 17 dB over 5 s with an ACF peak at 537 samples, in a gated capture whose neighbours end at 0.55 s (§11.1).
+
+### 9.8 The branch offset is the library's sample slip, not the unit (30 October 2026)
+
+*Scripts, per-capture table and results: `analysis/nl/branch_slip/`. `n_slip.json` holds o, n and the capture time for all 1,044 captures. `pair_lag.py` is model-free, on the raw 96 kHz WAVs. `n_deslip.py` re-scores the plugin and `summary.txt` holds its results. The bench's o (`bench_warp2_bk_kf_a0.7_lb2_hf_g5`) is read-only.*
+
+**1. Every o is +1 plus a whole number of 96 kHz file samples (C, direct measurement).**
+- Write n = (o − 1) × 96,000 / 26,373.6.
+- **967 of the 969 captures where o can be measured lie within ±0.1 file sample of an integer n** (964 within ±0.05; chance 10 %).
+- The two exceptions are trimmed captures. The 15 SPAN 0 / LATE 0 captures have no branch to measure (o ≈ −165 there is noise). The 60 "trims" of §9.4 / §11.4 are left out.
+- The groups that looked like integer device offsets are file-sample offsets too. "−63.6" is n = −235, "−83.3" is −307 and "−86.6" is −319. Under −64 / −84 / −87 *device* samples, n would fall 0.04 / 0.25 / 0.33 off the grid, but it falls 0.006 / 0.003 / 0.003 off (spread ≤ 0.011, 115 / 18 / 35 untrimmed captures).
+
+| n (file samples) | 0 | −1…−3 | −5…−7 | −233…−242 | −306…−320 | others (−37…−669) | trims (§11.4) | SPAN 0 / LATE 0 |
+|---|---|---|---|---|---|---|---|---|
+| captures | 329 | 334 | 14 | 208 | 71 | 13 | 60 | 15 |
+| o (device samples) | +1.000 | +0.73 / +0.45 / +0.18 | −0.4…−0.9 | ≈ −63…−65 | ≈ −83…−87 | | | unidentifiable |
+
+**2. Model-free check (C).** I compared raw captures of one (SPAN, EARLY) that differ only in LATE: 4 blocks, 40 captures, 300 Hz–8 kHz, with sub-sample cross-correlation.
+- The front-tap segments have the **same sub-sample phase in every capture (±0.01 file sample)**.
+- The main-tap segments are offset by **exact whole file samples**: +1.00, +2.00, −1.00, −5.00, +233.00, −304.00, −305.00, −317.00 and so on.
+- L and R are always equal.
+- So the branch moves rigidly by a whole number of host samples, and the front taps never move.
+
+**3. Where (S).** The offset is constant from the first main tap to at least 0.4 s (10 ms windows). The step falls between R's last front-frame arrival (465) and R's next branch arrival (588 + n / 3.64):
+- 17.7–22.3 ms of response time;
+- **1,792–1,898 file samples (18.7–19.8 ms) of file time**, common to all 488 slipped untrimmed captures.
+
+This also accounts for §9.2's "R's first-tap direct term sits in the front frame". Defect (0, −0.5, 0) in §9.7 (a 0.27-sample slip between the 410 and 463 front taps) is the same thing: one file sample, a little earlier in the file.
+
+**4. It follows capture time, not the setting (S).** The library has `bext` timestamps (Samplitude recording, Voxengo Deconvolver, 9–12 April 2016; `analysis/nl_hfdrift/d_times.json`). In time order, the classes of the table above change 209 times, against a mean of 777 (minimum 742) in 200 shuffles.
+- Whole sessions sit in one class: 10 April 10:28, 119 captures all −1…−3; 9 April, SPAN 0, 155 of 157 at 0.
+- Other sessions switch: 11 April 17:53 flips between −235 and 0 from one capture to the next near its end.
+- Within a (SPAN, EARLY) block the class is often uniform, because the block was captured in one stretch. The same settings in another session carry another class, so it is not a function of SPAN, EARLY or LATE.
+
+**5. The candidates against the data.**
+
+| Candidate | Predicts | Data | Verdict |
+|---|---|---|---|
+| Load-time pointer / buffer phase in the unit (H of §9.4) | o − 1 a whole number of **device** samples, constant from one program load to the next | o − 1 is whole **file** samples (0.275-device-sample steps); it flips from capture to capture within a session | **refuted** (S) |
+| Free-running counter / LFO phase at the input's arrival, interpolated | a continuous spread of o | o sits on the 96 kHz grid to ±0.02 file samples | **refuted** (S) |
+| L/R half-sample offset, 0.5037 L offset, deconvolution, alignment | L-only or channel-dependent effects; an offset in the front frame | L = R exactly; the front phase is identical across captures; model-free pairs show the same steps | **refuted** (C) |
+| A setting rule (SPAN / EARLY / LATE) | o fixed by the setting | the same setting takes different n in different sessions | **refuted** (S) |
+| **The library's processing: a sample slip at a file time** (like S's 99.9 ms and M's 126–139 ms slips, `library_notes.md` §2) | whole file samples, both channels, a step in time, session-dependent | all of these | **adopted** (S; which step of the processing does it is H) |
+
+The unit's own value is the n = 0 class: **o = +1.000 ± 0.005 device samples** (S), an integer as the unit requires.
+
+**6. The plugin against the de-slipped captures.** Every 4th capture, the slipped ones, 103 of 165 (the first 72 in key order, then every 3rd of the rest).
+- **The correction:** the capture's part after a cut in the gap (midway between R's 465 and its next branch arrival) is moved back by n file samples.
+- **Parameters:** n is one integer per capture, read from the bench's o; the model-free pair test gives the same values. Then the phase 5 fit runs unchanged (shift, clock and 2 gains per capture).
+- **What is held out:** n is not fitted against the plugin, but it was fitted by the bench on the same windows, so read these as "the plugin matches the unit once the library's slip is removed". They are not a new hold-out of the plugin.
+
+R (L), dB, medians. Excess over the noise floor. "Before" is the phase 5 result on the same captures (`REPORT_chainfix.md` §6).
+
+| Window (s) | n = 0, 75 (phase 5) | n −1…−7, 63 de-slipped | before | n −233…−320, 27 de-slipped | before | bench on the same 27 |
+|---|---|---|---|---|---|---|
+| 0–0.05 | −56.9 (−57.9), +22.8, 71/75 ≤ −50 | −52.9 (−51.3), +26.1, 58/63 | −9.9 | −44.9 (−44.2), +26.2, 0/27 | −0.6 | −49.0 |
+| 0.05–0.15 | −60.5 (−61.9), +12.9, 65/75 | −57.9 (−59.9), +13.3, 56/63 | −25.8 | −57.7 (−59.5), +14.4, 24/27 | −29.7 | −59.3 |
+| 0.15–0.3 | −57.7 (−58.9), +10.0, 58/75 | −55.2 (−56.8), +11.9, 40/60 | −27.1 | −57.9 (−60.0), +12.5, 24/27 | −29.8 | −59.3 |
+| 0.3–0.6 | −51.3 (−51.7), +7.3, 37/70 | −47.5 (−47.3), +9.1, 21/57 | −24.1 | −55.0 (−55.9), +11.4, 17/26 | −31.3 | −55.7 |
+
+- **The plugin with o = +1 now nulls on the slipped captures as on the unslipped ones**, within 0–2 dB of the bench, which has o free.
+- **Per band, 0.05–0.6 s:** 0.1–1 / 1–5 / 5–10 kHz are −56.6 / −57.6 / −54.8 dB (n −1…−7) and −58.6 / −59.7 / −55.8 dB (large n), against −59.3 / −59.9 / −57.3 dB for n = 0. 20–100 Hz and 10–12 kHz are as in phase 5.
+- **Large n, 0–0.05 s (−45 dB, bench −49):** my hard cut near R's 465 arrival is the limit there. The deleted 235–320 file samples (2.4–3.3 ms of the front taps' tails) are also gone from the capture. The defect is in the capture, not the plugin.
+- **The trimmed captures (13) are as poor for the bench as for the plugin.** Their scores are set by Tomkin's trim (§11.4), not by o.
+
+**7. For the plugin and the bench.**
+- **The plugin keeps o = +1 (branch_delay = 1).** It needs no random, per-load or setting-dependent offset: the 80s unit had none to reproduce.
+- **For validation**, score N captures with the library's slip undone (one integer per capture), or only the n = 0 class. Don't count the slipped captures' raw nulls against the plugin.
+- **Suggested, not done:** the bench could restrict o to 1 + n / 3.64 with n an integer (a discrete library parameter in place of a continuous one), and `defects` could list the slipped N captures as `NL_SLIPPED`, the way `ML_SLIPPED` does for M.
 
 ## 10. The late section, decoded (26 October 2026)
 
@@ -243,7 +311,7 @@ Full record: `analysis/nl_lowband30/REPORT.md` (parts 1–8). Switch: `tools/low
 
 `tools/nl_spec.py` → `analysis/nl/nl_plugin_spec.json` (every constant with label and section) and `analysis/nl/ref/nl_<SPAN>_<EARLY>_<LATE>.wav` (device rate, float32, input impulse at sample 0, main-tap units). `simulate()` is the sample-by-sample reference (delay lines, all-passes, loops); it equals the bench model (device only, `render(proc=False)`) to −136 dB or better.
 
-- **Signal flow (per channel):** front taps on the input; the input through AP(124) into a delay line read by the main taps (stage gains from the EARLY law), summed into AP(180) L / AP(188) R; the same AP(124) line at FEED[SPAN] (R 220 earlier) through AP(314) into three flat loops (Jot gain for RT = LATE) read by four equal taps each, at the late gain; LATE 0 drops the late. The branch sits **one sample** after the table positions (the captures' modal offset; then R's first tap needs no special case).
+- **Signal flow (per channel):** front taps on the input; the input through AP(124) into a delay line read by the main taps (stage gains from the EARLY law), summed into AP(180) L / AP(188) R; the same AP(124) line at FEED[SPAN] (R 220 earlier) through AP(314) into three flat loops (Jot gain for RT = LATE) read by four equal taps each, at the late gain; LATE 0 drops the late. The branch sits **one sample** after the table positions (the captures' modal offset; then R's first tap needs no special case). Since §9.8 this is the unit's only offset (S): the other captures' offsets are the library's sample slips, so the plugin keeps +1 and has no per-load or random offset.
 - **Cost:** per channel 3 front + up to 27 main taps, 4 all-passes (AP124 shared), 3 loops with 12 reads: well inside 2 × TMS32010.
 - **Controls (N's panel slots):** DELAY (H: a pure pre-delay); SPAN in the AMPL slot, library values 0–0.5 in 0.1 (finer steps H by the stage rule); EARLY in the LF slot, **16 values −3, −2, −1, −0.7, −0.5, −0.2, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0, 1.5, 2.0, 3.0, 10 (flat)** = the LF column's 16 steps; RT slot blank; LATE in the HF slot, **0–2.0 in 0.2 (11 values), 0 = gated**; LOW PASS as the other programs (its 12 kHz step most likely the §11.3 EQ). The plugin's current N tables (`plugin/src/params/Parameters.cpp`) are guesses and differ: to be changed in the plugin session.
 - **Low band:** nothing of §11.8 enters the spec or the plugin (`simulate()` and the references are the device only, `render(proc=False)`); the measured transfer belongs to the captures' processing.
