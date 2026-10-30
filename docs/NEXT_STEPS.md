@@ -15,7 +15,7 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 **Resume here (in order):**
 1. Phase 5: full-chain renders through the plugin at 44.1/48/96 kHz against the Tomkin 96 kHz IRs, held out, excess over noise floor, parameter count (CLAUDE.md bar); settle the bridge's two H items there (coupling corners 0.72/0.16 Hz vs the netlists' 0.62/0.157; L's offset 0.5 vs the library's ~0.506 device samples); CPU profile; then one manual CI run (ask the user first: Actions minutes).
 2. Small fixes found in phase 4: (done 30 Oct: L's 0.40 HF floor now holds below RT 2.2 and blends in log RT to the general floor at 2.6, H; library settings unchanged) `DeviceBridge.h` line ~35 comment still names AdcClipper; HF parameter range is now 0-10 (N's 11 LATE steps), which shifts automation mapping (pre-release, flagged).
-3. User decisions pending: whether LF 1.5 should be an LF step (E's Altiverb family is LF 1.49; the factory E preset uses 1.4).
+3. Decided 30 Oct (user; `EMT250_program.md` §19, the 250's front panel): E's RT table = the 250's 16 steps (0.4 0.6 0.8 1.0 1.2 1.5 1.8 2.0 2.2 2.5 2.8 3.0 3.3 3.6 4.0 4.5); LF table `0.1 ... 1.0 by 0.1, 1.1 1.2 1.3 1.5 1.8 2.0` (1.5 now a step; above 1.2 H apart from 1.5); factory E preset LF 1.5 / HF 0.7. Do this first at the next session: Parameters.cpp tables, PresetManager E preset, ParameterTests / StateTests, rebuild both runners.
 4. Phase 6: 10b review of the plugin C++ and docs; research-side tidy-up: make the S and E specs self-contained (their generators also read `analysis/loop_cv/...` fold/cell files and `analysis/q1/laws.json` etc.).
 5. Then the final optimisation pass.
 
