@@ -43,11 +43,22 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
     and today's builds agree with each other to -190.6 dB with modulation on. So **the ML stage has not been scored
     at theta 0.13 yet.** That rerun (render + ml, about 30 min) is the one that adds information.
 
+- **Later the same day:**
+  - **Latency 148 -> 50 samples at 48 kHz** (3.08 -> 1.04 ms; 44.1 / 96 kHz: 49 / 76; `91e32289`). E and N read
+    their input sooner (`ProgramCore::setAdvance`) instead of the other programs being delayed. It is an exact shift,
+    bit-identical at the device rate.
+  - **plugin_check M / L rerun at θ 0.13** (`REPORT_chainfix.md` §7):
+    - The static windows are unchanged.
+    - The recirculations are 0.5-0.8 dB closer to the captures; M is within 0.2-0.9 dB of Tomkin's repeat floor.
+    - Decorrelation excess is now +1.7 dB median (was +2.8). Three L settings remain 3-5 dB over (open, H).
+    - S, N and E are unchanged, so they were not rerun.
+
 **Resume here:**
-1. plugin_check rerun (the user decides the scope): at least `--set ml` render + `--stage ml` with theta 0.13; the full
-   run is about 90 min. Move or rename the old `renders_fix/`, `ml_fix/` and the other result directories first:
-   every stage skips files that exist.
-2. **One manual CI run** (ask the user first: Actions minutes).
+1. **One manual CI run** (ask the user first: Actions minutes).
+2. Before any further plugin_check: rerun `--stage align` (the 31 October latency change moved the engine's timing;
+   renders made from now on carry it), and move old result dirs aside (every stage skips existing files).
+3. Optional, latency: refit the 65-tap correction with a short bulk delay (17 -> about 2 device samples, -0.57 ms) if
+   it keeps today's accuracy.
 3. Later: listen in a host (XFMR on / off); factory presets from the guessed Altiverb settings; optionally the
    13-number CLA cascade for the XFMR low band; the optional N tidy below.
 

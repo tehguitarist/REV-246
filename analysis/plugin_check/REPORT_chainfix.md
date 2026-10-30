@@ -222,3 +222,37 @@ Whole library, same fits and hold-outs as `REPORT.md` (S: RT-step folds; M / L: 
 **N (every 4th capture, 261):** 86 / 256 captures reach −50 dB at 0.05–0.15 s; 75 of the 261 have the bench's branch offset +1, which the plugin fixes, so the rest are the open branch-offset item. All-capture medians are −32 dB for that reason.
 
 **L offset after the fix:** residual library-vs-plugin offset leaves an L-channel limit of −61 dB at 10–12.3 kHz (−64 at 6.4–10 kHz), below the bar.
+
+## 7. M / L at θ = 0.13 rad rms (31 October 2026)
+
+Section 6 scored M / L with renders made before the θ refit (0.15 → 0.13, `ml_structure.md` §9.8). Rerun with the
+same fits and windows: `--stage render --set ml / sim`, `--stage ml`, `--stage sim`. The old renders and results are in
+`renders_fix_theta015/` and `ml_fix_theta015/` (gitignored); `summary_ml_fix.json` and `sim/` now hold θ = 0.13.
+S, N, E and the host rates were not rerun: a 1-in-25 sample of their render lists, rendered by the 31 October build,
+equals `renders_fix/` to −197 dB or better.
+
+Medians, dB, R (L), the plugin against each capture; repeat = Tomkin's own capture pairs.
+
+| | θ 0.15 | θ 0.13 | Repeat |
+|---|---|---|---|
+| M cluster + gap | −62.5 (−63.7) | −62.5 (−63.7) | −54.8 |
+| M first pass | −50.0 (−55.4) | −50.0 (−55.4) | −49.0 |
+| M recirc 1 / 2 / 3 | −18.3 / −12.8 / −8.9 | −18.8 / −13.4 / −9.6 | −19.7 / −13.7 / −9.8 |
+| L cluster + gap | −57.3 (−56.7) | −57.3 (−56.7) | −52.6 |
+| L first pass | −55.0 (−56.9) | −55.0 (−56.9) | −54.1 |
+| L recirc 1 / 2 / 3 | −14.6 / −12.1 / −9.5 | −15.3 / −12.8 / −10.1 | −17.6 / −13.4 / −10.0 |
+
+- The static windows are unchanged, as they must be (θ only acts on the recirculation).
+- The recirculation nulls are 0.5–0.8 dB closer to the captures. M sits 0.2–0.9 dB from Tomkin's repeat floor. L is
+  0.0–2.3 dB from it, and nearest by recirc 3.
+- EDC decay-time ratio: median 0.00 in every octave for both programs; 90th percentile ≤ 7.2 % (M) and ≤ 4.7 % (L),
+  as before.
+- Decorrelation (the sweep pairs, `sim/`; the plugin's renders at different start phases against Tomkin's capture
+  pairs, plugin minus Tomkin over the 8 settings × 6 windows): median **+1.7 dB** (|p90| 4.5) at 0.13, against
+  +2.8 dB (|p90| 5.7) at 0.15. θ 0.13 is closer in every setting and window. Five settings are within ±2.4 dB (M
+  −2.4…+1.9, L 2.0_2.6_0.5 −0.8…−0.6). Three L settings still decorrelate 3.2–5.3 dB more than Tomkin's pairs (L
+  0.1_10.0_0.3, 1.2_20.0_1.0, 1.2_4.5_0.8), each by a nearly constant amount across windows. Open (H): a
+  setting-dependent depth, or those pairs sharing more than the modulation (e.g. close in time). The θ fit's range
+  (0.11–0.144, §9.8) brackets it; not changed here.
+- Run note: 6 workers passed 8 GB on the long L groups (LF 2.0, RT ≥ 2.6), and memguard stopped the run at 314 / 340.
+  The resume with 4 workers peaked at 7.2 GB.

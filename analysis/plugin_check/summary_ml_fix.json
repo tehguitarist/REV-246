@@ -20,10 +20,10 @@
    "first_pass": {
     "plugin_L": -55.39,
     "plugin_R": -49.97,
-    "plugin_R_le_-50": "226/457",
+    "plugin_R_le_-50": "227/457",
     "chain3_L": -55.39,
     "chain3_R": -49.97,
-    "chain3_R_le_-50": "226/457",
+    "chain3_R_le_-50": "227/457",
     "bench_law_L": -50.62,
     "bench_law_R": -48.24,
     "bench_law_R_le_-50": "115/457",
@@ -32,11 +32,11 @@
     "bench_repeat_R_le_-50": "187/457"
    },
    "recirc1": {
-    "plugin_L": -19.59,
-    "plugin_R": -18.34,
+    "plugin_L": -20.08,
+    "plugin_R": -18.83,
     "plugin_R_le_-50": "0/450",
-    "chain3_L": -19.59,
-    "chain3_R": -18.34,
+    "chain3_L": -20.08,
+    "chain3_R": -18.83,
     "chain3_R_le_-50": "0/450",
     "bench_law_L": -22.02,
     "bench_law_R": -20.77,
@@ -46,11 +46,11 @@
     "bench_repeat_R_le_-50": "0/444"
    },
    "recirc2": {
-    "plugin_L": -13.55,
-    "plugin_R": -12.81,
+    "plugin_L": -14.14,
+    "plugin_R": -13.43,
     "plugin_R_le_-50": "0/393",
-    "chain3_L": -13.55,
-    "chain3_R": -12.81,
+    "chain3_L": -14.14,
+    "chain3_R": -13.43,
     "chain3_R_le_-50": "0/393",
     "bench_law_L": -16.65,
     "bench_law_R": -16.03,
@@ -60,11 +60,11 @@
     "bench_repeat_R_le_-50": "0/384"
    },
    "recirc3": {
-    "plugin_L": -9.55,
-    "plugin_R": -8.88,
+    "plugin_L": -10.21,
+    "plugin_R": -9.55,
     "plugin_R_le_-50": "0/350",
-    "chain3_L": -9.55,
-    "chain3_R": -8.88,
+    "chain3_L": -10.21,
+    "chain3_R": -9.55,
     "chain3_R_le_-50": "0/350",
     "bench_law_L": -13.14,
     "bench_law_R": -12.62,
@@ -77,10 +77,10 @@
   "bands": {
    "125": {
     "plugin": {
-     "slope_db_per_s_median": -0.25,
-     "slope_abs_p90": 2.71,
-     "level_db_median": -0.04,
-     "level_abs_p90": 0.35
+     "slope_db_per_s_median": -0.21,
+     "slope_abs_p90": 2.57,
+     "level_db_median": -0.03,
+     "level_abs_p90": 0.33
     },
     "bench": {
      "slope_db_per_s_median": -0.1,
@@ -91,10 +91,10 @@
    },
    "250": {
     "plugin": {
-     "slope_db_per_s_median": 0.23,
-     "slope_abs_p90": 1.04,
-     "level_db_median": -0.04,
-     "level_abs_p90": 0.14
+     "slope_db_per_s_median": 0.19,
+     "slope_abs_p90": 0.99,
+     "level_db_median": -0.03,
+     "level_abs_p90": 0.13
     },
     "bench": {
      "slope_db_per_s_median": -0.07,
@@ -106,7 +106,7 @@
    "500": {
     "plugin": {
      "slope_db_per_s_median": -0.04,
-     "slope_abs_p90": 0.84,
+     "slope_abs_p90": 0.82,
      "level_db_median": 0.01,
      "level_abs_p90": 0.09
     },
@@ -119,10 +119,10 @@
    },
    "1000": {
     "plugin": {
-     "slope_db_per_s_median": 0.09,
-     "slope_abs_p90": 0.51,
+     "slope_db_per_s_median": 0.06,
+     "slope_abs_p90": 0.49,
      "level_db_median": 0.02,
-     "level_abs_p90": 0.07
+     "level_abs_p90": 0.06
     },
     "bench": {
      "slope_db_per_s_median": -0.1,
@@ -133,8 +133,8 @@
    },
    "2000": {
     "plugin": {
-     "slope_db_per_s_median": -0.02,
-     "slope_abs_p90": 0.55,
+     "slope_db_per_s_median": -0.03,
+     "slope_abs_p90": 0.56,
      "level_db_median": 0.0,
      "level_abs_p90": 0.06
     },
@@ -147,8 +147,8 @@
    },
    "4000": {
     "plugin": {
-     "slope_db_per_s_median": 0.02,
-     "slope_abs_p90": 0.38,
+     "slope_db_per_s_median": -0.0,
+     "slope_abs_p90": 0.36,
      "level_db_median": 0.0,
      "level_abs_p90": 0.03
     },
@@ -161,8 +161,8 @@
    },
    "8000": {
     "plugin": {
-     "slope_db_per_s_median": -0.05,
-     "slope_abs_p90": 0.3,
+     "slope_db_per_s_median": -0.07,
+     "slope_abs_p90": 0.32,
      "level_db_median": 0.0,
      "level_abs_p90": 0.02
     },
@@ -177,31 +177,31 @@
   "edc_t_ratio": {
    "125": {
     "median": -0.01,
-    "abs_p90": 0.0759
+    "abs_p90": 0.0715
    },
    "250": {
-    "median": 0.0,
-    "abs_p90": 0.0449
+    "median": -0.0,
+    "abs_p90": 0.0427
    },
    "500": {
     "median": -0.01,
-    "abs_p90": 0.0364
+    "abs_p90": 0.0344
    },
    "1000": {
     "median": 0.0,
-    "abs_p90": 0.022
+    "abs_p90": 0.0213
    },
    "2000": {
     "median": 0.0,
-    "abs_p90": 0.017
+    "abs_p90": 0.0172
    },
    "4000": {
     "median": 0.0,
-    "abs_p90": 0.0159
+    "abs_p90": 0.0158
    },
    "8000": {
     "median": 0.0,
-    "abs_p90": 0.0113
+    "abs_p90": 0.0112
    }
   }
  },
@@ -224,10 +224,10 @@
     "bench_repeat_R_le_-50": "174/179"
    },
    "first_pass": {
-    "plugin_L": -56.87,
+    "plugin_L": -56.86,
     "plugin_R": -54.95,
     "plugin_R_le_-50": "359/359",
-    "chain3_L": -56.87,
+    "chain3_L": -56.86,
     "chain3_R": -54.95,
     "chain3_R_le_-50": "359/359",
     "bench_law_L": -47.8,
@@ -238,11 +238,11 @@
     "bench_repeat_R_le_-50": "338/358"
    },
    "recirc1": {
-    "plugin_L": -15.4,
-    "plugin_R": -14.57,
+    "plugin_L": -16.16,
+    "plugin_R": -15.33,
     "plugin_R_le_-50": "0/359",
-    "chain3_L": -15.4,
-    "chain3_R": -14.57,
+    "chain3_L": -16.16,
+    "chain3_R": -15.33,
     "chain3_R_le_-50": "0/359",
     "bench_law_L": -19.88,
     "bench_law_R": -19.06,
@@ -252,11 +252,11 @@
     "bench_repeat_R_le_-50": "0/358"
    },
    "recirc2": {
-    "plugin_L": -12.3,
-    "plugin_R": -12.05,
+    "plugin_L": -13.0,
+    "plugin_R": -12.75,
     "plugin_R_le_-50": "0/359",
-    "chain3_L": -12.3,
-    "chain3_R": -12.05,
+    "chain3_L": -13.0,
+    "chain3_R": -12.75,
     "chain3_R_le_-50": "0/359",
     "bench_law_L": -16.26,
     "bench_law_R": -15.88,
@@ -266,11 +266,11 @@
     "bench_repeat_R_le_-50": "0/358"
    },
    "recirc3": {
-    "plugin_L": -9.69,
-    "plugin_R": -9.48,
+    "plugin_L": -10.3,
+    "plugin_R": -10.08,
     "plugin_R_le_-50": "0/355",
-    "chain3_L": -9.69,
-    "chain3_R": -9.48,
+    "chain3_L": -10.3,
+    "chain3_R": -10.08,
     "chain3_R_le_-50": "0/355",
     "bench_law_L": -12.94,
     "bench_law_R": -12.68,
@@ -283,10 +283,10 @@
   "bands": {
    "125": {
     "plugin": {
-     "slope_db_per_s_median": -0.21,
-     "slope_abs_p90": 0.5,
+     "slope_db_per_s_median": -0.2,
+     "slope_abs_p90": 0.48,
      "level_db_median": -0.0,
-     "level_abs_p90": 0.17
+     "level_abs_p90": 0.16
     },
     "bench": {
      "slope_db_per_s_median": -0.15,
@@ -297,9 +297,9 @@
    },
    "250": {
     "plugin": {
-     "slope_db_per_s_median": -0.03,
+     "slope_db_per_s_median": -0.04,
      "slope_abs_p90": 0.29,
-     "level_db_median": 0.02,
+     "level_db_median": 0.01,
      "level_abs_p90": 0.1
     },
     "bench": {
@@ -311,10 +311,10 @@
    },
    "500": {
     "plugin": {
-     "slope_db_per_s_median": 0.12,
-     "slope_abs_p90": 0.34,
+     "slope_db_per_s_median": 0.09,
+     "slope_abs_p90": 0.31,
      "level_db_median": 0.03,
-     "level_abs_p90": 0.13
+     "level_abs_p90": 0.11
     },
     "bench": {
      "slope_db_per_s_median": -0.07,
@@ -326,7 +326,7 @@
    "1000": {
     "plugin": {
      "slope_db_per_s_median": 0.01,
-     "slope_abs_p90": 0.29,
+     "slope_abs_p90": 0.3,
      "level_db_median": 0.0,
      "level_abs_p90": 0.06
     },
@@ -339,7 +339,7 @@
    },
    "2000": {
     "plugin": {
-     "slope_db_per_s_median": 0.02,
+     "slope_db_per_s_median": 0.01,
      "slope_abs_p90": 0.21,
      "level_db_median": 0.01,
      "level_abs_p90": 0.05
@@ -353,7 +353,7 @@
    },
    "4000": {
     "plugin": {
-     "slope_db_per_s_median": -0.0,
+     "slope_db_per_s_median": -0.01,
      "slope_abs_p90": 0.22,
      "level_db_median": 0.0,
      "level_abs_p90": 0.04
@@ -367,10 +367,10 @@
    },
    "8000": {
     "plugin": {
-     "slope_db_per_s_median": -0.0,
+     "slope_db_per_s_median": -0.01,
      "slope_abs_p90": 0.18,
      "level_db_median": -0.0,
-     "level_abs_p90": 0.03
+     "level_abs_p90": 0.02
     },
     "bench": {
      "slope_db_per_s_median": -0.02,
@@ -383,31 +383,31 @@
   "edc_t_ratio": {
    "125": {
     "median": -0.0,
-    "abs_p90": 0.0476
+    "abs_p90": 0.0465
    },
    "250": {
     "median": -0.0,
-    "abs_p90": 0.0341
+    "abs_p90": 0.032
    },
    "500": {
     "median": 0.0,
-    "abs_p90": 0.0246
+    "abs_p90": 0.0242
    },
    "1000": {
     "median": -0.0,
-    "abs_p90": 0.0224
+    "abs_p90": 0.0238
    },
    "2000": {
-    "median": -0.0,
-    "abs_p90": 0.0215
+    "median": 0.0,
+    "abs_p90": 0.0217
    },
    "4000": {
-    "median": -0.0,
-    "abs_p90": 0.0157
+    "median": 0.0,
+    "abs_p90": 0.0163
    },
    "8000": {
     "median": 0.0,
-    "abs_p90": 0.0145
+    "abs_p90": 0.0154
    }
   }
  },
@@ -424,14 +424,14 @@
     "2.0-4.0": -6.19
    },
    "plugin": {
-    "recirc1": -14.01,
-    "recirc2": -11.01,
-    "recirc3": -8.07,
-    "0.15-0.3": -28.63,
-    "0.3-0.6": -12.72,
-    "0.6-1.0": -8.27,
-    "1.0-2.0": -4.47,
-    "2.0-4.0": -2.18
+    "recirc1": -15.24,
+    "recirc2": -12.22,
+    "recirc3": -9.23,
+    "0.15-0.3": -29.86,
+    "0.3-0.6": -13.94,
+    "0.6-1.0": -9.45,
+    "1.0-2.0": -5.52,
+    "2.0-4.0": -2.92
    },
    "python_sim": {
     "recirc1": -22.35,
@@ -466,14 +466,14 @@
     "2.0-4.0": -4.96
    },
    "plugin": {
-    "recirc1": -13.34,
-    "recirc2": -10.48,
-    "recirc3": -7.8,
-    "0.15-0.3": -26.69,
-    "0.3-0.6": -12.12,
-    "0.6-1.0": -7.98,
-    "1.0-2.0": -4.02,
-    "2.0-4.0": -2.01
+    "recirc1": -14.56,
+    "recirc2": -11.69,
+    "recirc3": -8.96,
+    "0.15-0.3": -27.93,
+    "0.3-0.6": -13.34,
+    "0.6-1.0": -9.15,
+    "1.0-2.0": -5.04,
+    "2.0-4.0": -2.66
    },
    "python_sim": {
     "recirc1": -17.02,
@@ -508,14 +508,14 @@
     "2.0-4.0": -8.06
    },
    "plugin": {
-    "recirc1": -14.21,
-    "recirc2": -11.2,
-    "recirc3": -8.16,
-    "0.15-0.3": -29.11,
-    "0.3-0.6": -12.94,
-    "0.6-1.0": -8.42,
-    "1.0-2.0": -4.83,
-    "2.0-4.0": -2.34
+    "recirc1": -15.43,
+    "recirc2": -12.42,
+    "recirc3": -9.33,
+    "0.15-0.3": -30.34,
+    "0.3-0.6": -14.17,
+    "0.6-1.0": -9.59,
+    "1.0-2.0": -5.89,
+    "2.0-4.0": -3.14
    },
    "python_sim": {
     "recirc1": -19.63,
@@ -550,14 +550,14 @@
     "2.0-4.0": -2.67
    },
    "plugin": {
-    "recirc1": -15.46,
-    "recirc2": -11.99,
-    "recirc3": -8.48,
-    "0.15-0.3": -32.1,
-    "0.3-0.6": -13.8,
-    "0.6-1.0": -8.82,
-    "1.0-2.0": -5.23,
-    "2.0-4.0": -2.41
+    "recirc1": -16.69,
+    "recirc2": -13.21,
+    "recirc3": -9.65,
+    "0.15-0.3": -33.34,
+    "0.3-0.6": -15.03,
+    "0.6-1.0": -10.0,
+    "1.0-2.0": -6.32,
+    "2.0-4.0": -3.22
    },
    "python_sim": {
     "recirc1": -20.82,
@@ -592,14 +592,14 @@
     "2.0-4.0": null
    },
    "plugin": {
-    "recirc1": -15.99,
-    "recirc2": -11.92,
-    "recirc3": -8.81,
-    "0.15-0.3": -14.13,
-    "0.3-0.6": -8.89,
-    "0.6-1.0": -6.16,
-    "1.0-2.0": -4.3,
-    "2.0-4.0": -5.34
+    "recirc1": -17.22,
+    "recirc2": -13.14,
+    "recirc3": -9.99,
+    "0.15-0.3": -15.35,
+    "0.3-0.6": -10.07,
+    "0.6-1.0": -7.24,
+    "1.0-2.0": -5.1,
+    "2.0-4.0": -5.31
    },
    "python_sim": {
     "recirc1": -24.31,
@@ -634,14 +634,14 @@
     "2.0-4.0": null
    },
    "plugin": {
-    "recirc1": -16.27,
-    "recirc2": -11.78,
-    "recirc3": -8.54,
-    "0.15-0.3": -14.34,
-    "0.3-0.6": -8.58,
-    "0.6-1.0": -5.98,
-    "1.0-2.0": -4.26,
-    "2.0-4.0": -4.7
+    "recirc1": -17.51,
+    "recirc2": -12.99,
+    "recirc3": -9.7,
+    "0.15-0.3": -15.56,
+    "0.3-0.6": -9.75,
+    "0.6-1.0": -7.04,
+    "1.0-2.0": -5.05,
+    "2.0-4.0": -4.63
    },
    "python_sim": {
     "recirc1": -21.34,
@@ -676,14 +676,14 @@
     "2.0-4.0": -6.53
    },
    "plugin": {
-    "recirc1": -13.82,
-    "recirc2": -10.69,
-    "recirc3": -8.04,
-    "0.15-0.3": -12.46,
-    "0.3-0.6": -7.92,
-    "0.6-1.0": -5.46,
-    "1.0-2.0": -4.17,
-    "2.0-4.0": -5.66
+    "recirc1": -15.04,
+    "recirc2": -11.9,
+    "recirc3": -9.19,
+    "0.15-0.3": -13.68,
+    "0.3-0.6": -9.08,
+    "0.6-1.0": -6.48,
+    "1.0-2.0": -4.86,
+    "2.0-4.0": -5.55
    },
    "python_sim": {
     "recirc1": -17.43,
@@ -718,14 +718,14 @@
     "2.0-4.0": null
    },
    "plugin": {
-    "recirc1": -17.55,
-    "recirc2": -12.82,
-    "recirc3": -8.95,
-    "0.15-0.3": -15.48,
-    "0.3-0.6": -9.54,
-    "0.6-1.0": -6.45,
-    "1.0-2.0": -4.91,
-    "2.0-4.0": -8.33
+    "recirc1": -18.79,
+    "recirc2": -14.05,
+    "recirc3": -10.12,
+    "0.15-0.3": -16.71,
+    "0.3-0.6": -10.72,
+    "0.6-1.0": -7.54,
+    "1.0-2.0": -5.75,
+    "2.0-4.0": -8.54
    },
    "python_sim": {
     "recirc1": -22.91,
