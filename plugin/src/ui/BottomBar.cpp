@@ -2,6 +2,9 @@
 
 #include "ui/Design.h"
 
+#include "params/Parameters.h"
+
+#include <array>
 #include <utility>
 
 namespace rv::ui
@@ -170,11 +173,19 @@ void PresetBar::showMenu()
     int id = 1;
     std::vector<juce::String> byId{{}};
     menu.addSectionHeader("Factory");
-    for (const auto& n : presets.factoryNames())
+    // The five Init presets at the top level; the Altiverb ones in one submenu per program.
+    const auto factory = presets.factoryNames();
+    std::array<juce::PopupMenu, rv::params::numPrograms> altiverb;
+    for (int i = 0; i < factory.size(); ++i)
     {
-        menu.addItem(id++, n, true, n == presets.currentName());
+        const auto& n = factory[i];
+        auto& m = i < rv::params::numPrograms ? menu : altiverb[(size_t)rv::PresetManager::factoryProgram(i)];
+        m.addItem(id++, n, true, n == presets.currentName());
         byId.push_back(n);
     }
+    for (int p = 0; p < rv::params::numPrograms; ++p)
+        if (altiverb[(size_t)p].getNumItems() > 0)
+            menu.addSubMenu("Altiverb " + rv::params::programLongName((rv::params::Program)p), altiverb[(size_t)p]);
     const auto users = presets.userNames();
     if (!users.isEmpty())
     {

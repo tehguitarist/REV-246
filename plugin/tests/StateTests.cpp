@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "presets/FactoryPresets.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -27,7 +28,7 @@ TEST_CASE("state round-trips")
 TEST_CASE("factory presets load and are not user-overwritable")
 {
     Rev246Processor p;
-    CHECK(p.presets.factoryNames().size() == rv::params::numPrograms);
+    CHECK(p.presets.factoryNames().size() == rv::params::numPrograms + (int)rv::presets::factoryPresets.size());
     CHECK(p.presets.load("Init N"));
     CHECK(juce::roundToInt(p.apvts.getRawParameterValue(rv::params::id::program)->load()) == 4);
     CHECK_FALSE(p.presets.save("Init N"));
@@ -40,10 +41,12 @@ TEST_CASE("every factory preset sits on its program's step tables; E has the Alt
 {
     using namespace rv::params;
     Rev246Processor p;
-    for (int program = 0; program < numPrograms; ++program)
+    const auto names = p.presets.factoryNames();
+    for (int i = 0; i < names.size(); ++i)
     {
-        REQUIRE(p.presets.load(rv::PresetManager::factoryName(program)));
-        INFO("program " << program);
+        const auto program = rv::PresetManager::factoryProgram(i);
+        REQUIRE(p.presets.load(names[i]));
+        INFO(names[i] << ", program " << program);
         CHECK(juce::roundToInt(p.apvts.getRawParameterValue(id::program)->load()) == program);
         for (int j = 0; j < numJoys; ++j)
         {
@@ -109,4 +112,19 @@ TEST_CASE("the saved state carries its layout version, and an unversioned state 
     b.setStateInformation(old.getData(), (int)old.getSize());
     CHECK(juce::roundToInt(b.apvts.getRawParameterValue(rv::params::id::delay)->load()) == 77);
     CHECK((int)b.apvts.state.getProperty(rv::params::stateVersionProperty) == rv::params::stateVersion);
+}
+
+TEST_CASE("an Altiverb factory preset sets its program and its six panel steps")
+{
+    using namespace rv::params;
+    Rev246Processor p;
+    for (const auto& f : rv::presets::factoryPresets)
+    {
+        REQUIRE(p.presets.load(f.name));
+        INFO(f.name);
+        CHECK(juce::roundToInt(p.apvts.getRawParameterValue(id::program)->load()) == f.program);
+        for (int j = 0; j < numJoys; ++j)
+            CHECK(juce::roundToInt(p.apvts.getRawParameterValue(joyId((Joy)j))->load()) == f.steps[(size_t)j]);
+        CHECK(!p.presets.isModified());
+    }
 }

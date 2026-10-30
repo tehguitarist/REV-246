@@ -2,6 +2,7 @@
 
 #include "dsp/generated/e_spec.h"
 #include "params/Parameters.h"
+#include "presets/FactoryPresets.h"
 
 #include <cmath>
 
@@ -32,6 +33,7 @@ juce::ValueTree parametersOnly(juce::ValueTree copy)
 }
 
 static_assert(sizeof("SMLEN") - 1 == (size_t)params::numPrograms, "one letter per program, in Program order");
+static_assert(presets::factoryJoyCount == params::numJoys, "FactoryPresets.h lists one step per joystick");
 } // namespace
 
 juce::String PresetManager::factoryName(int program)
@@ -63,7 +65,16 @@ juce::StringArray PresetManager::factoryNames() const
     juce::StringArray n;
     for (int i = 0; i < params::numPrograms; ++i)
         n.add(factoryName(i));
+    for (const auto& p : presets::factoryPresets)
+        n.add(p.name);
     return n;
+}
+
+int PresetManager::factoryProgram(int index)
+{
+    if (index < params::numPrograms)
+        return index;
+    return presets::factoryPresets[(size_t)(index - params::numPrograms)].program;
 }
 
 juce::StringArray PresetManager::userNames() const
@@ -105,8 +116,9 @@ juce::File PresetManager::presetFile(const juce::String& name) const
     return presetFolder.getChildFile(name + extension);
 }
 
-juce::ValueTree PresetManager::factoryState(int program) const
+juce::ValueTree PresetManager::factoryState(int index) const
 {
+    const auto program = factoryProgram(index);
     // Every sound setting at its default, with the program set; the settings are the unit's own defaults (params).
     auto state = apvts.copyState();
     for (const auto* p : apvts.processor.getParameters())
@@ -125,6 +137,13 @@ juce::ValueTree PresetManager::factoryState(int program) const
     {
         set(params::id::lf, params::joyNearestStep(params::Program::e, params::Joy::lf, dsp::gen::e::familyLf));
         set(params::id::hf, params::joyNearestStep(params::Program::e, params::Joy::hf, dsp::gen::e::familyHf));
+    }
+    // An Altiverb preset: its six panel steps on top (the rest stays at the defaults).
+    if (index >= params::numPrograms)
+    {
+        const auto& p = presets::factoryPresets[(size_t)(index - params::numPrograms)];
+        for (int j = 0; j < params::numJoys; ++j)
+            set(params::joyId((params::Joy)j), p.steps[(size_t)j]);
     }
     return parametersOnly(state);
 }

@@ -24,7 +24,11 @@ class PresetManager
     explicit PresetManager(juce::AudioProcessorValueTreeState&);
 
     juce::File folder() const { return presetFolder; }
+    // The built-in presets: the five "Init" ones, then the Altiverb EMT 246 presets as best-guess panel settings
+    // (FactoryPresets.h, docs/library_notes.md section 7).
     juce::StringArray factoryNames() const;
+    // The program of factoryNames()[index] (for grouping them in the menu).
+    static int factoryProgram(int index);
     juce::StringArray userNames() const;
     juce::StringArray allNames() const { auto n = factoryNames(); n.addArray(userNames()); return n; }
     bool isFactory(const juce::String& name) const { return factoryNames().contains(name, true); }
@@ -41,7 +45,7 @@ class PresetManager
     std::function<void()> onChange; // the current name or list changed (message thread)
 
   private:
-    juce::ValueTree factoryState(int program) const;
+    juce::ValueTree factoryState(int index) const; // index into factoryNames()
     juce::ValueTree stateFor(const juce::String& name) const;
     juce::File presetFile(const juce::String& name) const;
     void apply(const juce::ValueTree&);

@@ -1,0 +1,5341 @@
+{
+ "method": "tools/altiverb_presets.py (docstring); docs/library_notes.md section 7",
+ "joy_order": [
+  "lowpass",
+  "delay",
+  "ampl",
+  "lf",
+  "rt",
+  "hf"
+ ],
+ "presets": {
+  "LONG RT 10.0s": {
+   "altiverb": "LONG RT 10.0s",
+   "plugin_name": "Altiverb L RT 10",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 40.43,
+   "included": true,
+   "decay_fit": {
+    "rt": 10.000974248149891,
+    "lf": 1.2392523342090875,
+    "hf": 0.40116033523143163,
+    "chi2_dof": 0.005950453969976559,
+    "t60_measured": [
+     11.71612803455016,
+     11.26884786782735,
+     10.337006080138124,
+     9.511152503529345,
+     8.178272052927369,
+     5.944831037984256,
+     3.6405076444428683
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 39,
+     "step": 39,
+     "label": "H",
+     "reason": "family onset 40.43 ms; DELAY 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40",
+     "inferred": 39.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 10.0,
+     "step": 11,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 10.001
+    },
+    "lf": {
+     "value": 1.2,
+     "step": 11,
+     "label": "H",
+     "reason": "RT-matched slices 1.19 / 1.20 / 1.30 (RT 6 / 8 / 10); pooled fit unreliable for LF (this file alone: 1.24)"
+    },
+    "hf": {
+     "value": 0.4,
+     "step": 3,
+     "label": "S",
+     "reason": "RT-matched slices 0.42-0.42, pooled 0.38-0.52 (this file alone: 0.40)"
+    },
+    "ampl": {
+     "value": 60,
+     "step": 6,
+     "label": "H",
+     "reason": "cluster / reverb ratio 57.5-64.0 %, scale resting on Tomkin's single L AMPL (80) (this file: 87.4 %)",
+     "inferred": 87.3747
+    }
+   },
+   "label_string": "L: RT 10 (C), LF 1.2 (H), HF 0.4 (S), AMPL 60 (H), DELAY 39 (H)"
+  },
+  "LONG RT 2.0s": {
+   "altiverb": "LONG RT 2.0s",
+   "plugin_name": "Altiverb L RT 2.0",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 40.43,
+   "included": true,
+   "decay_fit": {
+    "rt": 1.964182035831644,
+    "lf": 1.313482026394632,
+    "hf": 0.5574086855660223,
+    "chi2_dof": 2.212695817439838,
+    "t60_measured": [
+     2.3840421766487783,
+     2.3547410867947045,
+     2.101866124911971,
+     1.9095400924887334,
+     1.6678246650434216,
+     1.3301468879178504,
+     1.1132873031894872
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 39,
+     "step": 39,
+     "label": "H",
+     "reason": "family onset 40.43 ms; DELAY 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40",
+     "inferred": 39.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 2.0,
+     "step": 0,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 1.9642
+    },
+    "lf": {
+     "value": 1.2,
+     "step": 11,
+     "label": "H",
+     "reason": "RT-matched slices 1.19 / 1.20 / 1.30 (RT 6 / 8 / 10); pooled fit unreliable for LF (this file alone: 1.31)"
+    },
+    "hf": {
+     "value": 0.4,
+     "step": 3,
+     "label": "S",
+     "reason": "RT-matched slices 0.42-0.42, pooled 0.38-0.52 (this file alone: 0.56)"
+    },
+    "ampl": {
+     "value": 60,
+     "step": 6,
+     "label": "H",
+     "reason": "cluster / reverb ratio 57.5-64.0 %, scale resting on Tomkin's single L AMPL (80) (this file: 96.7 %)",
+     "inferred": 96.6861
+    }
+   },
+   "label_string": "L: RT 2.0 (C), LF 1.2 (H), HF 0.4 (S), AMPL 60 (H), DELAY 39 (H)"
+  },
+  "LONG RT 3.0s": {
+   "altiverb": "LONG RT 3.0s",
+   "plugin_name": "Altiverb L RT 3.0",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 40.43,
+   "included": true,
+   "decay_fit": {
+    "rt": 3.0496156352343857,
+    "lf": 1.168160108686222,
+    "hf": 0.4034865153602261,
+    "chi2_dof": 1.311320951667173,
+    "t60_measured": [
+     3.3444647109537273,
+     3.3796923329885753,
+     3.0995807041881953,
+     2.7855304069586957,
+     2.2890051102760713,
+     1.6336576961756524,
+     1.2318791915947918
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 39,
+     "step": 39,
+     "label": "H",
+     "reason": "family onset 40.43 ms; DELAY 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40",
+     "inferred": 39.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 3.0,
+     "step": 3,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 3.0496
+    },
+    "lf": {
+     "value": 1.2,
+     "step": 11,
+     "label": "H",
+     "reason": "RT-matched slices 1.19 / 1.20 / 1.30 (RT 6 / 8 / 10); pooled fit unreliable for LF (this file alone: 1.17)"
+    },
+    "hf": {
+     "value": 0.4,
+     "step": 3,
+     "label": "S",
+     "reason": "RT-matched slices 0.42-0.42, pooled 0.38-0.52 (this file alone: 0.40)"
+    },
+    "ampl": {
+     "value": 60,
+     "step": 6,
+     "label": "H",
+     "reason": "cluster / reverb ratio 57.5-64.0 %, scale resting on Tomkin's single L AMPL (80) (this file: 92.0 %)",
+     "inferred": 92.0422
+    }
+   },
+   "label_string": "L: RT 3.0 (C), LF 1.2 (H), HF 0.4 (S), AMPL 60 (H), DELAY 39 (H)"
+  },
+  "LONG RT 4.0s": {
+   "altiverb": "LONG RT 4.0s",
+   "plugin_name": "Altiverb L RT 4.0",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 40.43,
+   "included": true,
+   "decay_fit": {
+    "rt": 3.9783801912408134,
+    "lf": 1.206914582540609,
+    "hf": 0.4052354860644582,
+    "chi2_dof": 0.14996607534384215,
+    "t60_measured": [
+     4.548340520243193,
+     4.441008598751921,
+     4.040012819597569,
+     3.725406597092477,
+     3.074439951191658,
+     2.2592028670131015,
+     1.5147263050376785
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 39,
+     "step": 39,
+     "label": "H",
+     "reason": "family onset 40.43 ms; DELAY 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40",
+     "inferred": 39.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 4.0,
+     "step": 5,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 3.9784
+    },
+    "lf": {
+     "value": 1.2,
+     "step": 11,
+     "label": "H",
+     "reason": "RT-matched slices 1.19 / 1.20 / 1.30 (RT 6 / 8 / 10); pooled fit unreliable for LF (this file alone: 1.21)"
+    },
+    "hf": {
+     "value": 0.4,
+     "step": 3,
+     "label": "S",
+     "reason": "RT-matched slices 0.42-0.42, pooled 0.38-0.52 (this file alone: 0.41)"
+    },
+    "ampl": {
+     "value": 60,
+     "step": 6,
+     "label": "H",
+     "reason": "cluster / reverb ratio 57.5-64.0 %, scale resting on Tomkin's single L AMPL (80) (this file: 86.6 %)",
+     "inferred": 86.5649
+    }
+   },
+   "label_string": "L: RT 4.0 (C), LF 1.2 (H), HF 0.4 (S), AMPL 60 (H), DELAY 39 (H)"
+  },
+  "LONG RT 5.0s": {
+   "altiverb": "LONG RT 5.0s",
+   "plugin_name": "Altiverb L RT 5.0",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 40.43,
+   "included": true,
+   "decay_fit": {
+    "rt": 4.992780626836906,
+    "lf": 1.1976433570771956,
+    "hf": 0.3969712327087023,
+    "chi2_dof": 0.11108770875558169,
+    "t60_measured": [
+     5.704006993864292,
+     5.480412382576607,
+     5.105329630067642,
+     4.692666253312902,
+     3.8835617488465592,
+     2.8348388259754573,
+     1.8424550189557376
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 39,
+     "step": 39,
+     "label": "H",
+     "reason": "family onset 40.43 ms; DELAY 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40",
+     "inferred": 39.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 5.0,
+     "step": 7,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 4.9928
+    },
+    "lf": {
+     "value": 1.2,
+     "step": 11,
+     "label": "H",
+     "reason": "RT-matched slices 1.19 / 1.20 / 1.30 (RT 6 / 8 / 10); pooled fit unreliable for LF (this file alone: 1.20)"
+    },
+    "hf": {
+     "value": 0.4,
+     "step": 3,
+     "label": "S",
+     "reason": "RT-matched slices 0.42-0.42, pooled 0.38-0.52 (this file alone: 0.40)"
+    },
+    "ampl": {
+     "value": 60,
+     "step": 6,
+     "label": "H",
+     "reason": "cluster / reverb ratio 57.5-64.0 %, scale resting on Tomkin's single L AMPL (80) (this file: 86.5 %)",
+     "inferred": 86.4625
+    }
+   },
+   "label_string": "L: RT 5.0 (C), LF 1.2 (H), HF 0.4 (S), AMPL 60 (H), DELAY 39 (H)"
+  },
+  "LONG RT 6.0s": {
+   "altiverb": "LONG RT 6.0s",
+   "plugin_name": "Altiverb L RT 6.0",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 40.43,
+   "included": true,
+   "decay_fit": {
+    "rt": 5.956794885559947,
+    "lf": 1.205718291416216,
+    "hf": 0.40230592310296476,
+    "chi2_dof": 0.11848130568339828,
+    "t60_measured": [
+     6.8408360225608735,
+     6.557502534856701,
+     6.1390203187365255,
+     5.629363750097783,
+     4.737224622596802,
+     3.4214807914116503,
+     2.236869187428584
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 39,
+     "step": 39,
+     "label": "H",
+     "reason": "family onset 40.43 ms; DELAY 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40",
+     "inferred": 39.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 6.0,
+     "step": 8,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 5.9568
+    },
+    "lf": {
+     "value": 1.2,
+     "step": 11,
+     "label": "H",
+     "reason": "RT-matched slices 1.19 / 1.20 / 1.30 (RT 6 / 8 / 10); pooled fit unreliable for LF (this file alone: 1.21)"
+    },
+    "hf": {
+     "value": 0.4,
+     "step": 3,
+     "label": "S",
+     "reason": "RT-matched slices 0.42-0.42, pooled 0.38-0.52 (this file alone: 0.40)"
+    },
+    "ampl": {
+     "value": 60,
+     "step": 6,
+     "label": "H",
+     "reason": "cluster / reverb ratio 57.5-64.0 %, scale resting on Tomkin's single L AMPL (80) (this file: 86.7 %)",
+     "inferred": 86.697
+    }
+   },
+   "label_string": "L: RT 6.0 (C), LF 1.2 (H), HF 0.4 (S), AMPL 60 (H), DELAY 39 (H)"
+  },
+  "LONG RT 8.0s": {
+   "altiverb": "LONG RT 8.0s",
+   "plugin_name": "Altiverb L RT 8.0",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 40.43,
+   "included": true,
+   "decay_fit": {
+    "rt": 8.057772612925058,
+    "lf": 1.1867867837946409,
+    "hf": 0.3962342147484944,
+    "chi2_dof": 0.07087729236178268,
+    "t60_measured": [
+     9.146907457067009,
+     8.804140062790001,
+     8.182091459180239,
+     7.677324696970789,
+     6.489833747413361,
+     4.69620578309752,
+     2.9190476529593
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 39,
+     "step": 39,
+     "label": "H",
+     "reason": "family onset 40.43 ms; DELAY 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40",
+     "inferred": 39.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 8.0,
+     "step": 10,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 8.0578
+    },
+    "lf": {
+     "value": 1.2,
+     "step": 11,
+     "label": "H",
+     "reason": "RT-matched slices 1.19 / 1.20 / 1.30 (RT 6 / 8 / 10); pooled fit unreliable for LF (this file alone: 1.19)"
+    },
+    "hf": {
+     "value": 0.4,
+     "step": 3,
+     "label": "S",
+     "reason": "RT-matched slices 0.42-0.42, pooled 0.38-0.52 (this file alone: 0.40)"
+    },
+    "ampl": {
+     "value": 60,
+     "step": 6,
+     "label": "H",
+     "reason": "cluster / reverb ratio 57.5-64.0 %, scale resting on Tomkin's single L AMPL (80) (this file: 86.8 %)",
+     "inferred": 86.7541
+    }
+   },
+   "label_string": "L: RT 8.0 (C), LF 1.2 (H), HF 0.4 (S), AMPL 60 (H), DELAY 39 (H)"
+  },
+  "MED RT 0.5s": {
+   "altiverb": "MED RT 0.5s",
+   "plugin_name": "Altiverb M RT 0.5",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 20.328,
+   "included": true,
+   "decay_fit": {
+    "rt": 0.6547872164546841,
+    "lf": 0.9951924747869388,
+    "hf": 0.7906937091676434,
+    "chi2_dof": 2.7631790697395444,
+    "t60_measured": [
+     0.651515983807224,
+     0.6546461003047006,
+     0.6740348390766632,
+     0.6215459379783381,
+     0.6553354461350223,
+     0.5615389448982744,
+     0.5103966045813085
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 0.5,
+     "step": 0,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 0.6548
+    },
+    "lf": {
+     "value": 1.1,
+     "step": 10,
+     "label": "H",
+     "reason": "RT-matched slices 1.10-1.20 (RT 1.8-5.0): between the 1.1 and 1.2 steps (this file alone: 1.00)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "RT-matched slices 0.69-0.71, pooled 0.69-0.75 (this file alone: 0.79)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio: 78.1-85.9 % (this file: 109.3 %)",
+     "inferred": 109.314
+    }
+   },
+   "label_string": "M: RT 0.5 (C), LF 1.1 (H), HF 0.7 (S), AMPL 80 (S), DELAY 20 (S)"
+  },
+  "MED RT 1.0s": {
+   "altiverb": "MED RT 1.0s",
+   "plugin_name": "Altiverb M RT 1.0",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 20.328,
+   "included": true,
+   "decay_fit": {
+    "rt": 1.0006646694333865,
+    "lf": 1.1375952980431157,
+    "hf": 0.7742217189333056,
+    "chi2_dof": 1.3030725824451868,
+    "t60_measured": [
+     1.1146925512127286,
+     1.0800400348036838,
+     1.095012490464625,
+     0.9910508246506112,
+     0.9460772636544272,
+     0.8623361048413374,
+     0.7492252097774996
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 1.0,
+     "step": 5,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 1.0007
+    },
+    "lf": {
+     "value": 1.1,
+     "step": 10,
+     "label": "H",
+     "reason": "RT-matched slices 1.10-1.20 (RT 1.8-5.0): between the 1.1 and 1.2 steps (this file alone: 1.14)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "RT-matched slices 0.69-0.71, pooled 0.69-0.75 (this file alone: 0.77)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio: 78.1-85.9 % (this file: 99.7 %)",
+     "inferred": 99.6835
+    }
+   },
+   "label_string": "M: RT 1.0 (C), LF 1.1 (H), HF 0.7 (S), AMPL 80 (S), DELAY 20 (S)"
+  },
+  "MED RT 1.4s": {
+   "altiverb": "MED RT 1.4s",
+   "plugin_name": "Altiverb M RT 1.4",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 20.328,
+   "included": true,
+   "decay_fit": {
+    "rt": 1.4128962903429305,
+    "lf": 1.0530999690921055,
+    "hf": 0.7109546471005004,
+    "chi2_dof": 0.3699149817932315,
+    "t60_measured": [
+     1.4803197202932985,
+     1.4646249266387354,
+     1.4264660969845029,
+     1.398751068623897,
+     1.3334728058542438,
+     1.173448661841755,
+     0.9418597034984884
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 1.4,
+     "step": 8,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 1.4129
+    },
+    "lf": {
+     "value": 1.1,
+     "step": 10,
+     "label": "H",
+     "reason": "RT-matched slices 1.10-1.20 (RT 1.8-5.0): between the 1.1 and 1.2 steps (this file alone: 1.05)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "RT-matched slices 0.69-0.71, pooled 0.69-0.75 (this file alone: 0.71)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio: 78.1-85.9 % (this file: 98.8 %)",
+     "inferred": 98.8297
+    }
+   },
+   "label_string": "M: RT 1.4 (C), LF 1.1 (H), HF 0.7 (S), AMPL 80 (S), DELAY 20 (S)"
+  },
+  "MED RT 1.8s": {
+   "altiverb": "MED RT 1.8s",
+   "plugin_name": "Altiverb M RT 1.8",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 20.328,
+   "included": true,
+   "decay_fit": {
+    "rt": 1.802633345805382,
+    "lf": 1.1024438013118756,
+    "hf": 0.6994980329103787,
+    "chi2_dof": 0.12196808947440359,
+    "t60_measured": [
+     2.001135643098997,
+     1.8708842719542638,
+     1.8574341471491451,
+     1.787804321159212,
+     1.7156775836014941,
+     1.4701767432386506,
+     1.1878242455719277
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 1.8,
+     "step": 9,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 1.8026
+    },
+    "lf": {
+     "value": 1.1,
+     "step": 10,
+     "label": "H",
+     "reason": "RT-matched slices 1.10-1.20 (RT 1.8-5.0): between the 1.1 and 1.2 steps (this file alone: 1.10)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "RT-matched slices 0.69-0.71, pooled 0.69-0.75 (this file alone: 0.70)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio: 78.1-85.9 % (this file: 98.7 %)",
+     "inferred": 98.6575
+    }
+   },
+   "label_string": "M: RT 1.8 (C), LF 1.1 (H), HF 0.7 (S), AMPL 80 (S), DELAY 20 (S)"
+  },
+  "MED RT 2.0s": {
+   "altiverb": "MED RT 2.0s",
+   "plugin_name": "Altiverb M RT 2.0",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 20.328,
+   "included": true,
+   "decay_fit": {
+    "rt": 2.0052067994420315,
+    "lf": 1.1170969700914788,
+    "hf": 0.7091013872217103,
+    "chi2_dof": 0.8044962473202716,
+    "t60_measured": [
+     2.2599692072470168,
+     2.0690863077722828,
+     2.142080455279696,
+     1.9832140431611016,
+     1.894815553816204,
+     1.664081378047026,
+     1.3292377850438082
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 2.0,
+     "step": 10,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 2.0052
+    },
+    "lf": {
+     "value": 1.1,
+     "step": 10,
+     "label": "H",
+     "reason": "RT-matched slices 1.10-1.20 (RT 1.8-5.0): between the 1.1 and 1.2 steps (this file alone: 1.12)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "RT-matched slices 0.69-0.71, pooled 0.69-0.75 (this file alone: 0.71)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio: 78.1-85.9 % (this file: 99.2 %)",
+     "inferred": 99.1984
+    }
+   },
+   "label_string": "M: RT 2.0 (C), LF 1.1 (H), HF 0.7 (S), AMPL 80 (S), DELAY 20 (S)"
+  },
+  "MED RT 2.6s": {
+   "altiverb": "MED RT 2.6s",
+   "plugin_name": "Altiverb M RT 2.6",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 20.328,
+   "included": true,
+   "decay_fit": {
+    "rt": 2.5792495325706013,
+    "lf": 1.0983241062259173,
+    "hf": 0.706721371657908,
+    "chi2_dof": 0.19794619860873666,
+    "t60_measured": [
+     2.8581071279237196,
+     2.657995303108684,
+     2.681394710677593,
+     2.5568008166697047,
+     2.4529595502668733,
+     2.1434718055975557,
+     1.6976960952017148
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 2.6,
+     "step": 11,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 2.5792
+    },
+    "lf": {
+     "value": 1.1,
+     "step": 10,
+     "label": "H",
+     "reason": "RT-matched slices 1.10-1.20 (RT 1.8-5.0): between the 1.1 and 1.2 steps (this file alone: 1.10)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "RT-matched slices 0.69-0.71, pooled 0.69-0.75 (this file alone: 0.71)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio: 78.1-85.9 % (this file: 99.2 %)",
+     "inferred": 99.2372
+    }
+   },
+   "label_string": "M: RT 2.6 (C), LF 1.1 (H), HF 0.7 (S), AMPL 80 (S), DELAY 20 (S)"
+  },
+  "MED RT 3.0s": {
+   "altiverb": "MED RT 3.0s",
+   "plugin_name": "Altiverb M RT 3.0",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 20.328,
+   "included": true,
+   "decay_fit": {
+    "rt": 2.9707298281662755,
+    "lf": 1.1133784474403081,
+    "hf": 0.7076763592331763,
+    "chi2_dof": 0.2208746492638497,
+    "t60_measured": [
+     3.300163744774057,
+     3.1505393848495444,
+     3.011213924908047,
+     2.9553590877742133,
+     2.839288954864541,
+     2.4743788493279784,
+     1.948783887256236
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 3.0,
+     "step": 12,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 2.9707
+    },
+    "lf": {
+     "value": 1.1,
+     "step": 10,
+     "label": "H",
+     "reason": "RT-matched slices 1.10-1.20 (RT 1.8-5.0): between the 1.1 and 1.2 steps (this file alone: 1.11)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "RT-matched slices 0.69-0.71, pooled 0.69-0.75 (this file alone: 0.71)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio: 78.1-85.9 % (this file: 99.7 %)",
+     "inferred": 99.6996
+    }
+   },
+   "label_string": "M: RT 3.0 (C), LF 1.1 (H), HF 0.7 (S), AMPL 80 (S), DELAY 20 (S)"
+  },
+  "MED RT 3.5s": {
+   "altiverb": "MED RT 3.5s",
+   "plugin_name": "Altiverb M RT 3.5",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 20.328,
+   "included": true,
+   "decay_fit": {
+    "rt": 3.5247379756361226,
+    "lf": 1.0953453407239475,
+    "hf": 0.6957495494948788,
+    "chi2_dof": 0.029209006852766804,
+    "t60_measured": [
+     3.8639014725953498,
+     3.66963748116427,
+     3.6456602444329,
+     3.5056244757564894,
+     3.33141302810279,
+     2.911132661988095,
+     2.28371219042942
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 3.5,
+     "step": 13,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 3.5247
+    },
+    "lf": {
+     "value": 1.1,
+     "step": 10,
+     "label": "H",
+     "reason": "RT-matched slices 1.10-1.20 (RT 1.8-5.0): between the 1.1 and 1.2 steps (this file alone: 1.10)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "RT-matched slices 0.69-0.71, pooled 0.69-0.75 (this file alone: 0.70)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio: 78.1-85.9 % (this file: 99.7 %)",
+     "inferred": 99.6586
+    }
+   },
+   "label_string": "M: RT 3.5 (C), LF 1.1 (H), HF 0.7 (S), AMPL 80 (S), DELAY 20 (S)"
+  },
+  "MED RT 4.0s": {
+   "altiverb": "MED RT 4.0s",
+   "plugin_name": "Altiverb M RT 4.0",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 20.328,
+   "included": true,
+   "decay_fit": {
+    "rt": 3.985293495074509,
+    "lf": 1.0888898268413134,
+    "hf": 0.6966840099441323,
+    "chi2_dof": 0.14097990487305362,
+    "t60_measured": [
+     4.31195678467423,
+     4.182332361916309,
+     4.111040249896428,
+     3.9498101229553546,
+     3.766246755328646,
+     3.308569558653093,
+     2.576812689372622
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 4.0,
+     "step": 14,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 3.9853
+    },
+    "lf": {
+     "value": 1.1,
+     "step": 10,
+     "label": "H",
+     "reason": "RT-matched slices 1.10-1.20 (RT 1.8-5.0): between the 1.1 and 1.2 steps (this file alone: 1.09)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "RT-matched slices 0.69-0.71, pooled 0.69-0.75 (this file alone: 0.70)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio: 78.1-85.9 % (this file: 100.5 %)",
+     "inferred": 100.5366
+    }
+   },
+   "label_string": "M: RT 4.0 (C), LF 1.1 (H), HF 0.7 (S), AMPL 80 (S), DELAY 20 (S)"
+  },
+  "MED RT 5.0s": {
+   "altiverb": "MED RT 5.0s",
+   "plugin_name": "Altiverb M RT 5.0",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 20.328,
+   "included": true,
+   "decay_fit": {
+    "rt": 4.95925733142674,
+    "lf": 1.0943282519982922,
+    "hf": 0.6989205714551122,
+    "chi2_dof": 0.3435252026212535,
+    "t60_measured": [
+     5.361328266985058,
+     5.2657317833592785,
+     5.090338161024466,
+     4.918149960184318,
+     4.699380119357841,
+     4.12483130834959,
+     3.2251123453380757
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 5.0,
+     "step": 15,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 4.9593
+    },
+    "lf": {
+     "value": 1.1,
+     "step": 10,
+     "label": "H",
+     "reason": "RT-matched slices 1.10-1.20 (RT 1.8-5.0): between the 1.1 and 1.2 steps (this file alone: 1.09)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "RT-matched slices 0.69-0.71, pooled 0.69-0.75 (this file alone: 0.70)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio: 78.1-85.9 % (this file: 101.8 %)",
+     "inferred": 101.7724
+    }
+   },
+   "label_string": "M: RT 5.0 (C), LF 1.1 (H), HF 0.7 (S), AMPL 80 (S), DELAY 20 (S)"
+  },
+  "NON-LIN": {
+   "altiverb": "NON-LIN",
+   "plugin_name": "Altiverb N Non-Lin",
+   "program": "N",
+   "how": "front taps 41/410/463 (L), 41/278/463 (R)",
+   "onset_ms": 19.0,
+   "included": true,
+   "n_fit": {
+    "best": [
+     0.3,
+     10.0,
+     0.4
+    ],
+    "cost": 210.1062133370524,
+    "next": [
+     [
+      0.3,
+      3.0,
+      0.4
+     ],
+     [
+      0.3,
+      -3.0,
+      0.4
+     ],
+     [
+      0.3,
+      -2.0,
+      0.4
+     ],
+     [
+      0.3,
+      2.0,
+      0.4
+     ],
+     [
+      0.3,
+      2.0,
+      0.6
+     ]
+    ],
+    "next_cost": [
+     552.0697346387185,
+     573.1119322712058,
+     1003.1655254401899,
+     1013.2508847195496,
+     1322.961589550041
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 19,
+     "step": 19,
+     "label": "H",
+     "reason": "family onset 19.00 ms; DELAY 19 matches the Altiverb's onset in the plugin's timing (N's front tap 1.57 ms after S's tap 0), against the round 20",
+     "inferred": 19.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "ampl": {
+     "value": 0.3,
+     "step": 6,
+     "label": "S",
+     "reason": "SPAN: envelope fit over the library steps (cost 210; runners-up [(0.3, 3.0, 0.4), (0.3, -3.0, 0.4), (0.3, -2.0, 0.4)])"
+    },
+    "lf": {
+     "value": 10.0,
+     "step": 15,
+     "label": "S",
+     "reason": "EARLY RT: the stages' gain slope, envelope fit"
+    },
+    "hf": {
+     "value": 0.4,
+     "step": 2,
+     "label": "S",
+     "reason": "LATE RT: the flat late decay, envelope fit"
+    },
+    "rt": {
+     "value": null,
+     "step": 8,
+     "label": "C",
+     "reason": "RT is blank in N; the step is left at the default"
+    }
+   },
+   "label_string": "N: SPAN 0.30 (S), EARLY 10 (S), LATE 0.4 (S), DELAY 19 (H)"
+  },
+  "NON-LIN SHORT RT 0.2s": {
+   "altiverb": "NON-LIN SHORT RT 0.2s",
+   "plugin_name": "Altiverb S RT 0.2",
+   "program": "S",
+   "how": "cluster taps 54/194/288 (L), 143/194/353 (R)",
+   "onset_ms": 10.164,
+   "included": true,
+   "decay_fit": {
+    "rt": 0.3064981013475423,
+    "lf": 0.8382301484219483,
+    "hf": 0.8687392079436641,
+    "chi2_dof": 2.3150497494740563,
+    "t60_measured": [
+     0.27653835890747547,
+     0.2715801965180565,
+     0.28635753166736816,
+     0.3173227946636529,
+     0.2996939377771267,
+     0.2917070608802165,
+     0.2591438338934038
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 10,
+     "step": 10,
+     "label": "S",
+     "reason": "family onset 10.16 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 10.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 0.2,
+     "step": 0,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 0.3065
+    },
+    "lf": {
+     "value": 1.0,
+     "step": 9,
+     "label": "S",
+     "reason": "RT-matched Tomkin slices 0.99 / 1.03 / 1.01 (RT 0.6 / 1.0 / 2.2); CLA's panel (same S setting) reads LF 1.0 (this file alone: 0.84)"
+    },
+    "hf": {
+     "value": 0.9,
+     "step": 8,
+     "label": "S",
+     "reason": "RT-matched slices 0.90-0.92, pooled fit 0.88-0.93 at every RT; CLA's panel reads HF 0.9 (this file alone: 0.87)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's linear AMPL law: 79.7-85.6 %; CLA's panel reads AMPL 80 (this file: 109.5 %)",
+     "inferred": 109.5049
+    }
+   },
+   "label_string": "S: RT 0.2 (C), LF 1.0 (S), HF 0.9 (S), AMPL 80 (S), DELAY 10 (S)"
+  },
+  "NON-LIN SHORT RT 0.6s": {
+   "altiverb": "NON-LIN SHORT RT 0.6s",
+   "plugin_name": "Altiverb S RT 0.6",
+   "program": "S",
+   "how": "cluster taps 54/194/288 (L), 143/194/353 (R)",
+   "onset_ms": 10.164,
+   "included": true,
+   "decay_fit": {
+    "rt": 0.5907561613124621,
+    "lf": 1.1005349422439497,
+    "hf": 0.9315084712858394,
+    "chi2_dof": 0.880223070201476,
+    "t60_measured": [
+     0.6222372721396867,
+     0.6613110000119293,
+     0.6011647021158322,
+     0.6004566341070162,
+     0.5857459846107608,
+     0.5684687712054284,
+     0.533340609425119
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 10,
+     "step": 10,
+     "label": "S",
+     "reason": "family onset 10.16 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 10.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 0.6,
+     "step": 4,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 0.5908
+    },
+    "lf": {
+     "value": 1.0,
+     "step": 9,
+     "label": "S",
+     "reason": "RT-matched Tomkin slices 0.99 / 1.03 / 1.01 (RT 0.6 / 1.0 / 2.2); CLA's panel (same S setting) reads LF 1.0 (this file alone: 1.10)"
+    },
+    "hf": {
+     "value": 0.9,
+     "step": 8,
+     "label": "S",
+     "reason": "RT-matched slices 0.90-0.92, pooled fit 0.88-0.93 at every RT; CLA's panel reads HF 0.9 (this file alone: 0.93)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's linear AMPL law: 79.7-85.6 %; CLA's panel reads AMPL 80 (this file: 108.6 %)",
+     "inferred": 108.5561
+    }
+   },
+   "label_string": "S: RT 0.6 (C), LF 1.0 (S), HF 0.9 (S), AMPL 80 (S), DELAY 10 (S)"
+  },
+  "NON-LIN SHORT RT 1.0s": {
+   "altiverb": "NON-LIN SHORT RT 1.0s",
+   "plugin_name": "Altiverb S RT 1.0",
+   "program": "S",
+   "how": "cluster taps 54/194/288 (L), 143/194/353 (R)",
+   "onset_ms": 10.164,
+   "included": true,
+   "decay_fit": {
+    "rt": 1.001030501886899,
+    "lf": 0.9225960996608068,
+    "hf": 0.8938068799357575,
+    "chi2_dof": 1.0739689239201362,
+    "t60_measured": [
+     0.8963011718375021,
+     1.0170000514452266,
+     0.9718304745514279,
+     0.9902872584038478,
+     1.0159335937074245,
+     0.9494019887497351,
+     0.8702825726518151
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 10,
+     "step": 10,
+     "label": "S",
+     "reason": "family onset 10.16 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 10.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 1.0,
+     "step": 8,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 1.001
+    },
+    "lf": {
+     "value": 1.0,
+     "step": 9,
+     "label": "S",
+     "reason": "RT-matched Tomkin slices 0.99 / 1.03 / 1.01 (RT 0.6 / 1.0 / 2.2); CLA's panel (same S setting) reads LF 1.0 (this file alone: 0.92)"
+    },
+    "hf": {
+     "value": 0.9,
+     "step": 8,
+     "label": "S",
+     "reason": "RT-matched slices 0.90-0.92, pooled fit 0.88-0.93 at every RT; CLA's panel reads HF 0.9 (this file alone: 0.89)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's linear AMPL law: 79.7-85.6 %; CLA's panel reads AMPL 80 (this file: 109.5 %)",
+     "inferred": 109.477
+    }
+   },
+   "label_string": "S: RT 1.0 (C), LF 1.0 (S), HF 0.9 (S), AMPL 80 (S), DELAY 10 (S)"
+  },
+  "NON-LIN SHORT RT 1.6s": {
+   "altiverb": "NON-LIN SHORT RT 1.6s",
+   "plugin_name": "Altiverb S RT 1.6",
+   "program": "S",
+   "how": "cluster taps 54/194/288 (L), 143/194/353 (R)",
+   "onset_ms": 10.164,
+   "included": true,
+   "decay_fit": {
+    "rt": 1.5907804167056663,
+    "lf": 0.9882339059898665,
+    "hf": 0.9066676972526254,
+    "chi2_dof": 0.3076233853695062,
+    "t60_measured": [
+     1.6122923655851693,
+     1.5562938795925096,
+     1.5862398994723925,
+     1.562021809721021,
+     1.605738481909614,
+     1.5368838317927176,
+     1.3960251649022692
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 10,
+     "step": 10,
+     "label": "S",
+     "reason": "family onset 10.16 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 10.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 1.6,
+     "step": 11,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 1.5908
+    },
+    "lf": {
+     "value": 1.0,
+     "step": 9,
+     "label": "S",
+     "reason": "RT-matched Tomkin slices 0.99 / 1.03 / 1.01 (RT 0.6 / 1.0 / 2.2); CLA's panel (same S setting) reads LF 1.0 (this file alone: 0.99)"
+    },
+    "hf": {
+     "value": 0.9,
+     "step": 8,
+     "label": "S",
+     "reason": "RT-matched slices 0.90-0.92, pooled fit 0.88-0.93 at every RT; CLA's panel reads HF 0.9 (this file alone: 0.91)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's linear AMPL law: 79.7-85.6 %; CLA's panel reads AMPL 80 (this file: 112.4 %)",
+     "inferred": 112.4151
+    }
+   },
+   "label_string": "S: RT 1.6 (C), LF 1.0 (S), HF 0.9 (S), AMPL 80 (S), DELAY 10 (S)"
+  },
+  "NON-LIN SHORT RT 2.0s": {
+   "altiverb": "NON-LIN SHORT RT 2.0s",
+   "plugin_name": "Altiverb S RT 2.0",
+   "program": "S",
+   "how": "cluster taps 54/194/288 (L), 143/194/353 (R)",
+   "onset_ms": 10.164,
+   "included": true,
+   "decay_fit": {
+    "rt": 2.0033673237104783,
+    "lf": 0.9943008048729486,
+    "hf": 0.8967390154133527,
+    "chi2_dof": 0.03121084685633974,
+    "t60_measured": [
+     1.9892493200169428,
+     1.9666894099699634,
+     2.0154444563060054,
+     1.9930524453680447,
+     2.002213399157313,
+     1.9011880942404582,
+     1.7442360393461531
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 10,
+     "step": 10,
+     "label": "S",
+     "reason": "family onset 10.16 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 10.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 2.0,
+     "step": 13,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 2.0034
+    },
+    "lf": {
+     "value": 1.0,
+     "step": 9,
+     "label": "S",
+     "reason": "RT-matched Tomkin slices 0.99 / 1.03 / 1.01 (RT 0.6 / 1.0 / 2.2); CLA's panel (same S setting) reads LF 1.0 (this file alone: 0.99)"
+    },
+    "hf": {
+     "value": 0.9,
+     "step": 8,
+     "label": "S",
+     "reason": "RT-matched slices 0.90-0.92, pooled fit 0.88-0.93 at every RT; CLA's panel reads HF 0.9 (this file alone: 0.90)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's linear AMPL law: 79.7-85.6 %; CLA's panel reads AMPL 80 (this file: 113.9 %)",
+     "inferred": 113.8994
+    }
+   },
+   "label_string": "S: RT 2.0 (C), LF 1.0 (S), HF 0.9 (S), AMPL 80 (S), DELAY 10 (S)"
+  },
+  "NON-LIN SHORT RT 2.2s": {
+   "altiverb": "NON-LIN SHORT RT 2.2s",
+   "plugin_name": "Altiverb S RT 2.2",
+   "program": "S",
+   "how": "cluster taps 54/194/288 (L), 143/194/353 (R)",
+   "onset_ms": 10.164,
+   "included": true,
+   "decay_fit": {
+    "rt": 2.2054443419875587,
+    "lf": 1.0145888547776092,
+    "hf": 0.8934321585614446,
+    "chi2_dof": 0.15039370487823892,
+    "t60_measured": [
+     2.21096306670872,
+     2.178743504371179,
+     2.2427510212167032,
+     2.2040483542840317,
+     2.188708935867519,
+     2.0850379805449224,
+     1.9118766118190749
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 10,
+     "step": 10,
+     "label": "S",
+     "reason": "family onset 10.16 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 10.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 2.2,
+     "step": 14,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 2.2054
+    },
+    "lf": {
+     "value": 1.0,
+     "step": 9,
+     "label": "S",
+     "reason": "RT-matched Tomkin slices 0.99 / 1.03 / 1.01 (RT 0.6 / 1.0 / 2.2); CLA's panel (same S setting) reads LF 1.0 (this file alone: 1.01)"
+    },
+    "hf": {
+     "value": 0.9,
+     "step": 8,
+     "label": "S",
+     "reason": "RT-matched slices 0.90-0.92, pooled fit 0.88-0.93 at every RT; CLA's panel reads HF 0.9 (this file alone: 0.89)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's linear AMPL law: 79.7-85.6 %; CLA's panel reads AMPL 80 (this file: 114.7 %)",
+     "inferred": 114.6598
+    }
+   },
+   "label_string": "S: RT 2.2 (C), LF 1.0 (S), HF 0.9 (S), AMPL 80 (S), DELAY 10 (S)"
+  },
+  "PRESET1 PIANO": {
+   "altiverb": "PRESET1 PIANO",
+   "plugin_name": "Altiverb P1 Piano",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 40.424,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 29.08713076107561,
+     "3": 23.0609316284005,
+     "4": 18.863772486220313,
+     "5": 15.601226853411031,
+     "6": 12.876417373171684,
+     "8": 8.263491419151753,
+     "10": 4.073723662276641,
+     "12": 0.1364337343414411
+    },
+    "fir2_a": 0.06,
+    "fir2_rms_db": 0.008143810695839767,
+    "excess_db": {
+     "4": -0.043323532945242285,
+     "8": -0.15267164571004863,
+     "10": -0.2080584226798455,
+     "11": -0.22722082421954912
+    }
+   },
+   "decay_fit": {
+    "rt": 1.6005503306115443,
+    "lf": 1.2147491856109474,
+    "hf": 0.7101231506487394,
+    "chi2_dof": 0.9934089023070721,
+    "t60_measured": [
+     1.9571689122332638,
+     1.7260181844122306,
+     1.7152231756683456,
+     1.601910887402882,
+     1.5197492446356353,
+     1.3075419056289235,
+     1.0706794925489338
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 40,
+     "step": 40,
+     "label": "S",
+     "reason": "onset 40.42 ms = family + 20.10 ms (off a whole ms by +0.10); family DELAY 20 (S)",
+     "inferred": 40.0964
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "C",
+     "reason": "tap 0 -0.21 dB at 10 kHz re the family's: open"
+    },
+    "rt": {
+     "value": 1.5,
+     "step": 8,
+     "label": "S",
+     "reason": "decay law fit 1.60 s (1 kHz T60 1.60 s; chi2/dof 0.99); nearest step",
+     "inferred": 1.6006
+    },
+    "lf": {
+     "value": 1.2,
+     "step": 11,
+     "label": "H",
+     "reason": "law fit 1.21 from the 125-500 Hz decay against the family's (1.1); family LOO scatter below",
+     "inferred": 1.2147
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "law fit 0.71 from the 2-8 kHz decay against the family's (0.7)",
+     "inferred": 0.7101
+    },
+    "ampl": {
+     "value": 70,
+     "step": 7,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 74.8 % (law sd 15 %)",
+     "inferred": 74.8352
+    }
+   },
+   "label_string": "M: RT 1.5 (S), LF 1.2 (H), HF 0.7 (S), AMPL 70 (S), DELAY 40 (S)"
+  },
+  "PRESET10 CATHEDRL": {
+   "altiverb": "PRESET10 CATHEDRL",
+   "plugin_name": "Altiverb P10 Cathedral",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 180.432,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 26.00840275423543,
+     "3": 19.8551027232154,
+     "4": 15.560205426787695,
+     "5": 12.222142035820053,
+     "6": 9.443191632332068,
+     "8": 4.820474789835045,
+     "10": 1.4186372617975114,
+     "12": 3.596794452967072
+    },
+    "fir2_a": 0.492,
+    "fir2_rms_db": 0.022463165688277043,
+    "excess_db": {
+     "4": -0.30540822335344764,
+     "8": -1.9498148834623603,
+     "10": -4.4882157351221625,
+     "11": -7.0578519945135785
+    }
+   },
+   "decay_fit": {
+    "rt": 4.966873087847776,
+    "lf": 2.0,
+    "hf": 0.21140090990214974,
+    "chi2_dof": 3.110348512967147,
+    "t60_measured": [
+     8.622205852607564,
+     7.203371973503346,
+     5.2260648854709455,
+     3.605112977189152,
+     2.2486582182385537,
+     1.43129088604065,
+     1.080766979236146
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 179,
+     "step": 179,
+     "label": "H",
+     "reason": "onset 180.43 ms = family + 140.00 ms (off a whole ms by +0.00); family DELAY 39 (H); family 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40, so 180 by the round reading",
+     "inferred": 179.0026
+    },
+    "lowpass": {
+     "value": 10,
+     "step": 6,
+     "label": "H",
+     "reason": "tap 0 -1.9 / -4.5 / -7.1 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 10 kHz; the excess fits a 2-tap device FIR a = 0.492 (rms 0.02 dB): the unit's LP shape is unknown"
+    },
+    "rt": {
+     "value": 5.2,
+     "step": 7,
+     "label": "H",
+     "reason": "decay law fit 4.97 s (1 kHz T60 3.61 s; chi2/dof 3.11); nearest step",
+     "inferred": 4.9669
+    },
+    "lf": {
+     "value": 2.0,
+     "step": 15,
+     "label": "H",
+     "reason": "law fit 2.00 from the 125-500 Hz decay against the family's (1.2); family LOO scatter below",
+     "inferred": 2.0
+    },
+    "hf": {
+     "value": 0.2,
+     "step": 1,
+     "label": "H",
+     "reason": "law fit 0.21 from the 2-8 kHz decay against the family's (0.4)",
+     "inferred": 0.2114
+    },
+    "ampl": {
+     "value": 20,
+     "step": 2,
+     "label": "H",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 16.8 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
+     "inferred": 16.7922
+    }
+   },
+   "label_string": "L: RT 5.2 (H), LF 2.0 (H), HF 0.2 (H), AMPL 20 (H), DELAY 179 (H), LP 10 (H)"
+  },
+  "PRESET2 BRASS": {
+   "altiverb": "PRESET2 BRASS",
+   "plugin_name": "Altiverb P2 Brass",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 30.383,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 27.796750702365514,
+     "3": 21.731758353167763,
+     "4": 17.50991266352629,
+     "5": 14.234219807536268,
+     "6": 11.507843930436264,
+     "8": 6.939045389233438,
+     "10": 2.949906052274696,
+     "12": 1.4993836538668326
+    },
+    "fir2_a": 0.332,
+    "fir2_rms_db": 0.009163362299655163,
+    "excess_db": {
+     "4": -0.18846938043403663,
+     "8": -1.0947083345290956,
+     "10": -2.198120103992576,
+     "11": -2.9611213428269676
+    }
+   },
+   "decay_fit": {
+    "rt": 2.001752876247535,
+    "lf": 0.9944205920349477,
+    "hf": 0.8754336268503222,
+    "chi2_dof": 1.2654618900562544,
+    "t60_measured": [
+     1.9241902177384846,
+     2.0164876716032483,
+     1.9531324100244596,
+     1.980644018024586,
+     1.970981636908919,
+     1.8923318200924046,
+     1.782688095472425
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 30,
+     "step": 30,
+     "label": "S",
+     "reason": "onset 30.38 ms = family + 10.05 ms (off a whole ms by +0.05); family DELAY 20 (S)",
+     "inferred": 30.0495
+    },
+    "lowpass": {
+     "value": 10,
+     "step": 6,
+     "label": "H",
+     "reason": "tap 0 -1.1 / -2.2 / -3.0 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 10 kHz; the excess fits a 2-tap device FIR a = 0.332 (rms 0.01 dB): the unit's LP shape is unknown"
+    },
+    "rt": {
+     "value": 2.0,
+     "step": 7,
+     "label": "S",
+     "reason": "decay law fit 2.00 s (1 kHz T60 1.98 s; chi2/dof 1.27); nearest step",
+     "inferred": 2.0018
+    },
+    "lf": {
+     "value": 1.0,
+     "step": 9,
+     "label": "H",
+     "reason": "law fit 0.99 from the 125-500 Hz decay against the family's (1.49); family LOO scatter below",
+     "inferred": 0.9944
+    },
+    "hf": {
+     "value": 0.9,
+     "step": 8,
+     "label": "S",
+     "reason": "law fit 0.88 from the 2-8 kHz decay against the family's (0.69)",
+     "inferred": 0.8754
+    },
+    "ampl": {
+     "value": 100,
+     "step": 10,
+     "label": "H",
+     "reason": "direct tap / reverb ratio 1.19 x the family's at RT 2.00 -> 95.4 % (family = 80, H)",
+     "inferred": 95.4267
+    }
+   },
+   "label_string": "E: RT 2.0 (S), LF 1.0 (H), HF 0.9 (S), AMPL 100 (H), DELAY 30 (S), LP 10 (H)"
+  },
+  "PRESET23 SM SECT1": {
+   "altiverb": "PRESET23 SM SECT1",
+   "plugin_name": "Altiverb P23 Sm Sect 1",
+   "program": "N",
+   "how": "front taps 41/410/463 (L), 41/278/463 (R)",
+   "onset_ms": 18.974,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 21.102190526722662,
+     "3": 14.848410078102452,
+     "4": 10.576518386838186,
+     "5": 7.484555937970956,
+     "6": 5.4465699854319265,
+     "8": 5.527397575727178,
+     "10": 9.113183985011727,
+     "12": 12.717685873290801
+    },
+    "fir2_a": 0.498,
+    "fir2_rms_db": 7.744237014904677,
+    "excess_db": {
+     "4": -0.21223993260021615,
+     "8": -1.3173649242354706,
+     "10": -13.331904636762962,
+     "11": -39.35156825123292
+    }
+   },
+   "n_fit": {
+    "best": [
+     0.2,
+     10.0,
+     1.4
+    ],
+    "cost": 212.41978058303442,
+    "next": [
+     [
+      0.2,
+      3.0,
+      1.4
+     ],
+     [
+      0.2,
+      -3.0,
+      1.4
+     ],
+     [
+      0.2,
+      -2.0,
+      1.4
+     ],
+     [
+      0.2,
+      2.0,
+      1.4
+     ],
+     [
+      0.2,
+      3.0,
+      1.6
+     ]
+    ],
+    "next_cost": [
+     320.81970777249575,
+     329.17327978446986,
+     469.43312826832425,
+     470.2398231351533,
+     627.0839070583347
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 19,
+     "step": 19,
+     "label": "H",
+     "reason": "onset 18.97 ms = family + -0.03 ms (off a whole ms by -0.03); family DELAY 19 (H); family 19 matches the Altiverb's onset in the plugin's timing (N's front tap 1.57 ms after S's tap 0), against the round 20, so 20 by the round reading",
+     "inferred": 18.974
+    },
+    "lowpass": {
+     "value": 8,
+     "step": 5,
+     "label": "H",
+     "reason": "tap 0 -1.3 / -13.3 / -39.4 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 8 kHz; the excess fits a 2-tap device FIR a = 0.498 (rms 7.74 dB): the unit's LP shape is unknown"
+    },
+    "ampl": {
+     "value": 0.2,
+     "step": 4,
+     "label": "S",
+     "reason": "SPAN: envelope fit over the library steps (cost 212; runners-up [(0.2, 3.0, 1.4), (0.2, -3.0, 1.4), (0.2, -2.0, 1.4)])"
+    },
+    "lf": {
+     "value": 10.0,
+     "step": 15,
+     "label": "S",
+     "reason": "EARLY RT: the stages' gain slope, envelope fit"
+    },
+    "hf": {
+     "value": 1.4,
+     "step": 7,
+     "label": "S",
+     "reason": "LATE RT: the flat late decay, envelope fit"
+    },
+    "rt": {
+     "value": null,
+     "step": 8,
+     "label": "C",
+     "reason": "RT is blank in N; the step is left at the default"
+    }
+   },
+   "label_string": "N: SPAN 0.20 (S), EARLY 10 (S), LATE 1.4 (S), DELAY 19 (H), LP 8 (H)"
+  },
+  "PRESET27 LG SECT1": {
+   "altiverb": "PRESET27 LG SECT1",
+   "plugin_name": "Altiverb P27 Lg Sect 1",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 64.391,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 28.753432358586384,
+     "3": 22.726229340719946,
+     "4": 18.53176351927906,
+     "5": 15.274962152852728,
+     "6": 12.558867295656068,
+     "8": 7.97412713894324,
+     "10": 3.837948790114999,
+     "12": 0.4718033405862103
+    },
+    "fir2_a": 0.09,
+    "fir2_rms_db": 0.00576192481792953,
+    "excess_db": {
+     "4": -0.13662942351078344,
+     "8": -0.5118270494118778,
+     "10": -0.7111576602047455,
+     "11": -0.7907022278778575
+    }
+   },
+   "decay_fit": {
+    "rt": 2.5390932125063186,
+    "lf": 1.6409161167210997,
+    "hf": 0.529089384967413,
+    "chi2_dof": 0.39519340377425766,
+    "t60_measured": [
+     3.865243826592608,
+     3.4104597966950503,
+     2.866443058735187,
+     2.528337512644553,
+     2.2097353345932595,
+     1.6896460720949689,
+     1.2298418134995606
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 64,
+     "step": 64,
+     "label": "S",
+     "reason": "onset 64.39 ms = family + 44.06 ms (off a whole ms by +0.06); family DELAY 20 (S)",
+     "inferred": 64.0625
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "H",
+     "reason": "tap 0 -0.5 / -0.7 / -0.8 dB at 8 / 10 / 11 kHz re the family, nearer open than any plugin LP step (2nd-order Butterworth); the excess fits a 2-tap device FIR a = 0.090 (rms 0.01 dB), a roll-off the plugin's LP cannot make"
+    },
+    "rt": {
+     "value": 2.6,
+     "step": 11,
+     "label": "S",
+     "reason": "decay law fit 2.54 s (1 kHz T60 2.53 s; chi2/dof 0.40); nearest step",
+     "inferred": 2.5391
+    },
+    "lf": {
+     "value": 1.5,
+     "step": 13,
+     "label": "H",
+     "reason": "law fit 1.64 from the 125-500 Hz decay against the family's (1.1); family LOO scatter below",
+     "inferred": 1.6409
+    },
+    "hf": {
+     "value": 0.5,
+     "step": 4,
+     "label": "S",
+     "reason": "law fit 0.53 from the 2-8 kHz decay against the family's (0.7)",
+     "inferred": 0.5291
+    },
+    "ampl": {
+     "value": 40,
+     "step": 4,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 43.4 % (law sd 15 %)",
+     "inferred": 43.4348
+    }
+   },
+   "label_string": "M: RT 2.6 (S), LF 1.5 (H), HF 0.5 (S), AMPL 40 (S), DELAY 64 (S)"
+  },
+  "PRESET3 WOODWIND": {
+   "altiverb": "PRESET3 WOODWIND",
+   "plugin_name": "Altiverb P3 Woodwind",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 50.323,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 28.762166718507924,
+     "3": 22.735012915495567,
+     "4": 18.54056073376046,
+     "5": 15.28375014666786,
+     "6": 12.567633784698293,
+     "8": 7.982822723044069,
+     "10": 3.846405826568887,
+     "12": 0.46342414149765604
+    },
+    "fir2_a": 0.09,
+    "fir2_rms_db": 0.014497720068832657,
+    "excess_db": {
+     "4": -0.12975329821577772,
+     "8": -0.5041207582201267,
+     "10": -0.7035536500308132,
+     "11": -0.780819293077812
+    }
+   },
+   "decay_fit": {
+    "rt": 2.2527764935754595,
+    "lf": 1.147924132770346,
+    "hf": 0.5393016687925437,
+    "chi2_dof": 0.32641362303937566,
+    "t60_measured": [
+     2.5491362876015247,
+     2.4279672583391,
+     2.3863419133903996,
+     2.1951985861294245,
+     1.9842195484428773,
+     1.5455868567998698,
+     1.1282213021545422
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 50,
+     "step": 50,
+     "label": "S",
+     "reason": "onset 50.32 ms = family + 29.99 ms (off a whole ms by -0.01); family DELAY 20 (S)",
+     "inferred": 49.9948
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "H",
+     "reason": "tap 0 -0.5 / -0.7 / -0.8 dB at 8 / 10 / 11 kHz re the family, nearer open than any plugin LP step (2nd-order Butterworth); the excess fits a 2-tap device FIR a = 0.090 (rms 0.01 dB), a roll-off the plugin's LP cannot make"
+    },
+    "rt": {
+     "value": 2.2,
+     "step": 10,
+     "label": "S",
+     "reason": "decay law fit 2.25 s (1 kHz T60 2.20 s; chi2/dof 0.33); nearest step",
+     "inferred": 2.2528
+    },
+    "lf": {
+     "value": 1.1,
+     "step": 10,
+     "label": "H",
+     "reason": "law fit 1.15 from the 125-500 Hz decay against the family's (1.1); family LOO scatter below",
+     "inferred": 1.1479
+    },
+    "hf": {
+     "value": 0.5,
+     "step": 4,
+     "label": "S",
+     "reason": "law fit 0.54 from the 2-8 kHz decay against the family's (0.7)",
+     "inferred": 0.5393
+    },
+    "ampl": {
+     "value": 30,
+     "step": 3,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 28.9 % (law sd 15 %)",
+     "inferred": 28.8977
+    }
+   },
+   "label_string": "M: RT 2.2 (S), LF 1.1 (H), HF 0.5 (S), AMPL 30 (S), DELAY 50 (S)"
+  },
+  "PRESET4 STRINGS": {
+   "altiverb": "PRESET4 STRINGS",
+   "plugin_name": "Altiverb P4 Strings",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 70.427,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 26.706537518939196,
+     "3": 20.593808867325908,
+     "4": 16.3346098718962,
+     "5": 13.02958379219123,
+     "6": 10.281954238432753,
+     "8": 5.711271186605977,
+     "10": 2.0094619295246114,
+     "12": 2.7258799075560636
+    },
+    "fir2_a": 0.41000000000000003,
+    "fir2_rms_db": 0.013512955816515614,
+    "excess_db": {
+     "4": -0.27270437633574907,
+     "8": -1.697704357498337,
+     "10": -3.714541119738943,
+     "11": -5.464390739977729
+    }
+   },
+   "decay_fit": {
+    "rt": 3.560284214740547,
+    "lf": 1.4194294795501434,
+    "hf": 0.42194463441459445,
+    "chi2_dof": 1.1749229836371322,
+    "t60_measured": [
+     4.661099718184292,
+     4.370281324201447,
+     3.8256156800297125,
+     3.397603260764649,
+     2.7356675353198057,
+     1.9968610444975052,
+     1.4757617327599872
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 69,
+     "step": 69,
+     "label": "H",
+     "reason": "onset 70.43 ms = family + 30.00 ms (off a whole ms by -0.00); family DELAY 39 (H); family 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40, so 70 by the round reading",
+     "inferred": 68.9974
+    },
+    "lowpass": {
+     "value": 10,
+     "step": 6,
+     "label": "H",
+     "reason": "tap 0 -1.7 / -3.7 / -5.5 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 10 kHz; the excess fits a 2-tap device FIR a = 0.410 (rms 0.01 dB): the unit's LP shape is unknown"
+    },
+    "rt": {
+     "value": 3.6,
+     "step": 4,
+     "label": "S",
+     "reason": "decay law fit 3.56 s (1 kHz T60 3.40 s; chi2/dof 1.17); nearest step",
+     "inferred": 3.5603
+    },
+    "lf": {
+     "value": 1.5,
+     "step": 13,
+     "label": "H",
+     "reason": "law fit 1.42 from the 125-500 Hz decay against the family's (1.2); family LOO scatter below",
+     "inferred": 1.4194
+    },
+    "hf": {
+     "value": 0.4,
+     "step": 3,
+     "label": "S",
+     "reason": "law fit 0.42 from the 2-8 kHz decay against the family's (0.4)",
+     "inferred": 0.4219
+    },
+    "ampl": {
+     "value": 90,
+     "step": 9,
+     "label": "H",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 89.3 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
+     "inferred": 89.2795
+    }
+   },
+   "label_string": "L: RT 3.6 (S), LF 1.5 (H), HF 0.4 (S), AMPL 90 (H), DELAY 69 (H), LP 10 (H)"
+  },
+  "PRESET5 VOCALS": {
+   "altiverb": "PRESET5 VOCALS",
+   "plugin_name": "Altiverb P5 Vocals",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 50.323,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 29.084634341991713,
+     "3": 23.058378132169622,
+     "4": 18.861190889844007,
+     "5": 15.598642092365253,
+     "6": 12.873855166077933,
+     "8": 8.261046933440264,
+     "10": 4.071510273769455,
+     "12": 0.13891951112794287
+    },
+    "fir2_a": 0.06,
+    "fir2_rms_db": 0.006729139227177619,
+    "excess_db": {
+     "4": -0.043678180591414595,
+     "8": -0.15492933602700454,
+     "10": -0.20957529908554692,
+     "11": -0.23129789497641706
+    }
+   },
+   "decay_fit": {
+    "rt": 2.5833729256198628,
+    "lf": 1.3920010668642886,
+    "hf": 0.8890520293825322,
+    "chi2_dof": 0.17654976525158328,
+    "t60_measured": [
+     3.4392854804071025,
+     3.157035517545221,
+     2.833860867382772,
+     2.6145519794091223,
+     2.5161706348370307,
+     2.4017599608520293,
+     2.21330259699089
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 50,
+     "step": 50,
+     "label": "S",
+     "reason": "onset 50.32 ms = family + 29.99 ms (off a whole ms by -0.01); family DELAY 20 (S)",
+     "inferred": 49.9948
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "C",
+     "reason": "tap 0 -0.21 dB at 10 kHz re the family's: open"
+    },
+    "rt": {
+     "value": 2.6,
+     "step": 11,
+     "label": "S",
+     "reason": "decay law fit 2.58 s (1 kHz T60 2.61 s; chi2/dof 0.18); nearest step",
+     "inferred": 2.5834
+    },
+    "lf": {
+     "value": 1.3,
+     "step": 12,
+     "label": "H",
+     "reason": "law fit 1.39 from the 125-500 Hz decay against the family's (1.1); family LOO scatter below",
+     "inferred": 1.392
+    },
+    "hf": {
+     "value": 0.9,
+     "step": 8,
+     "label": "S",
+     "reason": "law fit 0.89 from the 2-8 kHz decay against the family's (0.7)",
+     "inferred": 0.8891
+    },
+    "ampl": {
+     "value": 50,
+     "step": 5,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 47.8 % (law sd 15 %)",
+     "inferred": 47.8046
+    }
+   },
+   "label_string": "M: RT 2.6 (S), LF 1.3 (H), HF 0.9 (S), AMPL 50 (S), DELAY 50 (S)"
+  },
+  "PRESET54 GATED": {
+   "altiverb": "PRESET54 GATED",
+   "plugin_name": "Altiverb P54 Gated",
+   "program": "N",
+   "how": "front taps 41/410/463 (L), 41/278/463 (R)",
+   "onset_ms": 39.096,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 29.212339875532194,
+     "3": 23.185372870749344,
+     "4": 18.986063976681557,
+     "5": 15.720210763129014,
+     "6": 12.990955589496986,
+     "8": 8.365111642746237,
+     "10": 4.154360826111667,
+     "12": 0.013743134972026776
+    },
+    "fir2_a": 0.0,
+    "fir2_rms_db": 0.013743134972026776,
+    "excess_db": {
+     "4": 0.007816496481853156,
+     "8": -0.005331250685603435,
+     "10": -0.0027268719472649896,
+     "11": -0.017359333981343966
+    }
+   },
+   "n_fit": {
+    "best": [
+     0.2,
+     -3.0,
+     0.8
+    ],
+    "cost": 162.34243730115102,
+    "next": [
+     [
+      0.2,
+      -2.0,
+      0.8
+     ],
+     [
+      0.2,
+      10.0,
+      0.8
+     ],
+     [
+      0.2,
+      3.0,
+      0.8
+     ],
+     [
+      0.2,
+      -1.0,
+      0.8
+     ],
+     [
+      0.2,
+      2.0,
+      0.8
+     ]
+    ],
+    "next_cost": [
+     189.98042977540956,
+     264.4014530786362,
+     572.778145650373,
+     583.6836359156814,
+     815.9450175350034
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 39,
+     "step": 39,
+     "label": "H",
+     "reason": "onset 39.10 ms = family + 20.10 ms (off a whole ms by +0.10); family DELAY 19 (H); family 19 matches the Altiverb's onset in the plugin's timing (N's front tap 1.57 ms after S's tap 0), against the round 20, so 40 by the round reading",
+     "inferred": 39.0964
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "C",
+     "reason": "tap 0 -0.00 dB at 10 kHz re the family's: open"
+    },
+    "ampl": {
+     "value": 0.2,
+     "step": 4,
+     "label": "S",
+     "reason": "SPAN: envelope fit over the library steps (cost 162; runners-up [(0.2, -2.0, 0.8), (0.2, 10.0, 0.8), (0.2, 3.0, 0.8)])"
+    },
+    "lf": {
+     "value": -3.0,
+     "step": 0,
+     "label": "S",
+     "reason": "EARLY RT: the stages' gain slope, envelope fit"
+    },
+    "hf": {
+     "value": 0.8,
+     "step": 4,
+     "label": "S",
+     "reason": "LATE RT: the flat late decay, envelope fit"
+    },
+    "rt": {
+     "value": null,
+     "step": 8,
+     "label": "C",
+     "reason": "RT is blank in N; the step is left at the default"
+    }
+   },
+   "label_string": "N: SPAN 0.20 (S), EARLY -3 (S), LATE 0.8 (S), DELAY 39 (H)"
+  },
+  "PRESET6 PERC": {
+   "altiverb": "PRESET6 PERC",
+   "plugin_name": "Altiverb P6 Percussion",
+   "program": "N",
+   "how": "front taps 41/410/463 (L), 41/278/463 (R)",
+   "onset_ms": 16.99,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 29.21386953411375,
+     "3": 23.186806674210402,
+     "4": 18.987409971724347,
+     "5": 15.721488778209173,
+     "6": 12.99219685613872,
+     "8": 8.366423383322596,
+     "10": 4.155925371204515,
+     "12": 0.011441843456572518
+    },
+    "fir2_a": 0.0,
+    "fir2_rms_db": 0.011441843456572518,
+    "excess_db": {
+     "4": 0.003951862535261623,
+     "8": -0.005155928396286831,
+     "10": -0.011417005817806247,
+     "11": -0.015072861599470263
+    }
+   },
+   "n_fit": {
+    "best": [
+     0.3,
+     3.0,
+     1.0
+    ],
+    "cost": 233.505514265849,
+    "next": [
+     [
+      0.3,
+      2.0,
+      1.0
+     ],
+     [
+      0.4,
+      2.0,
+      1.0
+     ],
+     [
+      0.4,
+      1.5,
+      1.0
+     ],
+     [
+      0.3,
+      2.0,
+      1.2
+     ],
+     [
+      0.3,
+      1.5,
+      1.2
+     ]
+    ],
+    "next_cost": [
+     331.7554848665824,
+     506.9125587820142,
+     602.1695328359588,
+     629.2226299173755,
+     656.1142395155756
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 17,
+     "step": 17,
+     "label": "H",
+     "reason": "onset 16.99 ms = family + -2.01 ms (off a whole ms by -0.01); family DELAY 19 (H); family 19 matches the Altiverb's onset in the plugin's timing (N's front tap 1.57 ms after S's tap 0), against the round 20, so 18 by the round reading",
+     "inferred": 16.9896
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "C",
+     "reason": "tap 0 -0.01 dB at 10 kHz re the family's: open"
+    },
+    "ampl": {
+     "value": 0.3,
+     "step": 6,
+     "label": "S",
+     "reason": "SPAN: envelope fit over the library steps (cost 234; runners-up [(0.3, 2.0, 1.0), (0.4, 2.0, 1.0), (0.4, 1.5, 1.0)])"
+    },
+    "lf": {
+     "value": 3.0,
+     "step": 14,
+     "label": "S",
+     "reason": "EARLY RT: the stages' gain slope, envelope fit"
+    },
+    "hf": {
+     "value": 1.0,
+     "step": 5,
+     "label": "S",
+     "reason": "LATE RT: the flat late decay, envelope fit"
+    },
+    "rt": {
+     "value": null,
+     "step": 8,
+     "label": "C",
+     "reason": "RT is blank in N; the step is left at the default"
+    }
+   },
+   "label_string": "N: SPAN 0.30 (S), EARLY 3 (S), LATE 1.0 (S), DELAY 17 (H)"
+  },
+  "PRESET7 ECHOROOM": {
+   "altiverb": "PRESET7 ECHOROOM",
+   "plugin_name": "Altiverb P7 Echo Room",
+   "program": null,
+   "how": "no 246 S/M/L/E/N template; first peaks L 100.04 / R 66.09 ms",
+   "onset_ms": 66.094,
+   "included": false,
+   "why_not": "a two-channel recirculating echo (L every 99.8 ms x 0.49, R every 65.8 ms x 0.62; T60 about 1.0 s flat): the 246's delay / echo program, not one of the plugin's programs"
+  },
+  "PRESET72 SM LIVE": {
+   "altiverb": "PRESET72 SM LIVE",
+   "plugin_name": "Altiverb P72 Sm Live",
+   "program": "S",
+   "how": "cluster taps 54/194/288 (L), 143/194/353 (R)",
+   "onset_ms": 12.138,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 29.154960784772076,
+     "3": 23.125538413776347,
+     "4": 18.924316903020017,
+     "5": 15.656925406161678,
+     "6": 12.926456291610217,
+     "8": 8.29930502019355,
+     "10": 4.090149602037485,
+     "12": 0.07907549498921784
+    },
+    "fir2_a": 0.006,
+    "fir2_rms_db": 0.0444857069967971,
+    "excess_db": {
+     "4": -0.011889557758904193,
+     "8": -0.03042609687378459,
+     "10": -0.07091819103385912,
+     "11": -0.17080207358777816
+    }
+   },
+   "decay_fit": {
+    "rt": 0.802646042366163,
+    "lf": 0.6646249488500272,
+    "hf": 1.0,
+    "chi2_dof": 0.9528715071261213,
+    "t60_measured": [
+     0.5517111968659456,
+     0.6613746125284146,
+     0.7104599578314266,
+     0.8025693515521846,
+     0.8308996682876526,
+     0.8245287045815125,
+     0.8350742470403687
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 12,
+     "step": 12,
+     "label": "S",
+     "reason": "onset 12.14 ms = family + 1.97 ms (off a whole ms by -0.03); family DELAY 10 (S)",
+     "inferred": 11.974
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "C",
+     "reason": "tap 0 -0.07 dB at 10 kHz re the family's: open"
+    },
+    "rt": {
+     "value": 0.8,
+     "step": 6,
+     "label": "S",
+     "reason": "decay law fit 0.80 s (1 kHz T60 0.80 s; chi2/dof 0.95); nearest step",
+     "inferred": 0.8026
+    },
+    "lf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "H",
+     "reason": "law fit 0.66 from the 125-500 Hz decay against the family's (1.0); family LOO scatter below",
+     "inferred": 0.6646
+    },
+    "hf": {
+     "value": 1.0,
+     "step": 9,
+     "label": "S",
+     "reason": "law fit 1.00 from the 2-8 kHz decay against the family's (0.9)",
+     "inferred": 1.0
+    },
+    "ampl": {
+     "value": 100,
+     "step": 10,
+     "label": "H",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 110.0 % (law sd 4 %)",
+     "inferred": 110.0255
+    }
+   },
+   "label_string": "S: RT 0.8 (S), LF 0.7 (H), HF 1.0 (S), AMPL 100 (H), DELAY 12 (S)"
+  },
+  "PRESET73 SM REF": {
+   "altiverb": "PRESET73 SM REF",
+   "plugin_name": "Altiverb P73 Sm Ref",
+   "program": "S",
+   "how": "cluster taps 54/194/288 (L), 143/194/353 (R)",
+   "onset_ms": 14.109,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 29.188477912167897,
+     "3": 23.160629543479814,
+     "4": 18.960671275227664,
+     "5": 15.694338988161379,
+     "6": 12.964761509299583,
+     "8": 8.338825749878822,
+     "10": 4.129274169355129,
+     "12": 0.03882285658197572
+    },
+    "fir2_a": 0.004,
+    "fir2_rms_db": 0.021759739140483427,
+    "excess_db": {
+     "4": -0.006240225177512308,
+     "8": -0.018270592796763224,
+     "10": -0.03639492460037088,
+     "11": -0.08411463625316418
+    }
+   },
+   "decay_fit": {
+    "rt": 0.8879237165403346,
+    "lf": 0.8405167510614248,
+    "hf": 0.8116629210070999,
+    "chi2_dof": 0.6714300178367852,
+    "t60_measured": [
+     0.7493376474849338,
+     0.8337765411489655,
+     0.8373024343699473,
+     0.8786293879818894,
+     0.8934543078788723,
+     0.8038648374692836,
+     0.691221386038821
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 14,
+     "step": 14,
+     "label": "S",
+     "reason": "onset 14.11 ms = family + 3.95 ms (off a whole ms by -0.05); family DELAY 10 (S)",
+     "inferred": 13.9453
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "C",
+     "reason": "tap 0 -0.04 dB at 10 kHz re the family's: open"
+    },
+    "rt": {
+     "value": 0.9,
+     "step": 7,
+     "label": "S",
+     "reason": "decay law fit 0.89 s (1 kHz T60 0.88 s; chi2/dof 0.67); nearest step",
+     "inferred": 0.8879
+    },
+    "lf": {
+     "value": 0.8,
+     "step": 7,
+     "label": "H",
+     "reason": "law fit 0.84 from the 125-500 Hz decay against the family's (1.0); family LOO scatter below",
+     "inferred": 0.8405
+    },
+    "hf": {
+     "value": 0.8,
+     "step": 7,
+     "label": "S",
+     "reason": "law fit 0.81 from the 2-8 kHz decay against the family's (0.9)",
+     "inferred": 0.8117
+    },
+    "ampl": {
+     "value": 90,
+     "step": 9,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 93.0 % (law sd 4 %)",
+     "inferred": 93.0187
+    }
+   },
+   "label_string": "S: RT 0.9 (S), LF 0.8 (H), HF 0.8 (S), AMPL 90 (S), DELAY 14 (S)"
+  },
+  "PRESET74 SM WARM": {
+   "altiverb": "PRESET74 SM WARM",
+   "plugin_name": "Altiverb P74 Sm Warm",
+   "program": "S",
+   "how": "cluster taps 54/194/288 (L), 143/194/353 (R)",
+   "onset_ms": 16.307,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 29.132587213630316,
+     "3": 23.102262385125357,
+     "4": 18.900341137233756,
+     "5": 15.632386673768885,
+     "6": 12.901464299158496,
+     "8": 8.2737480604282,
+     "10": 4.064962402111066,
+     "12": 0.10514135204057651
+    },
+    "fir2_a": 0.008,
+    "fir2_rms_db": 0.058939595543028814,
+    "excess_db": {
+     "4": -0.01589290146115725,
+     "8": -0.04204880752803864,
+     "10": -0.09392428452778673,
+     "11": -0.22472499459660294
+    }
+   },
+   "decay_fit": {
+    "rt": 0.9811069724521934,
+    "lf": 0.9633397426917046,
+    "hf": 0.5234482257677363,
+    "chi2_dof": 1.5831738502737724,
+    "t60_measured": [
+     0.9024029042594206,
+     1.0109072712409068,
+     0.9603127464358421,
+     0.9529123724110271,
+     0.8750202973028819,
+     0.648179094531315,
+     0.4701603958481041
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 16,
+     "step": 16,
+     "label": "S",
+     "reason": "onset 16.31 ms = family + 6.14 ms (off a whole ms by +0.14); family DELAY 10 (S)",
+     "inferred": 16.1432
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "C",
+     "reason": "tap 0 -0.09 dB at 10 kHz re the family's: open"
+    },
+    "rt": {
+     "value": 1.0,
+     "step": 8,
+     "label": "S",
+     "reason": "decay law fit 0.98 s (1 kHz T60 0.95 s; chi2/dof 1.58); nearest step",
+     "inferred": 0.9811
+    },
+    "lf": {
+     "value": 1.0,
+     "step": 9,
+     "label": "H",
+     "reason": "law fit 0.96 from the 125-500 Hz decay against the family's (1.0); family LOO scatter below",
+     "inferred": 0.9633
+    },
+    "hf": {
+     "value": 0.5,
+     "step": 4,
+     "label": "S",
+     "reason": "law fit 0.52 from the 2-8 kHz decay against the family's (0.9)",
+     "inferred": 0.5234
+    },
+    "ampl": {
+     "value": 100,
+     "step": 10,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 100.5 % (law sd 4 %)",
+     "inferred": 100.5071
+    }
+   },
+   "label_string": "S: RT 1.0 (S), LF 1.0 (H), HF 0.5 (S), AMPL 100 (S), DELAY 16 (S)"
+  },
+  "PRESET75 MED LIVE": {
+   "altiverb": "PRESET75 MED LIVE",
+   "plugin_name": "Altiverb P75 Med Live",
+   "program": "S",
+   "how": "cluster taps 54/194/288 (L), 143/194/353 (R)",
+   "onset_ms": 24.346,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 29.146930629188656,
+     "3": 23.117305821418256,
+     "4": 18.91594065520493,
+     "5": 15.648449206744456,
+     "6": 12.917918970999212,
+     "8": 8.290772011179678,
+     "10": 4.081941452397278,
+     "12": 0.08782005165506165
+    },
+    "fir2_a": 0.008,
+    "fir2_rms_db": 0.048988527393716966,
+    "excess_db": {
+     "4": -0.014039691267651996,
+     "8": -0.03570958195148033,
+     "10": -0.0791816693492539,
+     "11": -0.18924954502355718
+    }
+   },
+   "decay_fit": {
+    "rt": 1.3964948036600902,
+    "lf": 0.7875937524567398,
+    "hf": 0.9006078318647769,
+    "chi2_dof": 0.2834347313792796,
+    "t60_measured": [
+     1.1241019193906454,
+     1.2216802415576975,
+     1.3071611323357595,
+     1.3634839742742328,
+     1.4280975390728838,
+     1.3632889371130517,
+     1.2412344500430414
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 24,
+     "step": 24,
+     "label": "S",
+     "reason": "onset 24.35 ms = family + 14.18 ms (off a whole ms by +0.18); family DELAY 10 (S)",
+     "inferred": 24.1823
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "C",
+     "reason": "tap 0 -0.08 dB at 10 kHz re the family's: open"
+    },
+    "rt": {
+     "value": 1.4,
+     "step": 10,
+     "label": "S",
+     "reason": "decay law fit 1.40 s (1 kHz T60 1.36 s; chi2/dof 0.28); nearest step",
+     "inferred": 1.3965
+    },
+    "lf": {
+     "value": 0.8,
+     "step": 7,
+     "label": "H",
+     "reason": "law fit 0.79 from the 125-500 Hz decay against the family's (1.0); family LOO scatter below",
+     "inferred": 0.7876
+    },
+    "hf": {
+     "value": 0.9,
+     "step": 8,
+     "label": "S",
+     "reason": "law fit 0.90 from the 2-8 kHz decay against the family's (0.9)",
+     "inferred": 0.9006
+    },
+    "ampl": {
+     "value": 100,
+     "step": 10,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 97.5 % (law sd 4 %)",
+     "inferred": 97.4981
+    }
+   },
+   "label_string": "S: RT 1.4 (S), LF 0.8 (H), HF 0.9 (S), AMPL 100 (S), DELAY 24 (S)"
+  },
+  "PRESET76 MED REF": {
+   "altiverb": "PRESET76 MED REF",
+   "plugin_name": "Altiverb P76 Med Ref",
+   "program": "S",
+   "how": "cluster taps 54/194/288 (L), 143/194/353 (R)",
+   "onset_ms": 26.357,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 29.186531415266877,
+     "3": 23.159919354583153,
+     "4": 18.961036985014672,
+     "5": 15.695686265870094,
+     "6": 12.967036271720017,
+     "8": 8.342896546302793,
+     "10": 4.135078468660184,
+     "12": 0.0373167939307296
+    },
+    "fir2_a": 0.004,
+    "fir2_rms_db": 0.013457871103939773,
+    "excess_db": {
+     "4": -0.020061900062212017,
+     "8": -0.02674817844739802,
+     "10": -0.04121268979384973,
+     "11": -0.07250423804298552
+    }
+   },
+   "decay_fit": {
+    "rt": 1.570270310342797,
+    "lf": 1.015015627995942,
+    "hf": 0.6284227541072163,
+    "chi2_dof": 0.1210451207852562,
+    "t60_measured": [
+     1.6211837576531427,
+     1.543050866244253,
+     1.5770776215859157,
+     1.5297935235694633,
+     1.4892161995356155,
+     1.2262000311396255,
+     0.8871532376015856
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 26,
+     "step": 26,
+     "label": "S",
+     "reason": "onset 26.36 ms = family + 16.19 ms (off a whole ms by +0.19); family DELAY 10 (S)",
+     "inferred": 26.1927
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "C",
+     "reason": "tap 0 -0.04 dB at 10 kHz re the family's: open"
+    },
+    "rt": {
+     "value": 1.6,
+     "step": 11,
+     "label": "S",
+     "reason": "decay law fit 1.57 s (1 kHz T60 1.53 s; chi2/dof 0.12); nearest step",
+     "inferred": 1.5703
+    },
+    "lf": {
+     "value": 1.0,
+     "step": 9,
+     "label": "H",
+     "reason": "law fit 1.02 from the 125-500 Hz decay against the family's (1.0); family LOO scatter below",
+     "inferred": 1.015
+    },
+    "hf": {
+     "value": 0.6,
+     "step": 5,
+     "label": "S",
+     "reason": "law fit 0.63 from the 2-8 kHz decay against the family's (0.9)",
+     "inferred": 0.6284
+    },
+    "ampl": {
+     "value": 100,
+     "step": 10,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 100.5 % (law sd 4 %)",
+     "inferred": 100.4936
+    }
+   },
+   "label_string": "S: RT 1.6 (S), LF 1.0 (H), HF 0.6 (S), AMPL 100 (S), DELAY 26 (S)"
+  },
+  "PRESET77 MED WARM": {
+   "altiverb": "PRESET77 MED WARM",
+   "plugin_name": "Altiverb P77 Med Warm",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 26.365,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 27.795517169940084,
+     "3": 21.73049430155763,
+     "4": 17.508649953271924,
+     "5": 14.232978990682897,
+     "6": 11.50664210536493,
+     "8": 6.937953432208079,
+     "10": 2.948913335156895,
+     "12": 1.5005581594534363
+    },
+    "fir2_a": 0.332,
+    "fir2_rms_db": 0.009960035537089603,
+    "excess_db": {
+     "4": -0.1895127945900746,
+     "8": -1.1030095602934054,
+     "10": -2.202957622852161,
+     "11": -2.9632529109183925
+    }
+   },
+   "decay_fit": {
+    "rt": 1.480110419711848,
+    "lf": 1.2403466835069878,
+    "hf": 0.42869178749887266,
+    "chi2_dof": 0.3499731852326266,
+    "t60_measured": [
+     1.7313215730075138,
+     1.6613175787400931,
+     1.5655992190708696,
+     1.375124715801069,
+     1.1564755737573345,
+     0.8431922220335843,
+     0.6049936082073432
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 26,
+     "step": 26,
+     "label": "S",
+     "reason": "onset 26.36 ms = family + 6.03 ms (off a whole ms by +0.03); family DELAY 20 (S)",
+     "inferred": 26.0312
+    },
+    "lowpass": {
+     "value": 10,
+     "step": 6,
+     "label": "H",
+     "reason": "tap 0 -1.1 / -2.2 / -3.0 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 10 kHz; the excess fits a 2-tap device FIR a = 0.332 (rms 0.01 dB): the unit's LP shape is unknown"
+    },
+    "rt": {
+     "value": 1.5,
+     "step": 5,
+     "label": "S",
+     "reason": "decay law fit 1.48 s (1 kHz T60 1.38 s; chi2/dof 0.35); nearest step",
+     "inferred": 1.4801
+    },
+    "lf": {
+     "value": 1.2,
+     "step": 11,
+     "label": "H",
+     "reason": "law fit 1.24 from the 125-500 Hz decay against the family's (1.49); family LOO scatter below",
+     "inferred": 1.2403
+    },
+    "hf": {
+     "value": 0.4,
+     "step": 3,
+     "label": "S",
+     "reason": "law fit 0.43 from the 2-8 kHz decay against the family's (0.69)",
+     "inferred": 0.4287
+    },
+    "ampl": {
+     "value": 90,
+     "step": 9,
+     "label": "H",
+     "reason": "direct tap / reverb ratio 1.09 x the family's at RT 1.48 -> 87.1 % (family = 80, H)",
+     "inferred": 87.0561
+    }
+   },
+   "label_string": "E: RT 1.5 (S), LF 1.2 (H), HF 0.4 (S), AMPL 90 (H), DELAY 26 (S), LP 10 (H)"
+  },
+  "PRESET78 LG LIVE": {
+   "altiverb": "PRESET78 LG LIVE",
+   "plugin_name": "Altiverb P78 Lg Live",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 34.396,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 29.09461781198032,
+     "3": 23.068959922503815,
+     "4": 18.872245543224814,
+     "5": 15.610088338004113,
+     "6": 12.885632371257913,
+     "8": 8.273345146377109,
+     "10": 4.084074792316535,
+     "12": 0.1297219292542214
+    },
+    "fir2_a": 0.058,
+    "fir2_rms_db": 0.017314709622997228,
+    "excess_db": {
+     "4": -0.04464533623654302,
+     "8": -0.1526967662477943,
+     "10": -0.20079463434707814,
+     "11": -0.21487853810758045
+    }
+   },
+   "decay_fit": {
+    "rt": 2.001626700458439,
+    "lf": 1.0111103460289492,
+    "hf": 0.8088790808888717,
+    "chi2_dof": 1.098025113538519,
+    "t60_measured": [
+     2.082335255997342,
+     1.9288321862548066,
+     2.0814336927858568,
+     1.979295692549906,
+     1.9450890655482707,
+     1.8009853170287515,
+     1.5518398523358767
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 34,
+     "step": 34,
+     "label": "S",
+     "reason": "onset 34.40 ms = family + 14.07 ms (off a whole ms by +0.07); family DELAY 20 (S)",
+     "inferred": 34.0677
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "C",
+     "reason": "tap 0 -0.20 dB at 10 kHz re the family's: open"
+    },
+    "rt": {
+     "value": 2.2,
+     "step": 10,
+     "label": "S",
+     "reason": "decay law fit 2.00 s (1 kHz T60 1.98 s; chi2/dof 1.10); nearest step",
+     "inferred": 2.0016
+    },
+    "lf": {
+     "value": 1.0,
+     "step": 9,
+     "label": "H",
+     "reason": "law fit 1.01 from the 125-500 Hz decay against the family's (1.1); family LOO scatter below",
+     "inferred": 1.0111
+    },
+    "hf": {
+     "value": 0.8,
+     "step": 7,
+     "label": "S",
+     "reason": "law fit 0.81 from the 2-8 kHz decay against the family's (0.7)",
+     "inferred": 0.8089
+    },
+    "ampl": {
+     "value": 90,
+     "step": 9,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 93.9 % (law sd 15 %)",
+     "inferred": 93.916
+    }
+   },
+   "label_string": "M: RT 2.2 (S), LF 1.0 (H), HF 0.8 (S), AMPL 90 (S), DELAY 34 (S)"
+  },
+  "PRESET79 LG REF": {
+   "altiverb": "PRESET79 LG REF",
+   "plugin_name": "Altiverb P79 Lg Ref",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 36.406,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 28.760832722425874,
+     "3": 22.733850965131275,
+     "4": 18.539532634171128,
+     "5": 15.282825010518865,
+     "6": 12.566783203578776,
+     "8": 7.982037392243644,
+     "10": 3.8455209148703595,
+     "12": 0.46451889669186486
+    },
+    "fir2_a": 0.09,
+    "fir2_rms_db": 0.012263516725472979,
+    "excess_db": {
+     "4": -0.1380244110140547,
+     "8": -0.5078519018852264,
+     "10": -0.7040690983112543,
+     "11": -0.7783381647322872
+    }
+   },
+   "decay_fit": {
+    "rt": 1.9530152879247473,
+    "lf": 1.2381166129917653,
+    "hf": 0.5267309298058275,
+    "chi2_dof": 0.4172908998954627,
+    "t60_measured": [
+     2.367414819525609,
+     2.190967350097467,
+     2.1170263659957174,
+     1.8922095394837997,
+     1.7101075260164817,
+     1.295704191730469,
+     0.9620005766405577
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 36,
+     "step": 36,
+     "label": "S",
+     "reason": "onset 36.41 ms = family + 16.08 ms (off a whole ms by +0.08); family DELAY 20 (S)",
+     "inferred": 36.0781
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "H",
+     "reason": "tap 0 -0.5 / -0.7 / -0.8 dB at 8 / 10 / 11 kHz re the family, nearer open than any plugin LP step (2nd-order Butterworth); the excess fits a 2-tap device FIR a = 0.090 (rms 0.01 dB), a roll-off the plugin's LP cannot make"
+    },
+    "rt": {
+     "value": 1.8,
+     "step": 9,
+     "label": "S",
+     "reason": "decay law fit 1.95 s (1 kHz T60 1.89 s; chi2/dof 0.42); nearest step",
+     "inferred": 1.953
+    },
+    "lf": {
+     "value": 1.2,
+     "step": 11,
+     "label": "H",
+     "reason": "law fit 1.24 from the 125-500 Hz decay against the family's (1.1); family LOO scatter below",
+     "inferred": 1.2381
+    },
+    "hf": {
+     "value": 0.5,
+     "step": 4,
+     "label": "S",
+     "reason": "law fit 0.53 from the 2-8 kHz decay against the family's (0.7)",
+     "inferred": 0.5267
+    },
+    "ampl": {
+     "value": 70,
+     "step": 7,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 72.0 % (law sd 15 %)",
+     "inferred": 72.0463
+    }
+   },
+   "label_string": "M: RT 1.8 (S), LF 1.2 (H), HF 0.5 (S), AMPL 70 (S), DELAY 36 (S)"
+  },
+  "PRESET8 CHAMBER": {
+   "altiverb": "PRESET8 CHAMBER",
+   "plugin_name": "Altiverb P8 Chamber",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 26.365,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 27.80104326734146,
+     "3": 21.735723464546364,
+     "4": 17.51358650808624,
+     "5": 14.237610863037423,
+     "6": 11.510939772079885,
+     "8": 6.941429805344809,
+     "10": 2.9509017476131936,
+     "12": 1.4959996219081066
+    },
+    "fir2_a": 0.332,
+    "fir2_rms_db": 0.012051295402252499,
+    "excess_db": {
+     "4": -0.1806370137633031,
+     "8": -1.0945457309764135,
+     "10": -2.1942949604208635,
+     "11": -2.958400397235443
+    }
+   },
+   "decay_fit": {
+    "rt": 1.8155222033359895,
+    "lf": 1.1751449010126067,
+    "hf": 0.5947124663644874,
+    "chi2_dof": 1.9928810549820082,
+    "t60_measured": [
+     1.9893951096272864,
+     2.0393792853862767,
+     1.8541918377327664,
+     1.7692620263499417,
+     1.659887455265786,
+     1.3364634529263557,
+     1.0355176822906345
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 26,
+     "step": 26,
+     "label": "S",
+     "reason": "onset 26.36 ms = family + 6.03 ms (off a whole ms by +0.03); family DELAY 20 (S)",
+     "inferred": 26.0312
+    },
+    "lowpass": {
+     "value": 10,
+     "step": 6,
+     "label": "H",
+     "reason": "tap 0 -1.1 / -2.2 / -3.0 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 10 kHz; the excess fits a 2-tap device FIR a = 0.332 (rms 0.01 dB): the unit's LP shape is unknown"
+    },
+    "rt": {
+     "value": 1.8,
+     "step": 6,
+     "label": "S",
+     "reason": "decay law fit 1.82 s (1 kHz T60 1.77 s; chi2/dof 1.99); nearest step",
+     "inferred": 1.8155
+    },
+    "lf": {
+     "value": 1.2,
+     "step": 11,
+     "label": "H",
+     "reason": "law fit 1.18 from the 125-500 Hz decay against the family's (1.49); family LOO scatter below",
+     "inferred": 1.1751
+    },
+    "hf": {
+     "value": 0.6,
+     "step": 5,
+     "label": "S",
+     "reason": "law fit 0.59 from the 2-8 kHz decay against the family's (0.69)",
+     "inferred": 0.5947
+    },
+    "ampl": {
+     "value": 90,
+     "step": 9,
+     "label": "H",
+     "reason": "direct tap / reverb ratio 1.07 x the family's at RT 1.82 -> 85.9 % (family = 80, H)",
+     "inferred": 85.8966
+    }
+   },
+   "label_string": "E: RT 1.8 (S), LF 1.2 (H), HF 0.6 (S), AMPL 90 (H), DELAY 26 (S), LP 10 (H)"
+  },
+  "PRESET80 LG WARM": {
+   "altiverb": "PRESET80 LG WARM",
+   "plugin_name": "Altiverb P80 Lg Warm",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 36.417,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 26.705651914693302,
+     "3": 20.59267449355064,
+     "4": 16.333248958567825,
+     "5": 13.028002386918743,
+     "6": 10.280148454140068,
+     "8": 5.708945100353111,
+     "10": 2.00670720589039,
+     "12": 2.727754037091042
+    },
+    "fir2_a": 0.41000000000000003,
+    "fir2_rms_db": 0.015932619669574502,
+    "excess_db": {
+     "4": -0.27028964359237634,
+     "8": -1.6947362971247415,
+     "10": -3.715771601101224,
+     "11": -5.4678116149371
+    }
+   },
+   "decay_fit": {
+    "rt": 2.1564096013197305,
+    "lf": 1.447595599810568,
+    "hf": 0.3253859723326101,
+    "chi2_dof": 1.0965386795590877,
+    "t60_measured": [
+     2.887771219161726,
+     2.6653852864741454,
+     2.27513320883651,
+     1.95254989283734,
+     1.5260052630920191,
+     0.9553778850594744,
+     0.6700322548456357
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 36,
+     "step": 36,
+     "label": "S",
+     "reason": "onset 36.42 ms = family + 16.08 ms (off a whole ms by +0.08); family DELAY 20 (S)",
+     "inferred": 36.0833
+    },
+    "lowpass": {
+     "value": 10,
+     "step": 6,
+     "label": "H",
+     "reason": "tap 0 -1.7 / -3.7 / -5.5 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 10 kHz; the excess fits a 2-tap device FIR a = 0.410 (rms 0.02 dB): the unit's LP shape is unknown"
+    },
+    "rt": {
+     "value": 2.2,
+     "step": 8,
+     "label": "S",
+     "reason": "decay law fit 2.16 s (1 kHz T60 1.95 s; chi2/dof 1.10); nearest step",
+     "inferred": 2.1564
+    },
+    "lf": {
+     "value": 1.5,
+     "step": 13,
+     "label": "H",
+     "reason": "law fit 1.45 from the 125-500 Hz decay against the family's (1.49); family LOO scatter below",
+     "inferred": 1.4476
+    },
+    "hf": {
+     "value": 0.3,
+     "step": 2,
+     "label": "S",
+     "reason": "law fit 0.33 from the 2-8 kHz decay against the family's (0.69)",
+     "inferred": 0.3254
+    },
+    "ampl": {
+     "value": 70,
+     "step": 7,
+     "label": "H",
+     "reason": "direct tap / reverb ratio 0.85 x the family's at RT 2.16 -> 67.8 % (family = 80, H)",
+     "inferred": 67.8409
+    }
+   },
+   "label_string": "E: RT 2.2 (S), LF 1.5 (H), HF 0.3 (S), AMPL 70 (H), DELAY 36 (S), LP 10 (H)"
+  },
+  "PRESET81 SM LIVE": {
+   "altiverb": "PRESET81 SM LIVE",
+   "plugin_name": "Altiverb P81 Sm Live",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 44.445,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 29.088127252354795,
+     "3": 23.062021958805325,
+     "4": 18.86494075608543,
+     "5": 15.602462474555336,
+     "6": 12.87771306582043,
+     "8": 8.26491171205277,
+     "10": 4.075335112406804,
+     "12": 0.1355525783875484
+    },
+    "fir2_a": 0.06,
+    "fir2_rms_db": 0.009859866288338508,
+    "excess_db": {
+     "4": -0.04349584576898006,
+     "8": -0.15247648685083723,
+     "10": -0.20809631101565584,
+     "11": -0.22574832687630228
+    }
+   },
+   "decay_fit": {
+    "rt": 2.562848097630845,
+    "lf": 1.2425869471536588,
+    "hf": 0.7143833376186396,
+    "chi2_dof": 0.03115969316761801,
+    "t60_measured": [
+     3.1213328004742373,
+     2.8891520931951096,
+     2.7485199706544186,
+     2.566140637868817,
+     2.4204721609878104,
+     2.1241051578816954,
+     1.7094918554727885
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 44,
+     "step": 44,
+     "label": "S",
+     "reason": "onset 44.45 ms = family + 24.12 ms (off a whole ms by +0.12); family DELAY 20 (S)",
+     "inferred": 44.1172
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "C",
+     "reason": "tap 0 -0.21 dB at 10 kHz re the family's: open"
+    },
+    "rt": {
+     "value": 2.6,
+     "step": 11,
+     "label": "S",
+     "reason": "decay law fit 2.56 s (1 kHz T60 2.57 s; chi2/dof 0.03); nearest step",
+     "inferred": 2.5628
+    },
+    "lf": {
+     "value": 1.2,
+     "step": 11,
+     "label": "H",
+     "reason": "law fit 1.24 from the 125-500 Hz decay against the family's (1.1); family LOO scatter below",
+     "inferred": 1.2426
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "law fit 0.71 from the 2-8 kHz decay against the family's (0.7)",
+     "inferred": 0.7144
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 75.8 % (law sd 15 %)",
+     "inferred": 75.7515
+    }
+   },
+   "label_string": "M: RT 2.6 (S), LF 1.2 (H), HF 0.7 (S), AMPL 80 (S), DELAY 44 (S)"
+  },
+  "PRESET82 SM REF": {
+   "altiverb": "PRESET82 SM REF",
+   "plugin_name": "Altiverb P82 Sm Ref",
+   "program": "M",
+   "how": "cluster taps 108/388/576 (L), 285/388/704 (R)",
+   "onset_ms": 46.456,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 28.753797128009644,
+     "3": 22.72625329883333,
+     "4": 18.531477347473686,
+     "5": 15.274383730380057,
+     "6": 12.558012286431426,
+     "8": 7.972755000661678,
+     "10": 3.8360528501919466,
+     "12": 0.47156932781518
+    },
+    "fir2_a": 0.09,
+    "fir2_rms_db": 0.0073521528946293956,
+    "excess_db": {
+     "4": -0.13393788639337081,
+     "8": -0.5095213706297007,
+     "10": -0.711791746741656,
+     "11": -0.7930325969557394
+    }
+   },
+   "decay_fit": {
+    "rt": 2.5467615242185335,
+    "lf": 1.4341736609044324,
+    "hf": 0.4286855047732094,
+    "chi2_dof": 0.9344500119498931,
+    "t60_measured": [
+     3.4370802696123928,
+     3.2050178829727507,
+     2.74472168521656,
+     2.465691397472093,
+     2.055493269101981,
+     1.4559067899340943,
+     0.9949675287609822
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 46,
+     "step": 46,
+     "label": "S",
+     "reason": "onset 46.46 ms = family + 26.13 ms (off a whole ms by +0.13); family DELAY 20 (S)",
+     "inferred": 46.1276
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "H",
+     "reason": "tap 0 -0.5 / -0.7 / -0.8 dB at 8 / 10 / 11 kHz re the family, nearer open than any plugin LP step (2nd-order Butterworth); the excess fits a 2-tap device FIR a = 0.090 (rms 0.01 dB), a roll-off the plugin's LP cannot make"
+    },
+    "rt": {
+     "value": 2.6,
+     "step": 11,
+     "label": "S",
+     "reason": "decay law fit 2.55 s (1 kHz T60 2.47 s; chi2/dof 0.93); nearest step",
+     "inferred": 2.5468
+    },
+    "lf": {
+     "value": 1.5,
+     "step": 13,
+     "label": "H",
+     "reason": "law fit 1.43 from the 125-500 Hz decay against the family's (1.1); family LOO scatter below",
+     "inferred": 1.4342
+    },
+    "hf": {
+     "value": 0.4,
+     "step": 3,
+     "label": "S",
+     "reason": "law fit 0.43 from the 2-8 kHz decay against the family's (0.7)",
+     "inferred": 0.4287
+    },
+    "ampl": {
+     "value": 40,
+     "step": 4,
+     "label": "S",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 43.3 % (law sd 15 %)",
+     "inferred": 43.3185
+    }
+   },
+   "label_string": "M: RT 2.6 (S), LF 1.5 (H), HF 0.4 (S), AMPL 40 (S), DELAY 46 (S)"
+  },
+  "PRESET83 SM WARM": {
+   "altiverb": "PRESET83 SM WARM",
+   "plugin_name": "Altiverb P83 Sm Warm",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 46.464,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 26.710221673384748,
+     "3": 20.596881108760982,
+     "4": 16.33712111080081,
+     "5": 13.031564534968162,
+     "6": 10.283416408557757,
+     "8": 5.71150393340248,
+     "10": 2.006533136292334,
+     "12": 2.724348384467318
+    },
+    "fir2_a": 0.41000000000000003,
+    "fir2_rms_db": 0.02021823062227724,
+    "excess_db": {
+     "4": -0.2645387103108409,
+     "8": -1.6937009743742621,
+     "10": -3.704304215131275,
+     "11": -5.46343501378544
+    }
+   },
+   "decay_fit": {
+    "rt": 2.7084341515648793,
+    "lf": 1.6667372313961812,
+    "hf": 0.3333855782421064,
+    "chi2_dof": 0.543454025908738,
+    "t60_measured": [
+     4.084593983303918,
+     3.602538905486256,
+     2.9666730140378803,
+     2.5448686985453057,
+     1.9232411057051348,
+     1.2853219063270633,
+     0.8233563800409032
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 46,
+     "step": 46,
+     "label": "S",
+     "reason": "onset 46.46 ms = family + 26.13 ms (off a whole ms by +0.13); family DELAY 20 (S)",
+     "inferred": 46.1302
+    },
+    "lowpass": {
+     "value": 10,
+     "step": 6,
+     "label": "H",
+     "reason": "tap 0 -1.7 / -3.7 / -5.5 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 10 kHz; the excess fits a 2-tap device FIR a = 0.410 (rms 0.02 dB): the unit's LP shape is unknown"
+    },
+    "rt": {
+     "value": 2.8,
+     "step": 10,
+     "label": "S",
+     "reason": "decay law fit 2.71 s (1 kHz T60 2.54 s; chi2/dof 0.54); nearest step",
+     "inferred": 2.7084
+    },
+    "lf": {
+     "value": 1.8,
+     "step": 14,
+     "label": "H",
+     "reason": "law fit 1.67 from the 125-500 Hz decay against the family's (1.49); family LOO scatter below",
+     "inferred": 1.6667
+    },
+    "hf": {
+     "value": 0.3,
+     "step": 2,
+     "label": "S",
+     "reason": "law fit 0.33 from the 2-8 kHz decay against the family's (0.69)",
+     "inferred": 0.3334
+    },
+    "ampl": {
+     "value": 30,
+     "step": 3,
+     "label": "H",
+     "reason": "direct tap / reverb ratio 0.42 x the family's at RT 2.71 -> 33.3 % (family = 80, H)",
+     "inferred": 33.2921
+    }
+   },
+   "label_string": "E: RT 2.8 (S), LF 1.8 (H), HF 0.3 (S), AMPL 30 (H), DELAY 46 (S), LP 10 (H)"
+  },
+  "PRESET84 MED LIVE": {
+   "altiverb": "PRESET84 MED LIVE",
+   "plugin_name": "Altiverb P84 Med Live",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 80.362,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 26.708665789731487,
+     "3": 20.5958039400805,
+     "4": 16.33648116250752,
+     "5": 13.031333830543126,
+     "6": 10.283581580066265,
+     "8": 5.712637776283036,
+     "10": 2.01018064464592,
+     "12": 2.724218296624692
+    },
+    "fir2_a": 0.41000000000000003,
+    "fir2_rms_db": 0.01597317493873407,
+    "excess_db": {
+     "4": -0.2703134997250538,
+     "8": -1.6963618827537847,
+     "10": -3.71098389250864,
+     "11": -5.466223519906856
+    }
+   },
+   "decay_fit": {
+    "rt": 3.3110663482666314,
+    "lf": 1.3877900209676564,
+    "hf": 0.5979905789558537,
+    "chi2_dof": 0.8448132101639878,
+    "t60_measured": [
+     4.206936332762336,
+     4.101565431578019,
+     3.5734752818282542,
+     3.2854804960487347,
+     2.929546249906955,
+     2.4698794519235334,
+     1.9150340469941338
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 79,
+     "step": 79,
+     "label": "H",
+     "reason": "onset 80.36 ms = family + 39.93 ms (off a whole ms by -0.07); family DELAY 39 (H); family 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40, so 80 by the round reading",
+     "inferred": 78.9323
+    },
+    "lowpass": {
+     "value": 10,
+     "step": 6,
+     "label": "H",
+     "reason": "tap 0 -1.7 / -3.7 / -5.5 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 10 kHz; the excess fits a 2-tap device FIR a = 0.410 (rms 0.02 dB): the unit's LP shape is unknown"
+    },
+    "rt": {
+     "value": 3.1,
+     "step": 3,
+     "label": "S",
+     "reason": "decay law fit 3.31 s (1 kHz T60 3.29 s; chi2/dof 0.84); nearest step",
+     "inferred": 3.3111
+    },
+    "lf": {
+     "value": 1.3,
+     "step": 12,
+     "label": "H",
+     "reason": "law fit 1.39 from the 125-500 Hz decay against the family's (1.2); family LOO scatter below",
+     "inferred": 1.3878
+    },
+    "hf": {
+     "value": 0.6,
+     "step": 5,
+     "label": "S",
+     "reason": "law fit 0.60 from the 2-8 kHz decay against the family's (0.4)",
+     "inferred": 0.598
+    },
+    "ampl": {
+     "value": 60,
+     "step": 6,
+     "label": "H",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 61.1 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
+     "inferred": 61.1399
+    }
+   },
+   "label_string": "L: RT 3.1 (S), LF 1.3 (H), HF 0.6 (S), AMPL 60 (H), DELAY 79 (H), LP 10 (H)"
+  },
+  "PRESET85 MED REF": {
+   "altiverb": "PRESET85 MED REF",
+   "plugin_name": "Altiverb P85 Med Ref",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 80.367,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 26.00751979423449,
+     "3": 19.854516651080903,
+     "4": 15.559847043211917,
+     "5": 12.222014928468989,
+     "6": 9.443354818544892,
+     "8": 4.821630856933152,
+     "10": 1.4221309859597455,
+     "12": 3.5961000897574937
+    },
+    "fir2_a": 0.492,
+    "fir2_rms_db": 0.018998334310786964,
+    "excess_db": {
+     "4": -0.29422646183927004,
+     "8": -1.9588619222076717,
+     "10": -4.497732736027766,
+     "11": -7.057855769295328
+    }
+   },
+   "decay_fit": {
+    "rt": 3.208853608811979,
+    "lf": 1.6961093558197675,
+    "hf": 0.32420191583323443,
+    "chi2_dof": 1.962735847122098,
+    "t60_measured": [
+     4.815491194353308,
+     4.41667665186515,
+     3.5129044418026716,
+     2.778681019674146,
+     2.0240451992563884,
+     1.3598967939096256,
+     1.0569681034746423
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 79,
+     "step": 79,
+     "label": "H",
+     "reason": "onset 80.37 ms = family + 39.94 ms (off a whole ms by -0.06); family DELAY 39 (H); family 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40, so 80 by the round reading",
+     "inferred": 78.9375
+    },
+    "lowpass": {
+     "value": 10,
+     "step": 6,
+     "label": "H",
+     "reason": "tap 0 -2.0 / -4.5 / -7.1 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 10 kHz; the excess fits a 2-tap device FIR a = 0.492 (rms 0.02 dB): the unit's LP shape is unknown"
+    },
+    "rt": {
+     "value": 3.1,
+     "step": 3,
+     "label": "S",
+     "reason": "decay law fit 3.21 s (1 kHz T60 2.78 s; chi2/dof 1.96); nearest step",
+     "inferred": 3.2089
+    },
+    "lf": {
+     "value": 1.8,
+     "step": 14,
+     "label": "H",
+     "reason": "law fit 1.70 from the 125-500 Hz decay against the family's (1.2); family LOO scatter below",
+     "inferred": 1.6961
+    },
+    "hf": {
+     "value": 0.3,
+     "step": 2,
+     "label": "S",
+     "reason": "law fit 0.32 from the 2-8 kHz decay against the family's (0.4)",
+     "inferred": 0.3242
+    },
+    "ampl": {
+     "value": 30,
+     "step": 3,
+     "label": "H",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 33.0 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
+     "inferred": 32.9624
+    }
+   },
+   "label_string": "L: RT 3.1 (S), LF 1.8 (H), HF 0.3 (S), AMPL 30 (H), DELAY 79 (H), LP 10 (H)"
+  },
+  "PRESET86 MED WARM": {
+   "altiverb": "PRESET86 MED WARM",
+   "plugin_name": "Altiverb P86 Med Warm",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 80.367,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 26.02674968680315,
+     "3": 19.87282519857781,
+     "4": 15.577263577222501,
+     "5": 12.238513577123209,
+     "6": 9.45884569584973,
+     "8": 4.8340516641625895,
+     "10": 1.4171064115278635,
+     "12": 3.5811636027732674
+    },
+    "fir2_a": 0.488,
+    "fir2_rms_db": 0.03636490710648839,
+    "excess_db": {
+     "4": -0.29015538068037233,
+     "8": -1.9401225691870216,
+     "10": -4.4652639550230875,
+     "11": -7.03395043737145
+    }
+   },
+   "decay_fit": {
+    "rt": 3.3150410552000156,
+    "lf": 1.8153481903042152,
+    "hf": 0.21580438382198727,
+    "chi2_dof": 0.9564213032813661,
+    "t60_measured": [
+     5.391192314263629,
+     4.449751991564705,
+     3.6673562341742634,
+     2.731094009063083,
+     1.7924223588402115,
+     1.0318138279614273,
+     0.6873518750009411
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 80,
+     "step": 80,
+     "label": "S",
+     "reason": "onset 80.37 ms = family + 60.03 ms (off a whole ms by +0.03); family DELAY 20 (S)",
+     "inferred": 80.0339
+    },
+    "lowpass": {
+     "value": 10,
+     "step": 6,
+     "label": "H",
+     "reason": "tap 0 -1.9 / -4.5 / -7.0 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 10 kHz; the excess fits a 2-tap device FIR a = 0.488 (rms 0.04 dB): the unit's LP shape is unknown"
+    },
+    "rt": {
+     "value": 3.3,
+     "step": 12,
+     "label": "S",
+     "reason": "decay law fit 3.32 s (1 kHz T60 2.73 s; chi2/dof 0.96); nearest step",
+     "inferred": 3.315
+    },
+    "lf": {
+     "value": 1.8,
+     "step": 14,
+     "label": "H",
+     "reason": "law fit 1.82 from the 125-500 Hz decay against the family's (1.49); family LOO scatter below",
+     "inferred": 1.8153
+    },
+    "hf": {
+     "value": 0.2,
+     "step": 1,
+     "label": "S",
+     "reason": "law fit 0.22 from the 2-8 kHz decay against the family's (0.69)",
+     "inferred": 0.2158
+    },
+    "ampl": {
+     "value": 30,
+     "step": 3,
+     "label": "H",
+     "reason": "direct tap / reverb ratio 0.43 x the family's at RT 3.32 -> 34.7 % (family = 80, H)",
+     "inferred": 34.6503
+    }
+   },
+   "label_string": "E: RT 3.3 (S), LF 1.8 (H), HF 0.2 (S), AMPL 30 (H), DELAY 80 (S), LP 10 (H)"
+  },
+  "PRESET87 LG LIVE": {
+   "altiverb": "PRESET87 LG LIVE",
+   "plugin_name": "Altiverb P87 Lg Live",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 115.404,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 26.01429502704569,
+     "3": 19.860959932727646,
+     "4": 15.56597924420054,
+     "5": 12.227808165958288,
+     "6": 9.448744309683827,
+     "8": 4.825659238607056,
+     "10": 1.4190142959677128,
+     "12": 3.591154728938099
+    },
+    "fir2_a": 0.49,
+    "fir2_rms_db": 0.025221875938803248,
+    "excess_db": {
+     "4": -0.29803699104034687,
+     "8": -1.9495145973212862,
+     "10": -4.48574915577871,
+     "11": -7.045718943880828
+    }
+   },
+   "decay_fit": {
+    "rt": 4.425030437794901,
+    "lf": 1.6411782174933085,
+    "hf": 0.5271202670860486,
+    "chi2_dof": 2.328486371362123,
+    "t60_measured": [
+     6.548205608768564,
+     5.853595085775481,
+     5.0472525830615975,
+     4.405977955453783,
+     3.7558368806420805,
+     2.9561797759803303,
+     2.2578298492517352
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 114,
+     "step": 114,
+     "label": "H",
+     "reason": "onset 115.40 ms = family + 74.97 ms (off a whole ms by -0.03); family DELAY 39 (H); family 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40, so 115 by the round reading",
+     "inferred": 113.974
+    },
+    "lowpass": {
+     "value": 10,
+     "step": 6,
+     "label": "H",
+     "reason": "tap 0 -1.9 / -4.5 / -7.0 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 10 kHz; the excess fits a 2-tap device FIR a = 0.490 (rms 0.03 dB): the unit's LP shape is unknown"
+    },
+    "rt": {
+     "value": 4.5,
+     "step": 6,
+     "label": "S",
+     "reason": "decay law fit 4.43 s (1 kHz T60 4.41 s; chi2/dof 2.33); nearest step",
+     "inferred": 4.425
+    },
+    "lf": {
+     "value": 1.5,
+     "step": 13,
+     "label": "H",
+     "reason": "law fit 1.64 from the 125-500 Hz decay against the family's (1.2); family LOO scatter below",
+     "inferred": 1.6412
+    },
+    "hf": {
+     "value": 0.5,
+     "step": 4,
+     "label": "S",
+     "reason": "law fit 0.53 from the 2-8 kHz decay against the family's (0.4)",
+     "inferred": 0.5271
+    },
+    "ampl": {
+     "value": 50,
+     "step": 5,
+     "label": "H",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 46.8 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
+     "inferred": 46.8466
+    }
+   },
+   "label_string": "L: RT 4.5 (S), LF 1.5 (H), HF 0.5 (S), AMPL 50 (H), DELAY 114 (H), LP 10 (H)"
+  },
+  "PRESET88 LG REF": {
+   "altiverb": "PRESET88 LG REF",
+   "plugin_name": "Altiverb P88 Lg Ref",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 115.404,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 26.009645117331562,
+     "3": 19.856303644294925,
+     "4": 15.561287391402061,
+     "5": 12.22307044268449,
+     "6": 9.443950440586354,
+     "8": 4.820709970348615,
+     "10": 1.41661755461587,
+     "12": 3.596357356283829
+    },
+    "fir2_a": 0.492,
+    "fir2_rms_db": 0.023898880298892766,
+    "excess_db": {
+     "4": -0.2928999603220112,
+     "8": -1.9435330996530673,
+     "10": -4.498102144466669,
+     "11": -7.060798403573464
+    }
+   },
+   "decay_fit": {
+    "rt": 4.41394387231479,
+    "lf": 1.8457386293778393,
+    "hf": 0.32270184917852035,
+    "chi2_dof": 0.8547257720013638,
+    "t60_measured": [
+     7.149984945429706,
+     6.240994564177351,
+     5.0021843905442775,
+     3.9729071156520526,
+     2.929315658310416,
+     1.9640051305688373,
+     1.3837020321678537
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 114,
+     "step": 114,
+     "label": "H",
+     "reason": "onset 115.40 ms = family + 74.97 ms (off a whole ms by -0.03); family DELAY 39 (H); family 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40, so 115 by the round reading",
+     "inferred": 113.974
+    },
+    "lowpass": {
+     "value": 10,
+     "step": 6,
+     "label": "H",
+     "reason": "tap 0 -1.9 / -4.5 / -7.1 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 10 kHz; the excess fits a 2-tap device FIR a = 0.492 (rms 0.02 dB): the unit's LP shape is unknown"
+    },
+    "rt": {
+     "value": 4.5,
+     "step": 6,
+     "label": "S",
+     "reason": "decay law fit 4.41 s (1 kHz T60 3.97 s; chi2/dof 0.85); nearest step",
+     "inferred": 4.4139
+    },
+    "lf": {
+     "value": 1.8,
+     "step": 14,
+     "label": "H",
+     "reason": "law fit 1.85 from the 125-500 Hz decay against the family's (1.2); family LOO scatter below",
+     "inferred": 1.8457
+    },
+    "hf": {
+     "value": 0.3,
+     "step": 2,
+     "label": "S",
+     "reason": "law fit 0.32 from the 2-8 kHz decay against the family's (0.4)",
+     "inferred": 0.3227
+    },
+    "ampl": {
+     "value": 20,
+     "step": 2,
+     "label": "H",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 15.5 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
+     "inferred": 15.5236
+    }
+   },
+   "label_string": "L: RT 4.5 (S), LF 1.8 (H), HF 0.3 (S), AMPL 20 (H), DELAY 114 (H), LP 10 (H)"
+  },
+  "PRESET89 LG WARM": {
+   "altiverb": "PRESET89 LG WARM",
+   "plugin_name": "Altiverb P89 Lg Warm",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 115.404,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 26.00707628090839,
+     "3": 19.85386253628983,
+     "4": 15.559036378392488,
+     "5": 12.22108246826782,
+     "6": 9.442330491005508,
+     "8": 4.82048404292618,
+     "10": 1.4208470710167793,
+     "12": 3.5972302544584163
+    },
+    "fir2_a": 0.492,
+    "fir2_rms_db": 0.020485412907408847,
+    "excess_db": {
+     "4": -0.2980077330100155,
+     "8": -1.960292330897128,
+     "10": -4.491178130748938,
+     "11": -7.0676318355656225
+    }
+   },
+   "decay_fit": {
+    "rt": 4.440532376172084,
+    "lf": 2.0,
+    "hf": 0.2146054520956826,
+    "chi2_dof": 5.041256019151403,
+    "t60_measured": [
+     7.764118232600346,
+     6.361596733644948,
+     4.586155836899467,
+     3.1379742389178373,
+     1.929607541595184,
+     1.250154919377646,
+     1.005933173999344
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 114,
+     "step": 114,
+     "label": "H",
+     "reason": "onset 115.40 ms = family + 74.97 ms (off a whole ms by -0.03); family DELAY 39 (H); family 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40, so 115 by the round reading",
+     "inferred": 113.974
+    },
+    "lowpass": {
+     "value": 10,
+     "step": 6,
+     "label": "H",
+     "reason": "tap 0 -2.0 / -4.5 / -7.1 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 10 kHz; the excess fits a 2-tap device FIR a = 0.492 (rms 0.02 dB): the unit's LP shape is unknown"
+    },
+    "rt": {
+     "value": 4.5,
+     "step": 6,
+     "label": "H",
+     "reason": "decay law fit 4.44 s (1 kHz T60 3.14 s; chi2/dof 5.04); nearest step",
+     "inferred": 4.4405
+    },
+    "lf": {
+     "value": 2.0,
+     "step": 15,
+     "label": "H",
+     "reason": "law fit 2.00 from the 125-500 Hz decay against the family's (1.2); family LOO scatter below",
+     "inferred": 2.0
+    },
+    "hf": {
+     "value": 0.2,
+     "step": 1,
+     "label": "H",
+     "reason": "law fit 0.21 from the 2-8 kHz decay against the family's (0.4)",
+     "inferred": 0.2146
+    },
+    "ampl": {
+     "value": 20,
+     "step": 2,
+     "label": "H",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 16.3 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
+     "inferred": 16.323
+    }
+   },
+   "label_string": "L: RT 4.5 (H), LF 2.0 (H), HF 0.2 (H), AMPL 20 (H), DELAY 114 (H), LP 10 (H)"
+  },
+  "PRESET9 CONCERT": {
+   "altiverb": "PRESET9 CONCERT",
+   "plugin_name": "Altiverb P9 Concert",
+   "program": "L",
+   "how": "cluster taps 216/776/1152 (L), 570/776/1407 (R)",
+   "onset_ms": 100.388,
+   "included": true,
+   "lowpass_fit": {
+    "rms_db_per_step": {
+     "2": 26.01367282506038,
+     "3": 19.860290077788083,
+     "4": 15.56526953783827,
+     "5": 12.227063097798112,
+     "6": 9.447963922776959,
+     "8": 4.824818404614354,
+     "10": 1.4187789329737792,
+     "12": 3.59194688363973
+    },
+    "fir2_a": 0.49,
+    "fir2_rms_db": 0.025095301268792815,
+    "excess_db": {
+     "4": -0.2976375090953933,
+     "8": -1.9483156381363187,
+     "10": -4.483872071370388,
+     "11": -7.050517422537021
+    }
+   },
+   "decay_fit": {
+    "rt": 4.440842295714764,
+    "lf": 1.8517100117428114,
+    "hf": 0.42174763488147077,
+    "chi2_dof": 1.3067635684582228,
+    "t60_measured": [
+     7.237944696035423,
+     6.303780621266126,
+     5.131383492762524,
+     4.27795278735468,
+     3.4429076858461327,
+     2.4968236536543644,
+     1.7943737726563946
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 99,
+     "step": 99,
+     "label": "H",
+     "reason": "onset 100.39 ms = family + 59.96 ms (off a whole ms by -0.04); family DELAY 39 (H); family 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40, so 100 by the round reading",
+     "inferred": 98.9583
+    },
+    "lowpass": {
+     "value": 10,
+     "step": 6,
+     "label": "H",
+     "reason": "tap 0 -1.9 / -4.5 / -7.1 dB at 8 / 10 / 11 kHz re the family; nearest plugin LP (2nd-order Butterworth, least amplitude error 1-12 kHz) 10 kHz; the excess fits a 2-tap device FIR a = 0.490 (rms 0.03 dB): the unit's LP shape is unknown"
+    },
+    "rt": {
+     "value": 4.5,
+     "step": 6,
+     "label": "S",
+     "reason": "decay law fit 4.44 s (1 kHz T60 4.28 s; chi2/dof 1.31); nearest step",
+     "inferred": 4.4408
+    },
+    "lf": {
+     "value": 1.8,
+     "step": 14,
+     "label": "H",
+     "reason": "law fit 1.85 from the 125-500 Hz decay against the family's (1.2); family LOO scatter below",
+     "inferred": 1.8517
+    },
+    "hf": {
+     "value": 0.4,
+     "step": 3,
+     "label": "S",
+     "reason": "law fit 0.42 from the 2-8 kHz decay against the family's (0.4)",
+     "inferred": 0.4217
+    },
+    "ampl": {
+     "value": 50,
+     "step": 5,
+     "label": "H",
+     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 47.7 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
+     "inferred": 47.7307
+    }
+   },
+   "label_string": "L: RT 4.5 (S), LF 1.8 (H), HF 0.4 (S), AMPL 50 (H), DELAY 99 (H), LP 10 (H)"
+  },
+  "PRESET90 VERY LG": {
+   "altiverb": "PRESET90 VERY LG",
+   "plugin_name": "Altiverb P90 Very Large",
+   "program": "L",
+   "how": "no cluster; reverb onset R - L = 1320 samples (L's 1320)",
+   "onset_ms": 150.571,
+   "included": true,
+   "decay_fit": {
+    "rt": 5.66249140952483,
+    "lf": 2.0,
+    "hf": 0.12741187163561304,
+    "chi2_dof": 39.703144595989755,
+    "t60_measured": [
+     9.516200594443102,
+     6.83448038029754,
+     3.786753884546438,
+     1.9882044386948206,
+     1.2115969977737764,
+     0.9452782376395095,
+     0.8542121914515797
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 149,
+     "step": 149,
+     "label": "H",
+     "reason": "onset 150.57 ms = family + 110.14 ms (off a whole ms by +0.14); family DELAY 39 (H); family 39 matches the Altiverb's onset in the plugin's timing (L's DELAY-0 onset 1.13 ms after S's), against the round 40, so 150 by the round reading",
+     "inferred": 149.1409
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "H",
+     "reason": "no cluster tap to read the LP from: open (the default)"
+    },
+    "rt": {
+     "value": 6.0,
+     "step": 8,
+     "label": "H",
+     "reason": "decay law fit 5.66 s (1 kHz T60 1.99 s; chi2/dof 39.70); nearest step",
+     "inferred": 5.6625
+    },
+    "lf": {
+     "value": 2.0,
+     "step": 15,
+     "label": "H",
+     "reason": "law fit 2.00 from the 125-500 Hz decay against the family's (1.2); family LOO scatter below",
+     "inferred": 2.0
+    },
+    "hf": {
+     "value": 0.1,
+     "step": 0,
+     "label": "H",
+     "reason": "law fit 0.13 from the 2-8 kHz decay against the family's (0.4)",
+     "inferred": 0.1274
+    },
+    "ampl": {
+     "value": 0,
+     "step": 0,
+     "label": "S",
+     "reason": "no cluster taps above the reverb (the reverb's own L-R onset lag identifies L)"
+    }
+   },
+   "label_string": "L: RT 6.0 (H), LF 2.0 (H), HF 0.1 (H), AMPL 0 (S), DELAY 149 (H)"
+  },
+  "REV-250": {
+   "altiverb": "REV-250",
+   "plugin_name": "Altiverb REV-250 (bare)",
+   "program": null,
+   "how": "no 246 S/M/L/E/N template; first peaks L 20.04 / R 24.99 ms",
+   "onset_ms": 20.039,
+   "included": false,
+   "why_not": "a bare two-tap delay (L 20.04 / R 24.99 ms), no reverb: probably the 246's delay program (EMT250_program 14.2); not one of the plugin's programs"
+  },
+  "REV-250 0.4s": {
+   "altiverb": "REV-250 0.4s",
+   "plugin_name": "Altiverb E RT 0.4",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 20.333,
+   "included": true,
+   "decay_fit": {
+    "rt": 0.4695445851466585,
+    "lf": 1.3155983364836892,
+    "hf": 0.8819314573800228,
+    "chi2_dof": 2.2818571238242655,
+    "t60_measured": [
+     0.5539499032315726,
+     0.5717893157960584,
+     0.523812203869756,
+     0.4689108818859853,
+     0.4549562436082428,
+     0.4337485418582096,
+     0.4193028923644451
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 0.4,
+     "step": 0,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 0.4695
+    },
+    "lf": {
+     "value": 1.5,
+     "step": 13,
+     "label": "S",
+     "reason": "fitted LF 1.49 on the 63-500 Hz decay (EMT250_program 16.5), the EMT 250's LF 1.5 step (this file alone: 1.32)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "fitted HF 0.69 on the 2-12.4 kHz decay, held out 0.6-2.1 % per octave (EMT250_program 17.3) (this file alone: 0.88)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "H",
+     "reason": "E's AMPL law is not in the data; the family is taken as AMPL 80 (e_plugin_spec)"
+    }
+   },
+   "label_string": "E: RT 0.4 (C), LF 1.5 (S), HF 0.7 (S), AMPL 80 (H), DELAY 20 (S)"
+  },
+  "REV-250 1.0s": {
+   "altiverb": "REV-250 1.0s",
+   "plugin_name": "Altiverb E RT 1.0",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 20.333,
+   "included": true,
+   "decay_fit": {
+    "rt": 1.0201755045663925,
+    "lf": 1.4240775327121555,
+    "hf": 0.7072852896502096,
+    "chi2_dof": 0.8620438582197265,
+    "t60_measured": [
+     1.3396934881777707,
+     1.252702888948495,
+     1.1513816560192986,
+     1.0176094790639318,
+     0.9389794402965352,
+     0.8217561060514528,
+     0.7095084027178112
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 1.0,
+     "step": 3,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 1.0202
+    },
+    "lf": {
+     "value": 1.5,
+     "step": 13,
+     "label": "S",
+     "reason": "fitted LF 1.49 on the 63-500 Hz decay (EMT250_program 16.5), the EMT 250's LF 1.5 step (this file alone: 1.42)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "fitted HF 0.69 on the 2-12.4 kHz decay, held out 0.6-2.1 % per octave (EMT250_program 17.3) (this file alone: 0.71)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "H",
+     "reason": "E's AMPL law is not in the data; the family is taken as AMPL 80 (e_plugin_spec)"
+    }
+   },
+   "label_string": "E: RT 1.0 (C), LF 1.5 (S), HF 0.7 (S), AMPL 80 (H), DELAY 20 (S)"
+  },
+  "REV-250 1.5s": {
+   "altiverb": "REV-250 1.5s",
+   "plugin_name": "Altiverb E RT 1.5",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 20.333,
+   "included": true,
+   "decay_fit": {
+    "rt": 1.52289512118056,
+    "lf": 1.4138406954143135,
+    "hf": 0.6900510196753478,
+    "chi2_dof": 0.9828820377135362,
+    "t60_measured": [
+     1.9817896577562566,
+     1.8889034842738999,
+     1.6616771959862056,
+     1.4929096703890652,
+     1.4346484119639464,
+     1.232380831554224,
+     1.0065036200272068
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 1.5,
+     "step": 5,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 1.5229
+    },
+    "lf": {
+     "value": 1.5,
+     "step": 13,
+     "label": "S",
+     "reason": "fitted LF 1.49 on the 63-500 Hz decay (EMT250_program 16.5), the EMT 250's LF 1.5 step (this file alone: 1.41)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "fitted HF 0.69 on the 2-12.4 kHz decay, held out 0.6-2.1 % per octave (EMT250_program 17.3) (this file alone: 0.69)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "H",
+     "reason": "E's AMPL law is not in the data; the family is taken as AMPL 80 (e_plugin_spec)"
+    }
+   },
+   "label_string": "E: RT 1.5 (C), LF 1.5 (S), HF 0.7 (S), AMPL 80 (H), DELAY 20 (S)"
+  },
+  "REV-250 2.0s": {
+   "altiverb": "REV-250 2.0s",
+   "plugin_name": "Altiverb E RT 2.0",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 20.333,
+   "included": true,
+   "decay_fit": {
+    "rt": 1.9876945579892318,
+    "lf": 1.5512858869973123,
+    "hf": 0.6938502413680105,
+    "chi2_dof": 1.4482876007500847,
+    "t60_measured": [
+     2.754847673738504,
+     2.6334776624112575,
+     2.1935594467181105,
+     1.974896228410231,
+     1.856791213624985,
+     1.6186386510279176,
+     1.3103736393882888
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 2.0,
+     "step": 7,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 1.9877
+    },
+    "lf": {
+     "value": 1.5,
+     "step": 13,
+     "label": "S",
+     "reason": "fitted LF 1.49 on the 63-500 Hz decay (EMT250_program 16.5), the EMT 250's LF 1.5 step (this file alone: 1.55)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "fitted HF 0.69 on the 2-12.4 kHz decay, held out 0.6-2.1 % per octave (EMT250_program 17.3) (this file alone: 0.69)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "H",
+     "reason": "E's AMPL law is not in the data; the family is taken as AMPL 80 (e_plugin_spec)"
+    }
+   },
+   "label_string": "E: RT 2.0 (C), LF 1.5 (S), HF 0.7 (S), AMPL 80 (H), DELAY 20 (S)"
+  },
+  "REV-250 2.5s": {
+   "altiverb": "REV-250 2.5s",
+   "plugin_name": "Altiverb E RT 2.5",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 20.333,
+   "included": true,
+   "decay_fit": {
+    "rt": 2.5047027331823095,
+    "lf": 1.545468057163249,
+    "hf": 0.6905807254488746,
+    "chi2_dof": 0.1032845074371128,
+    "t60_measured": [
+     3.609616527541979,
+     3.181397752462953,
+     2.7746056402893613,
+     2.521886476813873,
+     2.31247824072791,
+     2.046866358026822,
+     1.6386254884080231
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 2.5,
+     "step": 9,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 2.5047
+    },
+    "lf": {
+     "value": 1.5,
+     "step": 13,
+     "label": "S",
+     "reason": "fitted LF 1.49 on the 63-500 Hz decay (EMT250_program 16.5), the EMT 250's LF 1.5 step (this file alone: 1.55)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "fitted HF 0.69 on the 2-12.4 kHz decay, held out 0.6-2.1 % per octave (EMT250_program 17.3) (this file alone: 0.69)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "H",
+     "reason": "E's AMPL law is not in the data; the family is taken as AMPL 80 (e_plugin_spec)"
+    }
+   },
+   "label_string": "E: RT 2.5 (C), LF 1.5 (S), HF 0.7 (S), AMPL 80 (H), DELAY 20 (S)"
+  },
+  "REV-250 3.0s": {
+   "altiverb": "REV-250 3.0s",
+   "plugin_name": "Altiverb E RT 3.0",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 20.333,
+   "included": true,
+   "decay_fit": {
+    "rt": 3.0178412061723106,
+    "lf": 1.4431964378368591,
+    "hf": 0.685967338684883,
+    "chi2_dof": 0.09096420544922613,
+    "t60_measured": [
+     4.0921834835175686,
+     3.6735802506820807,
+     3.315419111009218,
+     3.025274463774383,
+     2.7675712993646315,
+     2.485680494531812,
+     1.9581736076596346
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 3.0,
+     "step": 11,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 3.0178
+    },
+    "lf": {
+     "value": 1.5,
+     "step": 13,
+     "label": "S",
+     "reason": "fitted LF 1.49 on the 63-500 Hz decay (EMT250_program 16.5), the EMT 250's LF 1.5 step (this file alone: 1.44)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "fitted HF 0.69 on the 2-12.4 kHz decay, held out 0.6-2.1 % per octave (EMT250_program 17.3) (this file alone: 0.69)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "H",
+     "reason": "E's AMPL law is not in the data; the family is taken as AMPL 80 (e_plugin_spec)"
+    }
+   },
+   "label_string": "E: RT 3.0 (C), LF 1.5 (S), HF 0.7 (S), AMPL 80 (H), DELAY 20 (S)"
+  },
+  "REV-250 3.6s": {
+   "altiverb": "REV-250 3.6s",
+   "plugin_name": "Altiverb E RT 3.6",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 20.333,
+   "included": true,
+   "decay_fit": {
+    "rt": 3.6027882643357527,
+    "lf": 1.478779224702967,
+    "hf": 0.6816742193073662,
+    "chi2_dof": 0.29913130504557184,
+    "t60_measured": [
+     5.07468923163008,
+     4.375076509207702,
+     4.001134461996128,
+     3.5708403229733734,
+     3.3290042195334926,
+     2.971506134872669,
+     2.3049675114910144
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 3.6,
+     "step": 13,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 3.6028
+    },
+    "lf": {
+     "value": 1.5,
+     "step": 13,
+     "label": "S",
+     "reason": "fitted LF 1.49 on the 63-500 Hz decay (EMT250_program 16.5), the EMT 250's LF 1.5 step (this file alone: 1.48)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "fitted HF 0.69 on the 2-12.4 kHz decay, held out 0.6-2.1 % per octave (EMT250_program 17.3) (this file alone: 0.68)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "H",
+     "reason": "E's AMPL law is not in the data; the family is taken as AMPL 80 (e_plugin_spec)"
+    }
+   },
+   "label_string": "E: RT 3.6 (C), LF 1.5 (S), HF 0.7 (S), AMPL 80 (H), DELAY 20 (S)"
+  },
+  "REV-250 4.0s": {
+   "altiverb": "REV-250 4.0s",
+   "plugin_name": "Altiverb E RT 4.0",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 20.333,
+   "included": true,
+   "decay_fit": {
+    "rt": 3.969550878213107,
+    "lf": 1.532149843862616,
+    "hf": 0.686458545441477,
+    "chi2_dof": 0.1461685415402712,
+    "t60_measured": [
+     5.714971952966584,
+     4.9617619220611475,
+     4.398228857231599,
+     3.957266437177295,
+     3.7051517787800146,
+     3.2373370453626826,
+     2.578327232299512
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 4.0,
+     "step": 14,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 3.9696
+    },
+    "lf": {
+     "value": 1.5,
+     "step": 13,
+     "label": "S",
+     "reason": "fitted LF 1.49 on the 63-500 Hz decay (EMT250_program 16.5), the EMT 250's LF 1.5 step (this file alone: 1.53)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "fitted HF 0.69 on the 2-12.4 kHz decay, held out 0.6-2.1 % per octave (EMT250_program 17.3) (this file alone: 0.69)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "H",
+     "reason": "E's AMPL law is not in the data; the family is taken as AMPL 80 (e_plugin_spec)"
+    }
+   },
+   "label_string": "E: RT 4.0 (C), LF 1.5 (S), HF 0.7 (S), AMPL 80 (H), DELAY 20 (S)"
+  },
+  "REV-250 4.5s": {
+   "altiverb": "REV-250 4.5s",
+   "plugin_name": "Altiverb E RT 4.5",
+   "program": "E",
+   "how": "R direct taps 0/429/718, L 314 samples later",
+   "onset_ms": 20.333,
+   "included": true,
+   "decay_fit": {
+    "rt": 4.509780538726302,
+    "lf": 1.5123098397281352,
+    "hf": 0.682033434793923,
+    "chi2_dof": 0.467614319761638,
+    "t60_measured": [
+     6.358732479717306,
+     5.5619115080161965,
+     5.09497873328346,
+     4.498215208823568,
+     4.14794688997851,
+     3.650580892146176,
+     2.9313544600502315
+    ]
+   },
+   "settings": {
+    "delay": {
+     "value": 20,
+     "step": 20,
+     "label": "S",
+     "reason": "family onset 20.33 ms; S's anchor: the CLA IR (DELAY 10 on its display) has its first tap at 10.07 ms and the S family at 10.08; M / L / E / N families sit at x2 / x4 / x2 / x2 of S and every numbered preset lands on whole ms from there",
+     "inferred": 20.0
+    },
+    "lowpass": {
+     "value": 12,
+     "step": 7,
+     "label": "S",
+     "reason": "family preset: its tap 0 is the program's own output kernel (the same as on Tomkin, LP 12): open"
+    },
+    "rt": {
+     "value": 4.5,
+     "step": 15,
+     "label": "C",
+     "reason": "from the preset name",
+     "inferred": 4.5098
+    },
+    "lf": {
+     "value": 1.5,
+     "step": 13,
+     "label": "S",
+     "reason": "fitted LF 1.49 on the 63-500 Hz decay (EMT250_program 16.5), the EMT 250's LF 1.5 step (this file alone: 1.51)"
+    },
+    "hf": {
+     "value": 0.7,
+     "step": 6,
+     "label": "S",
+     "reason": "fitted HF 0.69 on the 2-12.4 kHz decay, held out 0.6-2.1 % per octave (EMT250_program 17.3) (this file alone: 0.68)"
+    },
+    "ampl": {
+     "value": 80,
+     "step": 8,
+     "label": "H",
+     "reason": "E's AMPL law is not in the data; the family is taken as AMPL 80 (e_plugin_spec)"
+    }
+   },
+   "label_string": "E: RT 4.5 (C), LF 1.5 (S), HF 0.7 (S), AMPL 80 (H), DELAY 20 (S)"
+  }
+ },
+ "family_leave_one_out": {
+  "NON-LIN SHORT RT 0.2s": {
+   "rt_label": 0.2,
+   "rt": 0.3067631114195927,
+   "lf": 0.8376338225544767,
+   "hf": 0.8683672177664016,
+   "chi2_dof": 2.4994911273712677,
+   "rt_step_ok": false,
+   "lf_step": 0.8,
+   "hf_step": 0.9
+  },
+  "NON-LIN SHORT RT 0.6s": {
+   "rt_label": 0.6,
+   "rt": 0.589531346727741,
+   "lf": 1.168697194394235,
+   "hf": 0.9370121355822806,
+   "chi2_dof": 1.8230780681129013,
+   "rt_step_ok": true,
+   "lf_step": 1.2,
+   "hf_step": 0.9
+  },
+  "NON-LIN SHORT RT 1.0s": {
+   "rt_label": 1.0,
+   "rt": 1.0029065711364704,
+   "lf": 0.8822684177978828,
+   "hf": 0.889458680340429,
+   "chi2_dof": 1.3163216464674385,
+   "rt_step_ok": true,
+   "lf_step": 0.9,
+   "hf_step": 0.9
+  },
+  "NON-LIN SHORT RT 1.6s": {
+   "rt_label": 1.6,
+   "rt": 1.5905145534945242,
+   "lf": 0.979081041892859,
+   "hf": 0.9069205846928228,
+   "chi2_dof": 0.42886764456759946,
+   "rt_step_ok": true,
+   "lf_step": 1.0,
+   "hf_step": 0.9
+  },
+  "NON-LIN SHORT RT 2.0s": {
+   "rt_label": 2.0,
+   "rt": 2.0074568789959715,
+   "lf": 0.990831738749368,
+   "hf": 0.8946353560957674,
+   "chi2_dof": 0.11184720489788279,
+   "rt_step_ok": true,
+   "lf_step": 1.0,
+   "hf_step": 0.9
+  },
+  "NON-LIN SHORT RT 2.2s": {
+   "rt_label": 2.2,
+   "rt": 2.2083230954301074,
+   "lf": 1.0188147993939694,
+   "hf": 0.8922926751298558,
+   "chi2_dof": 0.2767020790862194,
+   "rt_step_ok": true,
+   "lf_step": 1.0,
+   "hf_step": 0.9
+  },
+  "MED RT 0.5s": {
+   "rt_label": 0.5,
+   "rt": 0.6564861298957709,
+   "lf": 0.9946602637857248,
+   "hf": 0.7946204508952589,
+   "chi2_dof": 2.9819396441365336,
+   "rt_step_ok": false,
+   "lf_step": 1.0,
+   "hf_step": 0.8
+  },
+  "MED RT 1.0s": {
+   "rt_label": 1.0,
+   "rt": 1.0063407121543868,
+   "lf": 1.134224655842627,
+   "hf": 0.7744113508887677,
+   "chi2_dof": 1.843735205097153,
+   "rt_step_ok": true,
+   "lf_step": 1.1,
+   "hf_step": 0.8
+  },
+  "MED RT 1.4s": {
+   "rt_label": 1.4,
+   "rt": 1.416110601287546,
+   "lf": 1.0477290524982923,
+   "hf": 0.7093556753148783,
+   "chi2_dof": 0.35875270215152305,
+   "rt_step_ok": true,
+   "lf_step": 1.0,
+   "hf_step": 0.7
+  },
+  "MED RT 1.8s": {
+   "rt_label": 1.8,
+   "rt": 1.807030483426417,
+   "lf": 1.0983367699840256,
+   "hf": 0.6958654354086536,
+   "chi2_dof": 0.17143233979978043,
+   "rt_step_ok": true,
+   "lf_step": 1.1,
+   "hf_step": 0.7
+  },
+  "MED RT 2.0s": {
+   "rt_label": 2.0,
+   "rt": 2.009733131579964,
+   "lf": 1.1138792672968212,
+   "hf": 0.7072343914055105,
+   "chi2_dof": 0.9149317315713877,
+   "rt_step_ok": true,
+   "lf_step": 1.1,
+   "hf_step": 0.7
+  },
+  "MED RT 2.6s": {
+   "rt_label": 2.6,
+   "rt": 2.578682197108351,
+   "lf": 1.0958352774790399,
+   "hf": 0.7047811879624374,
+   "chi2_dof": 0.20346147138043638,
+   "rt_step_ok": true,
+   "lf_step": 1.1,
+   "hf_step": 0.7
+  },
+  "MED RT 3.0s": {
+   "rt_label": 3.0,
+   "rt": 2.96770950554145,
+   "lf": 1.1134682607135271,
+   "hf": 0.7064263879420586,
+   "chi2_dof": 0.2384349086800484,
+   "rt_step_ok": true,
+   "lf_step": 1.1,
+   "hf_step": 0.7
+  },
+  "MED RT 3.5s": {
+   "rt_label": 3.5,
+   "rt": 3.5338656664299397,
+   "lf": 1.0918260398181903,
+   "hf": 0.6928785822661163,
+   "chi2_dof": 0.03250029177488088,
+   "rt_step_ok": true,
+   "lf_step": 1.1,
+   "hf_step": 0.7
+  },
+  "MED RT 4.0s": {
+   "rt_label": 4.0,
+   "rt": 3.9829490339938878,
+   "lf": 1.0875259832857103,
+   "hf": 0.6947563750834919,
+   "chi2_dof": 0.13627629569830668,
+   "rt_step_ok": true,
+   "lf_step": 1.1,
+   "hf_step": 0.7
+  },
+  "MED RT 5.0s": {
+   "rt_label": 5.0,
+   "rt": 4.9573173496359475,
+   "lf": 1.0934842845140067,
+   "hf": 0.6968709949331654,
+   "chi2_dof": 0.372836341094196,
+   "rt_step_ok": true,
+   "lf_step": 1.1,
+   "hf_step": 0.7
+  },
+  "LONG RT 10.0s": {
+   "rt_label": 10.0,
+   "rt": 10.008911781489385,
+   "lf": 1.24105256927893,
+   "hf": 0.40131559550810014,
+   "chi2_dof": 0.02324966130252858,
+   "rt_step_ok": true,
+   "lf_step": 1.2,
+   "hf_step": 0.4
+  },
+  "LONG RT 2.0s": {
+   "rt_label": 2.0,
+   "rt": 1.9586454715056911,
+   "lf": 1.3216678358976173,
+   "hf": 0.5640982894076216,
+   "chi2_dof": 2.673323367653153,
+   "rt_step_ok": true,
+   "lf_step": 1.3,
+   "hf_step": 0.6
+  },
+  "LONG RT 3.0s": {
+   "rt_label": 3.0,
+   "rt": 3.0435742922618396,
+   "lf": 1.17400983748598,
+   "hf": 0.4067546546552873,
+   "chi2_dof": 1.6616802609306234,
+   "rt_step_ok": true,
+   "lf_step": 1.2,
+   "hf_step": 0.4
+  },
+  "LONG RT 4.0s": {
+   "rt_label": 4.0,
+   "rt": 3.976161302938959,
+   "lf": 1.2104311201375346,
+   "hf": 0.40525228710375755,
+   "chi2_dof": 0.22482424573658433,
+   "rt_step_ok": true,
+   "lf_step": 1.2,
+   "hf_step": 0.4
+  },
+  "LONG RT 5.0s": {
+   "rt_label": 5.0,
+   "rt": 4.989184573688817,
+   "lf": 1.1962651766827423,
+   "hf": 0.3966381294986169,
+   "chi2_dof": 0.18167578754101277,
+   "rt_step_ok": true,
+   "lf_step": 1.2,
+   "hf_step": 0.4
+  },
+  "LONG RT 6.0s": {
+   "rt_label": 6.0,
+   "rt": 5.950923428499913,
+   "lf": 1.2045945523612664,
+   "hf": 0.4026531277396017,
+   "chi2_dof": 0.19113730843702345,
+   "rt_step_ok": true,
+   "lf_step": 1.2,
+   "hf_step": 0.4
+  },
+  "LONG RT 8.0s": {
+   "rt_label": 8.0,
+   "rt": 8.064404408765204,
+   "lf": 1.1825706077706104,
+   "hf": 0.3956059263718285,
+   "chi2_dof": 0.11493818016659245,
+   "rt_step_ok": true,
+   "lf_step": 1.2,
+   "hf_step": 0.4
+  },
+  "REV-250 0.4s": {
+   "rt_label": 0.4,
+   "rt": 0.4695445851466585,
+   "lf": 1.3155983364836892,
+   "hf": 0.8819314573800228,
+   "chi2_dof": 2.2818571238242655,
+   "rt_step_ok": true,
+   "lf_step": 1.3,
+   "hf_step": 0.9
+  },
+  "REV-250 1.0s": {
+   "rt_label": 1.0,
+   "rt": 1.0222940694456846,
+   "lf": 1.406502992446784,
+   "hf": 0.7096545555080713,
+   "chi2_dof": 1.1303419256515599,
+   "rt_step_ok": true,
+   "lf_step": 1.5,
+   "hf_step": 0.7
+  },
+  "REV-250 1.5s": {
+   "rt_label": 1.5,
+   "rt": 1.5240206358406214,
+   "lf": 1.3910470196298113,
+   "hf": 0.6893990456315782,
+   "chi2_dof": 1.3105548567254617,
+   "rt_step_ok": true,
+   "lf_step": 1.3,
+   "hf_step": 0.7
+  },
+  "REV-250 2.0s": {
+   "rt_label": 2.0,
+   "rt": 1.9850431983400663,
+   "lf": 1.5617690288481054,
+   "hf": 0.6945462249551015,
+   "chi2_dof": 2.001211112769047,
+   "rt_step_ok": true,
+   "lf_step": 1.5,
+   "hf_step": 0.7
+  },
+  "REV-250 2.5s": {
+   "rt_label": 2.5,
+   "rt": 2.5058388172928443,
+   "lf": 1.559793368905439,
+   "hf": 0.68992982620408,
+   "chi2_dof": 0.17032465324075313,
+   "rt_step_ok": true,
+   "lf_step": 1.5,
+   "hf_step": 0.7
+  },
+  "REV-250 3.0s": {
+   "rt_label": 3.0,
+   "rt": 3.023913299938077,
+   "lf": 1.426168958384055,
+   "hf": 0.6843907449114665,
+   "chi2_dof": 0.14914038531621474,
+   "rt_step_ok": true,
+   "lf_step": 1.5,
+   "hf_step": 0.7
+  },
+  "REV-250 3.6s": {
+   "rt_label": 3.6,
+   "rt": 3.5974806983749157,
+   "lf": 1.4883502573228786,
+   "hf": 0.6835674655817516,
+   "chi2_dof": 0.5265597699711262,
+   "rt_step_ok": true,
+   "lf_step": 1.5,
+   "hf_step": 0.7
+  },
+  "REV-250 4.0s": {
+   "rt_label": 4.0,
+   "rt": 3.9575729023082724,
+   "lf": 1.5542654244528424,
+   "hf": 0.6887637800884495,
+   "chi2_dof": 0.23984205830334285,
+   "rt_step_ok": true,
+   "lf_step": 1.5,
+   "hf_step": 0.7
+  },
+  "REV-250 4.5s": {
+   "rt_label": 4.5,
+   "rt": 4.512208482664429,
+   "lf": 1.5234447478577213,
+   "hf": 0.6805845966526661,
+   "chi2_dof": 0.5743862751719269,
+   "rt_step_ok": true,
+   "lf_step": 1.5,
+   "hf_step": 0.7
+  }
+ },
+ "calibration": {
+  "S": {
+   "log_ratio": [
+    0.005036726097784074,
+    -0.00946384113268756,
+    0.002897366699822461,
+    -0.0003123834910183005,
+    0.01307042141585218,
+    -0.0065310963231659785,
+    -0.005208571413384175
+   ],
+   "sd": [
+    0.0501097994345621,
+    0.04511872358817053,
+    0.02,
+    0.02,
+    0.02,
+    0.02,
+    0.02
+   ]
+  },
+  "M": {
+   "log_ratio": [
+    0.014501550587886021,
+    -0.014177090332572886,
+    0.007111172124055201,
+    0.000731552120841447,
+    0.0031119916531194653,
+    -0.010585105690225466,
+    0.01872261001932267
+   ],
+   "sd": [
+    0.02,
+    0.02,
+    0.025520889699776263,
+    0.02,
+    0.02,
+    0.021241301919782074,
+    0.039569163245217115
+   ]
+  },
+  "L": {
+   "log_ratio": [
+    -0.022071672323371427,
+    -0.008575490472565126,
+    -0.011859775765728612,
+    -0.005914610297639404,
+    -0.009037193764433437,
+    0.03229824086100935,
+    0.0562399142954966
+   ],
+   "sd": [
+    0.02,
+    0.02,
+    0.02,
+    0.02,
+    0.02,
+    0.02,
+    0.023100342530017966
+   ]
+  },
+  "E": {
+   "log_ratio": [
+    -0.0032654131561617285,
+    -0.02382899394513943,
+    0.0003711346171876742,
+    -0.006506429126315082,
+    -0.010743188741162363,
+    0.0071069377320267645,
+    0.05089675452393583
+   ],
+   "sd": [
+    0.031196452656908392,
+    0.022431888592717882,
+    0.02,
+    0.02,
+    0.02,
+    0.02,
+    0.02576344691617521
+   ]
+  }
+ }
+}
