@@ -8,7 +8,50 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 
 ## 0. Start here (hand-over, updated 30 October 2026)
 
-### Plugin validated against the hardware, 30 October 2026 (evening): resume here
+### Profile, 10b review and optimisation, 31 October 2026: resume here
+
+**Done and pushed** (`fc532788`, `83e462c1`, `b33601c3`, `7c357a83`; `plugin/docs/ENGINE.md` Cost):
+- **CPU profile** (hidden `[.profile]` cases in both runners): before the pass, the whole processor took 0.82-1.22 % of
+  one Apple-silicon core at 44.1 / 48 kHz and 1.17-1.62 % at 96 kHz. XFMR on and off cost the same, because the stage
+  always runs so its toggle can crossfade. The bridge was 55-80 % of an engine.
+- **10b review:**
+  - **Warnings:** GCC warns on `-Wfloat-equal` where clang skips exact literals, so the Linux build had 15 sites.
+    They now use `juce::exactlyEqual`; the UI's `-Wshadow` sites are fixed too. A GCC 16 syntax sweep over
+    `src/`, `tests/` and `tools/render` is clean.
+  - **RenderIr:** the `#define private public` hack is replaced by `ReverbEngine::setModulation` / `processDeviceRate`.
+  - **HF range:** the 0-9 -> 0-10 change is flagged in DEVELOPMENT.md (it shifts host automation; state and
+    presets are unaffected; pre-release, so no migration).
+  - **Specs:** the S and E specs embed what their codegen read from elsewhere (`--embed`; generated headers identical).
+  - **A review agent's findings, fixed:**
+    - WIDTH notched 150 Hz at widths 100-105, because a crossover blend was driven by the width; the crossover path
+      now fades in over time.
+    - TRUE ST switched abruptly; it now dips 10 ms, switches the routing, and returns in 10 ms.
+    - `std::clamp` was called with lo > hi before `prepare()` (undefined behaviour).
+    - Missing includes, guards, and stale docs (the latencies in DEVELOPMENT.md and README, N's kernel taps, comments).
+  - **auval:** PASS.
+  - **No oversampling needed:** ENGINE.md explains why.
+- **Optimisation pass, lossless:** worst null -193 dB against the previous build, all programs, rates and modes.
+  - Changes: dot products in partial sums (`dotProduct`); contiguous M / L / N kernels; S's read-out taps summed in
+    registers; the bridge's L tail weights taken as R's times a fixed shift.
+  - Result: the processor now takes **0.52-0.80 % at 44.1 / 48 kHz and 0.81-1.12 % at 96 kHz**. The bridge drops
+    0.64 -> 0.36 % and the S core 0.37 -> 0.06 %.
+  - The 2-biquad + 33-tap correction was not adopted: it would save under 0.02 % and cost accuracy.
+- **Smoke test for plugin_check (31 October):** a 1-in-25 sample of the check's own render lists (77 renders),
+  rendered by today's build and nulled against `renders_fix/`:
+  - S, N and E agree to -197 dB or better, so their phase-5 numbers stand unchanged.
+  - M and L differ by -23...-55 dB. Those old renders predate the theta 0.13 commit (renders 18:31, commit 20:09),
+    and today's builds agree with each other to -190.6 dB with modulation on. So **the ML stage has not been scored
+    at theta 0.13 yet.** That rerun (render + ml, about 30 min) is the one that adds information.
+
+**Resume here:**
+1. plugin_check rerun (the user decides the scope): at least `--set ml` render + `--stage ml` with theta 0.13; the full
+   run is about 90 min. Move or rename the old `renders_fix/`, `ml_fix/` and the other result directories first:
+   every stage skips files that exist.
+2. **One manual CI run** (ask the user first: Actions minutes).
+3. Later: listen in a host (XFMR on / off); factory presets from the guessed Altiverb settings; optionally the
+   13-number CLA cascade for the XFMR low band; the optional N tidy below.
+
+### Plugin validated against the hardware, 30 October 2026 (evening)
 
 **Done and pushed today** (after the engine build, `27c4b286`...`5b6f8964`, contract in `plugin/docs/ENGINE.md`):
 - **Phase 5, the plugin against the Tomkin 96 kHz IRs** (`7dfa5c09`, `analysis/plugin_check/REPORT.md`): the cores matched their benches, but the bridge's netlist chain differed from the measured chain3 and held every program near -30 dB.
