@@ -39,11 +39,15 @@ from scipy.signal import butter, sosfiltfilt
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 OUT = os.path.join(ROOT, "analysis", "plugin_check")
-RENDERS = os.path.join(OUT, "renders")
+# PLUGIN_CHECK_TAG=fix: the corrected bridge (REPORT_chainfix.md). Renders and per-setting results go to <dir>_<tag>, and
+# the "+ post" variants apply the capture residual (capture_post) instead of chain3 / bridge.
+TAG = os.environ.get("PLUGIN_CHECK_TAG", "")
+SFX = f"_{TAG}" if TAG else ""
+RENDERS = os.path.join(OUT, "renders" + SFX)
 RENDER_BIN = os.path.join(ROOT, "plugin", "build-render", "REV246Render_artefacts", "Release", "REV246Render")
 LIB = os.path.join(ROOT, "irs", "EMT 246 captures", "96kHz")
 HOST = 96000
-LR_DEV = 0.5                                        # DeviceBridge::lLateDeviceSamples
+LR_DEV = 0.5037                                     # DeviceBridge::lLateDeviceSamples (bridge_spec.h; REPORT §4)
 NETLIST_HP = dict(inp=(0.720158113537988, 0.61705364), out=(0.15915494309189537, 0.15671771))   # bridge -> netlist (Hz)
 
 
@@ -84,7 +88,7 @@ def s_settings():
     return out
 
 
-def render_stage(which):
+def render_stage(which, only=None):
     lines = {}
     if which in ("s", "all"):
         L = []
@@ -103,7 +107,9 @@ def render_stage(which):
     if which in ("rates", "all"):
         lines["rates"] = rates_render_lines()
     for name, L in lines.items():
-        run_renders(L, name)
+        if only:
+            L = [l for l in L if any(f"_{k}_a" in l.split()[0] for k in only)]
+        run_renders(L, name + SFX)
 
 
 # ---------------------------------------------------------------- the device-domain path (as ml_structure._make)
@@ -161,7 +167,7 @@ def align_stage():
     pk = [subsample_peak(x[:, c], int(np.argmax(np.abs(x[:300 + anchor, c])))) for c in (0, 1)]
     out = dict(anchor=anchor, t0=[t0L, t0R], shift=[q1.PRE - t0L, q1.PRE - t0R],
                lr_96k_dev=float((pk[0][0] - pk[1][0]) / HOST * 26373.626), lr_device_after_cache=float(t0L - t0R))
-    json.dump(out, open(os.path.join(OUT, "align.json"), "w"), indent=1)
+    json.dump(out, open(os.path.join(OUT, f"align{SFX}.json"), "w"), indent=1)
     print(out)
 
 
@@ -249,6 +255,164 @@ def chain_stage():
     np.savez(CHAIN, f=f, ratio=ratio * np.exp(-1j * w[:, None] * x[None, :] * T))
 
 
+# ---------------------------------------------------------------- the bridge's chain correction (REPORT_chainfix.md)
+FIX = os.path.join(OUT, "chain_fix.json")
+FIX_HP_HZ = 1.8          # Tomkin's 6.25 Hz total over the schematic's 4.46 Hz (analog_results.md §3; H: firmware or rig)
+FIX_TAPS = 65            # device-rate FIR per channel
+FIX_DELAY = 17           # its bulk delay (device samples), added to the engine's latency
+FIX_EDGES = [20, 40, 80, 160, 270, 400, 800, 1600, 3200, 6400, 10000, 11000, 12300]
+FIX_POST = (40.0, 80.0)  # the capture residual (validation only) is whole below 40 Hz and gone above 80 Hz
+
+
+def hp_device(f, fc):
+    """The first-order high-pass at the device rate, bilinear with the corner prewarped (DeviceBridge)."""
+    fs = 19.2e6 / 728
+    k = np.tan(np.pi * fc / fs)
+    zi = np.exp(-2j * np.pi * np.asarray(f, float) / fs)
+    return (1 - zi) / (1 + k) / (1 - (1 - k) / (1 + k) * zi)
+
+
+def fir_response(f, h):
+    return np.exp(-2j * np.pi * np.outer(np.asarray(f, float) * 728 / 19.2e6, np.arange(len(h)))) @ np.asarray(h)
+
+
+def chain_target(f=None, d0=None, g=None):
+    """chain3 / the bridge's netlist chain per channel (L, R) on a 2 Hz grid to 13.188 kHz: the bridge's L late by LR_DEV,
+    chain3's L read at the cache's 19.19 us (its kernel is relative to that read); R's best delay (100 Hz-10 kHz, equal
+    weight per octave) taken out of both, both scaled by R's mean magnitude over 300 Hz-3 kHz (L keeps its level re R).
+    On another grid pass d0 and g (chain_fix.json's target_delay_removed, target_scale) so the target is the same."""
+    from scipy.optimize import minimize_scalar
+    h = _harness()
+    if f is None:
+        f = np.arange(0, 13188, 2.0)
+        f[0] = 0.5
+    N = 1 << 19
+    fg = np.fft.rfftfreq(N, 1 / HOST)
+    K3g = h["K"].response(N, HOST)
+    K3 = np.stack([np.interp(f, fg, K3g[:, c].real) + 1j * np.interp(f, fg, K3g[:, c].imag) for c in (0, 1)], 1)
+    T = 728 / 19.2e6
+    w = 2 * np.pi * f
+    Hb = bridge_chain(f)
+    r = np.stack([K3[:, 0] * np.exp(-1j * w * h["ms"].LR_US * 1e-6) / (Hb * np.exp(-1j * w * LR_DEV * T)), K3[:, 1] / Hb], 1)
+    if d0 is not None:
+        return f, r * np.exp(1j * w * d0 * T)[:, None] * g, float(d0)
+    fit = (f >= 100) & (f <= 10000)
+    g0 = 1 / np.median(np.abs(r[fit, 1]))
+    d0 = minimize_scalar(lambda d: np.mean(np.abs(g0 * r[fit, 1] * np.exp(1j * w[fit] * d * T) - 1) ** 2 / f[fit]),
+                         bounds=(-5, 5), method="bounded", options=dict(xatol=1e-8)).x
+    r = r * np.exp(1j * w * d0 * T)[:, None]
+    m = (f >= 300) & (f <= 3000)
+    g = 1 / np.mean(np.abs(r[m, 1]))
+    _CT["g"] = float(g)
+    return f, r * g, float(d0)
+
+
+_CT = {}
+
+
+def _fix_weights(f):
+    W = np.zeros_like(f)
+    for a_, b_ in zip(FIX_EDGES[:-1], FIX_EDGES[1:]):
+        m = (f >= a_) & (f < b_)
+        W[m] = 1 / m.sum()
+    m = (f >= 12300) & (f < 12800)                   # beyond the analysis band: held loosely so the top stays sane
+    W[m] = 0.05 / m.sum()
+    return W
+
+
+def _fir_lsq(f, tgt, W, n, lam=1e-6):
+    E = np.exp(-2j * np.pi * np.outer(f * 728 / 19.2e6, np.arange(n)))
+    sw = np.sqrt(W)
+    A = np.vstack([(E * sw[:, None]).real, (E * sw[:, None]).imag, np.sqrt(lam) * np.eye(n)])
+    b = np.r_[(tgt * sw).real, (tgt * sw).imag, np.zeros(n)]
+    return np.linalg.lstsq(A, b, rcond=None)[0]
+
+
+def _band_db(f, err, ref, edges=FIX_EDGES):
+    out = {}
+    for a_, b_ in zip(edges[:-1], edges[1:]):
+        m = (f >= a_) & (f < b_)
+        out[f"{a_}-{b_}"] = round(float(10 * np.log10(np.mean(np.abs(err[m]) ** 2) / np.mean(np.abs(ref[m]) ** 2))), 2)
+    return out
+
+
+def chainfit_stage():
+    """The unit part of chain3 / bridge as the bridge's output-side correction: a first-order high-pass at FIX_HP_HZ
+    (H) and a FIX_TAPS-tap FIR per channel with bulk delay FIX_DELAY, least squares on the complex response with equal
+    weight per scoring band (20 Hz-12.3 kHz), the pair scaled to unity at 1 kHz on R. What is left below 80 Hz is the
+    capture residual, applied in post only (capture_post). -> chain_fix.json (read by tools/plugin_codegen/bridge.py)."""
+    f, r, d0 = chain_target()
+    T = 728 / 19.2e6
+    w = 2 * np.pi * f
+    W = _fix_weights(f)
+    hp = hp_device(f, FIX_HP_HZ)
+    lag = np.exp(-1j * w * FIX_DELAY * T)
+    taps = [_fir_lsq(f, r[:, c] * lag / hp, W, FIX_TAPS) for c in (0, 1)]
+    i1k = int(np.argmin(np.abs(f - 1000)))
+    s = 1 / abs(hp[i1k] * fir_response(f[i1k:i1k + 1], taps[1])[0])
+    taps = [t * s for t in taps]
+    out = dict(source="tools/plugin_check.py --stage chainfit: chain3 (analysis/library/tomkin96/kernels/chain3.npz) over "
+                      "the bridge's netlist chain, unit part (REPORT_chainfix.md)",
+               lr_device_samples=LR_DEV, highpass_hz=FIX_HP_HZ, delay_device_samples=FIX_DELAY, taps=FIX_TAPS,
+               target_delay_removed=d0, target_scale=_CT["g"], gain_to_unity_1k=float(s), fir_l=[float(v) for v in taps[0]],
+               fir_r=[float(v) for v in taps[1]], error={}, capture_residual={})
+    post_f = f[f <= FIX_POST[1] + 20]
+    for c, cn in ((0, "L"), (1, "R")):
+        U = hp * fir_response(f, taps[c]) * np.conj(lag) / s          # unit model on the target's scale, delay taken out
+        resid = r[:, c] / U
+        out["error"][cn] = dict(
+            with_corner=_band_db(f, U - r[:, c], r[:, c]),
+            # without the corner: the FIR refitted to the whole target alone
+            without_corner=_band_db(f, fir_response(f, _fir_lsq(f, r[:, c] * lag, W, FIX_TAPS)) * np.conj(lag) - r[:, c], r[:, c]),
+            with_corner_and_capture_post=_band_db(f, U * capture_blend(f, resid) - r[:, c], r[:, c]),
+            no_correction=_band_db(f, 1 - r[:, c], r[:, c]))
+        m = f <= post_f[-1]
+        out["capture_residual"][cn] = dict(re=[float(v) for v in resid[m].real], im=[float(v) for v in resid[m].imag])
+        print(cn, {k: v for k, v in out["error"][cn].items()}, flush=True)
+    out["capture_residual"]["f"] = [float(v) for v in post_f]
+    fr = np.linspace(12300, 13187, 50)
+    out["top_gain_db_max"] = [round(float(20 * np.log10(np.abs(hp_device(fr, FIX_HP_HZ) * fir_response(fr, t)).max())), 2) for t in taps]
+    json.dump(out, open(FIX, "w"), indent=1)
+    print("delay removed from the target", d0, "top gain", out["top_gain_db_max"])
+
+
+def capture_blend(f, resid):
+    """1 + b (resid - 1), b = 1 below FIX_POST[0], cos^2 to 0 at FIX_POST[1]."""
+    a_, b_ = FIX_POST
+    b = np.where(f <= a_, 1.0, np.where(f >= b_, 0.0, np.cos(np.pi / 2 * (f - a_) / (b_ - a_)) ** 2))
+    return 1 + b * (resid - 1)
+
+
+_CP = {}
+
+
+def capture_post(f):
+    """(n, 2): the capture residual below 80 Hz (chain_fix.json), 1 above: what chain3 has there that the unit model
+    (bridge + correction) has not. Validation only, never in the plugin."""
+    if not _CP:
+        z = json.load(open(FIX))["capture_residual"]
+        _CP.update(f=np.array(z["f"]), r=[np.array(z[c]["re"]) + 1j * np.array(z[c]["im"]) for c in ("L", "R")])
+    out = np.ones((len(f), 2), complex)
+    for c in (0, 1):
+        m = f <= _CP["f"][-1]
+        res = np.interp(f[m], _CP["f"], _CP["r"][c].real) + 1j * np.interp(f[m], _CP["f"], _CP["r"][c].imag)
+        out[m, c] = capture_blend(f[m], res)
+    return out
+
+
+def no_corner(f):
+    """(n,): the plugin with its FIX_HP_HZ high-pass taken out (an exact LTI division; 1 at DC by convention)."""
+    h = np.ones(len(f), complex)
+    m = f > 0
+    h[m] = 1 / hp_device(f[m], FIX_HP_HZ)
+    return h
+
+
+def post_ratio(f):
+    """What the '+ post' variants apply: chain3 / bridge, or with TAG the capture residual alone."""
+    return capture_post(f) if TAG else chain3_over_bridge(f)
+
+
 def chain3_over_bridge(f):
     """(n, 2): chain3 / the bridge's chain, interpolated from chain_ratio.npz (1 above 13.2 kHz)."""
     if not _CR:
@@ -300,8 +464,9 @@ def _s_job(a):
         p = plugin_q1(rpath(HOST, "S", key, c["amp"]), n, al)
         yp, gp, tep = sml.refit_capture(p, c, ends, n)
         ys, gs, tes, fit_s = refit_shift(p, c, ends, n)   # the same with the shift free for every capture (3 numbers)
-        pn = apply_ratio(p, FS, corner_ratio)        # H item 1: the netlists' coupling corners
-        p3 = apply_ratio(p, FS, chain3_over_bridge)  # the plugin with chain3 in place of the bridge's chain
+        # H item 1: the netlists' coupling corners (TAG: the plugin without its 1.8 Hz high-pass instead)
+        pn = apply_ratio(p, FS, no_corner if TAG else corner_ratio)
+        p3 = apply_ratio(p, FS, post_ratio)          # chain3 in place of the bridge's chain (TAG: the capture residual)
         y3, g3, te3, fit_3 = refit_shift(p3, c, ends, n)
         # (a) plugin against the bench model: one gain (both channels) over 0-300 ms, 100 Hz-10 kHz
         i1 = min(PRE + int(0.3 * FS), n)
@@ -342,9 +507,9 @@ def s_stage(workers, only=None, chunk=None):
     import pulse_check as pc
     from defects import DEFECTS
     q2 = pc.q2
-    d = os.path.join(OUT, "s")
+    d = os.path.join(OUT, "s" + SFX)
     os.makedirs(d, exist_ok=True)
-    al = json.load(open(os.path.join(OUT, "align.json")))
+    al = json.load(open(os.path.join(OUT, f"align{SFX}.json")))
     info, fade, _, _, eps0 = q2.q1_tables()
     ap = json.load(open(os.path.join(q2.OUT, pc.lf_.AP230)))
     ends = json.load(open(os.path.join(q2.OUT, "ramp.json")))
@@ -411,7 +576,7 @@ def ml_parts(prog, key, amps, n, chain3=False):
     for a in sorted(set(amps) | {0}):
         x = to_device(load_render(rpath(HOST, prog, key, a)), anchor)
         if chain3:
-            x = apply_ratio(x, ml.FSD, chain3_over_bridge)
+            x = apply_ratio(x, ml.FSD, post_ratio)
         x = sosfiltfilt(ml.BAND, x, axis=0)
         h[a] = np.vstack([x, np.zeros((max(0, n - len(x)), 2))])[:n]
     s = cc.K0 - cc.tap0(h[max(amps)])
@@ -470,7 +635,7 @@ def ml_stage(workers, only=None, chunk=None, every=1):
     sys.path.insert(0, HERE)
     import ml_carryover as cc
     from defects import ML_SLIPPED
-    d = os.path.join(OUT, "ml")
+    d = os.path.join(OUT, "ml" + SFX)
     os.makedirs(d, exist_ok=True)
     jobs = []
     for prog in ("M", "L"):
@@ -684,7 +849,7 @@ def _n_job(key):
     from scipy.optimize import minimize
     FS, K0 = nl.FSD, nl.K0
     span, early, late = key
-    path = os.path.join(OUT, "n", f"{span}_{early}_{late}.json")
+    path = os.path.join(OUT, "n" + SFX, f"{span}_{early}_{late}.json")
     if os.path.exists(path):
         return key
     noise = json.load(open(nm.NOISE))
@@ -699,7 +864,7 @@ def _n_job(key):
     out = dict(key=list(key), front_shift=fr, trimmed=trimmed, bench=json.load(open(bench_f)) if os.path.exists(bench_f) else None)
     pr = n_device(rpath(HOST, "N", f"{span}_{early}_{late}", span))
     for vn, c3 in (("plugin", False), ("chain3", True)):
-        m0 = apply_ratio(pr, FS, chain3_over_bridge) if c3 else pr
+        m0 = apply_ratio(pr, FS, post_ratio) if c3 else pr
         m0 = np.vstack([m0, np.zeros((max(0, n + 400 - len(m0)), 2))])[:n + 400]
         mb = sosfiltfilt(ne.BAND, m0, axis=0)
         # coarse: the cross-correlation peak of R over the scored span (front taps and early section), both banded
@@ -753,8 +918,11 @@ def _n_job(key):
 
 def n_stage(workers, only=None):
     from concurrent.futures import ProcessPoolExecutor
-    os.makedirs(os.path.join(OUT, "n"), exist_ok=True)
-    keys = n_keys()[:only] if only else n_keys()
+    os.makedirs(os.path.join(OUT, "n" + SFX), exist_ok=True)
+    if only and isinstance(only, list):
+        keys = [k for k in n_keys() if "_".join(str(v) for v in k) in only]
+    else:
+        keys = n_keys()[:only] if only else n_keys()
     with ProcessPoolExecutor(workers, max_tasks_per_child=10) as ex:
         for _ in ex.map(_n_job, keys, chunksize=2):
             pass
@@ -835,7 +1003,8 @@ def rates_stage():
                 n = 96000                                   # 0-1 s scored; the 2 s renders leave room for the shift
                 m_ = min(len(xr), len(ref))
                 xr, r = xr[:m_], ref[:m_]
-                lat = {44100: 111, 48000: 117}[rate] * 96000 / rate - 211      # reported latencies, in 96 kHz samples
+                lat = ({44100: 140, 48000: 148}[rate] * 96000 / rate - 272 if TAG else             # reported latencies,
+                       {44100: 111, 48000: 117}[rate] * 96000 / rate - 211)                       # in 96 kHz samples
                 row = {"latency_mismatch_96k_samples": lat}
                 for ch in (0, 1):
                     bb = butter(4, [20, 12800], btype="band", fs=96000, output="sos")
@@ -858,7 +1027,7 @@ def rates_stage():
                 out[f"{prog}_{k}_mod{mod}_{rate}"] = row
                 print(prog, k, mod, rate, "broadband L/R", round(row["L"]["broadband"], 1), round(row["R"]["broadband"], 1),
                       "worst band", round(max(max(row[c]["bands"].values()) for c in "LR"), 1), "shift", round(row["R"]["shift_96k"], 3), flush=True)
-    json.dump(out, open(os.path.join(OUT, "rates.json"), "w"), indent=1)
+    json.dump(out, open(os.path.join(OUT, f"rates{SFX}.json"), "w"), indent=1)
 
 
 # ---------------------------------------------------------------- report
@@ -872,7 +1041,7 @@ def _med(v):
 
 
 def report_s():
-    rows = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(OUT, "s", "*.json")))]
+    rows = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(OUT, "s" + SFX, "*.json")))]
     W = ["0-50", "50-150", "150-300", "300-600", "600-1000", "1000-1500", "1500-2500"]
     out = dict(settings=len(rows), captures=sum(len(r["caps"]) for r in rows), pulse={}, fullband={}, corners={})
     for w in W:
@@ -914,7 +1083,7 @@ def report_s():
 
 
 def report_ml():
-    rows = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(OUT, "ml", "*.json")))]
+    rows = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(OUT, "ml" + SFX, "*.json")))]
     out = {}
     for prog in ("M", "L"):
         rr = [x for r in rows if r["prog"] == prog for x in r["rows"]]
@@ -954,7 +1123,7 @@ def report_ml():
 
 
 def report_n():
-    rows = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(OUT, "n", "*.json")))]
+    rows = [json.load(open(f)) for f in sorted(glob.glob(os.path.join(OUT, "n" + SFX, "*.json")))]
     o = dict(captures=len(rows), windows={}, bands={})
     for w in ("0.0-0.05", "0.05-0.15", "0.15-0.3", "0.3-0.6", "0.6-1.0", "1.0-2.0"):
         cell = {}
@@ -981,7 +1150,7 @@ def report_stage():
             out[name] = fn()
         except (IndexError, KeyError, ValueError, StopIteration) as e:
             out[name] = dict(error=repr(e))
-        json.dump(out[name], open(os.path.join(OUT, f"summary_{name}.json"), "w"), indent=1)
+        json.dump(out[name], open(os.path.join(OUT, f"summary_{name}{SFX}.json"), "w"), indent=1)
     for f in ("chain.json", "loff.json", "rates.json", "align.json"):
         if os.path.exists(os.path.join(OUT, f)):
             print(f, "present")
@@ -1000,7 +1169,7 @@ def main():
     a = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
     if a.stage == "render":
-        render_stage(a.set)
+        render_stage(a.set, a.only)
     elif a.stage == "align":
         align_stage()
     elif a.stage == "ml":
@@ -1008,7 +1177,7 @@ def main():
     elif a.stage == "sim":
         sim_stage(a.workers, a.only)
     elif a.stage == "n":
-        n_stage(a.workers, int(a.only[0]) if a.only else None)
+        n_stage(a.workers, (a.only if "_" in a.only[0] else int(a.only[0])) if a.only else None)
     elif a.stage == "e":
         e_stage(a.rts)
     elif a.stage == "rates":
@@ -1019,6 +1188,8 @@ def main():
         loff_stage(a.workers)
     elif a.stage == "chain":
         chain_stage()
+    elif a.stage == "chainfit":
+        chainfit_stage()
     elif a.stage == "s":
         s_stage(a.workers, a.only, a.chunk)
     else:

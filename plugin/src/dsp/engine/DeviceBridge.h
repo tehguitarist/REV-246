@@ -7,6 +7,7 @@
 #include <juce_core/juce_core.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <complex>
 #include <cstdint>
@@ -19,8 +20,8 @@ namespace rv::dsp
 //
 //   host mono -> input filter 7 246 131 x coupling high-passes 3.35, 0.23, 0.72 Hz -> sampled at the device instants
 //             -> [A/D clip] -> the program (device rate, the caller's) -> (L, R)
-//             -> per channel: output S&H lag (device-rate one-pole) -> output filter 7 246 130 x 0.16 Hz high-pass
-//             -> host rate; L half a device sample late.
+//             -> per channel: correction (1.8 Hz high-pass, FIR) -> output S&H lag (device-rate one-pole)
+//             -> output filter 7 246 130 x 0.16 Hz high-pass -> host rate; L 0.5037 device samples late.
 //
 // Design: each analogue filter is discretised exactly for band-limited signals (BridgeFilter): the host signal is the
 // band-limited one its samples stand for (a Kaiser sinc flat to 1e-6 up to 12.8 kHz), and the input filter's response to
@@ -31,16 +32,29 @@ namespace rv::dsp
 // so nothing is truncated; double throughout. The sampling grid is exact rational arithmetic (host rate in mHz against
 // 19.2 MHz / 728), so the device instants never drift and any block split gives bit-identical output.
 //
-// Gain: unity at 1 kHz on each side (the input filter's inversion is not modelled). Full scale for the clip is a peak in
-// that input domain, as AdcClipper's. Latency: latency() host samples on R (L another half device sample).
+// Correction (analysis/plugin_check/REPORT_chainfix.md): the netlists miss the measured chain (chain3) by up to 70 degrees
+// in the output filter's skirt above 8 kHz and by about a degree in the mid band. Their ratio's unit part runs per channel
+// on the device samples before the S&H lag: a first-order high-pass at 1.8 Hz (H: Tomkin's 6.25 Hz total over the
+// schematic's 4.46 Hz, a DC blocker in the firmware or the capture rig; analog_results.md section 3) and a 65-tap FIR with
+// a bulk delay of correctionDelay() device samples, which the engine adds to its latency. The capture rig's own residue
+// below 80 Hz is left out.
+//
+// Gain: unity at 1 kHz on each side (the input filter's inversion is not modelled); the correction is unity at 1 kHz on
+// R, L keeps its measured level (+0.1 dB) and shape re R. Full scale for the clip is a peak in that input domain (the
+// A/D's, AdcCalibration.h). Latency: latency() host samples on R plus correctionDelay() device samples (L another
+// lLateDeviceSamples).
 class DeviceBridge
 {
   public:
     // The output S&H's charging lag y[n] = y[n-1] + (1 - p)(x[n] - y[n-1]) at the device rate (unit facts 2b): p = 0.301
     // fits Tomkin's unit (the library this plugin is checked against); CLA's unit fits 0.325. A per-unit trim (P202).
     static constexpr double shPole = 0.301;
-    // L's S&H pulse comes half a sample period after R's (the timing PROM; measured 0.49-0.51, unit facts 2b).
-    static constexpr double lLateDeviceSamples = 0.5;
+    // L's S&H pulse comes half a sample period after R's (the timing PROM; measured 0.49-0.51, unit facts 2b); against
+    // the library, 0.5037 (plugin_check REPORT section 4: a fixed L / R chain-delay difference folded in).
+    static constexpr double lLateDeviceSamples = gen::bridge::lLateDeviceSamples;
+    // The correction's FIR length and bulk delay (device samples; the engine compensates it).
+    static constexpr int correctionTaps = (int)gen::bridge::fixFirR.size();
+    static constexpr int correctionDelay() { return gen::bridge::fixDelayDeviceSamples; }
 
     // Not real-time: builds the tables (a few ms) and allocates for blocks of up to maxBlock host samples (longer blocks
     // are split).
@@ -74,6 +88,10 @@ class DeviceBridge
         // The S&H lag's gain at 1 kHz is taken out on the output side, so the chain is unity there.
         const auto w1k = juce::MathConstants<double>::twoPi * 1000.0 * devT;
         const auto lag1k = (1.0 - shPole) / std::abs(std::complex<double>(1.0 - shPole * std::cos(w1k), shPole * std::sin(w1k)));
+        // The correction's high-pass: bilinear, corner prewarped (as chain_fix.json's fit).
+        const auto k = std::tan(juce::MathConstants<double>::pi * gen::fixHighPassHz * devT);
+        hpGain = 1.0 / (1.0 + k);
+        hpPole = (1.0 - k) / (1.0 + k);
         inFilter.build(in, hostT, hostT, phiHalf, beta, std::max(64, (int)std::ceil(hostT / tableStep)), 1.0);
         outFilter.build(out, devT, hostT, phiHalf, beta, std::max(64, (int)std::ceil(devT / tableStep)), 1.0 / lag1k);
         wi = inFilter.halfTaps();
@@ -106,6 +124,8 @@ class DeviceBridge
         outState[0].clear();
         outState[1].clear();
         lag[0] = lag[1] = 0.0;
+        for (auto& c : fix)
+            c = {};
         hostIn = 0;
         devHost = 0;
         devRem = 0;
@@ -217,7 +237,8 @@ class DeviceBridge
             for (int c = 0; c < 2; ++c)
             {
                 const auto x = devOut[(size_t)c][(size_t)k];
-                lag[c] += (1.0 - shPole) * ((std::isfinite(x) ? (double)x : 0.0) - lag[c]);
+                const auto v = correct(c, std::isfinite(x) ? (double)x : 0.0);
+                lag[c] += (1.0 - shPole) * (v - lag[c]);
                 yRing[c].write(devPushed, lag[c]);
             }
             ++devPushed;
@@ -240,6 +261,23 @@ class DeviceBridge
         }
     }
 
+    // The correction on channel c's next device sample: high-pass, then the FIR (newest sample first in the ring).
+    double correct(int c, double x)
+    {
+        auto& s = fix[(size_t)c];
+        const auto y = hpGain * (x - s.hpIn) + hpPole * s.hpOut;
+        s.hpIn = x;
+        s.hpOut = y;
+        s.pos = (s.pos + fixRing - 1) & (fixRing - 1);
+        s.ring[(size_t)s.pos] = s.ring[(size_t)(s.pos + fixRing)] = y;
+        const auto& h = c == 0 ? gen::bridge::fixFirL : gen::bridge::fixFirR;
+        const auto* r = s.ring.data() + s.pos;
+        double acc = 0.0;
+        for (int i = 0; i < correctionTaps; ++i)
+            acc += h[(size_t)i] * r[i];
+        return acc;
+    }
+
     // Channel c (0 = L, 1 = R) at device position j + v.
     double readOut(int c, std::int64_t j, double v)
     {
@@ -251,7 +289,18 @@ class DeviceBridge
         return outFilter.head(ring.from(j - wo + 1), v) + outFilter.tail(st, v);
     }
 
+    static constexpr int fixRing = 128; // a power of two >= correctionTaps; doubled so the FIR reads contiguously
+    static_assert(fixRing >= correctionTaps && gen::bridge::fixFirL.size() == gen::bridge::fixFirR.size());
+    struct Fix
+    {
+        double hpIn = 0.0, hpOut = 0.0;
+        std::array<double, 2 * fixRing> ring{};
+        int pos = 0;
+    };
+
     BridgeFilter inFilter, outFilter;
+    std::array<Fix, 2> fix{}; // [0] = L, [1] = R
+    double hpGain = 1.0, hpPole = 0.0;
     BridgeFilter::State inState, outState[2];
     Ring xRing, yRing[2]; // yRing[0] = L, [1] = R
     std::vector<float> devIn, devOut[2];

@@ -8,6 +8,10 @@ The chain (docs/EMT246_unit_facts.md section 2b):
            (C106/R117, C101/R105, C3109/R3134), normalised to unity magnitude at 1 kHz;
   output = output filter 7 246 130 (band part) x the output coupling high-pass 0.16 Hz (C3009/R3031), unity at 1 kHz.
 The S&H lag (a device-rate one-pole) is applied by the C++ itself; only the test reference includes it here.
+The output-side correction (analysis/plugin_check/chain_fix.json, `tools/plugin_check.py --stage chainfit`; REPORT_chainfix.md):
+the unit part of the measured chain (chain3) over this netlist chain, as a device-rate first-order high-pass (1.8 Hz, H: a
+DC blocker in the firmware or Tomkin's rig, analog_results.md section 3) and a FIR per channel with a bulk delay that the
+engine adds to its latency. L's lateness (0.5037 device samples, REPORT section 4) comes from the same file.
 The filters' own sub-Hz coupling poles from the netlists (0.62 and 0.157 Hz, with their zeros at DC) are replaced by
 the schematic corners above, as tools/analog/lf_highpass.py does. Capture-chain terms are not part of the unit.
 
@@ -16,6 +20,7 @@ one entry per real pole or per conjugate pair (imag > 0, weight 2), which Device
 band-limited signals. The reference response is evaluated from the MNA solver (tools/analog/mna.py), independently of
 the pole-zero extraction, at the test frequencies.
 """
+import json
 import sys
 from pathlib import Path
 
@@ -35,6 +40,8 @@ SH_POLE = 0.301  # Tomkin's unit (CLA's: 0.325); the reference uses it, DeviceBr
 IN_HP_HZ = [IN_COUPLING_HZ, IN_AMP_COUPLING_HZ, 1 / (TWO_PI * 221e3 * 1e-6)]   # 3.35, 0.23, 0.72 Hz
 OUT_HP_HZ = [1 / (TWO_PI * 1e6 * 1e-6)]                                        # 0.16 Hz
 REF_HZ = np.r_[20 * 640.0 ** (np.arange(37) / 36), 1e3, 10e3]                 # 20 Hz .. 12.8 kHz, log
+FIX = ROOT / "analysis" / "plugin_check" / "chain_fix.json"
+TARGET_EDGES = [20, 40, 80, 160, 270, 400, 800, 1600, 3200, 6400, 10000, 11000, 12300]          # plugin_check's bands
 ALIAS_HZ = np.array([13.6e3, 14.0e3, 16.0e3])                                  # above device Nyquist (13.19 kHz)
 
 
@@ -89,8 +96,18 @@ def lag(f):
     return h / abs((1 - SH_POLE) / (1 - SH_POLE * np.exp(-1j * TWO_PI * 1e3 / FS_DEV)))
 
 
+def correction(f, fix, ch):
+    """The output-side correction at f for channel ch (0 = L, 1 = R): high-pass x FIR, as DeviceBridge runs them."""
+    k = np.tan(np.pi * fix["highpass_hz"] / FS_DEV)
+    zi = np.exp(-2j * np.pi * np.asarray(f, float) / FS_DEV)
+    hp = (1 - zi) / (1 + k) / (1 - (1 - k) / (1 + k) * zi)
+    h = np.asarray(fix["fir_l" if ch == 0 else "fir_r"])
+    return hp * (np.exp(-2j * np.pi * np.outer(np.asarray(f, float) / FS_DEV, np.arange(len(h)))) @ h)
+
+
 def main():
-    hdr = Header("bridge", "tools/analog (netlists.py, the unit's coupling corners)")
+    fix = json.loads(FIX.read_text())
+    hdr = Header("bridge", "tools/analog (netlists.py, the unit's coupling corners) and analysis/plugin_check/chain_fix.json")
     hdr.comment("The analogue chain as partial fractions H(s) = sum_j w_j Re-part of R_j / (s - p_j) (rad/s), one entry per\n"
                 "real pole (w = 1) or conjugate pair (imag > 0, w = 2), slowest first. Each side is unity at 1 kHz.")
     for name, net, hp in (("in", INPUT_FILTER, IN_HP_HZ), ("out", OUTPUT_FILTER, OUT_HP_HZ)):
@@ -113,19 +130,60 @@ def main():
     hdr.array("inHighPassHz", IN_HP_HZ)
     hdr.array("outHighPassHz", OUT_HP_HZ)
 
-    # Test reference: the whole chain (R channel) from the MNA solver, S&H lag p = refShPole, unity at 1 kHz.
+    hdr.comment("L's S&H pulse comes this many device samples after R's: the library's L - R offset over the plugin's\n"
+                "(analysis/plugin_check/REPORT.md section 4; 0.5 in the timing PROM, the rest a fixed L / R chain-delay difference).")
+    hdr.scalar("lLateDeviceSamples", fix["lr_device_samples"])
+    hdr.comment("Output-side correction, per channel at the device rate (chain_fix.json): the unit part of the measured chain\n"
+                "(chain3) over the netlist chain. A first-order high-pass (bilinear, corner prewarped; H: Tomkin's 6.25 Hz total\n"
+                "over the schematic's 4.46 Hz, analog_results.md section 3), then a FIR whose bulk delay (device samples) the\n"
+                "engine adds to its latency. The pair is unity at 1 kHz on R; L keeps its level and shape relative to R.")
+    hdr.scalar("fixHighPassHz", fix["highpass_hz"])
+    hdr.scalar("fixDelayDeviceSamples", fix["delay_device_samples"], ctype="int")
+    hdr.array("fixFirL", fix["fir_l"])
+    hdr.array("fixFirR", fix["fir_r"])
+
+    # Test reference: the whole chain from the MNA solver, S&H lag p = refShPole, with the correction (bulk delay
+    # included), R and L (L lLateDeviceSamples later).
     p_in, z_in, k_in, own_in = side(INPUT_FILTER, IN_HP_HZ)
     p_out, z_out, k_out, own_out = side(OUTPUT_FILTER, OUT_HP_HZ)
-    chain = mna_side(INPUT_FILTER, own_in, IN_HP_HZ, REF_HZ) * mna_side(OUTPUT_FILTER, own_out, OUT_HP_HZ, REF_HZ) * lag(REF_HZ)
-    hdr.comment("Test reference (tests/dsp/BridgeTests.cpp): chain response at refHz, R channel, after removing the latency.")
+
+    def netlist_chain(f):
+        return mna_side(INPUT_FILTER, own_in, IN_HP_HZ, f) * mna_side(OUTPUT_FILTER, own_out, OUT_HP_HZ, f) * lag(f)
+    chain = netlist_chain(REF_HZ)
+    late = np.exp(-2j * np.pi * REF_HZ * fix["lr_device_samples"] / FS_DEV)
+    chain_r = chain * correction(REF_HZ, fix, 1)
+    chain_l = chain * correction(REF_HZ, fix, 0) * late
+    hdr.comment("Test reference (tests/dsp/BridgeTests.cpp): chain response at refHz after removing the latency, R and L\n"
+                "(the netlist chain x the correction, its bulk delay included; L also lLateDeviceSamples later).")
     hdr.scalar("refShPole", SH_POLE)
     hdr.array("refHz", REF_HZ)
-    hdr.array("refRe", chain.real)
-    hdr.array("refIm", chain.imag)
-    # Aliasing: a tone at f above device Nyquist appears at f' = fs_dev - f with amplitude conj(H_in(f)) H_lag(f') H_out(f')
+    hdr.array("refRe", chain_r.real)
+    hdr.array("refIm", chain_r.imag)
+    hdr.array("refLRe", chain_l.real)
+    hdr.array("refLIm", chain_l.imag)
+    # Target: the unit part of the measured chain, i.e. the netlist chain x chain3 / netlist chain (plugin_check's
+    # chain_target: delay and level normalised) x the correction's own scale and bulk delay; 6 points per scoring band.
+    sys.path.insert(0, str(ROOT / "tools"))
+    import plugin_check as pc
+    tf = np.concatenate([np.linspace(a, b, 7)[:-1] + (b - a) / 12 for a, b in zip(TARGET_EDGES[:-1], TARGET_EDGES[1:])])
+    _, r, _ = pc.chain_target(tf, fix["target_delay_removed"], fix["target_scale"])
+    scale = fix["gain_to_unity_1k"] * np.exp(-2j * np.pi * tf * fix["delay_device_samples"] / FS_DEV)
+    tl = netlist_chain(tf) * r[:, 0] * scale * np.exp(-2j * np.pi * tf * fix["lr_device_samples"] / FS_DEV)
+    tr = netlist_chain(tf) * r[:, 1] * scale
+    hdr.comment("Unit-part target (measured chain3 with the capture residual below 80 Hz left in), 6 points per band of\n"
+                "targetEdgesHz, R and L, on the same time origin as the reference above.")
+    hdr.array("targetEdgesHz", TARGET_EDGES)
+    hdr.array("targetHz", tf)
+    hdr.array("targetRRe", tr.real)
+    hdr.array("targetRIm", tr.imag)
+    hdr.array("targetLRe", tl.real)
+    hdr.array("targetLIm", tl.imag)
+    # Aliasing: a tone at f above device Nyquist appears at f' = fs_dev - f with amplitude conj(H_in(f)) H_lag(f') H_out(f') C(f')
+    # (C: the correction, R)
     # (device instant 0 at host time 0).
     fold = FS_DEV - ALIAS_HZ
-    alias = np.conj(mna_side(INPUT_FILTER, own_in, IN_HP_HZ, ALIAS_HZ)) * mna_side(OUTPUT_FILTER, own_out, OUT_HP_HZ, fold) * lag(fold)
+    alias = (np.conj(mna_side(INPUT_FILTER, own_in, IN_HP_HZ, ALIAS_HZ)) * mna_side(OUTPUT_FILTER, own_out, OUT_HP_HZ, fold) * lag(fold)
+             * correction(fold, fix, 1))
     hdr.comment("Aliasing reference: input tone aliasHz, output at deviceRate - aliasHz, complex amplitude.")
     hdr.array("aliasHz", ALIAS_HZ)
     hdr.array("aliasRe", alias.real)

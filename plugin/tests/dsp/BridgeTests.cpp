@@ -14,7 +14,9 @@
 #include <vector>
 
 // DeviceBridge against the modelled analogue chain (tools/plugin_codegen/bridge.py: the MNA solver's input filter x
-// output filter x S&H lag with the unit's coupling corners, unity at 1 kHz), through an identity program.
+// output filter x S&H lag with the unit's coupling corners, unity at 1 kHz, times the output-side correction), through an
+// identity program; and the corrected chain against its target, the unit part of the measured chain3
+// (analysis/plugin_check/REPORT_chainfix.md).
 
 namespace
 {
@@ -117,9 +119,8 @@ TEST_CASE("Bridge: chain response through an identity program, every host rate",
                     band.worstAbs = std::max(band.worstAbs, absErr);
                     band.worstRel = std::max(band.worstRel, relErr);
                 }
-            // L: the same response, half a device sample later.
-            const auto lExpected = hr * std::polar(1.0, -twoPi * f * DeviceBridge::lLateDeviceSamples / rv::dsp::deviceRate);
-            worstLr = std::max(worstLr, std::abs(hl - lExpected));
+            // L: its own correction, lLateDeviceSamples later.
+            worstLr = std::max(worstLr, std::abs(hl - C(gen::refLRe[i], gen::refLIm[i])));
             if (std::abs(f - 1000.0) < 1e-9)
             {
                 phase1k = std::arg(hr / ref);
@@ -132,7 +133,7 @@ TEST_CASE("Bridge: chain response through an identity program, every host rate",
         for (const auto& band : bands)
             std::printf("  %6.0f-%6.0f Hz: |error| %7.1f dB re unity, %7.1f dB re the chain\n", band.lo, band.hi,
                         db(band.worstAbs), db(band.worstRel));
-        std::printf("  L vs R half a device sample later: %.1f dB; 1 kHz gain %.8f, phase error %.2e rad\n", db(worstLr),
+        std::printf("  L against its reference: %.1f dB; 1 kHz gain %.8f, phase error %.2e rad\n", db(worstLr),
                     gain1k, phase1k);
         CHECK(worstLr < std::pow(10.0, -90.0 / 20.0));
         CHECK(std::abs(gain1k - 1.0) < 1e-5);
@@ -168,25 +169,79 @@ TEST_CASE("Bridge: a tone above device Nyquist folds at the level the input filt
     }
 }
 
-TEST_CASE("Bridge: L lags R by half a device sample", "[bridge]")
+TEST_CASE("Bridge: L lags R by lLateDeviceSamples, with its own correction", "[bridge]")
 {
-    // From the phase between L and R on steady tones (the response test checks the same to -90 dB as a complex error).
+    // From the ratio L / R on steady tones against the references' ratio (the response test checks each to -90 dB). The
+    // two corrections differ by about 0.1 dB and well under a degree below 8 kHz, so the lateness reads directly at 1 kHz.
+    REQUIRE(std::abs(DeviceBridge::lLateDeviceSamples - 0.5037) < 1e-12);
     for (const auto fs : {44100.0, 192000.0})
     {
         DeviceBridge b;
         b.prepare(fs, 512);
         const auto d = (size_t)b.latency();
-        for (const auto f : {1000.0, 5000.0, 10000.0})
+        for (size_t i = 0; i < gen::refHz.size(); ++i)
         {
+            const auto f = gen::refHz[i];
+            if (std::abs(f - 1000.0) > 1e-9 && std::abs(f - 10000.0) > 1e-9)
+                continue;
             b.reset();
             const auto pre = (size_t)(0.1 * fs), len = (size_t)(0.25 * fs);
             const auto o = render(b, cosine(fs, f, 0.5, pre + len + d), 512, identity);
             const auto ratio = toneAt(o.l, fs, f, pre + d, len, 0.0) / toneAt(o.r, fs, f, pre + d, len, 0.0);
+            const auto expected = C(gen::refLRe[i], gen::refLIm[i]) / C(gen::refRe[i], gen::refIm[i]);
             const auto lateUs = -std::arg(ratio) / (twoPi * f) * 1e6;
-            std::printf("Bridge %6.0f Hz, %5.0f Hz tone: L %.6f us after R (half a device sample %.6f us), level %.2e dB\n", fs, f,
-                        lateUs, 0.5e6 / rv::dsp::deviceRate, db(std::abs(ratio)));
-            CHECK(std::abs(lateUs - 0.5e6 / rv::dsp::deviceRate) < 1e-4);
-            CHECK(std::abs(std::abs(ratio) - 1.0) < 1e-6);
+            std::printf("Bridge %6.0f Hz, %5.0f Hz tone: L %.6f us after R (lLateDeviceSamples %.6f us), level %.4f dB, "
+                        "error re the references %.1f dB\n",
+                        fs, f, lateUs, 1e6 * DeviceBridge::lLateDeviceSamples / rv::dsp::deviceRate, db(std::abs(ratio)),
+                        db(std::abs(ratio / expected - 1.0)));
+            CHECK(std::abs(ratio / expected - 1.0) < 1e-4);
+        }
+    }
+}
+
+TEST_CASE("Bridge: corrected chain against the unit part of the measured chain", "[bridge]")
+{
+    // targetHz holds 6 points in each scoring band of plugin_check (20 Hz-12.3 kHz). Error energy over target energy per
+    // band, per channel. Below 80 Hz the target keeps chain3's own shape, which the captures do not support (its kernel is
+    // too short for the 1.8 Hz corner; with the analytic corner the plugin nulls the captures far better there, REPORT_
+    // chainfix.md), so those two bands sit near -36 / -45 dB; from 80 Hz up the correction holds -50 dB.
+    constexpr size_t perBand = 6;
+    const auto numBands = gen::targetEdgesHz.size() - 1;
+    REQUIRE(gen::targetHz.size() == perBand * numBands);
+    for (const auto fs : {48000.0, 96000.0})
+    {
+        DeviceBridge b;
+        b.prepare(fs, 512);
+        const auto d = (size_t)b.latency();
+        std::vector<double> errE[2], refE[2];
+        for (auto c = 0; c < 2; ++c)
+        {
+            errE[c].assign(numBands, 0.0);
+            refE[c].assign(numBands, 0.0);
+        }
+        for (size_t i = 0; i < gen::targetHz.size(); ++i)
+        {
+            const auto f = gen::targetHz[i];
+            const auto pre = (size_t)((f < 200.0 ? 0.6 : 0.1) * fs);
+            const auto len = (size_t)((f < 200.0 ? 1.0 : 0.25) * fs);
+            b.reset();
+            const auto o = render(b, cosine(fs, f, 0.5, pre + len + d), 512, identity);
+            const C got[2]{toneAt(o.l, fs, f, pre + d, len, (double)d) / 0.5, toneAt(o.r, fs, f, pre + d, len, (double)d) / 0.5};
+            const C tgt[2]{C(gen::targetLRe[i], gen::targetLIm[i]), C(gen::targetRRe[i], gen::targetRIm[i])};
+            for (auto c = 0; c < 2; ++c)
+            {
+                errE[c][i / perBand] += std::norm(got[c] - tgt[c]);
+                refE[c][i / perBand] += std::norm(tgt[c]);
+            }
+        }
+        std::printf("Bridge %6.0f Hz against the unit part of chain3 (error re target, dB, L / R):\n", fs);
+        for (size_t k = 0; k < numBands; ++k)
+        {
+            const double e[2]{10.0 * std::log10(errE[0][k] / refE[0][k]), 10.0 * std::log10(errE[1][k] / refE[1][k])};
+            std::printf("  %6.0f-%6.0f Hz: %6.1f / %6.1f\n", gen::targetEdgesHz[k], gen::targetEdgesHz[k + 1], e[0], e[1]);
+            const auto bar = gen::targetEdgesHz[k] < 39.0 ? -32.0 : gen::targetEdgesHz[k] < 79.0 ? -42.0 : -50.0;
+            CHECK(e[0] < bar);
+            CHECK(e[1] < bar);
         }
     }
 }

@@ -179,7 +179,7 @@ class OutputDelay
 //   host in -> DeviceBridge input side (analogue input chain, A/D: clip in 16-bit mode, overload flag)
 //           -> device rate: alignment delay -> program core (S / M / L / E / N; two during a program crossfade)
 //              -> DELAY -> LOW PASS
-//           -> DeviceBridge output side (S&H lag, output filter, L half a device sample late) -> [16-bit: hiss]
+//           -> DeviceBridge output side (correction, S&H lag, output filter, L 0.5037 device samples late) -> [16-bit: hiss]
 //
 // Timing: every program comes out on one common grid, so the reported latency is the same for all of them and a
 // program switch never moves the timing. N's centred branch kernel looks 40 device samples ahead (NCore::latency), and
@@ -187,7 +187,8 @@ class OutputDelay
 // the spec puts them together at DELAY 0 (e_plugin_spec controls.onset, docs/EMT250_program.md 17.8, S). The core
 // inputs are delayed so that each program's own time origin lands `alignDelay` device samples late: S / M / L by
 // alignDelay, N by alignDelay - 40, E by alignDelay - 54, with alignDelay = 54. latency() is the bridge's plus
-// alignDelay in host samples, rounded (the fraction left, under half a host sample, is not compensated).
+// alignDelay and the bridge's correction delay (17 device samples) in host samples, rounded (the fraction left, under
+// half a host sample, is not compensated).
 //
 // Program switch: the new core is reset and its input faded in over `programFadeSamples` (30 ms) while the old one
 // keeps running on the input and its output fades out (equal power: the two reverbs are uncorrelated). Fading the new
@@ -222,7 +223,7 @@ class ReverbEngine
         for (auto* b : {&fadeBuf[0], &fadeBuf[1], &fadeGain[0], &fadeGain[1], &fadeIn})
             b->assign((size_t)maxDev, 0.0f);
         outputDelay.prepare((int)std::ceil(maxDelayMs / 1000.0 * deviceRate) + 1);
-        hostAlign = (int)std::lround((double)alignDelay * sampleRate / deviceRate);
+        hostAlign = (int)std::lround((double)(alignDelay + DeviceBridge::correctionDelay()) * sampleRate / deviceRate);
         hiss.prepare(sampleRate);
         prepared = true;
         applyFullScale();
@@ -293,7 +294,7 @@ class ReverbEngine
     // True if the A/D was out of range (clipped, or in float mode would have) since the last call.
     bool takeOverload() { return bridge.takeOverload(); }
 
-    // Host samples by which the wet output (R; L is half a device sample later inside the bridge) lags the input,
+    // Host samples by which the wet output (R; L is 0.5037 device samples later inside the bridge) lags the input,
     // the same for every program.
     int latency() const { return bridge.latency() + hostAlign; }
     // Device samples every program is delayed to its common grid (the largest program look-ahead).

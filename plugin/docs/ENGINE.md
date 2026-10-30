@@ -13,14 +13,21 @@ mono in -> input analogue chain -> [A/D clip, 16-bit mode] -> alignment -> Progr
            (input filter,          sampled at the device      delay        S / M / L / E / N
             coupling high-passes)  instants                                (two in a program crossfade)
         -> (L, R) -> output chain -> [hiss, 16-bit mode] -> wet L, R
-                     (S&H lag per channel, output filter, L half a device sample late)
+                     (per channel: correction, S&H lag, output filter; L 0.5037 device samples late)
 ```
 
 - **Device rate inside, host rate outside.** Each program core runs at the device rate with integer delays, exactly
   as its spec and reference IRs. `DeviceBridge` converts host -> device and device -> host and carries the analogue
   chain (`../../docs/NEXT_STEPS.md` §4 and §11, `../../tools/analog/`), so the cores never see the host rate.
 - **Mono in, stereo out.** One core per engine; L and R come out at the same device instants. L's half-sample lag
-  (the timing PROM's S&H pulses) is the output side's job: evaluate L's interpolation half a device sample later.
+  (the timing PROM's S&H pulses) is the output side's job: evaluate L's interpolation 0.5037 device samples later (the
+  library's L - R offset, `../../analysis/plugin_check/REPORT.md` §4: 0.5 plus a fixed L / R chain-delay difference).
+- **The chain correction** (`../../analysis/plugin_check/REPORT_chainfix.md`): the netlists miss the measured chain
+  (chain3) in the output filter's skirt above 8 kHz (up to 70°) and by about a degree in the mid band. Per channel, on
+  the device samples before the S&H lag, the bridge runs a first-order 1.8 Hz high-pass (H: Tomkin's 6.25 Hz total over
+  the schematic's 4.46 Hz, firmware DC blocker or capture rig, `../../docs/analog_results.md` §3) and a 65-tap FIR
+  (`chain_fix.json` via `tools/plugin_codegen/bridge.py`) with a bulk delay of 17 device samples, compensated in the
+  latency. Always on; no parameter.
 - **The A/D clips at the device rate**, on the input filter's output at the device instants (`DeviceBridge`): in
   16-bit mode a hard clip at full scale, in both modes the overload flag that lights OVL. Full scale follows CAL
   (`src/dsp/AdcCalibration.h`: a sine 6 dB over 0 VU), and the same number scales the cores' 16-bit storage and the
@@ -135,15 +142,17 @@ puts E's R direct tap (k0 = 64) with M's first cluster tap (at M's kernel centre
 (`e_plugin_spec.json` controls.onset, `../../docs/EMT250_program.md` §17.8, S): 54 samples. So every core's input is
 delayed to land 54 device samples late (S / M / L by 54, N by 14, E by 0), and
 
-  latency = bridge latency + round(54 x host rate / device rate) host samples
+  latency = bridge latency + round((54 + 17) x host rate / device rate) host samples
+
+(17: the bridge's chain correction, `DeviceBridge::correctionDelay()`)
 
 (the fraction left, under half a host sample, is not compensated). On R: L is another half device sample later.
 
-| Host rate | Bridge | Alignment | Reported latency |
+| Host rate | Bridge | Alignment + correction | Reported latency |
 |---|---|---|---|
-| 44.1 kHz | 21 | 90 | 111 samples (2.52 ms) |
-| 48 kHz | 19 | 98 | 117 samples (2.44 ms) |
-| 96 kHz | 14 | 197 | 211 samples (2.20 ms) |
+| 44.1 kHz | 21 | 119 | 140 samples (3.17 ms) |
+| 48 kHz | 19 | 129 | 148 samples (3.08 ms) |
+| 96 kHz | 14 | 258 | 272 samples (2.83 ms) |
 
 The modelled analogue chain adds its own peak delay on top (about 0.17 ms: S's cluster tap 0 peaks 8 samples after
 the latency at 44.1 kHz), as the unit does; it is part of the sound, not of the latency.
@@ -172,11 +181,11 @@ an exact bypass. Into and out of open it fades over 10 ms; between two cutoffs t
 
 | Program | 48 kHz | 96 kHz |
 |---|---|---|
-| S | 0.9 % | 1.1 % |
-| M | 0.6 % | 0.9 % |
-| L | 0.8 % | 1.1 % |
-| E | 0.5 % | 0.8 % |
-| N | 0.8 % | 1.1 % |
+| S | 1.1 % | 1.4 % |
+| M | 0.9 % | 1.2 % |
+| L | 1.1 % | 1.4 % |
+| E | 0.8 % | 1.1 % |
+| N | 1.1 % | 1.4 % |
 
 of one core; a program crossfade runs two cores for 30 ms.
 
