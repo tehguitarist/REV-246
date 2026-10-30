@@ -632,3 +632,76 @@ TEST_CASE("cost per engine and program")
             CHECK(t < seconds); // faster than real time, whatever the machine
         }
 }
+
+// Hidden ([.profile]; run with REV246DspTests "[.profile]"): where an engine's time goes, per stage. The bridge alone
+// (identity device process: the analogue chain, the correction and the rate conversion), each core alone at the device
+// rate, and the whole engine, all as a percentage of one core in real time (block 512, 10 s of noise, best of 3).
+TEST_CASE("cost per stage", "[.profile]")
+{
+    const auto seconds = 10.0;
+    auto best = [](auto&& run) {
+        auto t = 1e9;
+        for (int k = 0; k < 3; ++k)
+        {
+            const auto t0 = std::chrono::steady_clock::now();
+            run();
+            t = std::min(t, std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count());
+        }
+        return t;
+    };
+    for (const auto rate : rates)
+    {
+        rv::dsp::DeviceBridge bridge;
+        bridge.prepare(rate, 512);
+        const auto x = noise((size_t)(rate * seconds), 0.1f, 3);
+        std::vector<float> l(512), r(512);
+        const auto t = best([&] {
+            for (size_t i = 0; i + 512 <= x.size(); i += 512)
+                bridge.process(x.data() + i, l.data(), r.data(), 512, [](const float* in, float* dl, float* dr, int n) {
+                    std::copy(in, in + n, dl);
+                    std::copy(in, in + n, dr);
+                });
+        });
+        std::printf("profile bridge %g Hz: %.3f %%\n", rate, 100.0 * t / seconds);
+    }
+    {
+        const auto n = (size_t)(rv::dsp::deviceRate * seconds);
+        const auto x = noise(n, 0.1f, 4);
+        std::vector<float> l(256), r(256);
+        rv::dsp::SCore s;
+        rv::dsp::MLCore m(Program::m), lc(Program::l);
+        rv::dsp::ECore ec;
+        rv::dsp::NCore nc;
+        rv::dsp::ProgramCore* cores[] = {&s, &m, &lc, &ec, &nc};
+        for (int c = 0; c < 5; ++c)
+            for (const bool sixteen : {false, true})
+            {
+                auto* core = cores[c];
+                core->prepare();
+                core->setStorageFullScale(rv::dsp::adcFullScaleForZeroVu(-18.0f));
+                core->setSettings(settingsFor(programs[(size_t)c], 0.0, 10, 12.0, sixteen));
+                core->reset();
+                const auto t = best([&] {
+                    for (size_t i = 0; i + 256 <= n; i += 256)
+                        core->process(x.data() + i, l.data(), r.data(), 256);
+                });
+                std::printf("profile core %s %s: %.3f %%\n", name(programs[(size_t)c]), sixteen ? "16-bit" : "float",
+                            100.0 * t / seconds);
+            }
+    }
+    for (const auto rate : rates)
+        for (const auto p : programs)
+            for (const bool sixteen : {false, true})
+            {
+                ReverbEngine e;
+                start(e, rate, 512, settingsFor(p, 0.0, 10, 12.0, sixteen));
+                const auto x = noise((size_t)(rate * seconds), 0.1f, 5);
+                std::vector<float> l(512), r(512);
+                const auto t = best([&] {
+                    for (size_t i = 0; i + 512 <= x.size(); i += 512)
+                        e.process(x.data() + i, l.data(), r.data(), 512);
+                });
+                std::printf("profile engine %s %g Hz %s: %.3f %%\n", name(p), rate, sixteen ? "16-bit" : "float",
+                            100.0 * t / seconds);
+            }
+}

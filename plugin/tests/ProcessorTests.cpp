@@ -7,7 +7,9 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
+#include <cstdio>
 #include <functional>
 #include <complex>
 #include <vector>
@@ -457,4 +459,53 @@ TEST_CASE("the meter calibration places the A/D full scale 6 dB over 0 VU, and O
     Rev246Processor q;
     q.setStateInformation(state.getData(), (int)state.getSize());
     CHECK(q.getMeterCal() == 4);
+}
+
+// Hidden ([.profile]; run with REV246Tests "[.profile]"): the whole processBlock per program, host rate, FLOAT /
+// 16-BIT and XFMR on / off (stereo in / stereo out, the original summed path: one engine), as a percentage of one
+// core in real time (block 512, 10 s of noise, best of 3).
+TEST_CASE("cost of the whole processor", "[.profile]")
+{
+    const auto seconds = 10.0;
+    for (const auto rate : {44100.0, 48000.0, 96000.0})
+        for (int program = 0; program < rv::params::numPrograms; ++program)
+            for (const bool sixteen : {false, true})
+                for (const bool xfmr : {false, true})
+                {
+                    Rev246Processor p;
+                    p.prepareToPlay(rate, 512);
+                    setParam(p, rv::params::id::program, (float)program);
+                    setParam(p, rv::params::id::sixteenBit, sixteen ? 1.0f : 0.0f);
+                    setParam(p, rv::params::id::transformer, xfmr ? 1.0f : 0.0f);
+                    juce::MidiBuffer midi;
+                    juce::AudioBuffer<float> buffer(2, 512);
+                    juce::Random random(7);
+                    auto fill = [&] {
+                        for (int ch = 0; ch < 2; ++ch)
+                            for (int i = 0; i < 512; ++i)
+                                buffer.setSample(ch, i, 0.1f * (random.nextFloat() - 0.5f));
+                    };
+                    const auto blocks = (int)(rate * seconds / 512.0);
+                    for (int b = 0; b < (int)(rate * 0.2 / 512.0); ++b) // settle the parameter fades and the switch
+                    {
+                        fill();
+                        p.processBlock(buffer, midi);
+                    }
+                    auto t = 1e9;
+                    for (int k = 0; k < 3; ++k)
+                    {
+                        double busy = 0;
+                        for (int b = 0; b < blocks; ++b)
+                        {
+                            fill();
+                            const auto t0 = std::chrono::steady_clock::now();
+                            p.processBlock(buffer, midi);
+                            busy += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+                        }
+                        t = std::min(t, busy);
+                    }
+                    std::printf("profile processor %s %g Hz %s XFMR %s: %.3f %%\n",
+                                rv::params::programName((rv::params::Program)program).toRawUTF8(), rate,
+                                sixteen ? "16-bit" : "float", xfmr ? "on" : "off", 100.0 * t / seconds);
+                }
 }
