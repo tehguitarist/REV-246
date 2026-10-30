@@ -53,6 +53,10 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
     - Decorrelation excess is now +1.7 dB median (was +2.8). Three L settings remain 3-5 dB over (open, H).
     - S, N and E are unchanged, so they were not rerun.
 
+- **Later still, 31 October:** state version + migration hook; TRUE ST dry crossfade; WIDTH's decorrelator dropped (the late L/R is already uncorrelated); 64 Altiverb factory presets (`library_notes.md` §7); the N tidy (§9.9); pluginval at strictness 10 PASS (VST3 and AU; the AU's "current program -1" warning is benign); 60 s silence: CPU flat, no denormals.
+- **Agents still running when the usage limit hit (their work is uncommitted; check, then commit):** (a) the joint CLA + Altiverb XFMR cascade (`plugin/src/dsp/CaptureEq.h`, `plugin/tests/TransformerTests.cpp`, `tools/unit_chain_fullband.py`, a `model_s_results.md` §37.x; adopt only if within 0.5 dB of each unit's own cascade in every band); (b) the audit metrics G1-G6 on the plugin's renders (`tools/plugin_pulse.py`, `analysis/plugin_pulse/`, REPORT_chainfix §8).
+- **Not done:** Steinberg's VST3 validator (cloning and building the SDK was blocked by the permission check; the user decides).
+
 **Resume here:**
 1. **One manual CI run** (ask the user first: Actions minutes).
 2. Before any further plugin_check: rerun `--stage align` (the 31 October latency change moved the engine's timing;
