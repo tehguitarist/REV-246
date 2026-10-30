@@ -741,3 +741,60 @@ TEST_CASE("cost per stage", "[.profile]")
                             100.0 * t / seconds);
             }
 }
+
+// Hidden ([.profile]): after a burst, 60 s of silence. The cost per second must stay flat (no denormal slow-down as
+// the tails decay). Reported: the output's peak (16-bit: the hiss; float: a smooth decay, still normal floats at
+// 60 s, which FTZ flushes once they would go subnormal).
+TEST_CASE("cost stays flat in silence", "[.profile]")
+{
+    const double rate = 48000.0;
+    for (const auto p : programs)
+        for (const bool sixteen : {false, true})
+        {
+            ReverbEngine e;
+            start(e, rate, 512, settingsFor(p, 0.0, 10, 12.0, sixteen));
+            std::vector<float> l(512), r(512), zero(512, 0.0f);
+            const auto x = noise((size_t)(2.0 * rate), 0.1f, 6);
+            double busyCost = 0.0;
+            {
+                const auto t0 = std::chrono::steady_clock::now();
+                for (size_t i = 0; i + 512 <= x.size(); i += 512)
+                    e.process(x.data() + i, l.data(), r.data(), 512);
+                busyCost = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() / 2.0;
+            }
+            double worst = 0.0;
+            std::vector<double> perSecond;
+            int silentFrom = -1;
+            std::array<float, 3> peakAt{}; // the output's peak during seconds 5, 30 and 60
+            const auto blocksPerSecond = (int)(rate / 512.0);
+            for (int s = 0; s < 60; ++s)
+            {
+                bool allZero = true;
+                double t = 0.0; // the engine's time only, not the checks below
+                for (int b = 0; b < blocksPerSecond; ++b)
+                {
+                    const auto t0 = std::chrono::steady_clock::now();
+                    e.process(zero.data(), l.data(), r.data(), 512);
+                    t += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+                    for (int i = 0; i < 512; ++i)
+                    {
+                        allZero = allZero && juce::exactlyEqual(l[(size_t)i], 0.0f) && juce::exactlyEqual(r[(size_t)i], 0.0f);
+                        const auto k = s == 4 ? 0 : s == 29 ? 1 : s == 59 ? 2 : -1;
+                        if (k >= 0)
+                            peakAt[(size_t)k] = std::max({peakAt[(size_t)k], std::abs(l[(size_t)i]), std::abs(r[(size_t)i])});
+                    }
+                }
+                worst = std::max(worst, t);
+                perSecond.push_back(t);
+                if (allZero && silentFrom < 0)
+                    silentFrom = s;
+            }
+            std::sort(perSecond.begin(), perSecond.end());
+            const auto median = perSecond[perSecond.size() / 2];
+            auto dbfs = [](float v) { return v > 0.0f ? 20.0 * std::log10((double)v) : -999.0; };
+            std::printf("silence %s %s: median second %.2fx the busy cost (worst %.2fx), exactly 0 from second %d, peak at "
+                        "5 / 30 / 60 s %.0f / %.0f / %.0f dBFS\n", name(p), sixteen ? "16-bit" : "float", median / busyCost,
+                        worst / busyCost, silentFrom, dbfs(peakAt[0]), dbfs(peakAt[1]), dbfs(peakAt[2]));
+            CHECK(median < 1.5 * busyCost); // a single slow second is the scheduler; a denormal slow-down would last
+        }
+}
