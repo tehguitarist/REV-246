@@ -63,6 +63,13 @@ class ProgramCore
     // Samples by which the core's output is late against the reference IRs (N's branch read kernel needs a
     // centred look-ahead; every other core returns 0). The engine adds this to its latency.
     virtual int latency() const { return 0; }
+    // Reads every input-side path `samples` device samples sooner: the whole output moves that much earlier, exactly,
+    // because every path through the core is at least maxAdvance() samples deep (E: its front delay; N: its branch
+    // and front taps, which absorbs the branch kernel's look-ahead). The engine uses it to put every program on one
+    // grid without delaying the others (docs/ENGINE.md, One time grid); the reference-IR tests leave it at 0. Call
+    // before reset().
+    virtual int maxAdvance() const { return 0; }
+    virtual void setAdvance(int samples) { juce::ignoreUnused(samples); }
     // Time variance (M / L's theta, E's moving reads). On by default; the null tests switch it off to compare
     // the static network with the reference IRs. Takes effect at the next reset().
     void setModulation(bool on) { modulationOn = on; }

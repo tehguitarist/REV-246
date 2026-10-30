@@ -15,6 +15,7 @@
 #include <cstdlib>
 #include <new>
 #include <random>
+#include <tuple>
 #include <vector>
 
 // ReverbEngine end to end at host rates (docs/ENGINE.md, Tests): every program through the bridge, the common time
@@ -266,7 +267,7 @@ TEST_CASE("every program's impulse response is finite at 44.1 / 48 / 96 kHz, wit
             }
             INFO(name(p) << " at " << rate);
             CHECK(e.latency() == latency);
-            CHECK(e.alignmentDelay() == 54);
+            CHECK(e.alignmentDelay() == 0); // E and N read their input sooner instead (ProgramCore::setAdvance)
             const auto y = render(e, impulse((size_t)(1.5 * rate)), 512);
             CHECK(allFinite(y));
             CHECK(energy(y.l, 0, y.l.size()) > 1e-6);
@@ -275,6 +276,38 @@ TEST_CASE("every program's impulse response is finite at 44.1 / 48 / 96 kHz, wit
             const auto pre = energy(y.r, 0, (size_t)latency - 8) + energy(y.l, 0, (size_t)latency - 8);
             CHECK(db(pre / (energy(y.r, 0, y.r.size()) + energy(y.l, 0, y.l.size()))) < -60.0);
         }
+    }
+}
+
+TEST_CASE("E's and N's advance is an exact time shift")
+{
+    // ProgramCore::setAdvance reads every input-side path sooner; with E's moving reads frozen (with them on, the
+    // reads' fixed start phase meets the input at another point: an equally valid realisation) and N time-invariant,
+    // the output is the plain core's, earlier by the advance, bit for bit.
+    auto run = [](rv::dsp::ProgramCore& c, Program p, int advance) {
+        c.prepare();
+        c.setModulation(false);
+        c.setAdvance(advance);
+        c.setSettings(settingsFor(p));
+        c.reset();
+        std::vector<float> in(30000, 0.0f), l(in.size()), r(in.size());
+        in[0] = 1.0f;
+        c.process(in.data(), l.data(), r.data(), (int)in.size());
+        return Stereo{l, r};
+    };
+    rv::dsp::ECore e0, e1;
+    rv::dsp::NCore n0, n1;
+    for (auto [c0, c1, p] : {std::tuple<rv::dsp::ProgramCore*, rv::dsp::ProgramCore*, Program>{&e0, &e1, Program::e},
+                             std::tuple<rv::dsp::ProgramCore*, rv::dsp::ProgramCore*, Program>{&n0, &n1, Program::n}})
+    {
+        INFO(name(p));
+        const auto a = c1->maxAdvance();
+        REQUIRE(a > 0);
+        const auto y0 = run(*c0, p, 0), y1 = run(*c1, p, a);
+        bool same = true;
+        for (size_t i = 0; i + (size_t)a < y0.l.size() && same; ++i)
+            same = std::equal_to<float>{}(y1.l[i], y0.l[i + (size_t)a]) && std::equal_to<float>{}(y1.r[i], y0.r[i + (size_t)a]);
+        CHECK(same);
     }
 }
 
@@ -320,7 +353,7 @@ TEST_CASE("the programs share one time grid: E's direct tap arrives with M's fir
             std::copy(in, in + n, dl);
             std::copy(in, in + n, dr);
         });
-        const auto chainPeak = (double)peakIn(rr, 0, rr.size()) + 54.0 * r; // the engine's alignment, unrounded
+        const auto chainPeak = (double)peakIn(rr, 0, rr.size()); // the engine adds no alignment (ProgramCore::setAdvance)
         INFO("rate " << rate << ": S " << at[0] << " M " << at[1] << " L " << at[2] << " E " << at[3] << ", latency "
                      << latency << ", chain peak " << chainPeak);
         CHECK(std::abs(at[(size_t)Program::e] - at[(size_t)Program::m]) <= 1.0);
@@ -463,10 +496,12 @@ TEST_CASE("DELAY is a pure delay of the whole output in device samples, and a ch
     const double rate = 48000.0;
     const auto x = impulse((size_t)(1.6 * rate));
     Stereo y0, y1;
+    int latency = 0;
     {
         ReverbEngine e;
         start(e, rate, 512, settingsFor(Program::s, 0.0));
         y0 = render(e, x, 512);
+        latency = e.latency();
     }
     {
         ReverbEngine e;
@@ -476,7 +511,7 @@ TEST_CASE("DELAY is a pure delay of the whole output in device samples, and a ch
     const auto shift = (double)std::lround(0.1 * rv::dsp::deviceRate) * rate / rv::dsp::deviceRate; // 2637 device samples
     // tap 0 of the cluster (S's next R tap is 143 device samples, 5.4 ms, later)
     const auto window = (size_t)(0.003 * rate);
-    const auto p0 = (double)peakIn(y0.r, 0, (size_t)(0.003 * rate) + 200);
+    const auto p0 = (double)peakIn(y0.r, 0, (size_t)latency + window);
     const auto p1 = (double)peakIn(y1.r, (size_t)(p0 + shift) - window, (size_t)(p0 + shift) + window);
     CHECK(std::abs(p1 - p0 - shift) <= 1.0);
     // S is time-invariant, so the shifted response has the same energy (the bridge's sub-sample grid only).

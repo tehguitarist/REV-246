@@ -130,6 +130,18 @@ class NCore final : public ProgramCore
     void prepare() override
     {
         using namespace gen::n;
+        constexpr auto shallowest = [](const auto& d) {
+            int m = d[0];
+            for (const auto v : d)
+                m = v < m ? v : m;
+            return m;
+        };
+        static_assert(shallowest(frontDelayL) >= gen::n::bkCentre
+                          && shallowest(frontDelayR) >= gen::n::bkCentre
+                          && shallowest(mainDelayL) - 1 >= gen::n::bkCentre
+                          && shallowest(mainDelayR) - 1 >= gen::n::bkCentre
+                          && shallowest(libFeed) >= gen::n::bkCentre,
+                      "setAdvance(bkCentre) needs every branch read and front tap at least that deep");
         xHist.allocate((size_t)(frontDelayL.back() + bkCentre));  // front taps + the kernel's look-ahead
         branch.allocate((size_t)(mainDelayL.back() + branchDelay)); // the longest read: the last main tap
         apIn.allocate((size_t)apInDelay);
@@ -248,7 +260,8 @@ class NCore final : public ProgramCore
             std::fill(outR, outR + n, 0.0f);
             return;
         }
-        const unsigned pad = kernelOn ? (unsigned)bkCentre : 0u;
+        const unsigned pad = (unsigned)(latency()); // the front taps carry the kernel's look-ahead not absorbed by advance
+        const auto adv = (unsigned)effectiveAdvance(); // the branch line is read this much sooner (setAdvance)
         for (int i = 0; i < n; ++i)
         {
             const double x = in[i];
@@ -261,12 +274,12 @@ class NCore final : public ProgramCore
             {
                 double acc = 0.0;
                 for (int k = 0; k < nTaps; ++k)
-                    acc += tapGain[ch][(size_t)k] * branch.at((unsigned)tapDelay[ch][(size_t)k]);
+                    acc += tapGain[ch][(size_t)k] * branch.at((unsigned)tapDelay[ch][(size_t)k] - adv);
                 y[ch] = allpass(apOut[ch], acc);
             }
             if (lateOn)
             {
-                const double v = lateGain * allpass(apLate, branch.at((unsigned)lateFeed));
+                const double v = lateGain * allpass(apLate, branch.at((unsigned)lateFeed - adv));
                 for (size_t l = 0; l < (size_t)numLoops; ++l)
                 {
                     const double line = v + loopG[l] * loops[l].at((unsigned)loopDelay[l] - 1);
@@ -302,7 +315,11 @@ class NCore final : public ProgramCore
         }
     }
 
-    int latency() const override { return kernelOn ? gen::n::bkCentre : 0; }
+    // The kernel's look-ahead less what setAdvance() absorbed. maxAdvance(): the look-ahead (every branch read and
+    // front tap is deeper: main taps from 686, the late feed from 685, front taps from 41).
+    int latency() const override { return (kernelOn ? gen::n::bkCentre : 0) - effectiveAdvance(); }
+    int maxAdvance() const override { return kernelOn ? gen::n::bkCentre : 0; }
+    void setAdvance(int samples) override { advance = std::clamp(samples, 0, gen::n::bkCentre); }
 
   private:
     static constexpr double spanMarginS = 0.024;    // H: between the spec's 15 and 33 ms (docs/NonLin_program.md 9.2)
@@ -366,6 +383,9 @@ class NCore final : public ProgramCore
 
     // The coefficients setSettings() resolves (fixed-size: no allocation there)
     int nTaps = 0, lateFeed = 0;
+    int advance = 0;
+
+    int effectiveAdvance() const { return kernelOn ? advance : 0; }
     double lateGain = 0.0;
     std::array<std::array<int, 3>, 2> frontDelay{};
     std::array<std::array<double, 3>, 2> frontGain{};

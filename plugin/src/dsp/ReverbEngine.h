@@ -184,11 +184,12 @@ class OutputDelay
 // Timing: every program comes out on one common grid, so the reported latency is the same for all of them and a
 // program switch never moves the timing. N's centred branch kernel looks 40 device samples ahead (NCore::latency), and
 // E's R direct tap sits at k0 = 64 device samples where M's first cluster tap sits at 10 (its output kernel's centre);
-// the spec puts them together at DELAY 0 (e_plugin_spec controls.onset, docs/EMT250_program.md 17.8, S). The core
-// inputs are delayed so that each program's own time origin lands `alignDelay` device samples late: S / M / L by
-// alignDelay, N by alignDelay - 40, E by alignDelay - 54, with alignDelay = 54. latency() is the bridge's plus
-// alignDelay and the bridge's correction delay (17 device samples) in host samples, rounded (the fraction left, under
-// half a host sample, is not compensated).
+// the spec puts them together at DELAY 0 (e_plugin_spec controls.onset, docs/EMT250_program.md 17.8, S). Both are
+// pure delays inside the core (E's front delay; N's branch and front taps are deeper than the look-ahead), so E and N
+// read their input that much sooner (ProgramCore::setAdvance) and land on S / M / L's grid: alignDelay is 0. (The
+// alignment ring stays for any core that could not.) latency() is the bridge's plus alignDelay and the bridge's
+// correction delay (17 device samples) in host samples, rounded (the fraction left, under half a host sample, is not
+// compensated).
 //
 // Program switch: the new core is reset and its input faded in over `programFadeSamples` (30 ms) while the old one
 // keeps running on the input and its output fades out (equal power: the two reverbs are uncorrelated). Fading the new
@@ -214,6 +215,12 @@ class ReverbEngine
         bridge.prepare(sampleRate, std::max(1, maxBlockSize));
         for (auto* c : cores)
             c->prepare();
+        // E and N are late against the common origin (lateness()); both can read their input sooner by that much
+        // (ProgramCore::setAdvance), so every program lands on the grid without delaying the others.
+        eAdvance = 0;
+        eAdvance = std::min(lateness(params::Program::e), eCore.maxAdvance());
+        eCore.setAdvance(eAdvance);
+        nCore.setAdvance(nCore.maxAdvance());
         alignDelay = 0;
         for (int p = 0; p < params::numPrograms; ++p)
             alignDelay = std::max(alignDelay, lateness((params::Program)p));
@@ -297,7 +304,7 @@ class ReverbEngine
     // Host samples by which the wet output (R; L is 0.5037 device samples later inside the bridge) lags the input,
     // the same for every program.
     int latency() const { return bridge.latency() + hostAlign; }
-    // Device samples every program is delayed to its common grid (the largest program look-ahead).
+    // Device samples every program is delayed to its common grid (the largest lateness left after the advances: 0).
     int alignmentDelay() const { return alignDelay; }
     params::Program activeProgram() const { return active; }
     bool isCrossfading() const { return fadeLeft > 0 || pendingSwitch; }
@@ -334,15 +341,15 @@ class ReverbEngine
     }
 
     // The device samples by which program p's core output is late against the common time origin (see the class
-    // comment): N's look-ahead, E's direct tap against M's first cluster tap.
+    // comment) after its advance: N's look-ahead, E's direct tap against M's first cluster tap; 0 for both once advanced.
     int lateness(params::Program p) const
     {
         switch (p)
         {
         case params::Program::e:
-            return gen::e::k0 - (gen::ml::m::clusterRDelay[0] + gen::ml::m::kernelCentre);
+            return gen::e::k0 - (gen::ml::m::clusterRDelay[0] + gen::ml::m::kernelCentre) - eAdvance;
         case params::Program::n:
-            return nCore.latency();
+            return nCore.latency(); // after its advance
         case params::Program::s:
         case params::Program::m:
         case params::Program::l:
@@ -463,6 +470,7 @@ class ReverbEngine
     params::Program active = params::Program::s, fadeFrom = params::Program::s;
     bool pendingSwitch = false, prepared = false, sixteenBit = false; // sixteenBit: the A/D clip and hiss, at once
     int fadeLeft = 0, alignDelay = 0, hostAlign = 0;
+    int eAdvance = 0; // E reads its input this much sooner (ProgramCore::setAdvance)
     float fullScale = 1.0f;
 
     Ring inRing;

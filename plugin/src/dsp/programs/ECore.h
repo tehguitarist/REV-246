@@ -87,6 +87,9 @@ class ECore final : public ProgramCore
         return c;
     }
 
+    int maxAdvance() const override { return gen::e::k0; }
+    void setAdvance(int samples) override { advance = std::clamp(samples, 0, gen::e::k0); }
+
     void prepare() override
     {
         inLine.assign(pow2Above(gen::e::k0 + gen::e::lDirectDelay + gen::e::directTaps.back() + 1), 0.0f);
@@ -176,7 +179,7 @@ class ECore final : public ProgramCore
         for (int i = 0; i < n; ++i)
         {
             inLine[pos & inMask] = in[i];
-            const auto x = [&](int d) { return (double)inLine[(pos - (uint32_t)d) & inMask]; };
+            const auto x = [&](int d) { return (double)inLine[(pos - (uint32_t)(d - advance)) & inMask]; };
 
             // direct path, R and L (314 later, inverted, x gL)
             double yR = 0.0, yL = 0.0;
@@ -337,6 +340,7 @@ class ECore final : public ProgramCore
     std::array<double, (size_t)numReads> phase{}, phaseStep{};
     std::array<int, (size_t)numReads> offset{};
     uint32_t pos = 0;
+    int advance = 0; // setAdvance(): every input read is at k0 or deeper
     double movR = 0.0, movL = 0.0, prevStat = 0.0, yR1 = 0.0, yL1 = 0.0;
     bool moving = true;
 };

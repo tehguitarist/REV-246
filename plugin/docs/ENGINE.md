@@ -84,7 +84,8 @@ the integration step, so the parts can be written in parallel.
 - Every write into recirculating storage (loop and all-pass delay lines) goes through `ProgramCore`'s storage cut
   (`store()`, or `storeAcc()` / `runShelfPole16()` / `cut16()` for a value held in the accumulator), where the
   16-bit mode quantises. Non-recirculating taps need not.
-- `latency()` reports any look-ahead (N's centred branch read kernel). Time variance starts from a fixed phase at
+- `latency()` reports any look-ahead (N's centred branch read kernel) left after `setAdvance()`, which shifts the
+  whole output earlier where every path is deep enough (`maxAdvance()`; E and N, see The engine). Time variance starts from a fixed phase at
   `reset()`, so renders are repeatable.
 - Code reads like the surrounding plugin code: short comments that say what and why, with the spec section in
   brackets where a number comes from (e.g. `// model_s_results §38.1`).
@@ -147,22 +148,28 @@ through DELAY and LOW PASS; the bridge turns it into host-rate L and R; in 16-bi
 
 **One time grid, one latency.** Every program comes out on the same grid, so the reported latency is the same for all
 of them, both modes and both engines, and a program switch never shifts the timing. Two cores are late against the
-common origin: N by its branch kernel's look-ahead (`NCore::latency()`, 40 device samples), and E because the spec
-puts E's R direct tap (k0 = 64) with M's first cluster tap (at M's kernel centre, 10) at DELAY 0
-(`e_plugin_spec.json` controls.onset, `../../docs/EMT250_program.md` §17.8, S): 54 samples. So every core's input is
-delayed to land 54 device samples late (S / M / L by 54, N by 14, E by 0), and
+common origin: N by its branch kernel's look-ahead (40 device samples), and E because the spec puts E's R direct tap
+(k0 = 64) with M's first cluster tap (at M's kernel centre, 10) at DELAY 0 (`e_plugin_spec.json` controls.onset,
+`../../docs/EMT250_program.md` §17.8, S): 54 samples. Both are pure delays inside the core, so instead of delaying the
+other programs by 54 (the 30 October build), E and N read their input that much sooner (`ProgramCore::setAdvance`,
+31 October): E's every path starts at its front delay k0; N's front taps start at 41 and its branch reads at 685, so
+the kernel's look-ahead fits inside them (`static_assert`s in `NCore::prepare`). An exact time shift
+(EngineTests "E's and N's advance is an exact time shift": bit-identical; with E's moving reads on, their fixed
+start phase now meets the input 54 samples later, an equally valid realisation). The alignment is 0, and
 
-  latency = bridge latency + round((54 + 17) x host rate / device rate) host samples
+  latency = bridge latency + round(17 x host rate / device rate) host samples
 
-(17: the bridge's chain correction, `DeviceBridge::correctionDelay()`)
+(17: the bridge's chain correction, `DeviceBridge::correctionDelay()`; the fraction left, under half a host sample,
+is not compensated). On R: L is another half device sample later.
 
-(the fraction left, under half a host sample, is not compensated). On R: L is another half device sample later.
-
-| Host rate | Bridge | Alignment + correction | Reported latency |
+| Host rate | Bridge | Correction | Reported latency (30 October: with the 54-sample alignment) |
 |---|---|---|---|
-| 44.1 kHz | 21 | 119 | 140 samples (3.17 ms) |
-| 48 kHz | 19 | 129 | 148 samples (3.08 ms) |
-| 96 kHz | 14 | 258 | 272 samples (2.83 ms) |
+| 44.1 kHz | 21 | 28 | 49 samples, 1.11 ms (140, 3.17 ms) |
+| 48 kHz | 19 | 31 | 50 samples, 1.04 ms (148, 3.08 ms) |
+| 96 kHz | 14 | 62 | 76 samples, 0.79 ms (272, 2.83 ms) |
+
+What is left: the correction FIR's bulk delay (17 device samples, 0.64 ms; a refit with a shorter one is the
+candidate) and the bridge's band-limiting sinc (0.15-0.48 ms), which stays.
 
 The modelled analogue chain adds its own peak delay on top (about 0.17 ms: S's cluster tap 0 peaks 8 samples after
 the latency at 44.1 kHz), as the unit does; it is part of the sound, not of the latency.
@@ -243,5 +250,5 @@ float and 16-bit, from the build before it: worst -193 dB, i.e. float rounding; 
 - Resampling: the bridge adds no error above -90 dB to the modelled chain over 20 Hz-12.8 kHz; its latency is
   reported.
 - (Integration, 30 October) One latency for every program: all cores aligned to the latest (E's onset, 54 device
-  samples). Program switch: 30 ms, the new core's input faded in, the old core's output out. Settings within a
+  samples; since 31 October E and N advance instead, so the alignment is 0). Program switch: 30 ms, the new core's input faded in, the old core's output out. Settings within a
   program: at once. DELAY changes: a 10 ms crossfade. The A/D clip moved into the bridge; `AdcClipper` retired.
