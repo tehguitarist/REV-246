@@ -1,0 +1,29 @@
+M theta depth scan (1 Nov 2026): tools/ml_fix_depth.py (runs/, rate/), tools/ml_fix_depth_report.py (report.log, report_rate.log,
+depth*.json). Python core (= plugin C++ to -139...-148 dB) through the sweep, 3 phases, all 160 M groups, rms 0.13 / 0.11 /
+0.09 / 0.07 + theta 0 (d0); rate test 1.66 / 0.415 Hz at 0.13 on RT 0.8 and RT 5.0 (40 groups). Check: python d13 = plugin
+sw3 on every pooled M metric to 0.01 % (125/250/500 decay 1.97/1.28/1.22, EDT 1.75/1.24/0.88, recirc1 -18.7).
+Cost: 4767 s (2 workers, peak 1.24 GB) + 987 s (rate).
+
+Held-out law (cost = decorrelation gap |CC - SPPcorr| over recirc1/2, 0.3-0.6, 0.6-1.0 + low-band EDC excess; fit even
+groups, test odd): d13 at every RT step 0.6...5.0 (odd: own best d13 at 7 of 8 steps; RT 0.8 d11 1.16 vs d13 1.17).
+-> no depth law; 0 parameters added; M stays at 0.13 rad rms.
+
+RT 0.8 (20 groups), d13 -> d11 -> d09 -> d07 [CC], d0 = static through the sweep:
+  500 Hz decay  1.68 / 1.81 / 1.61 / 1.63 [1.48]  d0 1.42   in tol 72 / 82 / 82 / 82 %  d0 85 %
+  EDT 250       1.30 / 1.23 / 1.21 / 1.17 [0.82]  d0 1.04   in tol 80 / 81 / 86 / 87 %  d0 89 %
+  EDT 500       0.70 / 0.64 / 0.65 / 0.61 [0.43]  d0 0.59
+  null gap CC - SPPcorr, recirc1 / recirc2: -0.6/+0.1, +0.9/+1.5, +2.6/+3.2, +4.8/+5.4 dB
+Every other RT: gap at d13 -1.7...+1.4 (recirc1), +0.1...+2.1 (recirc2); d11 +1.4 dB more, d09 +3, d07 +5 (to +8.6).
+At RT 5.0 d13 is slightly UNDER-decorrelated (+1.4 / +1.9 dB).
+Rate (RT 0.8): 1.66 Hz in tol 82 / 88 % (500 / EDT250), SPP 500 1.24, nulls unchanged; but RT 5.0: 125 Hz decay 1.55 -> 5.18,
+EDT125 2.55 -> 4.90, EDC dev125 0.73 -> 2.02 dB (CC 1.57 / 2.65 / 0.74) and it breaks §9.3's 0.83 Hz autocorrelation. 0.415 Hz:
+worse at RT 0.8 (500 Hz 2.02, 69 %). -> no rate change.
+
+Verdict: not a static-model limit (d0, the static model through the sweep, is inside: 1.42 [1.48], 85 %). The excess is the
+modulation's realisation spread at short RT (SPP 500 Hz 2.50, ~2.05 corrected, vs CC 1.48) while its decorrelation matches
+the pairs. Depth and rate cannot trade one for the other without breaking the decorrelation curve (an accuracy metric for
+M / L) by >= 1-1.5 dB or the long-RT low band. Recommendation: keep theta 0.13 rms, 0.83 Hz, sine, for M; record the
+short-RT 500 Hz / EDT 250 spread as an open H item (theta's shape: a sine spends most time near its peaks, so frozen-theta
+realisations of a short decay differ more than a shape with less weight at the extremes would at equal rms; or the
+captures' AMPL takes not being independent draws at short RT). A shape test (triangle / smoothed random, same rms and
+autocorrelation) is the next cheap check, ~80 min for 160 groups.
