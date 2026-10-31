@@ -75,8 +75,10 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
   - The Steinberg VST3 validator (blocked by the permission check).
   - plugin_check renders from now on: rerun `--stage align` first.
 
+- **Late on 31 October:** the full sweep-measured M/L audit (340 groups, REPORT_chainfix §10) puts the plugin at the static model's level; the one open item is M at RT <= 1.0, 500 Hz decay 1.82 % against the model's 1.43 % (H: theta depth against a short decay). N LATE 0.2 uses the unit's measured gains (NonLin §10.4), and the bench has an NL_LATE_TABLE switch. **Manual CI run 41193343005: green on macOS, Windows and Linux** (ctest, auval, pluginval), no warnings from the plugin's sources.
+
 **Resume here:**
-1. **One manual CI run** (ask the user first: Actions minutes).
+1. ~~One manual CI run~~ done 31 October (green). Next: the user's listening test; then the release pipeline (`plugin-release.yml`: signing, notarisation, installers; it needs a green CI run on the same commit).
 2. Before any further plugin_check: rerun `--stage align` (the 31 October latency change moved the engine's timing;
    renders made from now on carry it), and move old result dirs aside (every stage skips existing files).
 3. Optional, latency: refit the 65-tap correction with a short bulk delay (17 -> about 2 device samples, -0.57 ms) if
