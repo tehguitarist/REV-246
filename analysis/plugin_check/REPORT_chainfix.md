@@ -499,3 +499,100 @@ Per band, 0.05–0.6 s (plugin / bench):
     LATE ≥ 0.4 is at the 0.05 % level.
 - **Trimmed starts:** they score like the rest after 0.15 s. 0–0.15 s and the bands are limited by Tomkin's trim (20–100
   Hz −33 dB for plugin and bench alike).
+
+## 10. M/L audit, sweep-measured, all groups
+
+§8 scored the plugin's M / L impulse renders, and every one of them starts θ at the same phase (0, rising). That makes all
+340 groups one realisation of the modulation, while Tomkin's captures are sweep measurements with a free-running phase.
+The diagnosis is in `analysis/ml_fix/diag.log`:
+- the port is exact (C++ core against `ml_variance.core`, static and modulated, −139…−148 dB);
+- the modulation adds no mean decay bias (M 125 Hz +0.38 ± 0.40 %, L 250 Hz −0.02 ± 0.36 %);
+- the sweep halves L's 250 Hz spread between realisations.
+
+This section reruns the whole audit with the plugin measured the way Tomkin's captures were.
+
+**Method** (`tools/ml_fix_diag.py --stage sw3 --set all`, report `tools/ml_fix_sw3_report.py`):
+- **Build:** the 31 October build, with the M / L AMPL fix and the 54-sample advance. The renders are aligned by the
+  cluster tap, as before.
+- **Renders per group:** three sweep renders, at θ start phases 0 / 120 / 240°, through `ml_variance`'s sweep
+  (10 Hz–13 kHz, L = 3.4 s, tail max(6 s, 0.8 RT)); plus static impulse renders at every AMPL.
+- **The model per capture:** the static impulse's cluster part plus the deconvolved sweep's reverb part, fitted with
+  `ml_lines.fit_warp` as in §8. The metrics are pulse_check's `compare` / `_ml_nulls`, unchanged.
+- **Disk:** the sweep WAVs are deleted once scored; the static impulses are kept.
+- **Run:** 340 groups in 3.3 h. The run used 2 workers, with the 40 L groups at RT ≥ 15 on 1 worker. Peak 3.53 GB.
+- **Smoke check:** two groups match the pre-fix smoke run to within 6·10⁻⁷ on every metric. That is as it should be,
+  because the fit's gains are free.
+- **The AMPL fix:** the fitted cluster / reverb gain ratio is now −0.08 dB (M) and −0.035 dB (L), against +11.58 dB on
+  the audit build.
+
+**Columns:** medians, R, |ratio − 1| % (EDC dev in dB).
+- SW = the sweep-measured plugin against the capture, 3 phases.
+- AUD = §8, the phase-0 impulse.
+- MC = the static model.
+- [CC] = the capture pairs.
+- SPP = sweep phase against sweep phase. The phases are 120° apart, which widens spreads by about 1.22× and makes nulls
+  about 1.8 dB shallower than random pairs would.
+- "In tol" = the share of captures within the group's largest capture-pair difference (3 % floor), as SW / AUD / MC.
+
+| Metric | SW | AUD | MC | [CC] | SPP | In tol SW / AUD / MC |
+|---|---|---|---|---|---|---|
+| M 125 Hz decay | 1.97 | 2.55 | 1.86 | [1.88] | 2.48 | 85 / 73 / 88 % |
+| M 250 Hz decay | 1.28 | 1.25 | 1.15 | [1.18] | 1.66 | 88 / 91 / 93 % |
+| M 500 Hz decay | 1.22 | 1.44 | 1.17 | [1.11] | 1.55 | 93 / 91 / 96 % |
+| M EDT 125 | 1.75 | 2.44 | 1.55 | [2.00] | 2.38 | 86 / 74 / 95 % |
+| M EDT 250 | 1.24 | 1.61 | 1.09 | [1.10] | 1.71 | 90 / 83 / 93 % |
+| M EDT 500 | 0.88 | 1.52 | 0.74 | [0.71] | 1.21 | 97 / 89 / 99 % |
+| M EDC dev 125 (dB) | 0.62 | 0.81 | 0.62 | [0.64] | 0.80 | 70 / 57 / 77 % |
+| L 125 Hz decay | 1.34 | 1.41 | 1.35 | [1.47] | 1.75 | 86 / 84 / 90 % |
+| L 250 Hz decay | 0.89 | 1.29 | 0.89 | [0.90] | 0.96 | 94 / 89 / 95 % |
+| L EDT 125 | 1.42 | 1.41 | 1.31 | [1.47] | 2.00 | 85 / 89 / 91 % |
+| L EDT 500 | 0.64 | 0.79 | 0.63 | [0.55] | 0.56 | 99 / 100 / 99 % |
+| L EDC dev 250 (dB) | 0.54 | 0.60 | 0.52 | [0.55] | 0.55 | 49 / 40 / 49 % |
+| L mixing time | 1.39 | 3.61 | 1.27 | [1.35] | 1.59 | 78 / 51 / 80 % |
+
+- **Above 500 Hz**, decay, EDT and late decay are unchanged from §8 and stay at the capture level.
+- **Late decay** at 125 Hz–1 kHz: SW 4.3–1.9 % (M) and 4.1–2.0 % (L), against [4.6–1.7] and [4.9–2.4]. In tol is the same
+  as the model's or better.
+- **Third-octave decay** at 100–500 Hz is within 0.5 % of MC in every band. The largest gap is M at 159 Hz, 4.11
+  against 3.62 [4.27].
+- **Decorrelation (nulls, dB):**
+  - L recirc 1 −17.1 [−17.6]; §8 was −15.4.
+  - M recirc 1 −18.7 [−19.3].
+  - recirc 2–3 and 0.3–4 s: within 0.5 dB of the pairs in both programs.
+- **Levels:**
+  - C50 / C80, early and late third-octave levels, L/R level, IACC and coherence are within 0.01–0.09 dB of the
+    capture, the same as SC and MC. Early metrics' [CC] is the AMPL change between captures, not a tolerance.
+  - M's early 100 Hz level is 0.06 against the model's 1.30 dB.
+- **Static windows** (deterministic, on the static impulse renders): first pass R −50.0 (M) and −54.9 dB (L), against
+  [−48.4 / −51.8]. Cluster + gap are not rescored; they are θ- and fit-independent, so §7's −62.5 / −57.3 dB stands.
+  The sweep costs about 0.2–0.5 dB in the first pass from sweep ghosts (SW −49.8 / −54.5), so the −50 dB bar is read on
+  the impulse.
+
+**Mixing time and `ned_def`:**
+- The mixing time (the first time the 50 ms-smoothed echo density reaches 0.9) flips by 100–200 ms where L's echo density
+  plateaus near 0.9. That threshold artefact was §8's 3.6 %. Sweep-measured over three phases it sits at the pairs
+  (1.39 [1.35]) and at SPP (1.59).
+- `ned_def` is a continuous replacement: the echo-density deficit Σ max(0, 1 − NED)·dt over the first second, as a ratio.
+  - M: 2.46 / AUD 2.83 / MC 2.12 [2.00], SPP 2.74.
+  - L's capture pairs are AMPL 0 against AMPL 80, and one of them has no cluster, so L's [CC] is meaningless (11.4).
+    Read L against SPP (1.71; SW 2.86).
+
+**Still outside tolerance, or worse than the static model:**
+- **M at short RT (RT ≤ 1.0, 40 groups), 500 Hz decay:** SW 1.82 against MC 1.43 [1.48], in tol 72 against 85 %. Its
+  SPP is 2.75 (about 2.25 after the spacing factor), which is wider than the captures' pairs. **H:** M's realisation
+  spread at short RT is larger than the unit's. This is the one place where θ (its depth or rate relative to the decay)
+  may need a closer look.
+- **Model-level, not modulation** (SW = AUD = MC, so not θ):
+  - M RT short 250 Hz: 2.75 / 2.58 / 2.60 [2.08].
+  - M LF 0.1 250 / 500 Hz: 1.79 / 1.42 against MC 1.84 / 1.18 [1.29 / 0.84].
+  - L LF 0.1 500 Hz decay and EDT 500: 1.77 / 1.39 against MC 2.03 / 1.40 [0.72 / 0.59].
+- **M EDT 125:** inside the pairs' median (1.75 [2.00]) but in tol 86 against the model's 95 %. M EDT 250 / 500: 1.24 /
+  0.88 against MC 1.09 / 0.74.
+- **EDC dev:** only about 49 % of L captures are in tol, the same as the model. L has one capture pair per group, so the
+  tolerance is too narrow; against SPP the share is 72–82 %.
+
+**Verdict:** measured as Tomkin measured, the plugin's M / L time variance is inside the capture-to-capture tolerance in
+the low band, with the one H item above, M at short RT. §8's excess came from the phase-0 impulse renders.
+
+Files: `analysis/ml_fix/sw3_all/` (one JSON per group), `sw3_all_report.log`, `sw3_all.json`, `sw3_all_run.log`; the
+smoke runs are in `sw3/` and `sw3_report.log`.

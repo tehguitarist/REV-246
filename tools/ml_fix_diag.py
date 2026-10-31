@@ -132,6 +132,7 @@ def slim(m):
     m = json.loads(json.dumps(m))                 # summarise expects the JSON form (string band keys)
     s = pc.summarise(m)
     out = {k: s.get(k) for k in KEEP}
+    out.update({k: v for k, v in s.items() if k.startswith(("rv_", "rvv_", "coh_", "fine_")) and k not in out})   # G4-G6 incl. level metrics
     for f in pc.OCT:                                # the absolute decay times (s) of both IRs, R: the bias test needs them
         b = m["oct"][str(f)][1]["t"]
         out[f"T{f}"] = b
@@ -360,9 +361,48 @@ def sw3path(prog, key, i):
     return os.path.join(RND, "96000", f"{prog}_{key}_a0_sw3_{i}.wav")
 
 
-def sw3_groups(only):
-    g = [(p, k) for p, ks in SW3_KEYS.items() for k in ks]
+SW3_DIR = os.environ.get("SW3_DIR", "sw3")         # sw3: the 20-group smoke (31 Oct, pre-AMPL-fix build); sw3_all: all groups
+
+
+def sw3_groups(only, every=None):
+    if every == "all":
+        import ml_carryover as cc
+        g = [(p, k) for p in ("M", "L") for k in sorted(cc.groups(p))]
+    else:
+        g = [(p, k) for p, ks in SW3_KEYS.items() for k in ks]
     return [x for x in g if not only or f"{x[0]}_{x[1]}" in only]
+
+
+def sw3_lines(prog, key):
+    sw = os.path.join(RND, "sweep_96k.wav")
+    T0 = len(pk.sweep_96k()[0]) / pk.HOST
+    g = pk.ml_groups(prog)[key]
+    lf, rt, hf = (float(x) for x in key.split("_"))
+    L = [pk.render_line(hpath(prog, key, amp, "static"), pk.HOST, prog, lf, rt, hf, amp, g["len"], mod=0)
+         for amp in sorted(set(g["amps"]) | {0})]
+    L += [pk.render_line(sw3path(prog, key, i), pk.HOST, prog, lf, rt, hf, 0, T0 + tail3(key), pre=pre, inp=sw) for i, pre in enumerate(PRE)]
+    return L
+
+
+def sweep_file():
+    sw = os.path.join(RND, "sweep_96k.wav")
+    if not os.path.exists(sw):
+        os.makedirs(RND, exist_ok=True)
+        sf.write(sw, (0.25 * pk.sweep_96k()[0]).astype(np.float32), pk.HOST, subtype="FLOAT")
+
+
+def render_group(prog, key):
+    """Render what this group lacks (in the job: one list per group)."""
+    todo = [l for l in sw3_lines(prog, key) if not os.path.exists(l.split()[0][4:])]
+    if not todo:
+        return
+    os.makedirs(os.path.join(RND, "96000"), exist_ok=True)
+    lst = os.path.join(RND, f"list_{prog}_{key}.txt")
+    open(lst, "w").write("\n".join(todo) + "\n")
+    r = subprocess.run([pk.RENDER_BIN, lst], capture_output=True, text=True)
+    os.remove(lst)
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr[-2000:])
 
 
 def sw3_render(only):
@@ -395,12 +435,16 @@ def sw3_render(only):
 def _sw3_job(a):
     """Per capture: the sweep-measured plugin (static cluster part + the sweep's reverb part at phase k, fit_warp exactly as
     the audit) vs the capture, the static impulse vs the capture, and the sweep phases against each other."""
-    prog, key, path = a
+    prog, key, path = a[:3]
+    inline = len(a) > 3 and a[3]
     import ml_carryover as cc
     import ml_lines as mll
     import ml_structure as ml
     from scipy.signal import fftconvolve
     t = time.time()
+    if inline:
+        render_group(prog, key)
+    tr = time.time() - t
     K0 = cc.K0
     g = cc.groups(prog)[key]
     n = max(len(cc._IR(f)) for f in g.values()) + 200
@@ -433,7 +477,8 @@ def _sw3_job(a):
         P, mdl = {}, {}
         row = dict(amp=amp, t_end=(i1 - K0) / FS, vs_cap={}, null_cap={}, pairs={}, null_pairs={})
         for v in names:
-            mdl[v], _, _, _ = mll.fit_warp(y, [C[amp], R[v]] if amp > 0 else [R[v]], sl, nf)
+            mdl[v], u, gs, _ = mll.fit_warp(y, [C[amp], R[v]] if amp > 0 else [R[v]], sl, nf)
+            row.setdefault("fit", {})[v] = dict(shift=u[0], ppm=u[1], gains=[[float(x) for x in gch] for gch in gs])
             P[v] = pc.prep(mdl[v][:i1], dtype=np.float32)
             row["vs_cap"][v] = slim(pc.compare(P[v], Y, i1, K0, t0, fw))
             row["null_cap"][v] = pc._ml_nulls(prog, y, mdl[v], i1)
@@ -445,19 +490,35 @@ def _sw3_job(a):
         rows.append(row)
         del P, Y, mdl
     lf, rt, hf = (float(x) for x in key.split("_"))
-    json.dump(dict(key=key, prog=prog, lf=lf, rt=rt, hf=hf, rows=rows), open(path, "w"))
+    json.dump(dict(key=key, prog=prog, lf=lf, rt=rt, hf=hf, render_s=tr, rows=rows), open(path, "w"))
+    if inline:                                      # disk: the sweep renders go once scored (the static impulses stay)
+        for i in range(len(PRE)):
+            os.remove(sw3path(prog, key, i))
     r = rows[-1]
     f = 125 if prog == "M" else 250
-    print(f"{prog} {key}: {time.time() - t:.0f} s; {f} Hz decay vs cap " + " ".join(f"{v} {100 * (r['vs_cap'][v][f'oct_t{f}'] or np.nan):+.1f}" for v in names), flush=True)
+    print(f"{prog} {key}: {time.time() - t:.0f} s (render {tr:.0f}); {f} Hz decay vs cap " + " ".join(f"{v} {100 * (r['vs_cap'][v][f'oct_t{f}'] or np.nan):+.1f}" for v in names), flush=True)
     return key
 
 
-def sw3_stage(workers, only):
+def sw3_stage(workers, only, every=None, chunk=None, rtmin=None, rtmax=None):
+    """every='all': every M / L group, rendering inside the job (render, score, delete the sweeps). rtmin / rtmax: L's
+    RT range (the long L groups run on one worker), M always below rtmin's cut unless rtmin is set."""
     from concurrent.futures import ProcessPoolExecutor
-    d = os.path.join(OUT, "sw3")
+    d = os.path.join(OUT, SW3_DIR)
     os.makedirs(d, exist_ok=True)
-    jobs = [(p, k, os.path.join(d, f"{p}_{k}.json")) for p, k in sw3_groups(only)]
+    sweep_file()
+    G = sw3_groups(only, every)
+    rt = lambda k: float(k.split("_")[1])
+    if rtmin is not None:
+        G = [(p, k) for p, k in G if p == "L" and rt(k) >= rtmin]
+    if rtmax is not None:
+        G = [(p, k) for p, k in G if not (p == "L" and rt(k) >= rtmax)]
+    if chunk:
+        i, m = (int(x) for x in chunk.split("/"))
+        G = G[i::m]
+    jobs = [(p, k, os.path.join(d, f"{p}_{k}.json"), every == "all") for p, k in G]
     jobs = [j for j in jobs if not os.path.exists(j[2])]
+    jobs.sort(key=lambda j: -rt(j[1]) * (3 if j[0] == "L" else 1))
     print(f"sw3: {len(jobs)} groups to run", flush=True)
     if workers == 1:
         for j in jobs:
@@ -468,16 +529,62 @@ def sw3_stage(workers, only):
             pass
 
 
+# ---------------------------------------------------------------- static windows on the (new build's) static impulse renders
+def _static_job(a):
+    """cluster + gap and first pass, per channel, the static impulse render fitted to each capture exactly as plugin_check's
+    ml stage (fit_warp on cluster + gap + first pass): the deterministic part, where the -50 dB bar applies."""
+    prog, key = a
+    import ml_carryover as cc
+    import ml_lines as mll
+    K0 = cc.K0
+    g = cc.groups(prog)[key]
+    n = max(len(cc._IR(f)) for f in g.values()) + 200
+    caps, _, amps = cc.captures(prog, key, n)
+    n = len(caps[amps[-1]])
+    C, R, _ = parts(prog, key, amps, n, "static")
+    W = mll.windows(prog)
+    rows = []
+    for amp in amps:
+        y = caps[amp]
+        end = mll.usable_end(y, g[amp], prog)
+        sl, nf = mll.fit_window(prog, amp > 0)
+        mdl, u, gs, _ = mll.fit_warp(y, [C[amp], R] if amp > 0 else [R], sl, nf)
+        rows.append(dict(amp=amp, gains=[[float(x) for x in gch] for gch in gs],
+                         null={w: [mll.null_db(y[:, ch], mdl[:, ch], K0 + W[ch][w][0], min(K0 + W[ch][w][1], end[ch])) for ch in (0, 1)]
+                               for w in ("cluster_gap", "first_pass") if amp > 0 or w != "cluster_gap"}))
+    return f"{prog}_{key}", rows
+
+
+def static_stage(workers, only):
+    from concurrent.futures import ProcessPoolExecutor
+    import ml_carryover as cc
+    p = os.path.join(OUT, "static_windows.json")
+    res = json.load(open(p)) if os.path.exists(p) else {}
+    jobs = [(pr, k) for pr in ("M", "L") for k in sorted(cc.groups(pr)) if f"{pr}_{k}" not in res and (not only or f"{pr}_{k}" in only)
+            and os.path.exists(hpath(pr, k, 0, "static"))]
+    print(f"static: {len(jobs)} groups", flush=True)
+    with ProcessPoolExecutor(workers, max_tasks_per_child=4) as ex:
+        for i, (k, rows) in enumerate(ex.map(_static_job, jobs)):
+            res[k] = rows
+            if i % 20 == 0:
+                json.dump(res, open(p, "w"))
+    json.dump(res, open(p, "w"))
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--stage", choices=["render", "ml", "port", "sweep", "sw3render", "sw3", "report"], required=True)
+    ap.add_argument("--stage", choices=["render", "ml", "port", "sweep", "sw3render", "sw3", "static", "report"], required=True)
     ap.add_argument("--only", default=None)
     ap.add_argument("--workers", type=int, default=1)
+    ap.add_argument("--set", default=None, help="sw3: 'all' = every M / L group, rendered inside the job")
+    ap.add_argument("--chunk", default=None)
+    ap.add_argument("--rtmin", type=float, default=None)
+    ap.add_argument("--rtmax", type=float, default=None)
     a = ap.parse_args()
     only = a.only.split(",") if a.only else None
     {"render": lambda: render_stage(only), "ml": lambda: ml_stage(a.workers, only), "port": lambda: port_stage(only),
      "sweep": lambda: sweep_stage(only), "sw3render": lambda: sw3_render(only),
-     "sw3": lambda: sw3_stage(a.workers, only), "report": report_stage}[a.stage]()
+     "static": lambda: static_stage(a.workers, only), "sw3": lambda: sw3_stage(a.workers, only, a.set, a.chunk, a.rtmin, a.rtmax), "report": report_stage}[a.stage]()
 
 
 if __name__ == "__main__":
