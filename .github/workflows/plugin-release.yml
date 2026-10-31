@@ -451,6 +451,7 @@ jobs:
           tag_name: plugin-v${{ needs.version.outputs.version }}
           name: REV-246 v${{ needs.version.outputs.version }}
           draft: ${{ inputs.draft }}
+          prerelease: ${{ startsWith(needs.version.outputs.version, '0.') }} # every 0.x version is a pre-release
           files: |
             artifacts/**/*.zip
             artifacts/**/*.pkg
