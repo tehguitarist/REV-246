@@ -1,0 +1,26 @@
+sw3 render: 72 of 120 to do
+sw3 render: done in 21 s
+[memguard] peak footprint 0.30 GB, 23 s, exit 0
+sw3: 16 groups to run
+M 0.1_0.8_0.9: 29 s; 125 Hz decay vs cap s0 +1.8 s1 +6.9 s2 -1.0 static +2.8
+M 2.0_0.8_0.9: 30 s; 125 Hz decay vs cap s0 +0.1 s1 -13.2 s2 -23.9 static -8.2
+M 0.1_1.8_0.4: 35 s; 125 Hz decay vs cap s0 -1.7 s1 -5.6 s2 -4.0 static -4.7
+M 0.7_3.0_0.2: 44 s; 125 Hz decay vs cap s0 +0.7 s1 +2.5 s2 +4.5 static +4.5
+M 0.1_4.0_0.4: 54 s; 125 Hz decay vs cap s0 +0.5 s1 -2.0 s2 +0.2 static -1.9
+M 0.7_1.2_0.4: 28 s; 125 Hz decay vs cap s0 +3.1 s1 -11.7 s2 -5.9 static -4.6
+M 1.2_5.0_0.9: 81 s; 125 Hz decay vs cap s0 +4.1 s1 +1.9 s2 +0.8 static +3.3
+M 1.2_0.6_0.9: 24 s; 125 Hz decay vs cap s0 +nan s1 +nan s2 +nan static +nan
+M 1.2_2.6_0.7: 54 s; 125 Hz decay vs cap s0 +1.1 s1 -4.1 s2 +1.8 static -2.0
+L 2.0_2.6_0.5: 46 s; 250 Hz decay vs cap s0 +0.5 s1 +1.1 s2 +0.7 static +1.3
+L 2.0_3.6_0.3: 39 s; 250 Hz decay vs cap s0 +1.0 s1 +6.1 s2 -5.1 static -0.2
+L 1.2_4.5_0.8: 50 s; 250 Hz decay vs cap s0 +0.6 s1 +2.7 s2 +0.1 static +0.9
+L 0.1_8.0_0.3: 56 s; 250 Hz decay vs cap s0 +0.1 s1 -0.0 s2 +0.0 static +0.1
+L 0.1_10.0_0.3: 70 s; 250 Hz decay vs cap s0 +1.8 s1 +0.6 s2 +1.4 static +1.1
+L 0.8_6.0_0.8: 59 s; 250 Hz decay vs cap s0 +0.3 s1 +2.5 s2 -1.0 static -0.1
+L 1.2_2.2_0.8: 36 s; 250 Hz decay vs cap s0 +0.6 s1 +0.4 s2 +0.7 static +0.7
+[memguard] peak footprint 1.70 GB, 380 s, exit 0
+sw3: 2 groups to run
+L 1.2_20.0_1.0: 155 s; 250 Hz decay vs cap s0 -0.2 s1 -0.5 s2 +0.9 static +0.5
+L 0.8_15.0_0.5: 107 s; 250 Hz decay vs cap s0 -0.7 s1 -0.0 s2 +1.3 static -0.4
+[memguard] peak footprint 2.07 GB, 262 s, exit 0
+ALLDONE
