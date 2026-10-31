@@ -60,7 +60,11 @@
   (`hp1_sos`, `lowshelf_sos`, `peak_sos`). It was fitted at the device rate; the plugin designs the same sections at
   the host rate from the same parameters, which matches `bq_resp` within 0.001 dB at 50 Hz–2 kHz from 22.05 to
   192 kHz (no prewarping needed; the fit is undefined below ~50 Hz). If `bq.json` is refitted, update
-  `CaptureEq::cla` and the reference table in `tests/TransformerTests.cpp` together.
+  `CaptureEq::cla` and the reference table in `tests/TransformerTests.cpp` together. Compared on 31 October 2026 (`../docs/model_s_results.md`
+  §37.1) with a 13-number cascade (a third peak) and with one joint CLA + Altiverb cascade: the two units' low bands
+  agree in level (<= 0.4 dB above 80 Hz) but not in phase below ~270 Hz, so the joint one loses 6-7 dB at 20-80 Hz; the
+  CLA-only 13-number form gains 6-12 dB at 160-400 Hz but costs 0.6-2.5 dB elsewhere. Neither adopted (the user's
+  call for the 13-number one: `analysis/unit_chain/cla13.json`).
 - `stereoWidth` (default 100, the WIDTH halo) is a sound setting and part of presets. `src/dsp/StereoWidth.h` holds
   the level-matched M/S `StereoWidener` (100 is a bit-exact bypass, 0 mono, 200 wide, bass mono above 100). It runs
   on the whole wet: pure M/S gains move nothing in time, so the early reflections are never smeared (the design
