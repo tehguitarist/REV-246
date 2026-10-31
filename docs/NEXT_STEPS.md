@@ -57,6 +57,13 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 - **Agents still running when the usage limit hit (their work is uncommitted; check, then commit):** (a) the joint CLA + Altiverb XFMR cascade (`plugin/src/dsp/CaptureEq.h`, `plugin/tests/TransformerTests.cpp`, `tools/unit_chain_fullband.py`, a `model_s_results.md` §37.x; adopt only if within 0.5 dB of each unit's own cascade in every band); (b) the audit metrics G1-G6 on the plugin's renders (`tools/plugin_pulse.py`, `analysis/plugin_pulse/`, REPORT_chainfix §8).
 - **Not done:** Steinberg's VST3 validator (cloning and building the SDK was blocked by the permission check; the user decides).
 
+- **31 October afternoon, paused by the session limit (resume after 4:30 pm; the agents' work so far is saved, resume them rather than restarting):**
+  1. **M/L AMPL law** (`tools/ml_ampl_check.py`, `analysis/ml_ampl/`): the plugin's M/L cluster/reverb ratio looked ~9-12 dB low against Tomkin at the same settings (preset check, `analysis/altiverb/preset_check/report.md` finding 2). Measure the hardware's absolute M/L AMPL law from Tomkin's AMPL pairs (reverb identical, cluster scales: no free gain); S as control, CLA (S at AMPL 80) as the known anchor; best guess with C/S/H where unmeasurable (user, 31 October); then implement the law (MLCore clusterGain, now AMPL / 90) held out, and redo the preset AMPLs on it.
+  2. **M/L sweep-measured audit smoke** (`tools/ml_fix_diag.py`, 3 start phases, ~20 groups), then report before a full rerun. The diagnosis (`analysis/ml_fix/diag.log`): the audit's low-band excess was one theta phase for all renders, not theta / port / decay law.
+  3. **N audit metrics** on the plugin's renders (`tools/plugin_pulse_n.py`, `analysis/plugin_pulse/n/`, REPORT_chainfix §9).
+  4. **LOW PASS shape from the presets (user's request):** the preset check found LP < 12 presets' tap 0 fits a 2-tap device-rate FIR [1-a, a] relative to their family (0.01-0.04 dB rms), PRESET23 a steep cut (-5 dB at 9 kHz, -39 dB at 11 kHz). Fit the candidate forms (2-tap FIR, one-pole, Butterworth, biquad) per preset, family-relative (the dark families' roll-off is L's output kernel, EMT250 §14.1), check that one parameter maps monotonically onto the lever's kHz steps, and adopt the form in `ReverbEngine`'s `DeviceLowPass` (now a guessed 2nd-order Butterworth, H).
+  5. Another session's test `plugin/tests/StateTests.cpp:157-158` compares floats with `==` (GCC `-Wfloat-equal`): fix before CI (`juce::exactlyEqual`) once that session is done with the file.
+
 **Resume here:**
 1. **One manual CI run** (ask the user first: Actions minutes).
 2. Before any further plugin_check: rerun `--stage align` (the 31 October latency change moved the engine's timing;
