@@ -6,44 +6,66 @@
 
 ![REV-246](docs/images/screenshot.png)
 
-REV-246 is a free, open-source reverb plugin (AU, VST3 and standalone) inspired by the classic and relatively rare
-EMT 246 digital reverb, with the EMT 250 algorithm included as a programme of its own. It is just the reverb half of
-the hardware: there is no delay or echo section.
+**A free, open-source digital reverb with a vintage heart.** REV-246 is inspired by the EMT 246, the rare late-1970s
+studio reverb prized for its dense, smooth tails and its distinctly period character: a little grit, a little weight,
+and a sound that sits in a mix instead of on top of it. It runs as AU, VST3 and standalone, on macOS, Windows and Linux.
 
-It was built by comparing impulse responses from three separate units, and it has two switches that move it between a
-clean, modern reading and a period one: **16-bit** processing, which reproduces the original's quantisation, and an
-optional **transformer** stage, the factory option the real unit could be ordered with. Both are on by default; switch
-either or both off for a cleaner sound.
-
-The original's remote joysticks are kept, made a little friendlier for a mouse, and the mix, input and output levels
-borrow the look of the unit's optional fader pack. A WIDTH halo sets how wide the reverb's wet output sits, from mono
-through the original's width to extra wide, with the bass kept mono as it widens.
+Five programmes cover everything from a tight room to a twenty-second cathedral, including a non-linear programme for
+gated and reverse drum sounds and the older EMT 250 algorithm. The panel keeps the original's six levers, glowing readouts and
+fader pack. Beneath it are modern conveniences the hardware never had: pre-delay, a ducker, a stereo-width control,
+true-stereo operation and presets.
 
 > REV-246 is an independent project. It is not affiliated with or endorsed by EMT or any other manufacturer.
 
-**Status:** pre-release. The reverb engine, panel, presets and installers are in place; the engine is being checked
-against the hardware's impulse responses before the first release, so there is no download yet. When there is, the latest one will be here:
+**Status:** pre-release. The reverb engine, panel, presets and installers are in place and are being checked and
+listened to before the first release, so there is no download yet. When there is, the latest one will be here:
 **[Download the latest release](https://github.com/tehguitarist/REV-246/releases/latest)**.
+
+## Highlights
+
+- **Five programmes**, each with the full set of levers.
+- **Period character, switchable.** 16-bit processing and an optional transformer stage add the grit and weight of the
+  original; switch them off for a clean, modern tail.
+- **Six levers:** low-pass, reflections delay and amplitude, and decay: low-frequency multiplier,
+  reverberation time and high-frequency multiplier.
+- **Plus:** pre-delay (0 to 200 ms), an input-keyed ducker, a WIDTH control that keeps the bass mono as it widens, and
+  a mono-sum or true-stereo input mode.
+- **64 factory presets** from small rooms and chambers to halls and cathedrals, plus your own user presets.
+- **Light on the CPU:** about 0.5 to 0.8 % of one Apple-silicon core at 44.1 / 48 kHz and about 1 % at 96 kHz, with about
+  1 ms of latency that your DAW compensates for.
+
+## Programmes
+
+| Programme | Character | Reverberation time |
+|---|---|---|
+| **S** | Short reverb: rooms, booths, live spaces (best between 0.2 and 1 s) | 0.2 to 2.5 s |
+| **M** | Medium reverb: the all-round concert hall (best between 0.8 and 4 s) | 0.5 to 5 s |
+| **L** | Long reverb: the cathedral, with widely spaced early reflections (best between 3 and 10 s) | 2 to 20 s |
+| **E** | The EMT 250 algorithm: recirculating delay loops with slowly moving taps, with extended pre-delay | 0.4 to 4.5 s |
+| **N** | Non-linear: an early section of fixed length (SPAN) with its own decay, then the late reverb; short SPAN gives gated reverb and a negative EARLY time gives reverse reverb | SPAN, early and late times |
+
+Every programme has the same six levers. The readouts above them show the value for the programme you are in; in N they
+change to the hardware's own labels (DELAY, SPAN, EARLY and LATE).
 
 ## Features
 
-- **Five programmes:** **S** (short, 0.2–2.5 s), **M** (medium, 0.5–5 s), **L** (long, 2–20 s), **E** (the EMT 250
-  algorithm) and **N** (the non-linear programme).
-- **Six joysticks** for the reverb's parameters: low-pass, reflections delay and amplitude, and the decay's low-
-  frequency multiplier, reverberation time and high-frequency multiplier. They step through the same kinds of values as
-  the hardware, and the readouts above them show the value for the programme you are in.
+- **Six joystick levers** for the reverb's parameters, stepping through the same kinds of values as the hardware.
+  Click, hold, drag, use the mouse wheel or double-click to type a value.
 - **Mix, input and output faders** with a PAN control for the dry signal, and an optional LINK to move input and output
   together.
-- **Level meter** with an overload light and a calibration button for the reference level.
-- **16-bit mode:** quantises the reverb's internal storage to 16 bits, as the original did, for its faint, signal-
-  dependent noise floor and grit in the decays, and clips the input where the original's A/D converter did. Set it to
-  FLOAT for full precision.
-- **XFMR:** adds the weight in the low end and the gentle low-frequency harmonic distortion of a unit
-  fitted with the optional input and output transformers. Off, the sound is that of the standard unit.
+- **Level meter** with an overload light and a calibration button (**CAL**) for the reference level.
+- **16-bit mode:** reproduces the original's 16-bit reverb storage, for its faint, signal-dependent noise floor and grit in
+  the decays, and clips the input where the original's A/D converter did. Set it to FLOAT for full precision.
+- **XFMR:** the weight in the low end and gentle low-frequency harmonic distortion of the unit's optional input and
+  output transformers. Off, you hear the standard unit.
+- **Pre-delay:** up to 200 ms before the reverb, on top of the programme's own reflections delay.
+- **Ducker:** lowers the reverb while the input is over a threshold, so it blooms in the gaps. Range, threshold,
+  attack and release are adjustable.
+- **WIDTH:** sets how wide the wet signal sits, from mono through the original's width to extra wide, with the bass kept
+  mono as it widens.
 - **Factory and user presets**, with a bypass (power) button.
-- **Mono in / mono out, mono in / stereo out and stereo in / stereo out.** Like the hardware, the reverb has one mono
-  input and two outputs. With a stereo input it can sum to mono first (**ORIGINAL**, the default) or run a reverb per
-  channel (**TRUE ST**).
+- **Mono in / mono out, mono in / stereo out and stereo in / stereo out.** With a stereo input the reverb can sum to
+  mono first (**ORIGINAL**, the default) or run a reverb per channel (**TRUE ST**).
 
 ## Install
 
@@ -60,8 +82,8 @@ Then rescan plugins in your DAW. Logic caches Audio Units, so if REV-246 does no
 
 ## Using it
 
-The initial state is fully wet, with INPUT and OUTPUT at 0 dB and LINK on, the CLA reference lever settings, WIDTH at
-100 and both accuracy options on.
+The initial state is fully wet, with INPUT and OUTPUT at 0 dB and LINK on, a short programme with a one-second decay, WIDTH at
+100 and both character options on.
 
 **Pick a programme** (S, M, L, E or N) and set the six joysticks. Each joystick is the original's lever: press the
 upper half of the round button to step the value up and the lower half to step it down. Hold it to repeat; after a
@@ -74,6 +96,8 @@ notch, and Option/Alt-click to return to the default.
 | **REFLECTIONS** (DELAY, AMPL.) | Delay before the early reflections, 0 to 999 ms, and their level, 0 to 100 % |
 | **DECAY** (LF ×, RT, HF ×) | Reverberation time in seconds, with multipliers for how much faster or slower the low and high frequencies decay |
 | **WIDTH** | Wet stereo width: 0 = mono, 100 = unchanged, 200 = extra wide. Above 100 the bass stays mono |
+| **PRE-DELAY** | Extra delay before the reverb, 0 to 200 ms (after the ducker). Option/Alt-click for 0 |
+| **DUCK** | Lowers the reverb while the input is over a threshold. Click for its settings: range (0 to -60 dB), threshold, attack and release |
 | **MIX** | Wet/dry balance. PAN places the dry signal |
 | **INPUT / OUTPUT** | Levels, with LINK to move them together |
 
@@ -94,14 +118,14 @@ the valid values or range for the current program and unit; an invalid entry lea
 and N have different meanings and ranges (for example amplitude in % vs span in s), and RT is not used in N.
 
 The bottom bar holds the preset browser (previous, next, name, **SAVE**) and **CAL** for the meter reference on the
-left, then the **WIDTH** halo and the routing and accuracy buttons (**ORIGINAL / TRUE ST**, **FLOAT / 16-BIT**,
+left, then the **WIDTH** halo and the routing and character buttons (**ORIGINAL / TRUE ST**, **FLOAT / 16-BIT**,
 **XFMR**), **LINK** and **?** on the right. A changed preset's name turns italic with a `*`. Saving under an existing user-preset name asks
 before replacing it; factory names are read-only. ORIGINAL / TRUE ST, XFMR and LINK are preferences, so presets
 neither store nor change them.
 
-## Accuracy options
+## Character options
 
-Both options are off or on independently, both default on, and both only change the reverb path.
+16-bit and XFMR are independent, both default on, and both only change the reverb path.
 
 **16-bit.** The original stored the intermediate results in its reverb loops as 16-bit words, and truncating them at
 that depth costs a little noise and grit: its service data put the reverb around 15 dB noisier than the unit's own
@@ -126,7 +150,7 @@ harmonic distortion slightly. **XFMR** is on by default; with it on, the wet pat
 gentle odd-harmonic distortion of that option. The low-frequency colour comes from measurement; the distortion is an informed
 estimate, since measurements of a unit's response cannot show it.
 
-## A/B comparison
+## Hear it
 
 **[Listen in your browser](https://tehguitarist.github.io/REV-246/listen/)**: looping players that switch between dry, IR and REV-246 in sync.
 
