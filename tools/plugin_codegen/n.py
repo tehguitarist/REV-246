@@ -92,6 +92,11 @@ def main():
               "from the feed, signs per channel), and the reads' amplitude [spec late].")
     h.scalar("apLateDelay", late["allpass"]["D"], "int")
     h.array("loopDelay", late["loops"]["P"], "int")
+    tab = late["loops"]["gain_table"]
+    assert list(tab) == ["0.2"], tab
+    h.comment("The unit's loop gains at LATE 0.2, per loop in loopDelay order; the law elsewhere [spec late.loops.gain_table].")
+    h.scalar("lateTableRt", 0.2)
+    h.array("lateTableGain", tab["0.2"])
     keys = [str(p) for p in late["loops"]["P"]]
     h.array("readDelay", [d for k in keys for d in late["reads"][k]["delay"]], "int", 4)
     h.array("readSignL", [d for k in keys for d in late["reads"][k]["L_sign"]], "int", 4)

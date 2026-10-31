@@ -269,6 +269,74 @@ By slip class (untrimmed; `summary.txt`): n −1…−7 (82 captures) −53.0 / 
 ### 10.3 What is left in the late section
 With the session clock (11.6 ppm) fixed, the late model nulls SPAN 0 captures at −47…−55 dB at 50–300 ms; captures sharing a setting agree to −57…−64 / −50…−57 dB there. Free per-loop gain corrections are −11…−15 millidB per pass (an ≈ 1 % RT shortfall, as in M / L) and gain 0.3 dB. The later windows are noise-limited.
 
+### 10.4 LATE 0.2: the loops' gains are not the RT law's (31 October 2026; S measured / H cause; not adopted, waiting for a decision)
+
+*Scripts and results: `analysis/nl/late02/`. `passes.py` gives the model-free per-pass gains (`passes_0.2.json`).
+`heldout.py` gives the held-out bench nulls (`heldout.json`, `heldout.log`). `late02.py` holds the bench scan and the
+one-number and per-loop fits (`scan/`). `tailfloor.py` gives the 0.3–1 s levels.*
+
+**Found by:** the audit metrics on the plugin's N renders (`analysis/plugin_check/REPORT_chainfix.md` §9).
+- At LATE 0.2 the late tail of both the plugin and the bench decays 1.8 % fast: 0.244 against 0.248 s.
+- Their nulls collapse after 0.15 s, to −38 / −21 dB at 0.15–0.3 / 0.3–0.6 s.
+- LATE ≥ 0.4 is at the 0.05 % level.
+- This is the "LATE 0.2 reads 0.23–0.29 s" of §10.1, which was put down to the estimator's bias. It is the unit's response.
+
+**1. Per-pass gains (S, direct measurement).**
+- **Method:** each capture keeps the bench's alignment. The model's front part and main-tap branch get one gain each.
+  Every pass k = 0…5 of every loop gets a free amplitude, with its 4 signed reads through AP(124) + AP(314) as in the
+  model. The loop law is not used.
+- **Result:** the ratio a_k+1 / a_k is the same in every pass, every capture and both channels.
+
+| Loop P | Law, LATE 0.2 | Measured (median, 79 untrimmed captures × L/R, IQR ≤ 0.0008) | Effective RT |
+|---|---|---|---|
+| 1108 | 0.2343 | **0.2390** | 0.203 s |
+| 1254 | 0.1935 | **0.2038** | 0.207 s |
+| 1386 | 0.1628 | **0.1820** | 0.213 s |
+
+- **The same fit at LATE 0.4** (one SPAN 0 capture, 0.0_-3.0_0.4): 0.4845 / 0.4403 / 0.4035 against the law's 0.4841 / 0.4399 / 0.4035, the law within
+  0.0004.
+- **So the law is right from 0.4 up.** At 0.2 the unit's gains are higher than 10^(−3P/(fs · 0.2)), and the excess grows
+  with P (+2.0 / +5.3 / +11.8 %).
+- **One effective RT does not fit them:** a single RT_eff (1 number, best +3.5 %) leaves 0.05–0.15 s at −43 and
+  0.15–0.3 s at −28 dB.
+- **H (cause):** a gain that is computed or tabulated, accurate only above about G = 0.4. Examples: a truncated
+  10^x / 2^x approximation, or a stored per-step table. A plain Q15 quantisation of G would change it by < 0.02 %. Neither
+  is identified.
+
+**2. The correction: a per-step table at LATE 0.2, 3 numbers (G per loop, L = R), the law elsewhere.**
+- **Fit:** on every other clean LATE 0.2 capture (40 train, 71 of 80 channel rows within 10 % of the median). The table is
+  G = 0.23901 / 0.20384 / 0.18200.
+- **Test:** on the other 39 untrimmed captures, scored with the bench's own alignment and least-squares gains. Nothing else
+  is fitted. Medians below are L / R, dB, with the number of R channel-windows at or under −50 dB.
+
+| Window (s) | Law | Table (held out) | Excess over the floor | R ≤ −50 dB |
+|---|---|---|---|---|
+| 0–0.05 | −52.0 / −53.3 | −52.0 / −53.3 | +24.2 | 34 → 35 of 39 |
+| 0.05–0.15 | −55.7 / −56.2 | **−59.7 / −59.0** | +11.6 | 23 → 37 |
+| 0.15–0.3 | −39.2 / −38.4 | **−54.9 / −53.9** | +9.6 | 14 → 23 |
+| 0.3–0.6 | −21.4 / −20.6 | −26.5 / −25.8 | +8.0 | 0 → 9 of 36 |
+| 0.6–1.0 | −12.5 / −11.0 | −11.2 / −10.7 | +9.7 | 0 of 8 |
+
+- **The train half** scores the same: 0.05–0.15 s −59.8 / −59.0, 0.15–0.3 s −53.8 / −53.3.
+- **The 16 trimmed-start captures:** 0.15–0.3 s −39.0 → −58.9 dB, 0.3–0.6 s −37.3 → −55.7 dB.
+- **After the table,** LATE 0.2 reaches the level of the other LATE steps: 0.15–0.3 s excess +9.6 dB, against +9…+11
+  elsewhere.
+- **LATE ≥ 0.4 is unchanged by construction:** 10 controls at LATE 0.4 are bit-identical.
+
+**3. The strict rule: not met.**
+- **Windows worse than 0.5 dB:** 28 untrimmed and 2 trimmed LATE 0.2 captures lose more than 0.5 dB somewhere (worst
+  +2.1 dB). Every loss is in 0.3–0.6 or 0.6–1.0 s, where both versions null at −6…−20 dB, except two:
+  - 0.4_0.7_0.2 at 0.3–0.6 s: −35.8 → −35.1 dB;
+  - the trimmed 0.1_0.2_0.2 at 0.15–0.3 s: −23.5 → −22.5 dB.
+- **What fills those windows:** the response 55–75 dB below its start. There the table's tail runs about 2 dB above the
+  capture: at 0.3 s, −57 against −59 dB re 0.05–0.1 s (`tailfloor.py`). The late passes decay a little faster at a low
+  level than one constant gain allows. H: the fixed-point loop's truncation.
+- **The table is already the bench cost's optimum:** a per-capture fit of the 3 gains on the bench's cost, which weights
+  every window equally, lands on the same values (`scan/`).
+- **Decision for the user:** the table gains 4 / 15 dB at 0.05–0.15 / 0.15–0.3 s on held-out captures. It loses up to
+  2 dB in windows that null at −6…−20 dB either way and lie 55–75 dB below the response's start. Under the stated rule it
+  is not adopted, and the spec and plugin are unchanged.
+
 ## 11. Bench: the whole program held out on the library (26–27 October 2026)
 
 `tools/nl_model.py --stage noise | bench | report` → `analysis/nl/bench_warp2/` (default, no kernel) and `analysis/nl/bench_warp2_bk_kf_a0.7/` (`NL_BK=1`, the adopted branch kernel, §11.5); the figures of 26–27 October on the old clock warp are kept in `bench/` and `bench_bk_a0.65/` (`NL_WARP2=0`). Since 27 October (§11.6) the clock correction uses a long interpolation kernel (`nl_late.unwarp`) and the model carries the harness's own resampler filter instead of a fitted EQ. 1,044 captures (`NL_DEFECTS` out), 96 kHz set only. **Per capture only:** the front taps' trim shift (measured, bias-corrected), the branch offset o, the clock ratio (11.6 ± 3 ppm) and one gain per channel; every structural number and law is shared, no setting's gains are fitted. The model goes through the captures' own processing response and the harness's resampler filter (§11.3, `nl_structure.resampler_gain`, no fitted numbers). Nulls per window from the input, each window from where the capture's content starts (§11.4) to the fade guard; windows within 10 dB of the noise are not scored. Floor = the capture noise (median of the LATE 0 tails) over the window's energy. Also per band over 0.05–0.6 s from the full-band capture and model, and an in-band (< 9.5 kHz) null.

@@ -110,7 +110,8 @@ def spec():
         "late": lab(dict(feed=dict(delay_on_branch_line={str(k): v for k, v in nlt.FEED.items()}, R="220 samples earlier"),
                          gain="EARLY > 0: the early law at stage min(ns, 13) (tau = 16 + 36 min(ns, 13) ms); EARLY < 0 or 10: 0 dB",
                          allpass=dict(D=nlt.AP_LATE, g=ne.G_AP),
-                         loops=dict(P=nlt.LOOPS, form="line[n] = v[n] + G line[n - P], G = 10^(-3 P / (fs LATE)), no filter"),
+                         loops=dict(P=nlt.LOOPS, form="line[n] = v[n] + G line[n - P], G = 10^(-3 P / (fs LATE)), no filter",
+                                    gain_table={'0.2': [0.23901, 0.20384, 0.182]}, gain_table_note="LATE 0.2 only (S, NonLin_program 10.4: the unit's gains at that step, measured pass by pass on 79 captures, L = R; held out -55.7 -> -59.7 dB at 0.05-0.15 s, -39.2 -> -54.9 at 0.15-0.3 s); every other step G = 10^(-3 P / (fs LATE))"),
                          reads={str(P): dict(delay=list(q), L_sign=list(nlt.READ_SIGNS[0][P]), R_sign=list(nlt.READ_SIGNS[1][P]))
                                 for P, q in nlt.READS.items()},
                          read_amp=nm.LATE_AMP, late_0="LATE 0: no late section at all (gated)"), "S", "§10"),

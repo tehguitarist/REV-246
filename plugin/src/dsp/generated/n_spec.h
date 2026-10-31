@@ -70,6 +70,10 @@ inline constexpr int lateRShift = 220;
 inline constexpr int apLateDelay = 314;
 inline constexpr std::array<int, 3> loopDelay{{
     1108, 1254, 1386}};
+// The unit's loop gains at LATE 0.2, per loop in loopDelay order; the law elsewhere [spec late.loops.gain_table].
+inline constexpr double lateTableRt = 0.2;
+inline constexpr std::array<double, 3> lateTableGain{{
+    0.23901, 0.20384, 0.182}};
 inline constexpr std::array<int, 12> readDelay{{
     301, 712, 923, 1107,
     398, 689, 1022, 1253,

@@ -238,7 +238,9 @@ class NCore final : public ProgramCore
             lateGain = std::pow(10.0, law.lateDb / 20.0);
             for (size_t l = 0; l < (size_t)numLoops; ++l)
             {
-                loopG[l] = loopGain(loopDelay[l], late);
+                // LATE 0.2: the unit's own gains (2-12 % above the law's, growing with P), every other step the law
+                // [spec late.loops.gain_table, NonLin_program 10.4].
+                loopG[l] = std::abs(late - lateTableRt) < 1e-9 ? lateTableGain[l] : loopGain(loopDelay[l], late);
                 setGridGain(gridLoop0 + (int)l, std::max(1.0 - loopG[l], 1e-6));
             }
             for (size_t r = 0; r < (size_t)numReads; ++r)
