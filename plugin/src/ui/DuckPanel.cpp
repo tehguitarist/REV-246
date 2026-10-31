@@ -169,7 +169,7 @@ class DuckPanel final : public juce::Component
           attackField(*apvts.getParameter(P::id::duckAttackMs), false),
           releaseField(*apvts.getParameter(P::id::duckReleaseMs), false)
     {
-        title.setText("DUCK", juce::dontSendNotification);
+        title.setText("DUCKER", juce::dontSendNotification);
         title.setFont(labelFont(22.0f));
         title.setColour(juce::Label::textColourId, design::gold);
         title.setJustificationType(juce::Justification::centredLeft);
