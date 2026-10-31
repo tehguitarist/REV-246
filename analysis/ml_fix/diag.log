@@ -1,0 +1,48 @@
+ml_fix phase 1 diagnosis (31 Oct 2026). Tools: tools/ml_fix_diag.py (render|ml|port|sweep), tools/ml_fix_report.py.
+Full tables: report.log; numbers: diag.json; per group: ml/*.json, sweep.json, port.json. Renders: renders/ (1.9 GB, not for git).
+Sample: 12 groups. M 2.0_0.8_0.9, 0.1_0.8_0.9, 0.1_1.8_0.4, 0.7_3.0_0.2, 0.1_4.0_0.4, 1.2_5.0_0.9; L 2.0_2.6_0.5, 2.0_3.6_0.3,
+1.2_4.5_0.8, 0.1_8.0_0.3, 0.1_10.0_0.3, 1.2_20.0_1.0 (8 of them = SIM_KEYS). Build: plugin/build-render 07:38 31 Oct.
+Phases: pre = 0 / 0.4016 / 0.8032 s (theta 0 / 120 / 240 deg at the impulse), mod on; plus mod=0. p0 = the audit's render
+(renders_fix) to -51...-84 dB once the 54-sample alignment change (latency 272 -> 76) is undone; PC0 metrics = AUD to 0.01.
+Run: 25 min wall in all, peak 2.07 GB (L RT 20 alone, 1 worker).
+
+(b) Port: C++ core (device domain) vs ml_variance.core (Python read-out form), 12 groups, every window to 6 s:
+    static -138.8...-147.9 dB; modulated -138.6...-147.7 dB with theta(n) = A sin(w(n + n0 + 1)), origin offset 0 samples.
+    -> no port difference. (The bridge after the core is LTI.)
+
+(a) Medians, R, |%| (EDC dev dB). PC = plugin vs capture over 3 phases, PC0 = phase 0 (the audit), SC = mod off,
+    MC = static model, CC = capture pairs, PP = plugin pairs (120 deg apart: x~1.22 spread / +1.8 dB null vs random pairs).
+                    PC0   PC    SC/MC  CC    PP
+    M 125 decay     3.84  2.87  2.81   3.94  3.27
+    M 500 decay     2.07  1.56  0.95   0.72  1.87
+    M EDT 125       2.42  1.80  1.86   1.79  2.87
+    M EDT 500       1.62  1.25  1.21   0.85  1.22
+    M EDC dev 125   0.88  0.79  0.72   0.50  0.85
+    L 250 decay     2.55  1.18  0.82   0.88  1.82
+    L EDT 500       1.54  0.94  0.55   0.41  1.24
+    L mixing time   4.04  2.20  0.79   1.19  3.88   (threshold metric: L's NED sits at 0.88-0.91 near 360 ms, flips 360 <-> 560 ms)
+    nulls dB        PC0   PC    MC     CC    PP(raw / -1.8 corrected)
+    M recirc1       -18.8 -18.2 -20.7  -17.0 -16.4 / -18.2
+    L recirc1       -15.3 -16.7 -18.9  -17.3 -15.4 / -17.2
+    L 0.6-1.0       -10.3 -10.7 -13.0  -12.3  -9.3 / -11.1
+    -> Half or more of the audit's low-band excess is the FIXED start phase: every audit render starts theta at 0 rising,
+       so 340 groups are one realisation, not independent draws. Over 3 phases M 125 / EDT 125 fall to the model and the
+       pairs; L 250 drops 2.55 -> 1.18 (pairs 0.88); L recirc1 excess over pairs 2.2 -> 0.6 dB.
+    Per group, L recirc1 PC - CC: +2.8, +2.5, +3.9 dB (0.1_10.0_0.3, 1.2_20.0_1.0, 1.2_4.5_0.8: §7's three) but -1.8, -2.9,
+       +0.3 in the other three; L has ONE capture pair per group (one random dphi), so +-3 dB per group is chance. Pooled
+       PP (corrected) -17.2 = CC -17.3: the depth is right for L on average; M's plugin pairs are ~1 dB LESS decorrelated.
+
+(d) Measurement method (the 8 SIM_KEYS groups, 6 sweep phases via ml_variance's sweep, L = 3.4 s; static sweep = static
+    impulse to -79 dB): spread of realisations, |%|, sweep pairs SWP / impulse pairs IPP; vs capture SWC / IC [CC]
+    M 125: SWP 2.78 / IPP 3.58; SWC 2.20 / IC 2.68 [3.28]      M 500: 1.33 / 1.39; 1.10 / 2.01 [0.79]
+    L 250: SWP 0.79 / IPP 1.57; SWC 0.66 / IC 1.00 [0.71]      L EDT500: 0.79 / 1.39; 0.75 / 0.94 [0.41]
+    M EDT500: SWC 0.77 / IC 0.98 [0.85]                       L EDT125: SWC 1.71 / IC 1.49 [1.68]
+    -> Tomkin's captures are sweeps; a sweep halves L's 250 Hz realisation spread. Measured as Tomkin was, the plugin
+       is at or inside the pair tolerance at 125/250 Hz in both programs; left over: M 500 decay (1.10 vs 0.79) and
+       L EDT 500 (0.75 vs 0.41), 4 groups each.
+
+(c) Bias (signed mean +- sem, %): modulated - static over 3 phases: M 125 +0.38 +- 0.40, M 500 -0.02 +- 0.25,
+    L 250 -0.02 +- 0.36, L 500 -0.25 +- 0.22. Sweep - static: M 125 -1.26 +- 1.23, L 125 -0.44 +- 0.31, L 500 -0.22 +- 0.13.
+    Per single phase the bias is not zero (M 125 p2 +1.21 +- 0.68, L 250 p2 -0.90 +- 0.30, L EDT 500 p0 -0.79 +- 0.31,
+    L EDT 125 p0 +0.70 +- 0.23): fixed-phase signatures that cancel over phases. -> spread, not a decay-law bias.
+    The audit's M 125 signed -1.2 % (median, 340 groups) is not reproduced in this 6-group sample (p0 +0.47 +- 1.06).
