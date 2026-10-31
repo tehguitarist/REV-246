@@ -170,8 +170,8 @@ Rev246Editor::~Rev246Editor()
 // Construction steps
 
 // The right end of the bar is laid out from the version number's width (fonts differ by platform): the version sits
-// versionRightPad from the panel's right edge, then XFMR, FLOAT / 16-BIT, ORIGINAL / TRUE ST, DUCK, the pre-delay halo
-// and the width halo, each a barGap apart. CAL sits at the left end of the bar, after SAVE, and the "?" after CAL.
+// versionRightPad from the panel's right edge, then the "?" versionGap to its left, then XFMR, FLOAT / 16-BIT,
+// ORIGINAL / TRUE ST, DUCK, the pre-delay halo and the width halo, each a barGap apart. CAL sits at the left end of the bar, after SAVE.
 void Rev246Editor::layoutBottomBar()
 {
     const auto versionWidth = rv::ui::textWidth(rv::ui::labelFont(D::versionCapHeight), versionText()) + 2.0f;
@@ -180,24 +180,20 @@ void Rev246Editor::layoutBottomBar()
     vb.setX(L::designWidth - D::versionRightPad - vb.getWidth());
     versionLabel.setDesignBounds(vb);
 
-    auto edge = vb.getX() - D::barGap; // the right edge of the next control
+    auto edge = vb.getX() - D::versionGap; // the right edge of the next control
     auto placeLeft = [&edge](rv::ui::DesignComponent& c) {
         auto b = c.getDesignBounds();
         b.setX(edge - b.getWidth());
         c.setDesignBounds(b);
         edge = b.getX() - D::barGap;
     };
+    placeLeft(helpButton);
     placeLeft(transformerButton);
     placeLeft(formatButton);
     placeLeft(stereoButton);
     placeLeft(duckButton);
     placeLeft(preDelayKnob);
     placeLeft(widthKnob);
-
-    // The "?" follows CAL at the left end of the bar, a barGap away like every other neighbour.
-    auto hb = helpButton.getDesignBounds();
-    hb.setX(D::calLeft + D::calWidth + D::barGap);
-    helpButton.setDesignBounds(hb);
 }
 
 void Rev246Editor::setUpProgramControls()

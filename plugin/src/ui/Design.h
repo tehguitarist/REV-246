@@ -11,7 +11,7 @@ inline constexpr float minScale = 0.25f, maxScale = 0.60f;
 
 // The bottom bar (presets, link, help) sits under main.png and is drawn in code. The version number keeps
 // versionRightPad from the panel's right edge.
-inline constexpr float versionRightPad = 20.0f;
+inline constexpr float versionRightPad = 20.0f, versionGap = 40.0f; // versionGap: from the "?" to the version
 inline constexpr float barTop = 1380.0f;
 // The bar's buttons share one row; the width halo is taller and sits a little higher.
 inline constexpr float barRowTop = barTop + 35.0f, barRowHeight = 80.0f;
