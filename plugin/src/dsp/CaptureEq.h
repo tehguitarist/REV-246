@@ -13,19 +13,22 @@ namespace rv::dsp
 // Tomkin's library nor the stock unit; possibly the manual's transformer option (EMT246_unit_facts.md §2b). Part
 // of the TRANSFORMER stage (Transformer.h), on by default.
 //
-// The 10 numbers are the "CLA" entry of analysis/unit_transfer/bq.json, fitted at the device rate: a first-order
-// high-pass, an RBJ low shelf and two RBJ peaking sections, the formulas of tools/unit_transfer.py (hp1_sos,
-// lowshelf_sos, peak_sos). The sections are designed at the host rate from the same parameters; that matches
+// The 13 numbers are CLA's capture transfer fitted at the device rate (analysis/unit_chain/cla13.json, "CLA13T";
+// docs/model_s_results.md §37.1-37.3, adopted by the user's decision on 31 October 2026 over bq.json's 10-number
+// "CLA" entry: 6-12 dB deeper nulls at 160-400 Hz and 2 dB at 400-800 Hz against about 1 dB worse at 80-160 Hz and
+// 0.8-1.6 kHz, a footprint of at most 0.17 dB): a first-order high-pass, an RBJ low shelf and three RBJ peaking
+// sections, the formulas of tools/unit_transfer.py (hp1_sos, lowshelf_sos, peak_sos). The sections are designed at the host rate from the same parameters; that matches
 // bq_resp within 0.001 dB at 50 Hz-2 kHz from 22.05 to 192 kHz (tests/TransformerTests.cpp). Below ~50 Hz the fit
-// is not defined by the data. Double precision: the corners sit at 40-280 Hz, far below the host rate.
+// is not defined by the data. Double precision: the corners sit at 40-380 Hz, far below the host rate.
 class CaptureEq
 {
   public:
-    // bq.json "CLA": hp fc, shelf (f0, gain dB, Q), peak (f0, gain dB, Q) x 2.
-    static constexpr std::array<double, 10> cla{39.999999999999986, 52.81516142596459,  9.30246847774469,
-                                                0.601569759607263,  154.6646171955935,  -0.8993904376426464,
-                                                1.2483159003121012, 276.0498874880384,  0.6201888324477692,
-                                                3.5043409976570743};
+    // cla13.json "CLA13T": hp fc, shelf (f0, gain dB, Q), peak (f0, gain dB, Q) x 3.
+    static constexpr std::array<double, 13> cla{39.99999999999999,  52.824460722524165, 9.326356298633552,
+                                                0.5990898451122239, 163.42759767700667, -1.0610196325227694,
+                                                1.1137864203744967, 295.39939134402744, 0.8637236387197627,
+                                                1.39871337943611,   377.78388410094027, -0.5656165432870692,
+                                                2.801949733068588};
 
     void prepare(double sampleRate)
     {
@@ -34,6 +37,7 @@ class CaptureEq
         sections[1] = lowShelf(x[1], x[2], x[3], sampleRate);
         sections[2] = peak(x[4], x[5], x[6], sampleRate);
         sections[3] = peak(x[7], x[8], x[9], sampleRate);
+        sections[4] = peak(x[10], x[11], x[12], sampleRate);
         reset();
     }
 
@@ -112,7 +116,7 @@ class CaptureEq
         return normalise(1 + al * A, -2 * c, 1 - al * A, 1 + al / A, -2 * c, 1 - al / A);
     }
 
-    std::array<Coeffs, 4> sections;
-    std::array<std::array<State, 4>, 2> state;
+    std::array<Coeffs, 5> sections;
+    std::array<std::array<State, 5>, 2> state;
 };
 } // namespace rv::dsp

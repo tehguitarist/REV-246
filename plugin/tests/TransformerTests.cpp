@@ -17,14 +17,15 @@ namespace
 {
 constexpr double deviceRate = 19.2e6 / 728.0;
 
-// 20 log10 |bq_resp(CLA, f)| from tools/unit_transfer.py at the device rate.
+// 20 log10 |H(f)| of analysis/unit_chain/cla13.json's cascade, from tools/unit_transfer.py's hp1_sos / lowshelf_sos /
+// peak_sos at the device rate.
 struct Point
 {
     double hz, db;
 };
-constexpr Point reference[] = {{50, 2.7839},  {60, 2.1453},   {80, 1.0834},   {100, 0.3708},
-                               {160, -0.6366}, {200, -0.4105}, {276, 0.4065},  {400, -0.0046},
-                               {700, -0.0120}, {1000, -0.0062}, {2000, -0.0016}};
+constexpr Point reference[] = {{50, 2.7854},   {60, 2.1488},   {80, 1.0851},    {100, 0.3722},  {160, -0.6463},
+                               {200, -0.4020}, {276, 0.3336},  {295, 0.3640},   {378, -0.1521}, {400, -0.1636},
+                               {700, 0.0218},  {1000, 0.0104}, {2000, 0.0023}};
 
 double db(std::complex<double> h)
 {

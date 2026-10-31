@@ -55,16 +55,15 @@
   on the mono input, then per output the low-band EQ (`src/dsp/CaptureEq.h`) and an output transformer core. Presets
   skip it, like `power` and `link`. The stage always runs (warm state, a 20 ms crossfade when toggled); off, its
   weight is exactly 0 and the signal is unchanged.
-- The EQ is the 10-number cascade of the "CLA" entry in `../analysis/unit_transfer/bq.json`: a first-order
-  high-pass, an RBJ low shelf and two RBJ peaking sections, with the formulas of `../tools/unit_transfer.py`
-  (`hp1_sos`, `lowshelf_sos`, `peak_sos`). It was fitted at the device rate; the plugin designs the same sections at
-  the host rate from the same parameters, which matches `bq_resp` within 0.001 dB at 50 Hz–2 kHz from 22.05 to
-  192 kHz (no prewarping needed; the fit is undefined below ~50 Hz). If `bq.json` is refitted, update
-  `CaptureEq::cla` and the reference table in `tests/TransformerTests.cpp` together. Compared on 31 October 2026 (`../docs/model_s_results.md`
-  §37.1) with a 13-number cascade (a third peak) and with one joint CLA + Altiverb cascade: the two units' low bands
-  agree in level (<= 0.4 dB above 80 Hz) but not in phase below ~270 Hz, so the joint one loses 6-7 dB at 20-80 Hz; the
-  CLA-only 13-number form gains 6-12 dB at 160-400 Hz but costs 0.6-2.5 dB elsewhere. Neither adopted (the user's
-  call for the 13-number one: `analysis/unit_chain/cla13.json`).
+- The EQ is a 13-number cascade fitted to CLA's capture transfer (`../analysis/unit_chain/cla13.json`; a first-order
+  high-pass, an RBJ low shelf and three RBJ peaking sections, the formulas of `../tools/unit_transfer.py`: `hp1_sos`,
+  `lowshelf_sos`, `peak_sos`). It replaced `bq.json`'s 10-number "CLA" entry on 31 October 2026 by the user's decision
+  (`../docs/model_s_results.md` §37.1-37.3): 6-12 dB deeper nulls at 160-400 Hz and about 2 dB at 400-800 Hz, for
+  about 1 dB at 80-160 Hz and 0.8-1.6 kHz; the two differ by at most 0.17 dB. A joint CLA + Altiverb cascade was tried
+  and loses 6-7 dB at 20-80 Hz (the units differ in phase there). It was fitted at the device rate; the plugin designs
+  the same sections at the host rate from the same parameters, which matches the Python response within 0.001 dB at
+  50 Hz-2 kHz from 22.05 to 192 kHz (no prewarping needed; the fit is undefined below ~50 Hz). If the fit changes,
+  update `CaptureEq::cla` and the reference table in `tests/TransformerTests.cpp` together.
 - `stereoWidth` (default 100, the WIDTH halo) is a sound setting and part of presets. `src/dsp/StereoWidth.h` holds
   the level-matched M/S `StereoWidener` (100 is a bit-exact bypass, 0 mono, 200 wide, bass mono above 100). It runs
   on the whole wet: pure M/S gains move nothing in time, so the early reflections are never smeared (the design
