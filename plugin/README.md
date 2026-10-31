@@ -12,8 +12,9 @@ and a sound that sits in a mix instead of on top of it. It runs as AU, VST3 and 
 
 Five programmes cover everything from a tight room to a twenty-second cathedral, including a non-linear programme for
 gated and reverse drum sounds and the older EMT 250 algorithm. The panel keeps the original's six levers, glowing readouts and
-fader pack. Beneath it are modern conveniences the hardware never had: pre-delay, a ducker, a stereo-width control,
-true-stereo operation and presets.
+fader pack. Beneath it are modern conveniences that the original made hard or impossible: an extra pre-delay, a ducker,
+a stereo-width control, true-stereo operation, presets, and switches for the 16-bit and transformer character that
+were fixed in the hardware (or, for the transformers, a factory option you had to order).
 
 > REV-246 is an independent project. It is not affiliated with or endorsed by EMT or any other manufacturer.
 
@@ -28,8 +29,9 @@ listened to before the first release, so there is no download yet. When there is
   original; switch them off for a clean, modern tail.
 - **Six levers:** low-pass, reflections delay and amplitude, and decay: low-frequency multiplier,
   reverberation time and high-frequency multiplier.
-- **Plus:** pre-delay (0 to 200 ms), an input-keyed ducker, a WIDTH control that keeps the bass mono as it widens, and
-  a mono-sum or true-stereo input mode.
+- **Modern conveniences the original lacked:** pre-delay (0 to 200 ms), an input-keyed ducker, a WIDTH control that
+  keeps the bass mono as it widens, a mono-sum or true-stereo input mode, and one-click switches for the 16-bit and
+  transformer character.
 - **64 factory presets** from small rooms and chambers to halls and cathedrals, plus your own user presets.
 - **Light on the CPU:** about 0.5 to 0.8 % of one Apple-silicon core at 44.1 / 48 kHz and about 1 % at 96 kHz, with about
   1 ms of latency that your DAW compensates for.
@@ -49,6 +51,10 @@ change to the hardware's own labels (DELAY, SPAN, EARLY and LATE).
 
 ## Features
 
+The first group is the original's; the second is what REV-246 adds.
+
+**The original's:**
+
 - **Six joystick levers** for the reverb's parameters, stepping through the same kinds of values as the hardware.
   Click, hold, drag, use the mouse wheel or double-click to type a value.
 - **Mix, input and output faders** with a PAN control for the dry signal, and an optional LINK to move input and output
@@ -58,11 +64,16 @@ change to the hardware's own labels (DELAY, SPAN, EARLY and LATE).
   the decays, and clips the input where the original's A/D converter did. Set it to FLOAT for full precision.
 - **XFMR:** the weight in the low end and gentle low-frequency harmonic distortion of the unit's optional input and
   output transformers. Off, you hear the standard unit.
+
+**Added for modern use:**
+
 - **Pre-delay:** up to 200 ms before the reverb, on top of the programme's own reflections delay.
 - **Ducker:** lowers the reverb while the input is over a threshold, so it blooms in the gaps. Range, threshold,
   attack and release are adjustable.
 - **WIDTH:** sets how wide the wet signal sits, from mono through the original's width to extra wide, with the bass kept
   mono as it widens.
+- **16-BIT / FLOAT and XFMR switches:** the original's storage depth was fixed and its transformers were an ordered
+  option; here both are one click, so you can A/B the period character against a clean tail.
 - **Factory and user presets**, with a bypass (power) button.
 - **Mono in / mono out, mono in / stereo out and stereo in / stereo out.** With a stereo input the reverb can sum to
   mono first (**ORIGINAL**, the default) or run a reverb per channel (**TRUE ST**).
