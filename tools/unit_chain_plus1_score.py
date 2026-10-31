@@ -2,7 +2,7 @@
 each capture's clock, shift, gain and 14-number FIR as fitted for the shipped CLA 10, applied unchanged to the candidate's model
 (so the refit's own movement is removed). Same IRs, model and bands as fullband_stage (copied loop). 11-12.3 kHz is skipped.
     EMT_KERNEL=chain3 EMT_PMAX=0.8475 .venv/bin/python tools/memguard.py --limit-gb 3 -- .venv/bin/python tools/unit_chain_plus1_score.py
- -> analysis/unit_chain/plus1_score.json ; print with --report"""
+ -> analysis/unit_chain/<OUTNAME> ; print with --report"""
 import glob, json, os, sys
 import numpy as np
 from scipy.signal import sosfiltfilt
@@ -11,6 +11,7 @@ sys.path.insert(0, HERE); sys.path.insert(0, os.path.join(HERE, "harness"))
 import unit_transfer as ut  # noqa: E402
 import unit_chain_plus1 as p1  # noqa: E402
 
+OUTNAME = "plus1_score.json"
 ROOT, OUT = p1.ROOT, os.path.join(p1.ROOT, "analysis", "unit_chain")
 P = json.load(open(os.path.join(OUT, "plus1.json")))
 VARS = ["plain", "bq_CLA"] + list(P)
@@ -66,11 +67,11 @@ def run():
             res["irs"][name][vn] = dict(refit=ut.band_nulls(y2, mdl2, te, bands), frozen=ut.band_nulls(fr_y, mf, fr_te, bands))
             print(name, vn, "50-150 R 270-400 refit/frozen", round(res["irs"][name][vn]["refit"]["270-400"]["50-150"][1], 1),
                   round(res["irs"][name][vn]["frozen"]["270-400"]["50-150"][1], 1), flush=True)
-    json.dump(res, open(os.path.join(OUT, "plus1_score.json"), "w"))
+    json.dump(res, open(os.path.join(OUT, OUTNAME), "w"))
 
 
 def report():
-    R = json.load(open(os.path.join(OUT, "plus1_score.json")))
+    R = json.load(open(os.path.join(OUT, OUTNAME)))
     W = ["50-150", "150-300", "300-600", "600-1000"]
     for mode in ("frozen", "refit"):
         for sn, us in (("CLA", ["CLA"]), ("Altiverb RT 1.6", ["Altiverb RT 1.6"]), ("Altiverb other 4 (held out of P_ho), median", [u for u in R["irs"] if u.startswith("Altiverb") and u != "Altiverb RT 1.6"])):
