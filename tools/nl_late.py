@@ -41,8 +41,17 @@ READ_SIGNS = {0: {1108: (-1, 1, 1, 1), 1254: (1, -1, 1, 1), 1386: (-1, -1, 1, -1
               1: {1108: (1, -1, 1, 1), 1254: (1, -1, -1, -1), 1386: (1, -1, 1, 1)}}
 
 
+# The unit's own loop gains at LATE 0.2 (NonLin_program 10.4, the spec's late.loops.gain_table, the plugin's): NL_LATE_TABLE=1
+# uses them; the default 0 keeps the law at every step, as every existing bench folder was scored.
+LATE_TABLE = os.environ.get("NL_LATE_TABLE", "0") == "1"
+GAIN_TABLE = {0.2: {1108: 0.23901, 1254: 0.20384, 1386: 0.18200}}
+
+
 def loop_gain(P, late):
-    """Jot gain of a flat loop of P samples for RT = LATE (s)."""
+    """Feedback gain of a flat loop of P samples for RT = LATE (s): the Jot law, or with NL_LATE_TABLE=1 the unit's
+    measured gain at LATE 0.2."""
+    if LATE_TABLE and abs(late - 0.2) < 1e-9 and P in GAIN_TABLE[0.2]:
+        return GAIN_TABLE[0.2][P]
     return 10 ** (-3 * P / (FS * late))
 
 

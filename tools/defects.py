@@ -22,8 +22,10 @@ DEFECTS = BAD | SLIPPED | GLITCH
 ML_SLIPPED = {("M", "0.7_3.0_0.4", 10), ("M", "1.2_1.8_0.4", 60), ("M", "2.0_0.6_0.7", 60), ("M", "2.0_0.8_0.4", 60),
               ("M", "2.0_1.2_0.4", 60)}
 NL_DEFECTS = {(0.0, -0.5, 0.0),    # Non-Lin (SPAN, EARLY, LATE): a 0.27-sample slip between front taps 410 and 463 (NonLin_program 9.7)
-              (0.1, -1.0, 0.0)}    # a foreign tail: a -52 dB plateau (re the early section) decaying ~17 dB over 5 s, ACF 537,
+              (0.1, -1.0, 0.0),    # a foreign tail: a -52 dB plateau (re the early section) decaying ~17 dB over 5 s, ACF 537,
                                    # in a gated (LATE 0) capture whose neighbours end at 0.55 s (NonLin_program 11.1)
+              (0.0, 2.0, 0.4)}     # not its label's response: the bench itself nulls it at +5...+21 dB in every window, its
+                                   # neighbours at the usual level (plugin N audit, REPORT_chainfix 9, 31 October 2026)
 
 
 def _nl_slipped():

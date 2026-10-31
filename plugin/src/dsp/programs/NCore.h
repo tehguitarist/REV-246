@@ -319,6 +319,9 @@ class NCore final : public ProgramCore
 
     // The kernel's look-ahead less what setAdvance() absorbed. maxAdvance(): the look-ahead (every branch read and
     // front tap is deeper: main taps from 686, the late feed from 685, front taps from 41).
+    // Loop k's feedback gain at the current LATE (0 with the late section off); for the tests.
+    double lateLoopGain(size_t k) const { return lateOn ? loopG[k] : 0.0; }
+
     int latency() const override { return (kernelOn ? gen::n::bkCentre : 0) - effectiveAdvance(); }
     int maxAdvance() const override { return kernelOn ? gen::n::bkCentre : 0; }
     void setAdvance(int samples) override { advance = std::clamp(samples, 0, gen::n::bkCentre); }

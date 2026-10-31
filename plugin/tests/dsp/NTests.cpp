@@ -238,3 +238,21 @@ TEST_CASE("N: cost per sample", "[.n-cost]")
         CHECK(std::isfinite(l.back()));
     }
 }
+
+TEST_CASE("N: at LATE 0.2 the late loops run at the unit's measured gains; elsewhere at the RT law", "[n]")
+{
+    // NonLin_program 10.4: at LATE 0.2 the unit's three loop gains sit 2 / 5 / 12 % above 10^(-3 P / (fs LATE))
+    // (measured pass by pass, held out on the bench); from LATE 0.4 the law holds.
+    for (const double late : {0.2, 0.4, 1.0, 2.0})
+    {
+        NCore core;
+        configure(core, nSettings(0.2, 10.0, late), false);
+        for (size_t k = 0; k < gen::loopDelay.size(); ++k)
+        {
+            const auto law = std::pow(10.0, -3.0 * gen::loopDelay[k] / (rv::dsp::deviceRate * late));
+            const auto want = juce::exactlyEqual(late, 0.2) ? gen::lateTableGain[k] : law;
+            INFO("LATE " << late << ", loop " << k);
+            CHECK(std::abs(core.lateLoopGain(k) - want) < 1e-12);
+        }
+    }
+}

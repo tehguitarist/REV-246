@@ -55,6 +55,7 @@ BENCH = os.path.join(nl.OUT, "bench" + ("" if nl.WIDE else "_narrow") + ("" if E
                      + (f"_a{float(BK_ALPHA):g}" if os.environ.get("NL_BK") == "1" and float(BK_ALPHA) != 1.0 else "")
                      + (f"_lb{os.environ.get('NL_LOWBAND', '2')}" if os.environ.get("NL_LOWBAND", "2") != "0" else "") + os.environ.get("NL_LOWBAND_TAG", "")   # NL_LOWBAND_TAG: bench folder tag for table tests
                      + ("_og" if os.environ.get("NL_OGRID") == "1" else "")   # NL_OGRID=1: o restricted to 1 + n x 26373.6/96000, n integer (NonLin_program 9.9)
+                     + ("_lt" if os.environ.get("NL_LATE_TABLE") == "1" else "")   # NL_LATE_TABLE=1: the unit's LATE 0.2 loop gains (nl_late, NonLin_program 10.4)
                      + ("_hf" + ("" if os.path.basename(HF_FILE) == "hf_corr.json" else "_" + os.path.basename(HF_FILE)[len("hf_corr_"):-5]) + (f"{HF_ALPHA:g}" if HF_ALPHA != 1.0 else "") if HF else ""))   # NL_LOWBAND (default 2, adopted): tools/lowband_joint.py
 
 
