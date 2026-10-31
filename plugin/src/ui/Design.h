@@ -10,16 +10,17 @@ namespace rv::design
 inline constexpr float minScale = 0.25f, maxScale = 0.60f;
 
 // The bottom bar (presets, link, help) sits under main.png and is drawn in code. The version number keeps
-// barEdgePad from the panel's right edge, and the "?" keeps the same distance from the version number.
-inline constexpr float barEdgePad = 57.0f;
+// versionRightPad from the panel's right edge; the other controls end at the linked / unlinked icon from Layout.h.
+inline constexpr float versionRightPad = 20.0f;
 inline constexpr float barTop = 1380.0f;
 // The bar's buttons share one row; the width halo is taller and sits a little higher.
 inline constexpr float barRowTop = barTop + 35.0f, barRowHeight = 80.0f;
 inline constexpr float barGap = 12.0f; // between neighbouring buttons
-inline constexpr float linkWidth = 220.0f, transformerWidth = 180.0f, formatWidth = 210.0f, stereoModeWidth = 300.0f;
+inline constexpr float transformerWidth = 180.0f, formatWidth = 210.0f, stereoModeWidth = 300.0f;
 inline constexpr float helpWidth = 90.0f, calWidth = 220.0f;
 inline constexpr float calLeft = 1224.0f;                          // CAL follows the preset buttons at the bar's left end
 inline constexpr float widthKnobTop = barTop + 10.0f, widthKnobW = 140.0f, widthKnobH = 130.0f;
+inline constexpr float preDelayKnobW = 100.0f, duckWidth = 120.0f;
 inline constexpr float titleLeft = 1597.0f, titleWidth = 300.0f;   // REV-246 centred on the panel
 inline constexpr float barRuleThickness = 4.0f, barRuleAlpha = 0.55f; // the gold rule where main.png ends
 inline constexpr float titleCapHeight = 42.0f, versionCapHeight = 30.0f;

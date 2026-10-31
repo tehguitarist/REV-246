@@ -1,5 +1,7 @@
 #pragma once
 
+#include "dsp/Ducker.h"
+#include "dsp/PreDelay.h"
 #include "dsp/ReverbEngine.h"
 #include "dsp/StereoWidth.h"
 #include "dsp/Transformer.h"
@@ -93,6 +95,9 @@ class Rev246Processor : public juce::AudioProcessor
     std::array<rv::dsp::ReverbEngine, 2> engines;
     std::array<rv::dsp::Transformer, 2> transformers;
     rv::dsp::StereoWidener stereoWidener;
+    // The wet stage after the transformer: input-keyed duck, then pre-delay, then width.
+    rv::dsp::Ducker ducker;
+    rv::dsp::PreDelay preDelay;
     // 20 ms ramps (set in prepareToPlay). The two "On" ones are crossfade weights, 0 or 1 at rest: power (processed
     // against bypassed) and the transformer stage.
     juce::LinearSmoothedValue<float> inGain, outGain, mixAmount, panLeft, panRight, powerOn, transformerOn;
@@ -124,6 +129,7 @@ class Rev246Processor : public juce::AudioProcessor
     void mixOutput(juce::AudioBuffer<float>&, const BlockBuffers&, bool trueStereo, bool stereoOut);
 
     std::atomic<float>*pProgram, *pMix, *pPan, *pIn, *pOut, *pPower, *pTransformer, *pTrueStereo, *pSixteenBit, *pStereoWidth;
+    std::atomic<float>*pPreDelayMs, *pDuckEnabled, *pDuckRangeDb, *pDuckThresholdDb, *pDuckAttackMs, *pDuckReleaseMs;
     std::array<std::atomic<float>*, rv::params::numJoys> pJoy;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Rev246Processor)

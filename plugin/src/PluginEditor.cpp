@@ -1,6 +1,7 @@
 #include "PluginEditor.h"
 
 #include "ui/Design.h"
+#include "ui/DuckPanel.h"
 #include "ui/HelpText.h"
 
 #include <algorithm>
@@ -37,7 +38,7 @@ static_assert(std::size(programArt) == (size_t)P::numPrograms);
 // The parameters whose changes the editor shows (the joystick steps are added by the caller).
 constexpr const char* watchedParams[] = {P::id::program, P::id::mix, P::id::pan, P::id::stereoWidth, P::id::inputGain,
                                          P::id::outputGain, P::id::power, P::id::link, P::id::transformer,
-                                         P::id::trueStereo, P::id::sixteenBit};
+                                         P::id::trueStereo, P::id::sixteenBit, P::id::duckEnabled};
 
 // Holding the DELAY lever for more than a second speeds it up to this many steps (ms) per press, as on the unit.
 constexpr int delayHoldStep = 10;
@@ -115,6 +116,8 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
               [](float v) { return std::abs(v) < 0.005f ? juce::String("Centre") : juce::String(v < 0.f ? "L " : "R ") + juce::String(std::abs(v) * 100.f, 2) + " %"; }),
       widthKnob({0.0f, D::widthKnobTop, D::widthKnobW, D::widthKnobH}, *p.apvts.getParameter(P::id::stereoWidth), bubble,
                 [](float v) { return juce::String(juce::roundToInt(v)) + " %"; }),
+      preDelayKnob({0.0f, D::widthKnobTop, D::preDelayKnobW, D::widthKnobH}, *p.apvts.getParameter(P::id::preDelayMs),
+                   bubble, [](float v) { return juce::String(juce::roundToInt(v)) + " ms"; }, "PRE-DLY"),
       mixFader(images, L::Image::redFader, L::mixFader.cx, D::mixTop, D::mixBottom,
                *p.apvts.getParameter(P::id::mix), bubble, [](float v) { return juce::String(v * 100.f, 2) + " %"; }),
       inputFader(images, L::Image::whiteFader, L::inputFader.cx, D::gainTop, D::gainBottom,
@@ -123,7 +126,8 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
                   *p.apvts.getParameter(P::id::outputGain), bubble, [](float v) { return P::gainText(v); }),
       presetBar(p.presets, *this),
       // The bar's buttons are placed by layoutBottomBar(); only their widths are set here.
-      linkButton(barSlot(D::linkWidth), "LINK", rv::ui::BarButton::Kind::toggle),
+      linkButton(images, L::link.bounds()),
+      duckButton(barSlot(D::duckWidth), "DUCK", rv::ui::BarButton::Kind::toggle),
       transformerButton(barSlot(D::transformerWidth), "XFMR", rv::ui::BarButton::Kind::toggle),
       formatButton(barSlot(D::formatWidth), "FLOAT", rv::ui::BarButton::Kind::toggle),
       stereoButton(barSlot(D::stereoModeWidth), "ORIGINAL", rv::ui::BarButton::Kind::toggle),
@@ -166,27 +170,31 @@ Rev246Editor::~Rev246Editor()
 // Construction steps
 
 // The right end of the bar is laid out from the version number's width (fonts differ by platform): the version sits
-// barEdgePad from the panel's right edge, then the "?" the same distance to its left, then LINK, XFMR, FLOAT / 16-BIT
-// and ORIGINAL / TRUE ST each a barGap apart, and the width halo last. CAL sits at the left end of the bar, after SAVE.
+// versionRightPad from the panel's right edge, the linked / unlinked icon has its own fixed slot to its left, then the
+// "?", XFMR, FLOAT / 16-BIT and ORIGINAL / TRUE ST each a barGap apart, then DUCK, the pre-delay halo and the width
+// halo. CAL sits at the left end of the bar, after SAVE.
 void Rev246Editor::layoutBottomBar()
 {
     const auto versionWidth = rv::ui::textWidth(rv::ui::labelFont(D::versionCapHeight), versionText()) + 2.0f;
     versionLabel.setDesignBounds(barSlot(versionWidth));
+    auto vb = versionLabel.getDesignBounds();
+    vb.setX(L::designWidth - D::versionRightPad - vb.getWidth());
+    versionLabel.setDesignBounds(vb);
 
-    auto edge = L::designWidth - D::barEdgePad; // the right edge of the next control
-    auto placeLeft = [&edge](rv::ui::DesignComponent& c, float gapAfter) {
+    auto edge = L::link.bounds().getX() - D::barGap; // the right edge of the next control
+    auto placeLeft = [&edge](rv::ui::DesignComponent& c) {
         auto b = c.getDesignBounds();
         b.setX(edge - b.getWidth());
         c.setDesignBounds(b);
-        edge = b.getX() - gapAfter;
+        edge = b.getX() - D::barGap;
     };
-    placeLeft(versionLabel, D::barEdgePad);
-    placeLeft(helpButton, D::barGap);
-    placeLeft(linkButton, D::barGap);
-    placeLeft(transformerButton, D::barGap);
-    placeLeft(formatButton, D::barGap);
-    placeLeft(stereoButton, D::barGap);
-    placeLeft(widthKnob, D::barGap);
+    placeLeft(helpButton);
+    placeLeft(transformerButton);
+    placeLeft(formatButton);
+    placeLeft(stereoButton);
+    placeLeft(duckButton);
+    placeLeft(preDelayKnob);
+    placeLeft(widthKnob);
 }
 
 void Rev246Editor::setUpProgramControls()
@@ -262,6 +270,11 @@ void Rev246Editor::setUpBarButtons()
     linkButton.setTooltip(rv::ui::help::link());
     linkButton.onToggle = [this](bool on) { setToggle(P::id::link, on); };
 
+    // DUCK is greyed out while off; a click opens the pop-up (enable / disable and the fields), it does not toggle.
+    duckButton.setGreyWhenOff(true);
+    duckButton.setTooltip(rv::ui::help::duck());
+    duckButton.onToggle = [this](bool) { showDuckPanel(); };
+
     transformerButton.setTooltip("Transformer (default on): the unit with its optional input and output transformers "
                                  "(service manual). Adds the low-end colour of the commercial captures (about +3 dB at "
                                  "40-60 Hz) and a guessed transformer distortion, mostly 3rd harmonic at low frequencies "
@@ -292,6 +305,8 @@ void Rev246Editor::setUpBarButtons()
 void Rev246Editor::setUpKnobsAndFaders()
 {
     widthKnob.onDoubleClick = [this] { promptWidthValue(); };
+    preDelayKnob.onDoubleClick = [this] { promptPreDelayValue(); };
+    preDelayKnob.helpText = rv::ui::help::preDelay();
     mixFader.helpText = rv::ui::help::mix();
     inputFader.helpText = rv::ui::help::input();
     outputFader.helpText = rv::ui::help::output();
@@ -310,8 +325,8 @@ void Rev246Editor::addChildren()
     for (auto& b : programButtons) designComponents.push_back(b.get());
     for (auto& l : leds) designComponents.push_back(l.get());
     for (auto* c : std::initializer_list<rv::ui::DesignComponent*>{&powerButton, &programDisplay, &lowpassDisplay, &reflectionsDisplay,
-                                                                  &decayDisplay, &levelMeter, &panKnob, &widthKnob, &mixFader, &inputFader,
-                                                                  &outputFader, &linkButton, &transformerButton, &formatButton, &stereoButton, &calButton, &helpButton,
+                                                                  &decayDisplay, &levelMeter, &panKnob, &widthKnob, &preDelayKnob, &mixFader, &inputFader,
+                                                                  &outputFader, &linkButton, &duckButton, &transformerButton, &formatButton, &stereoButton, &calButton, &helpButton,
                                                                   &titleLabel, &versionLabel})
         designComponents.push_back(c);
     presetBar.addTo(designComponents);
@@ -520,6 +535,32 @@ void Rev246Editor::promptWidthValue(const juce::String& initial)
                     [this](const juce::String& text) { promptWidthValue(text); });
 }
 
+void Rev246Editor::promptPreDelayValue(const juce::String& initial)
+{
+    auto& pr = param(P::id::preDelayMs);
+    const auto current = juce::String(juce::roundToInt(pr.convertFrom0to1(pr.getValue())));
+    const juce::String hint("Valid: whole numbers from 0 to 200 (milliseconds).");
+    showValueDialog("Enter pre-delay", "Enter the reverb pre-delay.\nCurrent: " + current + " ms.\n" + hint,
+                    initial.isEmpty() ? current : initial, hint,
+                    [this](const juce::String& text) {
+                        double value = 0.0;
+                        if (!parseNumber(text, value) || value < 0.0 || value > (double)P::preDelayMaxMs
+                            || std::abs(value - (double)juce::roundToInt(value)) >= 1e-6)
+                            return false;
+                        setParamValue(param(P::id::preDelayMs), (float)juce::roundToInt(value));
+                        return true;
+                    },
+                    [this](const juce::String& text) { promptPreDelayValue(text); });
+}
+
+// The DUCK pop-up, a call-out box that points up at the button from the bar.
+void Rev246Editor::showDuckPanel()
+{
+    auto panel = rv::ui::createDuckPanel(proc.apvts);
+    const auto area = duckButton.getScreenBounds();
+    juce::CallOutBox::launchAsynchronously(std::move(panel), area, this);
+}
+
 //==============================================================================
 // Refresh
 
@@ -557,6 +598,7 @@ void Rev246Editor::refreshAll()
     stereoButton.setEnabled(stereoAvailable);
     widthAvailable = proc.getTotalNumOutputChannels() > 1;
     widthKnob.setEnabled(widthAvailable);
+    duckButton.setOn(isOn(P::id::duckEnabled));
     const bool useTrueStereo = isOn(P::id::trueStereo);
     stereoButton.setOn(useTrueStereo);
     stereoButton.setLabel(useTrueStereo ? "TRUE ST" : "ORIGINAL");

@@ -29,6 +29,7 @@ enum ScratchChannel
     chWetL1,             // engine 1's outputs
     chWetR1,
     chTransformerWeight, // the transformer stage's crossfade weight, per sample, shared by input and output
+    chDuckKey,           // the dry input level that keys the ducker (one value per sample)
     chDryInL,            // the input, delayed by the reported latency
     chDryInR,
     numScratchChannels
@@ -63,12 +64,13 @@ struct Rev246Processor::BlockBuffers
           wetL1(s.getWritePointer(chWetL1)),
           wetR1(s.getWritePointer(chWetR1)),
           transformerWeight(s.getWritePointer(chTransformerWeight)),
+          duckKey(s.getWritePointer(chDuckKey)),
           dryInL(s.getWritePointer(chDryInL)),
           dryInR(s.getWritePointer(chDryInR))
     {
     }
 
-    float *engineIn0, *engineIn1, *wetL0, *wetR0, *wetL1, *wetR1, *transformerWeight, *dryInL, *dryInR;
+    float *engineIn0, *engineIn1, *wetL0, *wetR0, *wetL1, *wetR1, *transformerWeight, *duckKey, *dryInL, *dryInR;
 };
 
 Rev246Processor::Rev246Processor()
@@ -88,6 +90,12 @@ Rev246Processor::Rev246Processor()
     pTrueStereo = apvts.getRawParameterValue(id::trueStereo);
     pSixteenBit = apvts.getRawParameterValue(id::sixteenBit);
     pStereoWidth = apvts.getRawParameterValue(id::stereoWidth);
+    pPreDelayMs = apvts.getRawParameterValue(id::preDelayMs);
+    pDuckEnabled = apvts.getRawParameterValue(id::duckEnabled);
+    pDuckRangeDb = apvts.getRawParameterValue(id::duckRangeDb);
+    pDuckThresholdDb = apvts.getRawParameterValue(id::duckThresholdDb);
+    pDuckAttackMs = apvts.getRawParameterValue(id::duckAttackMs);
+    pDuckReleaseMs = apvts.getRawParameterValue(id::duckReleaseMs);
     for (int i = 0; i < rv::params::numJoys; ++i)
         pJoy[(size_t)i] = apvts.getRawParameterValue(rv::params::joyId((rv::params::Joy)i));
     applyMeterCal(rv::design::defaultMeterCal);
@@ -126,6 +134,8 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
         t.prepare(sampleRate);
     stereoWidener.prepare(sampleRate);
     stereoWidener.setWidth(pStereoWidth->load(), true);
+    ducker.prepare(sampleRate);
+    preDelay.prepare(sampleRate);
     for (auto* s : {&inGain, &outGain, &mixAmount, &panLeft, &panRight, &powerOn, &transformerOn})
         s->reset(sampleRate, rampSeconds);
     inGain.setCurrentAndTargetValue(rv::params::gainLinearFromPosition(pIn->load()));
@@ -150,6 +160,8 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
     dryStereo.setCurrentAndTargetValue(lastTrueStereo ? 1.0f : 0.0f);
     engineKey = {}; // the engines are prepared afresh: send them their settings, and start in the current program
     applyParameters(); // rather than crossfading into it from the default one
+    ducker.reset();
+    preDelay.reset();
     for (auto& e : engines)
         e.reset();
     const auto latency = engines[0].latency(); // the same for every program, both modes and both engines
@@ -227,10 +239,15 @@ void Rev246Processor::processChunk(juce::AudioBuffer<float>& buffer)
     // two sides come from the two engines.
     processTransformerOutputs(b, n, trueStereo);
 
-    // Stereo width on the wet path (pure M/S gains: nothing moves in time, so the early reflections are not smeared).
+    // The input-keyed duck comes before the pre-delay, so the gain envelope travels with the delayed wet and the
+    // reverb is still ducked when its first arrival happens. Width comes last (pure M/S gains: nothing moves in time).
+    auto* wetR = trueStereo ? b.wetR1 : b.wetR0;
+    ducker.process(b.duckKey, b.wetL0, wetR, n);
+    preDelay.process(b.wetL0, wetR, n);
+
     stereoWidener.setWidth(pStereoWidth->load());
     if (stereoOut)
-        stereoWidener.process(b.wetL0, trueStereo ? b.wetR1 : b.wetR0, n);
+        stereoWidener.process(b.wetL0, wetR, n);
 
     mixOutput(buffer, b, trueStereo, stereoOut);
 }
@@ -271,6 +288,12 @@ void Rev246Processor::applyParameters()
     mixAmount.setTargetValue(pMix->load());
     powerOn.setTargetValue(isOn(*pPower) ? 1.0f : 0.0f);
     transformerOn.setTargetValue(isOn(*pTransformer) ? 1.0f : 0.0f);
+    preDelay.setDelayMs(pPreDelayMs->load());
+    ducker.setEnabled(isOn(*pDuckEnabled));
+    ducker.setRangeDb(pDuckRangeDb->load());
+    ducker.setThresholdDb(pDuckThresholdDb->load());
+    ducker.setAttackMs(pDuckAttackMs->load());
+    ducker.setReleaseMs(pDuckReleaseMs->load());
     const auto fullScale = adcFullScale.load(std::memory_order_relaxed);
     for (auto& e : engines)
         e.setFullScale(fullScale);
@@ -305,6 +328,7 @@ float Rev246Processor::processInputStage(const float* inL, const float* inR, con
         const auto monoInput = monoSumGain * (l + r) * g;
         peak = std::max(peak, std::abs(monoInput));
         sumSq += monoInput * monoInput;
+        b.duckKey[i] = std::max(std::abs(l * g), std::abs(r * g));
         b.transformerWeight[i] = transformerMix;
         if (trueStereo)
         {

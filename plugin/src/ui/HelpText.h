@@ -140,6 +140,18 @@ inline juce::String width(const Routing& r)
            "wide. Above 100 the bass stays mono. Option/Alt-click for 100; double-click to type; Shift for fine.";
 }
 
+inline juce::String preDelay()
+{
+    return "Pre-delay (0-200 ms): delays the reverb after the dry signal, after the ducker. Option/Alt-click for 0; "
+           "double-click to type; Shift for fine.";
+}
+
+inline juce::String duck()
+{
+    return "Ducker: lowers the reverb while the input is over the threshold, so it blooms in the gaps. Greyed out when "
+           "off. Click to open its settings (range, threshold, attack, release).";
+}
+
 inline juce::String stereoMode(const Routing& r)
 {
     if (!r.stereoToStereo)

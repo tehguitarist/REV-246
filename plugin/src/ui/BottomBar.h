@@ -15,7 +15,7 @@ class BarButton : public DesignComponent
   public:
     enum class Kind { momentary, toggle };
 
-    BarButton(juce::Rectangle<float> slot, juce::String label, Kind = Kind::momentary);
+    BarButton(juce::Rectangle<float> slot, juce::String label, Kind = Kind::momentary, float capHeight = 34.0f);
 
     void setOn(bool);
     bool isOn() const { return on; }
@@ -25,6 +25,8 @@ class BarButton : public DesignComponent
     bool isItalic() const { return italic; }
     void setAlwaysLit(bool);
     bool isAlwaysLit() const { return alwaysLit; }
+    // A toggle that draws as disabled (greyed out) while it is off, but still takes clicks.
+    void setGreyWhenOff(bool shouldBeGrey) { greyWhenOff = shouldBeGrey; repaint(); }
     std::function<void()> onClick;
     std::function<void(bool)> onToggle; // toggles: the requested state
 
@@ -39,7 +41,29 @@ class BarButton : public DesignComponent
 
     juce::String label;
     Kind kind;
-    bool on = false, held = false, italic = false, alwaysLit = false;
+    float textCapHeight;
+    bool on = false, held = false, italic = false, alwaysLit = false, greyWhenOff = false;
+};
+
+// The linked / unlinked pair in the bar: the artwork itself is the button, no gold frame.
+class LinkButton : public DesignComponent
+{
+  public:
+    LinkButton(ScaledImages&, juce::Rectangle<float> slot);
+
+    void setOn(bool);
+    bool isOn() const { return on; }
+    std::function<void(bool)> onToggle;
+
+    void paint(juce::Graphics&) override;
+    void mouseDown(const juce::MouseEvent&) override;
+    void mouseUp(const juce::MouseEvent&) override;
+    std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override;
+
+  private:
+    void activate();
+    ScaledImages& images;
+    bool on = true, held = false;
 };
 
 // Static text in the bottom bar (the product name, the version).

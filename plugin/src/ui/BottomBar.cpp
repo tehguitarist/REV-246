@@ -11,13 +11,13 @@ namespace rv::ui
 {
 namespace
 {
-// The bar buttons' look in design pixels: corner radius, outline width, text inset and the text's cap height.
-constexpr float barCornerRadius = 14.0f, barOutline = 4.0f, barTextInset = 12.0f, barCapHeight = 34.0f;
+// The bar buttons' look in design pixels: corner radius, outline width, and text inset.
+constexpr float barCornerRadius = 14.0f, barOutline = 4.0f, barTextInset = 12.0f;
 constexpr float disabledAlpha = 0.3f;
 } // namespace
 
-BarButton::BarButton(juce::Rectangle<float> slot, juce::String text, Kind k)
-    : DesignComponent(slot), label(std::move(text)), kind(k)
+BarButton::BarButton(juce::Rectangle<float> slot, juce::String text, Kind k, float capHeight)
+    : DesignComponent(slot), label(std::move(text)), kind(k), textCapHeight(capHeight)
 {
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
     setTitle(label);
@@ -61,12 +61,13 @@ void BarButton::paint(juce::Graphics& g)
     const auto s = getScale();
     const auto b = getLocalBounds().toFloat().reduced(2.0f);
     const auto lit = isEnabled() && (alwaysLit || (kind == Kind::toggle ? on : held));
-    const auto fade = isEnabled() ? 1.0f : disabledAlpha; // greyed out
+    // Greyed out: disabled, or (for the DUCK toggle) switched off.
+    const auto fade = !isEnabled() || (greyWhenOff && kind == Kind::toggle && !on) ? disabledAlpha : 1.0f;
     g.setColour(design::gold.withAlpha((lit ? 0.22f : 0.08f) * fade));
     g.fillRoundedRectangle(b, barCornerRadius * s);
     g.setColour(design::gold.withAlpha((lit ? 0.95f : 0.6f) * fade));
     g.drawRoundedRectangle(b, barCornerRadius * s, juce::jmax(1.0f, barOutline * s));
-    const auto font = italic ? labelFont(barCapHeight * s).italicised() : labelFont(barCapHeight * s);
+    const auto font = italic ? labelFont(textCapHeight * s).italicised() : labelFont(textCapHeight * s);
     g.setFont(font);
     const auto labelColour = !alwaysLit && kind == Kind::toggle && !on ? design::labelDimmed : design::labelSelected;
     g.setColour(labelColour.withMultipliedAlpha(fade));
@@ -108,6 +109,60 @@ std::unique_ptr<juce::AccessibilityHandler> BarButton::createAccessibilityHandle
 {
     return std::make_unique<juce::AccessibilityHandler>(
         *this, kind == Kind::toggle ? juce::AccessibilityRole::toggleButton : juce::AccessibilityRole::button,
+        juce::AccessibilityActions().addAction(juce::AccessibilityActionType::press, [this] { activate(); }));
+}
+
+//==============================================================================
+LinkButton::LinkButton(ScaledImages& i, juce::Rectangle<float> slot) : DesignComponent(slot), images(i)
+{
+    setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    setTitle("Link input/output");
+}
+
+void LinkButton::setOn(bool state)
+{
+    if (state == on)
+        return;
+    on = state;
+    repaint();
+}
+
+void LinkButton::paint(juce::Graphics& g)
+{
+    if (held)
+    {
+        g.setColour(design::gold.withAlpha(0.18f));
+        g.fillRoundedRectangle(getLocalBounds().toFloat(), 6.0f * getScale());
+    }
+    drawFitted(g, images, on ? layout::Image::linked : layout::Image::unlinked, getLocalBounds().toFloat());
+}
+
+void LinkButton::mouseDown(const juce::MouseEvent&)
+{
+    held = true;
+    repaint();
+}
+
+void LinkButton::mouseUp(const juce::MouseEvent& e)
+{
+    const auto wasHeld = std::exchange(held, false);
+    repaint();
+    if (wasHeld && getLocalBounds().contains(e.getPosition()))
+        activate();
+}
+
+void LinkButton::activate()
+{
+    if (onToggle)
+        onToggle(!on);
+    else
+        setOn(!on);
+}
+
+std::unique_ptr<juce::AccessibilityHandler> LinkButton::createAccessibilityHandler()
+{
+    return std::make_unique<juce::AccessibilityHandler>(
+        *this, juce::AccessibilityRole::toggleButton,
         juce::AccessibilityActions().addAction(juce::AccessibilityActionType::press, [this] { activate(); }));
 }
 

@@ -57,3 +57,5 @@ level m3,,149.5,840.6,52,75,display box
 level m6,,149.5,945.8,52,75,display box
 level m9,,149.5,1051.0,52,75,display box
 level m12,,149.5,1156.2,52,75,display box
+link,linked,3144.75,1460.4,71.5,31.8,linked icon (LINK on); bottom-bar slot
+link,unlinked,3144.75,1460.4,71.5,31.8,unlinked icon (LINK off); bottom-bar slot

@@ -13,6 +13,8 @@
 namespace rv::params
 {
 inline constexpr int parameterVersion = 1; // juce::ParameterID version hint for every parameter below
+// Parameters added after the first release use a new version hint, so a host never confuses one with an old ID.
+inline constexpr int addedParameterVersion = 2;
 
 // The layout of the saved state (sessions and preset files), written as the root's `stateVersion`. Bump it whenever a
 // stored value changes meaning (a step table's range or order, a parameter's unit) and teach migrateState() the step.
@@ -49,7 +51,21 @@ inline constexpr const char* trueStereo = "trueStereo";
 inline constexpr const char* sixteenBit = "sixteenBit";
 // Wet stereo width: 0 = mono, 100 = unchanged, 200 = extra wide. A sound setting; presets store it.
 inline constexpr const char* stereoWidth = "stereoWidth";
+// An extra delay before the reverb's wet signal (0-200 ms), after the input-keyed duck.
+inline constexpr const char* preDelayMs = "preDelayMs";
+// Input-keyed ducker on the wet path: lowers the reverb while the dry input is over the threshold.
+inline constexpr const char* duckEnabled = "duckEnabled";
+inline constexpr const char* duckRangeDb = "duckRangeDb";         // attenuation while ducked, -60 ... 0 dB
+inline constexpr const char* duckThresholdDb = "duckThresholdDb"; // -80 ... 0 dB
+inline constexpr const char* duckAttackMs = "duckAttackMs";       // 0 ... 1000 ms
+inline constexpr const char* duckReleaseMs = "duckReleaseMs";     // 0 ... 1000 ms
 } // namespace id
+
+inline constexpr float preDelayMaxMs = 200.0f;
+inline constexpr float duckMinRangeDb = -60.0f, duckMaxRangeDb = 0.0f, duckDefaultRangeDb = -10.0f;
+inline constexpr float duckMinThresholdDb = -80.0f, duckMaxThresholdDb = 0.0f, duckDefaultThresholdDb = -20.0f;
+inline constexpr float duckMaxTimeMs = 1000.0f;
+inline constexpr float duckDefaultAttackMs = 10.0f, duckDefaultReleaseMs = 200.0f;
 
 enum class Program
 {

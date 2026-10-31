@@ -35,6 +35,8 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     rv::ui::BarButton& getStereoButton() { return stereoButton; }
     rv::ui::BarButton& getFormatButton() { return formatButton; }
     rv::ui::WidthKnob& getWidthKnob() { return widthKnob; }
+    rv::ui::WidthKnob& getPreDelayKnob() { return preDelayKnob; }
+    rv::ui::BarButton& getDuckButton() { return duckButton; }
     rv::ui::PresetBar& getPresetBar() { return presetBar; }
 
   private:
@@ -86,6 +88,8 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     // and then calls `onInvalid` with the same text so it can be edited.
     void promptJoyValue(Joy, const juce::String& initial = {});
     void promptWidthValue(const juce::String& initial = {});
+    void promptPreDelayValue(const juce::String& initial = {});
+    void showDuckPanel();
     void showValueDialog(const juce::String& title, const juce::String& message, const juce::String& shown,
                          const juce::String& hint, std::function<bool(const juce::String&)> onApply,
                          std::function<void(const juce::String&)> onInvalid);
@@ -103,10 +107,11 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     rv::ui::SegmentDisplay programDisplay, lowpassDisplay, reflectionsDisplay, decayDisplay;
     rv::ui::LevelMeter levelMeter;
     rv::ui::PanKnob panKnob;
-    rv::ui::WidthKnob widthKnob;
+    rv::ui::WidthKnob widthKnob, preDelayKnob;
     rv::ui::Fader mixFader, inputFader, outputFader;
     rv::ui::PresetBar presetBar;
-    rv::ui::BarButton linkButton;
+    rv::ui::LinkButton linkButton;
+    rv::ui::BarButton duckButton;
     rv::ui::BarButton transformerButton;
     rv::ui::BarButton formatButton;
     rv::ui::BarButton stereoButton;

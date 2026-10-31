@@ -125,14 +125,14 @@ class PanKnob : public DragKnob
     ShadowedSprite sprite;
 };
 
-// The stereo-width halo: an arc with the value in the middle and WIDTH underneath. Drag up to widen, down to narrow,
-// wheel, Option/Alt-click for 100 (the default), or double-click, which calls onDoubleClick (the editor opens its
-// numeric entry dialog). Ignores the mouse while disabled.
+// A halo control: an arc with the value in the middle and a label underneath (WIDTH, PRE-DLY). Drag up to increase,
+// down to decrease, wheel, Option/Alt-click for the default, or double-click, which calls onDoubleClick (the editor
+// opens its numeric entry dialog). Ignores the mouse while disabled.
 class WidthKnob : public DragKnob
 {
   public:
     WidthKnob(juce::Rectangle<float> designBounds, juce::RangedAudioParameter&, ValueBubble&,
-              std::function<juce::String(float value)> valueText);
+              std::function<juce::String(float value)> valueText, juce::String label = "WIDTH");
 
     std::function<void()> onDoubleClick;
 
@@ -143,5 +143,6 @@ class WidthKnob : public DragKnob
 
   private:
     void enablementChanged() override { repaint(); }
+    juce::String label;
 };
 } // namespace rv::ui

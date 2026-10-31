@@ -34,6 +34,7 @@ set(RV_SOURCES
     src/ui/Assets.cpp
     src/ui/BottomBar.cpp
     src/ui/Buttons.cpp
+    src/ui/DuckPanel.cpp
     src/ui/Fader.cpp
     src/ui/Joystick.cpp
     src/ui/LevelMeter.cpp
@@ -105,6 +106,7 @@ if (RV_BUILD_TESTS)
         tests/ProcessorTests.cpp
         tests/TransformerTests.cpp
         tests/StereoWidthTests.cpp
+        tests/DuckerTests.cpp
         tests/EditorTests.cpp
     )
     target_include_directories(REV246Tests PRIVATE src tests)

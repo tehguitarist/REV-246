@@ -387,6 +387,30 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
     layout.add(std::make_unique<AudioParameterBool>(pid(id::transformer), "Transformer", true));
     layout.add(std::make_unique<AudioParameterBool>(pid(id::trueStereo), "True stereo", false));
     layout.add(std::make_unique<AudioParameterBool>(pid(id::sixteenBit), "16-bit processing", true));
+
+    // Added after the first release: their IDs use a new version hint.
+    auto newPid = [](const char* s) { return ParameterID(s, addedParameterVersion); };
+    layout.add(std::make_unique<AudioParameterFloat>(
+        newPid(id::preDelayMs), "Pre-delay", NormalisableRange<float>(0.f, preDelayMaxMs, 1.f), 0.f,
+        AudioParameterFloatAttributes().withStringFromValueFunction(
+            [](float v, int) { return String(juce::roundToInt(v)) + " ms"; })));
+    layout.add(std::make_unique<AudioParameterBool>(newPid(id::duckEnabled), "Ducker", false));
+    layout.add(std::make_unique<AudioParameterFloat>(
+        newPid(id::duckRangeDb), "Ducker range", NormalisableRange<float>(duckMinRangeDb, duckMaxRangeDb, 0.01f),
+        duckDefaultRangeDb,
+        AudioParameterFloatAttributes().withStringFromValueFunction([](float v, int) { return String(v, 2) + " dB"; })));
+    layout.add(std::make_unique<AudioParameterFloat>(
+        newPid(id::duckThresholdDb), "Ducker threshold",
+        NormalisableRange<float>(duckMinThresholdDb, duckMaxThresholdDb, 0.01f), duckDefaultThresholdDb,
+        AudioParameterFloatAttributes().withStringFromValueFunction([](float v, int) { return String(v, 2) + " dB"; })));
+    layout.add(std::make_unique<AudioParameterFloat>(
+        newPid(id::duckAttackMs), "Ducker attack", NormalisableRange<float>(0.f, duckMaxTimeMs, 0.01f),
+        duckDefaultAttackMs,
+        AudioParameterFloatAttributes().withStringFromValueFunction([](float v, int) { return String(v, 2) + " ms"; })));
+    layout.add(std::make_unique<AudioParameterFloat>(
+        newPid(id::duckReleaseMs), "Ducker release", NormalisableRange<float>(0.f, duckMaxTimeMs, 0.01f),
+        duckDefaultReleaseMs,
+        AudioParameterFloatAttributes().withStringFromValueFunction([](float v, int) { return String(v, 2) + " ms"; })));
     return layout;
 }
 } // namespace rv::params

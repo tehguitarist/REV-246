@@ -297,8 +297,8 @@ void PanKnob::paint(juce::Graphics& g)
 
 //==============================================================================
 WidthKnob::WidthKnob(juce::Rectangle<float> designBounds, juce::RangedAudioParameter& p, ValueBubble& b,
-                     std::function<juce::String(float)> text)
-    : DragKnob(designBounds, p, b, std::move(text), 0.02f, 0.002f)
+                     std::function<juce::String(float)> text, juce::String labelIn)
+    : DragKnob(designBounds, p, b, std::move(text), 0.02f, 0.002f), label(std::move(labelIn))
 {
 }
 
@@ -343,7 +343,7 @@ void WidthKnob::paint(juce::Graphics& g)
     g.setFont(labelFont(widthLabelFont * s));
     g.setColour(design::gold.withAlpha(0.85f * alpha));
     const auto labelArea = toLocal({box.getX(), box.getY() + widthLabelTop, box.getWidth(), widthLabelH});
-    g.drawFittedText("WIDTH", labelArea.toNearestInt(), juce::Justification::centred, 1);
+    g.drawFittedText(label, labelArea.toNearestInt(), juce::Justification::centred, 1);
 }
 
 void WidthKnob::mouseDown(const juce::MouseEvent& e)
