@@ -16,6 +16,12 @@
 - Real-time code (`ReverbEngine::process`, `processBlock`) is allocation- and lock-free; no `std::string`,
   `std::vector` growth, or `juce::String` there.
 
+## Testing in a DAW
+- Configure a build with `-DRV_INSTALL_AFTER_BUILD=ON` and every build copies the AU and VST3 into the user's plug-in
+  folders (`~/Library/Audio/Plug-Ins/Components` and `.../VST3` on macOS), which DAWs scan. The system folders
+  (`/Library/Audio/Plug-Ins/...`) are root-owned; copy there by hand with `sudo` if a host only looks there. After an AU
+  update, `killall -9 AudioComponentRegistrar` makes macOS rescan it.
+
 ## CI/CD
 - Workflows are in `../.github/workflows/plugin-ci.yml` and `plugin-release.yml`. They are **`workflow_dispatch` only**
   until the reverb is ready, so they use no GitHub minutes. To switch CI on, uncomment its `push` / `pull_request`

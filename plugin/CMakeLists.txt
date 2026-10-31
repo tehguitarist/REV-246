@@ -41,6 +41,9 @@ set(RV_SOURCES
     src/ui/SegmentDisplay.cpp
 )
 
+# RV_INSTALL_AFTER_BUILD: copy the AU / VST3 into the user's plug-in folders (~/Library/Audio/Plug-Ins on macOS) after each
+# build, for testing in a DAW. Off by default (CI, release builds).
+option(RV_INSTALL_AFTER_BUILD "Copy the built plug-ins into the user's plug-in folders" OFF)
 set(RV_FORMATS AU VST3)
 if (RV_STANDALONE)
     list(APPEND RV_FORMATS Standalone)
@@ -58,6 +61,7 @@ juce_add_plugin(REV246
     NEEDS_MIDI_OUTPUT FALSE
     VST3_CATEGORIES Fx Reverb
     AU_MAIN_TYPE kAudioUnitType_Effect
+    COPY_PLUGIN_AFTER_BUILD ${RV_INSTALL_AFTER_BUILD}
 )
 
 target_sources(REV246 PRIVATE ${RV_SOURCES})
