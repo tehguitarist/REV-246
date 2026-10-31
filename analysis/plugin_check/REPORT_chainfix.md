@@ -375,3 +375,127 @@ here, and the +1.7 dB median of §7. The candidates are the same as §7's open i
 A check that fits within the no-hardware rule: the same metrics on two plugin renders of one setting at different
 start phases (`renders_fix/*_sweep*` style). If plugin-vs-plugin shows the same low-band spread, the excess is
 modulation depth and not a decay-law error.
+
+## 9. Audit metrics on the plugin's N renders
+
+The pulse check's per-IR metrics (G1–G6 of `tools/pulse_check.py`) were run on the plugin's N renders. The code is the
+new `tools/plugin_pulse_n.py`. Results are in `analysis/plugin_pulse/n/` (one JSON per capture),
+`analysis/plugin_pulse/report_n.log`, `summary_n.json` and `n_run.log`. `plugin_pulse.py` was not changed.
+
+**Inputs:**
+- **Renders:** the existing `renders_fix/96000/N_*.wav`, unchanged.
+- **Into the bench frame:** `plugin_check.n_device`, with the plugin's fit (shift, clock, 2 gains) read from
+  plugin_check's own result files: `n_fix/` for n = 0 and `analysis/nl/branch_slip/deslip/n_fix/` for the de-slipped
+  captures.
+- **Captures:** `plugin_check.n_keys()` (N_EVERY = 4).
+- **Slips:** the library's slip is undone as in `n_deslip.py`, with n from `defects.NL_SLIPPED`, checked against the
+  bench's o.
+- **Bench model:** `nl_model.render` with the adopted bench's own per-capture o (moved by the slip), clock and front shift,
+  and least-squares gains, against the same capture clock-corrected as the bench does it.
+
+**Checks:** the recomputed window nulls equal plugin_check's files (plugin) and the bench files (n = 0 captures) to
+0.0000 dB.
+
+**Run:** 257 captures, 2 workers, 15 min. Peak 0.9 GB for one capture and 2.04 GB for the run.
+
+**Excluded or apart:**
+- The 4 SPAN 0 / LATE 0 captures were skipped (no branch).
+- 18 captures whose bench o is not +1 plus a whole slip in −400…−1 are out ("unresolved": Tomkin's trims of §11.4 and the
+  two off-grid offsets).
+- 0.0_2.0_0.4 is out: the bench itself nulls at +5…+21 dB, so the file is not its label's response (a new defect
+  candidate, not added to `defects`).
+- The 33 trimmed-start captures are reported apart.
+- 205 untrimmed captures remain.
+
+**Tolerance:** the library has no repeat captures of an N setting (all 1,046 labels are distinct), so two stand-ins are
+used.
+- **Twin:** the capture against itself plus an independent stretch of the library's own capture noise (LATE 0 tails),
+  3 realisations; the tolerance is the largest |error|. This is what a perfect, noise-free model would score: a lower
+  bound.
+- **LATE pair:** a real capture vs capture comparison on the early section. The capture is set against the one that
+  differs only in LATE (SPAN ≥ 0.2, 127 pairs, 1 shift and 2 gains). It covers early levels, early IACC and L/R, and the
+  0–50 ms null.
+
+**Which metrics mean something on N:**
+- **Defined and reported:** EDC shape (largest EDC difference to −30 dB, from the input), the late section's tail decay
+  (EDC from 40 ms after the last main tap, −5/−25 dB, LATE > 0), C50 / C80 / D50 / Ts as energy partitions, early and late
+  tonal balance, echo density, coherence, fine-structure correlation and sd, narrow-band envelope, IACC, L/R level, and
+  nulls (N is time-invariant).
+- **Restricted:** the EDC decay fits (octave or third-octave −5/−25, EDT, −25/−40) are kept only where the capture's EDC
+  is straight within 1 dB over the fit range. That holds for 20–60 % of captures per band; gated, reverse and
+  stepped-ramp envelopes fail it.
+- **Dropped:** EDR per 1/24 octave (the same fit on non-exponential envelopes) and the mixing time (NED never reaches 0.9
+  within 1 s on N; defined for 1 capture).
+
+**Results** (205 untrimmed captures). Cells are plugin |err| / bench |err| [twin], medians, R.
+
+| Family | Plugin / bench [tolerance] |
+|---|---|
+| Octave decay −5/−25, where straight | 0.04–0.05 % / 0.04–0.05 % [0.01] |
+| Third-octave decay, where straight | 0.03–0.07 % / same [0.01–0.02] |
+| EDT, where straight | 0.03–0.05 % / same [0.00] |
+| Late decay −25/−40 | 0.08–0.15 % / same [0.02–0.08] |
+| Tail decay (late section), broadband and octaves | 0.05–0.06 % / 0.05–0.06 % [0.01–0.02] |
+| EDC shape, octaves, R and L | 0.01–0.03 dB / same [0.00–0.01] |
+| Third-octave EDC shape | 0.01–0.05 dB / same [0.01] |
+| C50 / C80 | 125 Hz 0.036 / 0.031 dB; elsewhere 0.003–0.009 / same [0.000–0.001] |
+| D50 | ≤ 0.0009 / same |
+| Ts | 125 Hz 0.22 ms; elsewhere 0.02–0.06 / same [≤ 0.005] |
+| Early tonal balance, 0–80 ms | 100–250 Hz 0.024–0.044 / 0.017–0.046 dB; above 400 Hz ≤ 0.01 [0.000–0.001] |
+| Late tonal balance | 160–400 Hz 0.008–0.010 / 0.004–0.006 dB; elsewhere ≤ 0.006 / same [0.000] |
+| Echo density | 0.0009 / 0.0009 [0.0005] |
+| Coherence, IACC, L/R | ≤ 0.0003, ≤ 0.0002, 0.000 dB, plugin = bench |
+| Fine-structure correlation | 1.0000 / 1.0000 |
+| Fine-structure sd | 0.001 dB / same [0.001], inside |
+| Narrow-band envelope (p90 / worst band) | 0.17 / 0.77 dB, bench 0.16 / 0.78 [0.06 / 0.17] |
+| LATE pairs (real capture vs capture) | early levels 100–250 Hz 0.03–0.06 / 0.03–0.06 dB [0.004–0.010]; 0–50 ms null −52.7 / −52.8 [pair −60.7] |
+
+**G1 nulls (held out as §9.9),** R (L), dB, medians:
+
+| Window (s) | Plugin | Bench | Excess (plugin) | ≤ −50 dB, plugin / bench |
+|---|---|---|---|---|
+| 0–0.05 | −53.3 (−51.7) | −53.4 | +26.5 | 148 / 147 of 205 |
+| 0.05–0.15 | −58.0 (−60.0) | −59.2 | +14.7 | 184 / 183 |
+| 0.15–0.3 | −57.1 (−58.6) | −56.2 | +11.4 | 158 / 158 of 202 |
+| 0.3–0.6 | −50.9 (−51.5) | −50.7 | +8.5 | 97 / 97 of 192 |
+| 0.6–1.0 | −40.2 | −40.1 | +6.4 | 17 / 14 of 134 |
+
+Per band, 0.05–0.6 s (plugin / bench):
+
+| Band | Plugin | Bench |
+|---|---|---|
+| 20–100 Hz | −49.4 | −49.4 |
+| 100 Hz–1 kHz | −58.3 | −60.3 |
+| 1–5 kHz | −58.6 | −58.5 |
+| 5–10 kHz | −55.6 | −55.1 |
+| 10–12 kHz | −39.7 | −48.4 |
+
+**Reading the results:**
+- **The plugin and the bench model are the same on every metric family.** The medians agree to within 0.005 dB, 0.01 %
+  or 0.001 in every band and group: EARLY > 0, EARLY 10, EARLY < 0, LATE 0, SPAN 0, slip undone and trimmed. The few
+  cases where the plugin is worse by more than twice the tolerance are listed in the next bullet.
+- **Where the plugin is clearly worse than the bench: 100 Hz–1 kHz.**
+  - Early and late tonal balance at 160–400 Hz: 0.010 against 0.006 dB late; in 100–150 of 205 captures the plugin's
+    error exceeds the bench's by more than twice the tolerance.
+  - The 100 Hz–1 kHz null: −58.3 against −60.3 dB.
+  - The 10–12 kHz null: −39.7 against −48.4 dB.
+  - **Cause (S):** two bench-side capture terms the plugin does not and must not carry. They are the measured low-band
+    transfer of the captures' processing (`NL_LOWBAND=2`, N's own table above 130 Hz, NonLin §11.8) and the per-run
+    band-edge term above 10 kHz (`NL_HF`, §11.6). Both are measurement-side, not the unit. 20 Hz–100 Hz and 1–10 kHz are
+    equal.
+- **Against the tolerance:** plugin and bench alike are outside the noise twin, and outside the real LATE-pair spread of
+  the early section (0–50 ms −52.7 against the pair's −60.7 dB; 100–250 Hz early levels 0.03–0.06 against 0.004–0.010 dB).
+  This is the known model-level gap of §11.1 (8–13 dB above the repeat level), shared by plugin and bench. Inside or at
+  tolerance: fine-structure sd and correlation, L/R level, and coherence in about half the captures.
+  The absolute errors are tiny: decay 0.05 %, EDC 0.02 dB, levels ≤ 0.06 dB.
+- **One clear shared failure: LATE 0.2** (20 captures).
+  - The late section's tail decays 1.8 % fast: RT 0.244 against the capture's 0.248 s (all 16 measurable captures between
+    −0.6 % and −2.0 %; tolerance 0.01 %).
+  - Nulls collapse after 0.15 s: −38 / −21 / −16 dB at 0.15–0.3 / 0.3–0.6 / 0.6–1.0 s, every band about −41 dB.
+  - Narrow-band envelope worst band 2.5 dB; echo density |diff| 0.010.
+  - Plugin and bench are identical, so this is a model item, not the port. It is the "LATE 0.2 reads 0.23–0.29 s" of
+    NonLin §10.1, attributed there to estimator bias, but it is the unit's response. H: the LATE 0.2 step's loop gains
+    are not Jot gains for RT = 0.2 s (the unit's real RT at that step is about 0.25 s, or the gain is quantised).
+    LATE ≥ 0.4 is at the 0.05 % level.
+- **Trimmed starts:** they score like the rest after 0.15 s. 0–0.15 s and the bands are limited by Tomkin's trim (20–100
+  Hz −33 dB for plugin and bench alike).
