@@ -5,7 +5,7 @@
 Per example: the recording is summed to mono (the unit is mono in), rendered through REV246Render (the plugin's own
 engine, latency removed as a DAW would) and convolved with the IR (both channels, resampled to 48 kHz). The IR wet is
 scaled to the plugin wet's RMS, so any difference heard is the reverb's character, not its level; both wets are then
-set to the dry's RMS and mixed at MIX (0.8 dry + 0.2 wet). The three files of an example share one gain, so no clip
+set to the dry's RMS and mixed at MIX (0.65 dry + 0.35 wet). The three files of an example share one gain, so no clip
 and no level change between them. Outputs: docs/listen/audio/<name>_{dry,ir,plugin}.mp3 plus `levels.json`.
 
 IR sources (kept unnamed in the README): 1 = CLA capture, 2 = Altiverb, 3 = Tomkin library.
@@ -22,7 +22,7 @@ RENDER = ROOT / "plugin/build-render/REV246Render_artefacts/Release/REV246Render
 OUT = ROOT / "docs/listen/audio"
 WORK = ROOT / "analysis/ab_samples"
 RATE = 48000
-MIX = 0.2
+MIX = 0.35
 TOMKIN = ROOT / "irs/EMT 246 captures/96kHz"
 ALT = ROOT / "irs/Altiverb EMT256 IRs"
 

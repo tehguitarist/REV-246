@@ -11,6 +11,8 @@
 //   program=S|M|L|E|N    [S]
 //   lf= rt= hf= ampl=    panel values (N: lf = EARLY RT s, hf = LATE RT s, ampl = SPAN s) [1.0 1.0 0.9 80]
 //   delay=<ms> [0]  lp=<kHz> [12, the exact bypass]  sixteen=0|1 [0]
+//   xfmr=0|1             the processor's XFMR stage (input transformer, the capture low-band EQ, output transformers),
+//                        fully on, host domain only [0]; cal=<dBFS> what 0 VU reads, for the A/D's full scale [-18]
 //   mod=0|1              time variance (M / L theta, E's moving reads) [1]; 0 = the cores' null-test switch
 //   len=<s>              output length after the input starts [3]
 //   pre=<s>              silence before the input (moves the time variance's phase at the input) [0]
@@ -25,7 +27,9 @@
 // Each render prints one line: out, the engine's latency (host samples, R) and alignment (device samples).
 // The output file starts at the first input sample (the latency is in the file, not removed).
 
+#include "dsp/AdcCalibration.h"
 #include "dsp/ReverbEngine.h"
+#include "dsp/Transformer.h"
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
@@ -234,6 +238,18 @@ int render(const Args& a)
 
     auto engine = std::make_unique<ReverbEngine>();
     engine->prepare(rate, block);
+    const bool xfmr = num(a, "xfmr", 0.0) > 0.5 && !device;
+    const auto fullScale = rv::dsp::adcFullScaleForZeroVu((float)num(a, "cal", -18.0));
+    if (xfmr || s.sixteenBit)
+        engine->setFullScale(fullScale); // the processor does this from CAL; without it the engine keeps its default
+    rv::dsp::Transformer transformer;
+    if (xfmr)
+    {
+        transformer.prepare(rate);
+        transformer.setFullScale(fullScale);
+        for (auto& x : in)
+            x = transformer.processInput(x);
+    }
     engine->setSettings(s);
     engine->setModulation(mod);
     engine->reset(); // start in s.program (no crossfade) with the modulation switch applied
@@ -254,6 +270,13 @@ int render(const Args& a)
         {
             const int n = (int)std::min((size_t)block, in.size() - i);
             engine->process(in.data() + i, l.data() + i, r.data() + i, n);
+        }
+
+    if (xfmr)
+        for (size_t i = 0; i < l.size(); ++i)
+        {
+            l[i] = transformer.processOutput(0, l[i]);
+            r[i] = transformer.processOutput(1, r[i]);
         }
 
     // The file starts at the input's first sample (pre-roll dropped).

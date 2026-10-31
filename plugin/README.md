@@ -166,7 +166,7 @@ estimate, since measurements of a unit's response cannot show it.
 **[Listen in your browser](https://tehguitarist.github.io/REV-246/listen/)**: looping players that switch between dry, IR and REV-246 in sync.
 
 Four recordings, each with the **dry** take, a convolution with a reference **impulse response (IR)** and **REV-246** set to the
-same settings. All at a **20 % wet mix** (0.8 dry + 0.2 wet); the two wets are level-matched, so what you hear is the reverb's
+same settings. All at a **35 % wet mix** (0.65 dry + 0.35 wet); the two wets are level-matched, so what you hear is the reverb's
 character and not its level. The recordings are summed to mono for the reverb (the original is mono in), the plugin's
 ~1 ms latency is removed as a DAW would, and the three files of an example share one gain. The IR sources are numbered
 1 to 3 and stay unnamed.
@@ -179,7 +179,7 @@ character and not its level. The recordings are summed to mono for the reverb (t
 | Snare (gated) | Programme N, SPAN 0.2 s, EARLY RT -3.0 s, LATE RT 0.8 s, DELAY 39 ms (factory preset *Altiverb P54 Gated*) | [dry](../docs/listen/audio/snare_dry.mp3) | 2: [IR](../docs/listen/audio/snare-ir2_ir.mp3) | [REV-246](../docs/listen/audio/snare-ir2_plugin.mp3) |
 | Snare (gated) | The same, DELAY 0 | [dry](../docs/listen/audio/snare_dry.mp3) | 3: [IR](../docs/listen/audio/snare-ir3_ir.mp3) | [REV-246](../docs/listen/audio/snare-ir3_plugin.mp3) |
 
-The reverb is the plugin's own engine at its defaults (FLOAT; no output stage). The IRs are single measurements of a
+The reverb is the plugin's own engine set to FLOAT with XFMR off: an impulse response is linear and noise-free, so 16-BIT's noise and grit and XFMR's added low-end weight would only move the plugin away from it. Both are there to switch on. The IRs are single measurements of a
 unit, so a time-varying programme (M here) and the original's analogue chain will differ from them in detail: see
 [analysis/ab_samples/report.md](../analysis/ab_samples/report.md) for how close the wets are, band by band.
 
