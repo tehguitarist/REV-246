@@ -54,7 +54,7 @@ def render(prog, st, tag, pre=0.0, length=12.5, sixteen=0):
     lat = int(o.split("latency=")[1].split()[0])
     x, fs = sf.read(path, always_2d=True)
     assert fs == FS
-    k = lat + int(round(pre * FS))
+    k = lat  # REV246Render drops the pre-roll itself (its output starts at the input)
     return x[k:].T.astype(np.float64), lat
 
 
