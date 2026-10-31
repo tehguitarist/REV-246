@@ -188,9 +188,9 @@ constexpr float barY = design::barTop + 35.0f, barH = 80.0f;
 }
 
 PresetBar::PresetBar(rv::PresetManager& p, juce::Component& parentIn)
-    : presets(p), parent(parentIn), parentAlive(&parentIn), prev({110, barY, 90, barH}, juce::CharPointer_UTF8("\xe2\x97\x80")),
-      next({916, barY, 90, barH}, juce::CharPointer_UTF8("\xe2\x96\xb6")), name({208, barY, 700, barH}, ""),
-      save({1016, barY, 200, barH}, "SAVE")
+    : presets(p), parent(parentIn), parentAlive(&parentIn), prev({design::presetBarLeft, barY, 90, barH}, juce::CharPointer_UTF8("\xe2\x97\x80")),
+      next({design::presetBarLeft + 806.0f, barY, 90, barH}, juce::CharPointer_UTF8("\xe2\x96\xb6")), name({design::presetBarLeft + 98.0f, barY, 700, barH}, ""),
+      save({design::presetBarLeft + 906.0f, barY, 200, barH}, "SAVE")
 {
     prev.setTooltip("Previous preset");
     next.setTooltip("Next preset");
