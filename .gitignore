@@ -65,3 +65,7 @@ analysis/fullband/gate_lowband/
 analysis/fullband/gate_oldkernel/
 analysis/fullband/*.log
 analysis/pulse/gate_mlkf_compact/
+
+# A/B example wets (tools/ab_samples.py): large, regenerable
+analysis/ab_samples/*.npz
+analysis/ab_samples/*.wav

@@ -1,0 +1,52 @@
+{
+ "acoustic-guitar": {
+  "latency": 50,
+  "ir_shift_ms": 2.6041666666666665,
+  "plugin_wet_gain_db": -6.779380315191577,
+  "ir_wet_gain_db": 10.270588667096032,
+  "natural_plugin_vs_ir_db": 17.04996898228761,
+  "common_gain_db": 0.0,
+  "settings": "Program S, RT 1.4 s, LF 1.0, HF 0.6, AMPL 60 %, DELAY 0, LP 12 kHz",
+  "ir_source": 3
+ },
+ "room-mic": {
+  "latency": 50,
+  "ir_shift_ms": 0.0,
+  "plugin_wet_gain_db": -6.360878099978252,
+  "ir_wet_gain_db": -13.505148677255658,
+  "natural_plugin_vs_ir_db": -7.144270577277405,
+  "common_gain_db": 0.0,
+  "settings": "Program S, RT 1.0 s, LF 1.0, HF 0.9, AMPL 80 %, DELAY 10 ms, LP 12 kHz",
+  "ir_source": 1
+ },
+ "piano": {
+  "latency": 50,
+  "ir_shift_ms": -0.14583333333333334,
+  "plugin_wet_gain_db": -4.635351113130003,
+  "ir_wet_gain_db": -63.86807994830438,
+  "natural_plugin_vs_ir_db": -59.23272883517437,
+  "common_gain_db": 0.0,
+  "settings": "Program M, RT 1.5 s, LF 1.2, HF 0.7, AMPL 60 %, DELAY 40 ms, LP 12 kHz",
+  "ir_source": 2
+ },
+ "snare-ir2": {
+  "latency": 50,
+  "ir_shift_ms": -0.08333333333333333,
+  "plugin_wet_gain_db": -10.397123817171408,
+  "ir_wet_gain_db": -64.00597605571085,
+  "natural_plugin_vs_ir_db": -53.60885223853945,
+  "common_gain_db": 0.0,
+  "settings": "Program N, SPAN 0.2 s, EARLY RT -3.0 s, LATE RT 0.8 s, DELAY 39 ms, LP 12 kHz",
+  "ir_source": 2
+ },
+ "snare-ir3": {
+  "latency": 50,
+  "ir_shift_ms": 0.8958333333333334,
+  "plugin_wet_gain_db": -10.397123809488054,
+  "ir_wet_gain_db": 20.098411495111918,
+  "natural_plugin_vs_ir_db": 30.49553530459997,
+  "common_gain_db": 0.0,
+  "settings": "Program N, SPAN 0.2 s, EARLY RT -3.0 s, LATE RT 0.8 s, DELAY 0, LP 12 kHz",
+  "ir_source": 3
+ }
+}

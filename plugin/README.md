@@ -128,14 +128,23 @@ estimate, since measurements of a unit's response cannot show it.
 
 ## A/B comparison
 
-<!-- TODO: add before the first release. Audio samples to be supplied by the author; the IR sources stay unnamed.
-     One row per example, each with a plugin render and the matching reference. -->
+Four recordings, each with the **dry** take, a convolution with a reference **impulse response (IR)** and **REV-246** set to the
+same settings. All at a **20 % wet mix** (0.8 dry + 0.2 wet); the two wets are level-matched, so what you hear is the reverb's
+character and not its level. The recordings are summed to mono for the reverb (the original is mono in), the plugin's
+~1 ms latency is removed as a DAW would, and the three files of an example share one gain. The IR sources are numbered
+1 to 3 and stay unnamed.
 
-*Audio examples comparing REV-246 with the reference impulse responses will go here.*
+| Example | Settings | Dry | IR source | REV-246 |
+|---|---|---|---|---|
+| Room mic | Programme S, RT 1.0 s, LF 1.0, HF 0.9, AMPL 80 %, DELAY 10 ms | [dry](docs/audio/room-mic_dry.mp3) | 1: [IR](docs/audio/room-mic_ir.mp3) | [REV-246](docs/audio/room-mic_plugin.mp3) |
+| Piano | Programme M, RT 1.5 s, LF 1.2, HF 0.7, AMPL 60 %, DELAY 40 ms (factory preset *Altiverb P1 Piano*) | [dry](docs/audio/piano_dry.mp3) | 2: [IR](docs/audio/piano_ir.mp3) | [REV-246](docs/audio/piano_plugin.mp3) |
+| Acoustic guitar | Programme S, RT 1.4 s, LF 1.0, HF 0.6, AMPL 60 %, DELAY 0 | [dry](docs/audio/acoustic-guitar_dry.mp3) | 3: [IR](docs/audio/acoustic-guitar_ir.mp3) | [REV-246](docs/audio/acoustic-guitar_plugin.mp3) |
+| Snare (gated) | Programme N, SPAN 0.2 s, EARLY RT -3.0 s, LATE RT 0.8 s, DELAY 39 ms (factory preset *Altiverb P54 Gated*) | [dry](docs/audio/snare_dry.mp3) | 2: [IR](docs/audio/snare-ir2_ir.mp3) | [REV-246](docs/audio/snare-ir2_plugin.mp3) |
+| Snare (gated) | The same, DELAY 0 | [dry](docs/audio/snare_dry.mp3) | 3: [IR](docs/audio/snare-ir3_ir.mp3) | [REV-246](docs/audio/snare-ir3_plugin.mp3) |
 
-| Example | Settings | REV-246 | Reference |
-|---|---|---|---|
-| *to come* | | | |
+The reverb is the plugin's own engine at its defaults (FLOAT; no output stage). The IRs are single measurements of a
+unit, so a time-varying programme (M here) and the original's analogue chain will differ from them in detail: see
+[analysis/ab_samples/report.md](../analysis/ab_samples/report.md) for how close the wets are, band by band.
 
 ## Build
 

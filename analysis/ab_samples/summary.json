@@ -1,0 +1,32 @@
+{
+ "room-mic": {
+  "broadband_null": -20.293856775616305,
+  "band_null_median": -27.09533522261169,
+  "level_abs_max": 0.3550255369768637,
+  "env_rms_median": 0.03379562853685874
+ },
+ "piano": {
+  "broadband_null": -15.34055986943828,
+  "band_null_median": -14.705129848179745,
+  "level_abs_max": 2.384894777609162,
+  "env_rms_median": 0.8438750654877871
+ },
+ "acoustic-guitar": {
+  "broadband_null": -42.85676155019318,
+  "band_null_median": -43.16372498299058,
+  "level_abs_max": 0.02278627872701572,
+  "env_rms_median": 1.054729647275082
+ },
+ "snare-ir2": {
+  "broadband_null": -17.026223189408153,
+  "band_null_median": -19.256508779619924,
+  "level_abs_max": 1.5339026651394798,
+  "env_rms_median": 0.453701318344707
+ },
+ "snare-ir3": {
+  "broadband_null": -26.983735645256587,
+  "band_null_median": -34.978997148680065,
+  "level_abs_max": 0.019733429069830756,
+  "env_rms_median": 1.645759747237288
+ }
+}
