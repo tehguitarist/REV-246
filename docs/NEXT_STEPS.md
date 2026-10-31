@@ -57,12 +57,26 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 - **Agents still running when the usage limit hit (their work is uncommitted; check, then commit):** (a) the joint CLA + Altiverb XFMR cascade (`plugin/src/dsp/CaptureEq.h`, `plugin/tests/TransformerTests.cpp`, `tools/unit_chain_fullband.py`, a `model_s_results.md` §37.x; adopt only if within 0.5 dB of each unit's own cascade in every band); (b) the audit metrics G1-G6 on the plugin's renders (`tools/plugin_pulse.py`, `analysis/plugin_pulse/`, REPORT_chainfix §8).
 - **Not done:** Steinberg's VST3 validator (cloning and building the SDK was blocked by the permission check; the user decides).
 
-- **31 October afternoon, paused by the session limit (resume after 4:30 pm; the agents' work so far is saved, resume them rather than restarting):**
-  1. **M/L AMPL law** (`tools/ml_ampl_check.py`, `analysis/ml_ampl/`): the plugin's M/L cluster/reverb ratio looked ~9-12 dB low against Tomkin at the same settings (preset check, `analysis/altiverb/preset_check/report.md` finding 2). Measure the hardware's absolute M/L AMPL law from Tomkin's AMPL pairs (reverb identical, cluster scales: no free gain); S as control, CLA (S at AMPL 80) as the known anchor; best guess with C/S/H where unmeasurable (user, 31 October); then implement the law (MLCore clusterGain, now AMPL / 90) held out, and redo the preset AMPLs on it.
-  2. **M/L sweep-measured audit smoke** (`tools/ml_fix_diag.py`, 3 start phases, ~20 groups), then report before a full rerun. The diagnosis (`analysis/ml_fix/diag.log`): the audit's low-band excess was one theta phase for all renders, not theta / port / decay law.
-  3. **N audit metrics** on the plugin's renders (`tools/plugin_pulse_n.py`, `analysis/plugin_pulse/n/`, REPORT_chainfix §9).
-  4. **LOW PASS shape from the presets (user's request):** the preset check found LP < 12 presets' tap 0 fits a 2-tap device-rate FIR [1-a, a] relative to their family (0.01-0.04 dB rms), PRESET23 a steep cut (-5 dB at 9 kHz, -39 dB at 11 kHz). Fit the candidate forms (2-tap FIR, one-pole, Butterworth, biquad) per preset, family-relative (the dark families' roll-off is L's output kernel, EMT250 §14.1), check that one parameter maps monotonically onto the lever's kHz steps, and adopt the form in `ReverbEngine`'s `DeviceLowPass` (now a guessed 2nd-order Butterworth, H).
-  5. Another session's test `plugin/tests/StateTests.cpp:157-158` compares floats with `==` (GCC `-Wfloat-equal`): fix before CI (`juce::exactlyEqual`) once that session is done with the file.
+- **31 October afternoon and evening (done, pushed):**
+  - **XFMR:** CLA-only 13-number cascade adopted (user's decision; model_s §37.1-37.3).
+  - **M/L AMPL law measured and fixed:** the cluster was 11.6 dB low against the reverb. The plugin is now within 0.01 dB of the hardware (`analysis/ml_ampl/`, unit facts AMPL row). The M/L wet is about 11 dB quieter, level with S (H: one capture gain).
+  - **Presets:** AMPL re-read absolutely (25 numbered presets lowered; the family anchors were right); P2 / P8 / P77 LP 12, P72 LF 0.6.
+  - **Preset check:** the double pre-roll cut is fixed; 56 of 64 pass.
+  - **M/L audit:** the low-band excess was one theta phase (`analysis/ml_fix/diag.log`); measured through the sweep with 3 phases it is gone (20-group smoke).
+  - **N audit:** plugin = bench on every metric (REPORT_chainfix §9). The LATE 0.2 tail RT is 1.8 % short (a model item).
+  - **LOW PASS:** no lever law in the presets. The dark M/L/E presets are per-preset output-kernel coefficients (library_notes 7.x); the lever shape stays H.
+  - **pluginval** at 22.05-192 kHz: PASS.
+  - **Disk:** 18 GB of old renders, caches and builds freed.
+- **Open, the user's calls:**
+  1. The LP lever shape: the Butterworth (current, H) or PRESET23's linear-phase shape scaled per step (H, +0.23 ms latency).
+  2. A preset-only output-kernel value for the dark M/L/E presets (an exact match; a new hidden parameter).
+  3. The full sweep-measured M/L audit rerun, about 3.5-4 h: `tools/ml_fix_diag.py`; delete each group's sweep WAVs after scoring, since disk is tight.
+- **Open, small:**
+  - N LATE 0.2 loop gains (refit, held out).
+  - Defect candidate N 0.0_2.0_0.4.
+  - The other session's `plugin/tests/StateTests.cpp:157-158` float `==` (GCC); fix before CI.
+  - The Steinberg VST3 validator (blocked by the permission check).
+  - plugin_check renders from now on: rerun `--stage align` first.
 
 **Resume here:**
 1. **One manual CI run** (ask the user first: Actions minutes).
