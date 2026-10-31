@@ -1672,11 +1672,11 @@
      "inferred": 0.7101
     },
     "ampl": {
-     "value": 70,
-     "step": 7,
+     "value": 60,
+     "step": 6,
      "label": "S",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 74.8 % (law sd 15 %)",
-     "inferred": 74.8352
+     "reason": "first pass 58.9 %, 40-120 ms 58.9 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 57.6/59.5 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 58.9
     }
    },
    "label_string": "M: RT 1.5 (S), LF 1.2 (H), HF 0.7 (S), AMPL 70 (S), DELAY 40 (S)"
@@ -1759,11 +1759,11 @@
      "inferred": 0.2114
     },
     "ampl": {
-     "value": 20,
-     "step": 2,
+     "value": 10,
+     "step": 1,
      "label": "H",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 16.8 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
-     "inferred": 16.7922
+     "reason": "first pass 11.0 %, 40-120 ms 11.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 10.0/11.4 %; 100-1k vs 1-10k bands disagree by 1.1 dB; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 11.1
     }
    },
    "label_string": "L: RT 5.2 (H), LF 2.0 (H), HF 0.2 (H), AMPL 20 (H), DELAY 179 (H), LP 10 (H)"
@@ -1846,11 +1846,11 @@
      "inferred": 0.8754
     },
     "ampl": {
-     "value": 100,
-     "step": 10,
+     "value": 90,
+     "step": 9,
      "label": "H",
-     "reason": "direct tap / reverb ratio 1.19 x the family's at RT 2.00 -> 95.4 % (family = 80, H)",
-     "inferred": 95.4267
+     "reason": "first pass 90.2 %, 40-120 ms 90.6 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 87.2/91.5 %; E's AMPL law (direct x AMPL / 80) is not measured; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 90.4
     }
    },
    "label_string": "E: RT 2.0 (S), LF 1.0 (H), HF 0.9 (S), AMPL 100 (H), DELAY 30 (S), LP 10 (H)"
@@ -2043,11 +2043,11 @@
      "inferred": 0.5291
     },
     "ampl": {
-     "value": 40,
-     "step": 4,
+     "value": 30,
+     "step": 3,
      "label": "S",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 43.4 % (law sd 15 %)",
-     "inferred": 43.4348
+     "reason": "first pass 31.6 %, 40-120 ms 31.7 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 31.5/32.0 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 31.7
     }
    },
    "label_string": "M: RT 2.6 (S), LF 1.5 (H), HF 0.5 (S), AMPL 40 (S), DELAY 64 (S)"
@@ -2130,11 +2130,11 @@
      "inferred": 0.5393
     },
     "ampl": {
-     "value": 30,
-     "step": 3,
+     "value": 20,
+     "step": 2,
      "label": "S",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 28.9 % (law sd 15 %)",
-     "inferred": 28.8977
+     "reason": "first pass 21.1 %, 40-120 ms 21.1 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 21.0/21.3 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 21.1
     }
    },
    "label_string": "M: RT 2.2 (S), LF 1.1 (H), HF 0.5 (S), AMPL 30 (S), DELAY 50 (S)"
@@ -2217,11 +2217,11 @@
      "inferred": 0.4219
     },
     "ampl": {
-     "value": 90,
-     "step": 9,
+     "value": 60,
+     "step": 6,
      "label": "H",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 89.3 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
-     "inferred": 89.2795
+     "reason": "first pass 62.7 %, 40-120 ms 63.3 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 63.3/62.7 %; 63.0 % is 3.0 from the step; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 63.0
     }
    },
    "label_string": "L: RT 3.6 (S), LF 1.5 (H), HF 0.4 (S), AMPL 90 (H), DELAY 69 (H), LP 10 (H)"
@@ -2304,11 +2304,11 @@
      "inferred": 0.8891
     },
     "ampl": {
-     "value": 50,
-     "step": 5,
-     "label": "S",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 47.8 % (law sd 15 %)",
-     "inferred": 47.8046
+     "value": 40,
+     "step": 4,
+     "label": "H",
+     "reason": "first pass 35.3 %, 40-120 ms 35.3 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 34.5/35.7 %; 35.3 % is 4.7 from the step; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 35.3
     }
    },
    "label_string": "M: RT 2.6 (S), LF 1.3 (H), HF 0.9 (S), AMPL 50 (S), DELAY 50 (S)"
@@ -2620,11 +2620,11 @@
      "inferred": 1.0
     },
     "ampl": {
-     "value": 100,
-     "step": 10,
-     "label": "H",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 110.0 % (law sd 4 %)",
-     "inferred": 110.0255
+     "value": 80,
+     "step": 8,
+     "label": "S",
+     "reason": "first pass 79.4 %, 40-120 ms 79.9 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.7/79.8 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 79.6
     }
    },
    "label_string": "S: RT 0.8 (S), LF 0.7 (H), HF 1.0 (S), AMPL 100 (H), DELAY 12 (S)"
@@ -2707,11 +2707,11 @@
      "inferred": 0.8117
     },
     "ampl": {
-     "value": 90,
-     "step": 9,
+     "value": 70,
+     "step": 7,
      "label": "S",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 93.0 % (law sd 4 %)",
-     "inferred": 93.0187
+     "reason": "first pass 69.5 %, 40-120 ms 69.7 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 69.8/69.9 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 69.6
     }
    },
    "label_string": "S: RT 0.9 (S), LF 0.8 (H), HF 0.8 (S), AMPL 90 (S), DELAY 14 (S)"
@@ -2794,11 +2794,11 @@
      "inferred": 0.5234
     },
     "ampl": {
-     "value": 100,
-     "step": 10,
+     "value": 70,
+     "step": 7,
      "label": "S",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 100.5 % (law sd 4 %)",
-     "inferred": 100.5071
+     "reason": "first pass 71.0 %, 40-120 ms 70.7 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 69.6/71.7 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 70.8
     }
    },
    "label_string": "S: RT 1.0 (S), LF 1.0 (H), HF 0.5 (S), AMPL 100 (S), DELAY 16 (S)"
@@ -2881,11 +2881,11 @@
      "inferred": 0.9006
     },
     "ampl": {
-     "value": 100,
-     "step": 10,
+     "value": 70,
+     "step": 7,
      "label": "S",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 97.5 % (law sd 4 %)",
-     "inferred": 97.4981
+     "reason": "first pass 69.5 %, 40-120 ms 70.0 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 69.8/69.9 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 69.8
     }
    },
    "label_string": "S: RT 1.4 (S), LF 0.8 (H), HF 0.9 (S), AMPL 100 (S), DELAY 24 (S)"
@@ -2968,11 +2968,11 @@
      "inferred": 0.6284
     },
     "ampl": {
-     "value": 100,
-     "step": 10,
+     "value": 70,
+     "step": 7,
      "label": "S",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 100.5 % (law sd 4 %)",
-     "inferred": 100.4936
+     "reason": "first pass 71.0 %, 40-120 ms 71.1 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 69.6/71.6 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 71.1
     }
    },
    "label_string": "S: RT 1.6 (S), LF 1.0 (H), HF 0.6 (S), AMPL 100 (S), DELAY 26 (S)"
@@ -3055,11 +3055,11 @@
      "inferred": 0.4287
     },
     "ampl": {
-     "value": 90,
-     "step": 9,
+     "value": 80,
+     "step": 8,
      "label": "H",
-     "reason": "direct tap / reverb ratio 1.09 x the family's at RT 1.48 -> 87.1 % (family = 80, H)",
-     "inferred": 87.0561
+     "reason": "first pass 74.8 %, 40-120 ms 76.7 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 73.8/76.1 %; E's AMPL law (direct x AMPL / 80) is not measured; 75.8 % is 4.2 from the step; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 75.8
     }
    },
    "label_string": "E: RT 1.5 (S), LF 1.2 (H), HF 0.4 (S), AMPL 90 (H), DELAY 26 (S), LP 10 (H)"
@@ -3142,11 +3142,11 @@
      "inferred": 0.8089
     },
     "ampl": {
-     "value": 90,
-     "step": 9,
+     "value": 70,
+     "step": 7,
      "label": "S",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 93.9 % (law sd 15 %)",
-     "inferred": 93.916
+     "reason": "first pass 70.6 %, 40-120 ms 70.6 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 69.1/71.4 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 70.6
     }
    },
    "label_string": "M: RT 2.2 (S), LF 1.0 (H), HF 0.8 (S), AMPL 90 (S), DELAY 34 (S)"
@@ -3229,11 +3229,11 @@
      "inferred": 0.5267
     },
     "ampl": {
-     "value": 70,
-     "step": 7,
+     "value": 50,
+     "step": 5,
      "label": "S",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 72.0 % (law sd 15 %)",
-     "inferred": 72.0463
+     "reason": "first pass 52.8 %, 40-120 ms 52.8 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 52.4/53.4 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 52.8
     }
    },
    "label_string": "M: RT 1.8 (S), LF 1.2 (H), HF 0.5 (S), AMPL 70 (S), DELAY 36 (S)"
@@ -3316,11 +3316,11 @@
      "inferred": 0.5947
     },
     "ampl": {
-     "value": 90,
-     "step": 9,
+     "value": 80,
+     "step": 8,
      "label": "H",
-     "reason": "direct tap / reverb ratio 1.07 x the family's at RT 1.82 -> 85.9 % (family = 80, H)",
-     "inferred": 85.8966
+     "reason": "first pass 77.7 %, 40-120 ms 79.8 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 78.8/78.4 %; E's AMPL law (direct x AMPL / 80) is not measured; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 78.8
     }
    },
    "label_string": "E: RT 1.8 (S), LF 1.2 (H), HF 0.6 (S), AMPL 90 (H), DELAY 26 (S), LP 10 (H)"
@@ -3403,11 +3403,11 @@
      "inferred": 0.3254
     },
     "ampl": {
-     "value": 70,
-     "step": 7,
+     "value": 60,
+     "step": 6,
      "label": "H",
-     "reason": "direct tap / reverb ratio 0.85 x the family's at RT 2.16 -> 67.8 % (family = 80, H)",
-     "inferred": 67.8409
+     "reason": "first pass 55.9 %, 40-120 ms 57.4 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 60.6/55.7 %; E's AMPL law (direct x AMPL / 80) is not measured; 56.6 % is 3.4 from the step; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 56.6
     }
    },
    "label_string": "E: RT 2.2 (S), LF 1.5 (H), HF 0.3 (S), AMPL 70 (H), DELAY 36 (S), LP 10 (H)"
@@ -3490,11 +3490,11 @@
      "inferred": 0.7144
     },
     "ampl": {
-     "value": 80,
-     "step": 8,
+     "value": 60,
+     "step": 6,
      "label": "S",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 75.8 % (law sd 15 %)",
-     "inferred": 75.7515
+     "reason": "first pass 58.9 %, 40-120 ms 58.9 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 57.6/59.5 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 58.9
     }
    },
    "label_string": "M: RT 2.6 (S), LF 1.2 (H), HF 0.7 (S), AMPL 80 (S), DELAY 44 (S)"
@@ -3577,11 +3577,11 @@
      "inferred": 0.4287
     },
     "ampl": {
-     "value": 40,
-     "step": 4,
+     "value": 30,
+     "step": 3,
      "label": "S",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 43.3 % (law sd 15 %)",
-     "inferred": 43.3185
+     "reason": "first pass 31.7 %, 40-120 ms 31.7 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 31.5/32.0 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 31.7
     }
    },
    "label_string": "M: RT 2.6 (S), LF 1.5 (H), HF 0.4 (S), AMPL 40 (S), DELAY 46 (S)"
@@ -3751,11 +3751,11 @@
      "inferred": 0.598
     },
     "ampl": {
-     "value": 60,
-     "step": 6,
-     "label": "H",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 61.1 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
-     "inferred": 61.1399
+     "value": 40,
+     "step": 4,
+     "label": "S",
+     "reason": "first pass 41.8 %, 40-120 ms 42.3 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 42.2/41.8 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 42.1
     }
    },
    "label_string": "L: RT 3.1 (S), LF 1.3 (H), HF 0.6 (S), AMPL 60 (H), DELAY 79 (H), LP 10 (H)"
@@ -3838,11 +3838,11 @@
      "inferred": 0.3242
     },
     "ampl": {
-     "value": 30,
-     "step": 3,
-     "label": "H",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 33.0 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
-     "inferred": 32.9624
+     "value": 20,
+     "step": 2,
+     "label": "S",
+     "reason": "first pass 20.8 %, 40-120 ms 21.6 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 20.0/21.3 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 21.2
     }
    },
    "label_string": "L: RT 3.1 (S), LF 1.8 (H), HF 0.3 (S), AMPL 30 (H), DELAY 79 (H), LP 10 (H)"
@@ -4012,11 +4012,11 @@
      "inferred": 0.5271
     },
     "ampl": {
-     "value": 50,
-     "step": 5,
-     "label": "H",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 46.8 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
-     "inferred": 46.8466
+     "value": 30,
+     "step": 3,
+     "label": "S",
+     "reason": "first pass 31.8 %, 40-120 ms 32.4 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 29.9/32.6 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 32.1
     }
    },
    "label_string": "L: RT 4.5 (S), LF 1.5 (H), HF 0.5 (S), AMPL 50 (H), DELAY 114 (H), LP 10 (H)"
@@ -4099,11 +4099,11 @@
      "inferred": 0.3227
     },
     "ampl": {
-     "value": 20,
-     "step": 2,
-     "label": "H",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 15.5 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
-     "inferred": 15.5236
+     "value": 10,
+     "step": 1,
+     "label": "S",
+     "reason": "first pass 10.6 %, 40-120 ms 10.8 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 10.0/10.9 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 10.7
     }
    },
    "label_string": "L: RT 4.5 (S), LF 1.8 (H), HF 0.3 (S), AMPL 20 (H), DELAY 114 (H), LP 10 (H)"
@@ -4186,11 +4186,11 @@
      "inferred": 0.2146
     },
     "ampl": {
-     "value": 20,
-     "step": 2,
+     "value": 10,
+     "step": 1,
      "label": "H",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 16.3 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
-     "inferred": 16.323
+     "reason": "first pass 11.0 %, 40-120 ms 11.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 10.0/11.4 %; 100-1k vs 1-10k bands disagree by 1.1 dB; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 11.1
     }
    },
    "label_string": "L: RT 4.5 (H), LF 2.0 (H), HF 0.2 (H), AMPL 20 (H), DELAY 114 (H), LP 10 (H)"
@@ -4273,11 +4273,11 @@
      "inferred": 0.4217
     },
     "ampl": {
-     "value": 50,
-     "step": 5,
-     "label": "H",
-     "reason": "cluster / reverb ratio on Tomkin's AMPL law: 47.7 % (law sd 4 %); L's scale rests on Tomkin's single L AMPL",
-     "inferred": 47.7307
+     "value": 30,
+     "step": 3,
+     "label": "S",
+     "reason": "first pass 31.8 %, 40-120 ms 32.4 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 29.9/32.6 %; absolute, from the measured AMPL law (analysis/ml_ampl/preset_ampl.json, 31 October 2026)",
+     "inferred": 32.1
     }
    },
    "label_string": "L: RT 4.5 (S), LF 1.8 (H), HF 0.4 (S), AMPL 50 (H), DELAY 99 (H), LP 10 (H)"

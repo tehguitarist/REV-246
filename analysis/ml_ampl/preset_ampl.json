@@ -1,0 +1,483 @@
+{
+ "LONG RT 10.0s": {
+  "program": "L",
+  "measured": 60.0,
+  "step": 60,
+  "old_step": 60,
+  "label": "S",
+  "reason": "first pass 59.7 %, 40-120 ms 60.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 59.7/59.8 %"
+ },
+ "LONG RT 2.0s": {
+  "program": "L",
+  "measured": 59.4,
+  "step": 60,
+  "old_step": 60,
+  "label": "S",
+  "reason": "first pass 58.5 %, 40-120 ms 60.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 59.7/58.8 %"
+ },
+ "LONG RT 3.0s": {
+  "program": "L",
+  "measured": 59.0,
+  "step": 60,
+  "old_step": 60,
+  "label": "S",
+  "reason": "first pass 57.8 %, 40-120 ms 60.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 59.7/57.7 %"
+ },
+ "LONG RT 4.0s": {
+  "program": "L",
+  "measured": 60.0,
+  "step": 60,
+  "old_step": 60,
+  "label": "S",
+  "reason": "first pass 59.7 %, 40-120 ms 60.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 59.7/59.8 %"
+ },
+ "LONG RT 5.0s": {
+  "program": "L",
+  "measured": 59.9,
+  "step": 60,
+  "old_step": 60,
+  "label": "S",
+  "reason": "first pass 59.7 %, 40-120 ms 60.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 59.7/59.8 %"
+ },
+ "LONG RT 6.0s": {
+  "program": "L",
+  "measured": 59.9,
+  "step": 60,
+  "old_step": 60,
+  "label": "S",
+  "reason": "first pass 59.7 %, 40-120 ms 60.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 59.7/59.8 %"
+ },
+ "LONG RT 8.0s": {
+  "program": "L",
+  "measured": 60.0,
+  "step": 60,
+  "old_step": 60,
+  "label": "S",
+  "reason": "first pass 59.7 %, 40-120 ms 60.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 59.7/59.8 %"
+ },
+ "MED RT 0.5s": {
+  "program": "M",
+  "measured": 77.7,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 77.5 %, 40-120 ms 77.8 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.2/78.2 %"
+ },
+ "MED RT 1.0s": {
+  "program": "M",
+  "measured": 79.1,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 79.0 %, 40-120 ms 79.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.2/79.5 %"
+ },
+ "MED RT 1.4s": {
+  "program": "M",
+  "measured": 79.1,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 79.0 %, 40-120 ms 79.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.2/79.5 %"
+ },
+ "MED RT 1.8s": {
+  "program": "M",
+  "measured": 79.1,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 79.0 %, 40-120 ms 79.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.2/79.5 %"
+ },
+ "MED RT 2.0s": {
+  "program": "M",
+  "measured": 79.1,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 79.0 %, 40-120 ms 79.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.2/79.5 %"
+ },
+ "MED RT 2.6s": {
+  "program": "M",
+  "measured": 79.1,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 79.0 %, 40-120 ms 79.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.2/79.5 %"
+ },
+ "MED RT 3.0s": {
+  "program": "M",
+  "measured": 79.1,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 79.0 %, 40-120 ms 79.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.2/79.5 %"
+ },
+ "MED RT 3.5s": {
+  "program": "M",
+  "measured": 79.1,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 79.0 %, 40-120 ms 79.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.2/79.5 %"
+ },
+ "MED RT 4.0s": {
+  "program": "M",
+  "measured": 79.1,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 79.0 %, 40-120 ms 79.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.2/79.5 %"
+ },
+ "MED RT 5.0s": {
+  "program": "M",
+  "measured": 79.1,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 79.0 %, 40-120 ms 79.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.2/79.5 %"
+ },
+ "NON-LIN SHORT RT 0.2s": {
+  "program": "S",
+  "measured": 83.7,
+  "step": 80,
+  "old_step": 80,
+  "label": "H",
+  "reason": "first pass 82.6 %, 40-120 ms 84.8 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.8/83.9 %; 83.7 % is 3.7 from the step"
+ },
+ "NON-LIN SHORT RT 0.6s": {
+  "program": "S",
+  "measured": 79.5,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 79.4 %, 40-120 ms 79.6 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.7/79.8 %"
+ },
+ "NON-LIN SHORT RT 1.0s": {
+  "program": "S",
+  "measured": 79.6,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 79.4 %, 40-120 ms 79.8 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.7/79.8 %"
+ },
+ "NON-LIN SHORT RT 1.6s": {
+  "program": "S",
+  "measured": 79.6,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 79.4 %, 40-120 ms 79.9 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.7/79.8 %"
+ },
+ "NON-LIN SHORT RT 2.0s": {
+  "program": "S",
+  "measured": 79.7,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 79.4 %, 40-120 ms 80.0 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.7/79.8 %"
+ },
+ "NON-LIN SHORT RT 2.2s": {
+  "program": "S",
+  "measured": 79.7,
+  "step": 80,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 79.4 %, 40-120 ms 80.0 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.7/79.8 %"
+ },
+ "PRESET1 PIANO": {
+  "program": "M",
+  "measured": 58.9,
+  "step": 60,
+  "old_step": 70,
+  "label": "S",
+  "reason": "first pass 58.9 %, 40-120 ms 58.9 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 57.6/59.5 %"
+ },
+ "PRESET10 CATHEDRL": {
+  "program": "L",
+  "measured": 11.1,
+  "step": 10,
+  "old_step": 20,
+  "label": "H",
+  "reason": "first pass 11.0 %, 40-120 ms 11.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 10.0/11.4 %; 100-1k vs 1-10k bands disagree by 1.1 dB"
+ },
+ "PRESET2 BRASS": {
+  "program": "E",
+  "measured": 90.4,
+  "step": 90,
+  "old_step": 100,
+  "label": "H",
+  "reason": "first pass 90.2 %, 40-120 ms 90.6 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 87.2/91.5 %; E's AMPL law (direct x AMPL / 80) is not measured"
+ },
+ "PRESET27 LG SECT1": {
+  "program": "M",
+  "measured": 31.7,
+  "step": 30,
+  "old_step": 40,
+  "label": "S",
+  "reason": "first pass 31.6 %, 40-120 ms 31.7 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 31.5/32.0 %"
+ },
+ "PRESET3 WOODWIND": {
+  "program": "M",
+  "measured": 21.1,
+  "step": 20,
+  "old_step": 30,
+  "label": "S",
+  "reason": "first pass 21.1 %, 40-120 ms 21.1 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 21.0/21.3 %"
+ },
+ "PRESET4 STRINGS": {
+  "program": "L",
+  "measured": 63.0,
+  "step": 60,
+  "old_step": 90,
+  "label": "H",
+  "reason": "first pass 62.7 %, 40-120 ms 63.3 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 63.3/62.7 %; 63.0 % is 3.0 from the step"
+ },
+ "PRESET5 VOCALS": {
+  "program": "M",
+  "measured": 35.3,
+  "step": 40,
+  "old_step": 50,
+  "label": "H",
+  "reason": "first pass 35.3 %, 40-120 ms 35.3 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 34.5/35.7 %; 35.3 % is 4.7 from the step"
+ },
+ "PRESET72 SM LIVE": {
+  "program": "S",
+  "measured": 79.6,
+  "step": 80,
+  "old_step": 100,
+  "label": "S",
+  "reason": "first pass 79.4 %, 40-120 ms 79.9 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.7/79.8 %"
+ },
+ "PRESET73 SM REF": {
+  "program": "S",
+  "measured": 69.6,
+  "step": 70,
+  "old_step": 90,
+  "label": "S",
+  "reason": "first pass 69.5 %, 40-120 ms 69.7 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 69.8/69.9 %"
+ },
+ "PRESET74 SM WARM": {
+  "program": "S",
+  "measured": 70.8,
+  "step": 70,
+  "old_step": 100,
+  "label": "S",
+  "reason": "first pass 71.0 %, 40-120 ms 70.7 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 69.6/71.7 %"
+ },
+ "PRESET75 MED LIVE": {
+  "program": "S",
+  "measured": 69.8,
+  "step": 70,
+  "old_step": 100,
+  "label": "S",
+  "reason": "first pass 69.5 %, 40-120 ms 70.0 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 69.8/69.9 %"
+ },
+ "PRESET76 MED REF": {
+  "program": "S",
+  "measured": 71.1,
+  "step": 70,
+  "old_step": 100,
+  "label": "S",
+  "reason": "first pass 71.0 %, 40-120 ms 71.1 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 69.6/71.6 %"
+ },
+ "PRESET77 MED WARM": {
+  "program": "E",
+  "measured": 75.8,
+  "step": 80,
+  "old_step": 90,
+  "label": "H",
+  "reason": "first pass 74.8 %, 40-120 ms 76.7 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 73.8/76.1 %; E's AMPL law (direct x AMPL / 80) is not measured; 75.8 % is 4.2 from the step"
+ },
+ "PRESET78 LG LIVE": {
+  "program": "M",
+  "measured": 70.6,
+  "step": 70,
+  "old_step": 90,
+  "label": "S",
+  "reason": "first pass 70.6 %, 40-120 ms 70.6 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 69.1/71.4 %"
+ },
+ "PRESET79 LG REF": {
+  "program": "M",
+  "measured": 52.8,
+  "step": 50,
+  "old_step": 70,
+  "label": "S",
+  "reason": "first pass 52.8 %, 40-120 ms 52.8 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 52.4/53.4 %"
+ },
+ "PRESET8 CHAMBER": {
+  "program": "E",
+  "measured": 78.8,
+  "step": 80,
+  "old_step": 90,
+  "label": "H",
+  "reason": "first pass 77.7 %, 40-120 ms 79.8 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 78.8/78.4 %; E's AMPL law (direct x AMPL / 80) is not measured"
+ },
+ "PRESET80 LG WARM": {
+  "program": "E",
+  "measured": 56.6,
+  "step": 60,
+  "old_step": 70,
+  "label": "H",
+  "reason": "first pass 55.9 %, 40-120 ms 57.4 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 60.6/55.7 %; E's AMPL law (direct x AMPL / 80) is not measured; 56.6 % is 3.4 from the step"
+ },
+ "PRESET81 SM LIVE": {
+  "program": "M",
+  "measured": 58.9,
+  "step": 60,
+  "old_step": 80,
+  "label": "S",
+  "reason": "first pass 58.9 %, 40-120 ms 58.9 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 57.6/59.5 %"
+ },
+ "PRESET82 SM REF": {
+  "program": "M",
+  "measured": 31.7,
+  "step": 30,
+  "old_step": 40,
+  "label": "S",
+  "reason": "first pass 31.7 %, 40-120 ms 31.7 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 31.5/32.0 %"
+ },
+ "PRESET83 SM WARM": {
+  "program": "E",
+  "measured": 28.5,
+  "step": 30,
+  "old_step": 30,
+  "label": "H",
+  "reason": "first pass 28.2 %, 40-120 ms 28.8 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 28.2/28.6 %; E's AMPL law (direct x AMPL / 80) is not measured"
+ },
+ "PRESET84 MED LIVE": {
+  "program": "L",
+  "measured": 42.1,
+  "step": 40,
+  "old_step": 60,
+  "label": "S",
+  "reason": "first pass 41.8 %, 40-120 ms 42.3 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 42.2/41.8 %"
+ },
+ "PRESET85 MED REF": {
+  "program": "L",
+  "measured": 21.2,
+  "step": 20,
+  "old_step": 30,
+  "label": "S",
+  "reason": "first pass 20.8 %, 40-120 ms 21.6 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 20.0/21.3 %"
+ },
+ "PRESET86 MED WARM": {
+  "program": "E",
+  "measured": 28.8,
+  "step": 30,
+  "old_step": 30,
+  "label": "H",
+  "reason": "first pass 28.5 %, 40-120 ms 29.0 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 29.8/28.9 %; E's AMPL law (direct x AMPL / 80) is not measured"
+ },
+ "PRESET87 LG LIVE": {
+  "program": "L",
+  "measured": 32.1,
+  "step": 30,
+  "old_step": 50,
+  "label": "S",
+  "reason": "first pass 31.8 %, 40-120 ms 32.4 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 29.9/32.6 %"
+ },
+ "PRESET88 LG REF": {
+  "program": "L",
+  "measured": 10.7,
+  "step": 10,
+  "old_step": 20,
+  "label": "S",
+  "reason": "first pass 10.6 %, 40-120 ms 10.8 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 10.0/10.9 %"
+ },
+ "PRESET89 LG WARM": {
+  "program": "L",
+  "measured": 11.1,
+  "step": 10,
+  "old_step": 20,
+  "label": "H",
+  "reason": "first pass 11.0 %, 40-120 ms 11.2 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 10.0/11.4 %; 100-1k vs 1-10k bands disagree by 1.1 dB"
+ },
+ "PRESET9 CONCERT": {
+  "program": "L",
+  "measured": 32.1,
+  "step": 30,
+  "old_step": 50,
+  "label": "S",
+  "reason": "first pass 31.8 %, 40-120 ms 32.4 % vs the plugin render at AMPL 90 (linear law, plugin = hardware 0.01 dB); bands lo/hi 29.9/32.6 %"
+ },
+ "PRESET90 VERY LG": {
+  "program": "L",
+  "measured": null,
+  "step": 0,
+  "old_step": 0,
+  "label": "S",
+  "reason": "no cluster: the first R peak above half the early maximum is the reverb onset (236.6 ms = onset 150.6 + R onset 2268 samples), no taps at 570/776/1407; no cluster -> AMPL 0 (presets.json's reading kept); the 18 % from the generic measure is the reverb itself"
+ },
+ "REV-250 0.4s": {
+  "program": "E",
+  "measured": 71.4,
+  "step": 70,
+  "old_step": 80,
+  "label": "H",
+  "reason": "first pass 69.7 %, 40-120 ms 73.1 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 72.4/69.7 %; E's AMPL law (direct x AMPL / 80) is not measured"
+ },
+ "REV-250 1.0s": {
+  "program": "E",
+  "measured": 73.9,
+  "step": 70,
+  "old_step": 80,
+  "label": "H",
+  "reason": "first pass 72.9 %, 40-120 ms 75.0 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 74.4/73.5 %; E's AMPL law (direct x AMPL / 80) is not measured; 73.9 % is 3.9 from the step"
+ },
+ "REV-250 1.5s": {
+  "program": "E",
+  "measured": 78.2,
+  "step": 80,
+  "old_step": 80,
+  "label": "H",
+  "reason": "first pass 77.8 %, 40-120 ms 78.7 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 75.8/79.3 %; E's AMPL law (direct x AMPL / 80) is not measured"
+ },
+ "REV-250 2.0s": {
+  "program": "E",
+  "measured": 78.0,
+  "step": 80,
+  "old_step": 80,
+  "label": "H",
+  "reason": "first pass 77.3 %, 40-120 ms 78.8 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.2/77.6 %; E's AMPL law (direct x AMPL / 80) is not measured"
+ },
+ "REV-250 2.5s": {
+  "program": "E",
+  "measured": 77.8,
+  "step": 80,
+  "old_step": 80,
+  "label": "H",
+  "reason": "first pass 77.6 %, 40-120 ms 77.9 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 81.5/77.8 %; E's AMPL law (direct x AMPL / 80) is not measured"
+ },
+ "REV-250 3.0s": {
+  "program": "E",
+  "measured": 80.7,
+  "step": 80,
+  "old_step": 80,
+  "label": "H",
+  "reason": "first pass 80.1 %, 40-120 ms 81.3 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 77.8/81.3 %; E's AMPL law (direct x AMPL / 80) is not measured"
+ },
+ "REV-250 3.6s": {
+  "program": "E",
+  "measured": 79.3,
+  "step": 80,
+  "old_step": 80,
+  "label": "H",
+  "reason": "first pass 79.1 %, 40-120 ms 79.5 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 75.6/81.0 %; E's AMPL law (direct x AMPL / 80) is not measured"
+ },
+ "REV-250 4.0s": {
+  "program": "E",
+  "measured": 80.9,
+  "step": 80,
+  "old_step": 80,
+  "label": "H",
+  "reason": "first pass 80.7 %, 40-120 ms 81.1 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 79.0/82.1 %; E's AMPL law (direct x AMPL / 80) is not measured"
+ },
+ "REV-250 4.5s": {
+  "program": "E",
+  "measured": 78.7,
+  "step": 80,
+  "old_step": 80,
+  "label": "H",
+  "reason": "first pass 78.7 %, 40-120 ms 78.7 % vs the plugin render at AMPL 80 (linear law, plugin = hardware 0.01 dB); bands lo/hi 76.3/80.0 %; E's AMPL law (direct x AMPL / 80) is not measured"
+ },
+ "_method": "tools/ml_ampl_presets.py: AMPL = A_ref x 10^((ratio_IR - ratio_render)/20), ratio = R-channel cluster rms (taps, +-1 ms) over R reverb rms in the first pass and 40-120 ms, 100 Hz-10 kHz, 48 kHz; render = the plugin at the preset's settings (lf/rt/hf/delay/lowpass from presets.json) at AMPL 90 (S/M/L, mod=0) or 80 (E, mod=1, 3 phases, cluster = R tap 0 only); measured = geometric mean of the two windows; step = nearest 10. R only: the Altiverb's L channel runs 1.6-2.1 dB hot at tap 0. Label S: windows within 1 dB, bands within 1 dB, within 3 % of the step; H otherwise or E (law H)"
+}
