@@ -90,6 +90,7 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     void promptWidthValue(const juce::String& initial = {});
     void promptPreDelayValue(const juce::String& initial = {});
     void showDuckPanel();
+    void showCalMenu();
     void showValueDialog(const juce::String& title, const juce::String& message, const juce::String& shown,
                          const juce::String& hint, std::function<bool(const juce::String&)> onApply,
                          std::function<void(const juce::String&)> onInvalid);

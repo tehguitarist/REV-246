@@ -289,16 +289,12 @@ void Rev246Editor::setUpBarButtons()
     stereoButton.onToggle = [this](bool on) { setToggle(P::id::trueStereo, on); };
 
     meterCalIndex = proc.getMeterCal();
-    calButton.setTooltip("Meter calibration: what 0 VU reads, in dBFS. Click to cycle. -18 dBFS is the default "
+    calButton.setTooltip("Meter calibration: what 0 VU reads, in dBFS. Click to choose. -18 dBFS is the default "
                          "(the unit's 0 VU is 1 kHz at 0.775 V). It is the unit's input alignment, so it also sets where "
                          "its A/D clips: 6 dB over 0 VU for a sine below 2 kHz, up to 5 dB sooner at high frequencies. "
                          "16-BIT applies that clipping; OVL shows it in either mode.");
     calButton.setLabel(calLabel());
-    calButton.onClick = [this] {
-        proc.setMeterCal((proc.getMeterCal() + 1) % D::numMeterCal);
-        meterCalIndex = proc.getMeterCal();
-        calButton.setLabel(calLabel());
-    };
+    calButton.onClick = [this] { showCalMenu(); };
 }
 
 void Rev246Editor::setUpKnobsAndFaders()
@@ -532,6 +528,24 @@ void Rev246Editor::promptWidthValue(const juce::String& initial)
                         return true;
                     },
                     [this](const juce::String& text) { promptWidthValue(text); });
+}
+
+// CAL's pop-up: the six calibrations, the current one ticked and the default marked.
+void Rev246Editor::showCalMenu()
+{
+    juce::PopupMenu menu;
+    menu.addSectionHeader("0 VU reads");
+    for (int i = 0; i < D::numMeterCal; ++i)
+        menu.addItem(i + 1, juce::String(D::meterCalDbFs[i], 0) + " dBFS" + (i == D::defaultMeterCal ? "  (default)" : ""),
+                     true, i == proc.getMeterCal());
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&calButton).withMinimumWidth(180),
+                       [safe = juce::Component::SafePointer<Rev246Editor>(this)](int result) {
+                           if (safe == nullptr || result <= 0)
+                               return;
+                           safe->proc.setMeterCal(result - 1);
+                           safe->meterCalIndex = safe->proc.getMeterCal();
+                           safe->calButton.setLabel(safe->calLabel());
+                       });
 }
 
 void Rev246Editor::promptPreDelayValue(const juce::String& initial)

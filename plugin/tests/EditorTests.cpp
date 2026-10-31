@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "ui/DuckPanel.h"
 #include "ui/HelpText.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -133,6 +134,21 @@ TEST_CASE("snapshot")
     dynamic_cast<Rev246Editor&>(*base).getLevelMeter().setLevel(0.3f, true, -18.0f); // lights the LEVEL LEDs incl. OVL
     base->setSize(1747, 764);
     auto img = base->createComponentSnapshot(base->getLocalBounds(), true, 1.0f);
+    juce::File(path).deleteFile();
+    juce::FileOutputStream out{juce::File(path)};
+    juce::PNGImageFormat().writeImageToStream(img, out);
+}
+
+// REV_SNAPSHOT_DUCK names a PNG for the DUCK pop-up (with the ducker enabled), for checking its layout by eye.
+TEST_CASE("snapshot duck panel")
+{
+    const auto path = juce::SystemStats::getEnvironmentVariable("REV_SNAPSHOT_DUCK", {});
+    if (path.isEmpty())
+        return;
+    Rev246Processor p;
+    p.apvts.getParameter(rv::params::id::duckEnabled)->setValueNotifyingHost(1.0f);
+    auto panel = rv::ui::createDuckPanel(p.apvts);
+    auto img = panel->createComponentSnapshot(panel->getLocalBounds(), true, 2.0f);
     juce::File(path).deleteFile();
     juce::FileOutputStream out{juce::File(path)};
     juce::PNGImageFormat().writeImageToStream(img, out);
