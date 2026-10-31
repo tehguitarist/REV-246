@@ -19,7 +19,7 @@ inline constexpr int addedParameterVersion = 2;
 // The layout of the saved state (sessions and preset files), written as the root's `stateVersion`. Bump it whenever a
 // stored value changes meaning (a step table's range or order, a parameter's unit) and teach migrateState() the step.
 // 0 = written before versioning (the pre-release builds, the same layout as 1).
-inline constexpr int stateVersion = 1;
+inline constexpr int stateVersion = 2; // 2: pre-delay and the ducker were added
 inline const juce::Identifier stateVersionProperty{"stateVersion"};
 // Brings a state written by an older build up to stateVersion, in place (a ValueTree is a shared reference: pass a
 // copy you own). A newer state is left as it is: every parameter is matched by id, unknown ones are ignored.

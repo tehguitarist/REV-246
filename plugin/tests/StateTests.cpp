@@ -1,6 +1,7 @@
 #include "PluginProcessor.h"
 #include "presets/FactoryPresets.h"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
@@ -127,4 +128,33 @@ TEST_CASE("an Altiverb factory preset sets its program and its six panel steps")
             CHECK(juce::roundToInt(p.apvts.getRawParameterValue(joyId((Joy)j))->load()) == f.steps[(size_t)j]);
         CHECK(!p.presets.isModified());
     }
+}
+
+TEST_CASE("a session saved before pre-delay and the ducker resets them to their defaults when loaded")
+{
+    namespace id = rv::params::id;
+    Rev246Processor fresh;
+    juce::MemoryBlock block;
+    fresh.getStateInformation(block);
+    const auto xml = juce::AudioProcessor::getXmlFromBinary(block.getData(), (int)block.getSize());
+    REQUIRE(xml != nullptr);
+    for (const auto* paramId : {id::preDelayMs, id::duckEnabled, id::duckRangeDb, id::duckThresholdDb, id::duckAttackMs,
+                                id::duckReleaseMs})
+        for (auto* child = xml->getFirstChildElement(); child != nullptr; child = child->getNextElement())
+            if (child->getStringAttribute("id") == paramId)
+            {
+                xml->removeChildElement(child, true);
+                break;
+            }
+    xml->setAttribute(rv::params::stateVersionProperty.toString(), 1);
+    juce::MemoryBlock old;
+    juce::AudioProcessor::copyXmlToBinary(*xml, old);
+
+    Rev246Processor p;
+    p.apvts.getParameter(id::preDelayMs)->setValueNotifyingHost(p.apvts.getParameter(id::preDelayMs)->convertTo0to1(80.0f));
+    p.apvts.getParameter(id::duckEnabled)->setValueNotifyingHost(1.0f);
+    p.setStateInformation(old.getData(), (int)old.getSize());
+    CHECK(p.apvts.getRawParameterValue(id::preDelayMs)->load() == 0.0f);
+    CHECK(p.apvts.getRawParameterValue(id::duckEnabled)->load() == 0.0f);
+    CHECK(p.apvts.getRawParameterValue(id::duckRangeDb)->load() == Catch::Approx(-10.0f));
 }

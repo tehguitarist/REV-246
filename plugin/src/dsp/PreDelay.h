@@ -35,7 +35,9 @@ class PreDelay
     void setDelayMs(float ms)
     {
         const auto maxSamples = (float)juce::jmax(0, (int)left.size() - 2);
-        targetDelay = (juce::jlimit(0.0f, maxSamples, ms * 0.001f * (float)sampleRate));
+        // Whole samples: a fractional delay read with linear interpolation would low-pass the wet by an amount that
+        // depends on the setting and the sample rate (the unit moves by under half a sample, about 10 us).
+        targetDelay = std::round(juce::jlimit(0.0f, maxSamples, ms * 0.001f * (float)sampleRate));
     }
 
     void process(float* wetLeft, float* wetRight, int numSamples)

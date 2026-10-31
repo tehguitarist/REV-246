@@ -239,7 +239,8 @@ void Rev246Processor::processChunk(juce::AudioBuffer<float>& buffer)
     // two sides come from the two engines.
     processTransformerOutputs(b, n, trueStereo);
 
-    // The input-keyed duck comes before the pre-delay, so the gain envelope travels with the delayed wet and the
+    // The input-keyed duck (its key is the undelayed input, so it leads the wet by the latency, ~1 ms: a small lookahead)
+    // comes before the pre-delay, so the gain envelope travels with the delayed wet and the
     // reverb is still ducked when its first arrival happens. Width comes last (pure M/S gains: nothing moves in time).
     auto* wetR = trueStereo ? b.wetR1 : b.wetR0;
     ducker.process(b.duckKey, b.wetL0, wetR, n);

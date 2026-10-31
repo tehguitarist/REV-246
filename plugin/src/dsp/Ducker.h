@@ -52,7 +52,7 @@ class Ducker
     float coefficientFor(float ms) const
     {
         return ms <= 0.0f || sampleRate <= 0.0 ? 1.0f
-                                               : 1.0f - std::exp(-1.0f / ((float)sampleRate * ms * 0.001f));
+                                               : -std::expm1(-1.0f / ((float)sampleRate * ms * 0.001f));
     }
 
     void updateCoefficients()

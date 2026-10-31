@@ -328,8 +328,26 @@ void migrateState(juce::ValueTree state)
     const int from = state.getProperty(stateVersionProperty, 0);
     if (from > stateVersion)
         return;
-    // from 0: nothing to change (0 and 1 share the layout). A future step goes here, e.g.
-    //   if (from < 2) { ... remap the old steps of the parameter that changed ... }
+    // from 0 and 1 share the layout, but 2 added pre-delay and the ducker: an older state has no nodes for them, and
+    // a host that loads it into a running plugin would leave their current values in place. Write the defaults.
+    if (from < 2)
+    {
+        const struct { const char* paramId; float value; } added[] = {
+            {id::preDelayMs, 0.0f},
+            {id::duckEnabled, 0.0f},
+            {id::duckRangeDb, duckDefaultRangeDb},
+            {id::duckThresholdDb, duckDefaultThresholdDb},
+            {id::duckAttackMs, duckDefaultAttackMs},
+            {id::duckReleaseMs, duckDefaultReleaseMs}};
+        for (const auto& a : added)
+            if (!state.getChildWithProperty("id", a.paramId).isValid())
+            {
+                juce::ValueTree node("PARAM");
+                node.setProperty("id", a.paramId, nullptr);
+                node.setProperty("value", a.value, nullptr);
+                state.appendChild(node, nullptr);
+            }
+    }
     state.setProperty(stateVersionProperty, stateVersion, nullptr);
 }
 

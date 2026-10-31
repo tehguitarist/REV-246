@@ -113,7 +113,8 @@ std::unique_ptr<juce::AccessibilityHandler> BarButton::createAccessibilityHandle
 }
 
 //==============================================================================
-LinkButton::LinkButton(ScaledImages& i, juce::Rectangle<float> slot) : DesignComponent(slot), images(i)
+LinkButton::LinkButton(ScaledImages& i, juce::Rectangle<float> slot)
+    : DesignComponent(slot.expanded(hitPad)), images(i)
 {
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
     setTitle("Link input/output");
@@ -134,7 +135,8 @@ void LinkButton::paint(juce::Graphics& g)
         g.setColour(design::gold.withAlpha(0.18f));
         g.fillRoundedRectangle(getLocalBounds().toFloat(), 6.0f * getScale());
     }
-    drawFitted(g, images, on ? layout::Image::linked : layout::Image::unlinked, getLocalBounds().toFloat());
+    drawFitted(g, images, on ? layout::Image::linked : layout::Image::unlinked,
+               getLocalBounds().toFloat().reduced(hitPad * getScale()));
 }
 
 void LinkButton::mouseDown(const juce::MouseEvent&)

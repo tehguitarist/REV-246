@@ -62,6 +62,8 @@ class LinkButton : public DesignComponent
 
   private:
     void activate();
+    // The icon is small, so the clickable area extends this far (design pixels) around it.
+    static constexpr float hitPad = 24.0f;
     ScaledImages& images;
     bool on = true, held = false;
 };
