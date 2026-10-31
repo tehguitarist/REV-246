@@ -1679,7 +1679,7 @@
      "inferred": 58.9
     }
    },
-   "label_string": "M: RT 1.5 (S), LF 1.2 (H), HF 0.7 (S), AMPL 70 (S), DELAY 40 (S)"
+   "label_string": "M: RT 1.5 (S), LF 1.2 (H), HF 0.7 (S), AMPL 60 (S), DELAY 40 (S)"
   },
   "PRESET10 CATHEDRL": {
    "altiverb": "PRESET10 CATHEDRL",
@@ -1766,7 +1766,7 @@
      "inferred": 11.1
     }
    },
-   "label_string": "L: RT 5.2 (H), LF 2.0 (H), HF 0.2 (H), AMPL 20 (H), DELAY 179 (H), LP 10 (H)"
+   "label_string": "L: RT 5.2 (H), LF 2.0 (H), HF 0.2 (H), AMPL 10 (H), DELAY 179 (H), LP 10 (H)"
   },
   "PRESET2 BRASS": {
    "altiverb": "PRESET2 BRASS",
@@ -1853,7 +1853,7 @@
      "inferred": 90.4
     }
    },
-   "label_string": "E: RT 2.0 (S), LF 1.0 (H), HF 0.9 (S), AMPL 100 (H), DELAY 30 (S), LP 10 (H)"
+   "label_string": "E: RT 2.0 (S), LF 1.0 (H), HF 0.9 (S), AMPL 90 (H), DELAY 30 (S), LP 10 (H)"
   },
   "PRESET23 SM SECT1": {
    "altiverb": "PRESET23 SM SECT1",
@@ -2050,7 +2050,7 @@
      "inferred": 31.7
     }
    },
-   "label_string": "M: RT 2.6 (S), LF 1.5 (H), HF 0.5 (S), AMPL 40 (S), DELAY 64 (S)"
+   "label_string": "M: RT 2.6 (S), LF 1.5 (H), HF 0.5 (S), AMPL 30 (S), DELAY 64 (S)"
   },
   "PRESET3 WOODWIND": {
    "altiverb": "PRESET3 WOODWIND",
@@ -2137,7 +2137,7 @@
      "inferred": 21.1
     }
    },
-   "label_string": "M: RT 2.2 (S), LF 1.1 (H), HF 0.5 (S), AMPL 30 (S), DELAY 50 (S)"
+   "label_string": "M: RT 2.2 (S), LF 1.1 (H), HF 0.5 (S), AMPL 20 (S), DELAY 50 (S)"
   },
   "PRESET4 STRINGS": {
    "altiverb": "PRESET4 STRINGS",
@@ -2224,7 +2224,7 @@
      "inferred": 63.0
     }
    },
-   "label_string": "L: RT 3.6 (S), LF 1.5 (H), HF 0.4 (S), AMPL 90 (H), DELAY 69 (H), LP 10 (H)"
+   "label_string": "L: RT 3.6 (S), LF 1.5 (H), HF 0.4 (S), AMPL 60 (H), DELAY 69 (H), LP 10 (H)"
   },
   "PRESET5 VOCALS": {
    "altiverb": "PRESET5 VOCALS",
@@ -2311,7 +2311,7 @@
      "inferred": 35.3
     }
    },
-   "label_string": "M: RT 2.6 (S), LF 1.3 (H), HF 0.9 (S), AMPL 50 (S), DELAY 50 (S)"
+   "label_string": "M: RT 2.6 (S), LF 1.3 (H), HF 0.9 (S), AMPL 40 (H), DELAY 50 (S)"
   },
   "PRESET54 GATED": {
    "altiverb": "PRESET54 GATED",
@@ -2627,7 +2627,7 @@
      "inferred": 79.6
     }
    },
-   "label_string": "S: RT 0.8 (S), LF 0.7 (H), HF 1.0 (S), AMPL 100 (H), DELAY 12 (S)"
+   "label_string": "S: RT 0.8 (S), LF 0.7 (H), HF 1.0 (S), AMPL 80 (S), DELAY 12 (S)"
   },
   "PRESET73 SM REF": {
    "altiverb": "PRESET73 SM REF",
@@ -2714,7 +2714,7 @@
      "inferred": 69.6
     }
    },
-   "label_string": "S: RT 0.9 (S), LF 0.8 (H), HF 0.8 (S), AMPL 90 (S), DELAY 14 (S)"
+   "label_string": "S: RT 0.9 (S), LF 0.8 (H), HF 0.8 (S), AMPL 70 (S), DELAY 14 (S)"
   },
   "PRESET74 SM WARM": {
    "altiverb": "PRESET74 SM WARM",
@@ -2801,7 +2801,7 @@
      "inferred": 70.8
     }
    },
-   "label_string": "S: RT 1.0 (S), LF 1.0 (H), HF 0.5 (S), AMPL 100 (S), DELAY 16 (S)"
+   "label_string": "S: RT 1.0 (S), LF 1.0 (H), HF 0.5 (S), AMPL 70 (S), DELAY 16 (S)"
   },
   "PRESET75 MED LIVE": {
    "altiverb": "PRESET75 MED LIVE",
@@ -2888,7 +2888,7 @@
      "inferred": 69.8
     }
    },
-   "label_string": "S: RT 1.4 (S), LF 0.8 (H), HF 0.9 (S), AMPL 100 (S), DELAY 24 (S)"
+   "label_string": "S: RT 1.4 (S), LF 0.8 (H), HF 0.9 (S), AMPL 70 (S), DELAY 24 (S)"
   },
   "PRESET76 MED REF": {
    "altiverb": "PRESET76 MED REF",
@@ -2975,7 +2975,7 @@
      "inferred": 71.1
     }
    },
-   "label_string": "S: RT 1.6 (S), LF 1.0 (H), HF 0.6 (S), AMPL 100 (S), DELAY 26 (S)"
+   "label_string": "S: RT 1.6 (S), LF 1.0 (H), HF 0.6 (S), AMPL 70 (S), DELAY 26 (S)"
   },
   "PRESET77 MED WARM": {
    "altiverb": "PRESET77 MED WARM",
@@ -3062,7 +3062,7 @@
      "inferred": 75.8
     }
    },
-   "label_string": "E: RT 1.5 (S), LF 1.2 (H), HF 0.4 (S), AMPL 90 (H), DELAY 26 (S), LP 10 (H)"
+   "label_string": "E: RT 1.5 (S), LF 1.2 (H), HF 0.4 (S), AMPL 80 (H), DELAY 26 (S), LP 10 (H)"
   },
   "PRESET78 LG LIVE": {
    "altiverb": "PRESET78 LG LIVE",
@@ -3149,7 +3149,7 @@
      "inferred": 70.6
     }
    },
-   "label_string": "M: RT 2.2 (S), LF 1.0 (H), HF 0.8 (S), AMPL 90 (S), DELAY 34 (S)"
+   "label_string": "M: RT 2.2 (S), LF 1.0 (H), HF 0.8 (S), AMPL 70 (S), DELAY 34 (S)"
   },
   "PRESET79 LG REF": {
    "altiverb": "PRESET79 LG REF",
@@ -3236,7 +3236,7 @@
      "inferred": 52.8
     }
    },
-   "label_string": "M: RT 1.8 (S), LF 1.2 (H), HF 0.5 (S), AMPL 70 (S), DELAY 36 (S)"
+   "label_string": "M: RT 1.8 (S), LF 1.2 (H), HF 0.5 (S), AMPL 50 (S), DELAY 36 (S)"
   },
   "PRESET8 CHAMBER": {
    "altiverb": "PRESET8 CHAMBER",
@@ -3323,7 +3323,7 @@
      "inferred": 78.8
     }
    },
-   "label_string": "E: RT 1.8 (S), LF 1.2 (H), HF 0.6 (S), AMPL 90 (H), DELAY 26 (S), LP 10 (H)"
+   "label_string": "E: RT 1.8 (S), LF 1.2 (H), HF 0.6 (S), AMPL 80 (H), DELAY 26 (S), LP 10 (H)"
   },
   "PRESET80 LG WARM": {
    "altiverb": "PRESET80 LG WARM",
@@ -3410,7 +3410,7 @@
      "inferred": 56.6
     }
    },
-   "label_string": "E: RT 2.2 (S), LF 1.5 (H), HF 0.3 (S), AMPL 70 (H), DELAY 36 (S), LP 10 (H)"
+   "label_string": "E: RT 2.2 (S), LF 1.5 (H), HF 0.3 (S), AMPL 60 (H), DELAY 36 (S), LP 10 (H)"
   },
   "PRESET81 SM LIVE": {
    "altiverb": "PRESET81 SM LIVE",
@@ -3497,7 +3497,7 @@
      "inferred": 58.9
     }
    },
-   "label_string": "M: RT 2.6 (S), LF 1.2 (H), HF 0.7 (S), AMPL 80 (S), DELAY 44 (S)"
+   "label_string": "M: RT 2.6 (S), LF 1.2 (H), HF 0.7 (S), AMPL 60 (S), DELAY 44 (S)"
   },
   "PRESET82 SM REF": {
    "altiverb": "PRESET82 SM REF",
@@ -3584,7 +3584,7 @@
      "inferred": 31.7
     }
    },
-   "label_string": "M: RT 2.6 (S), LF 1.5 (H), HF 0.4 (S), AMPL 40 (S), DELAY 46 (S)"
+   "label_string": "M: RT 2.6 (S), LF 1.5 (H), HF 0.4 (S), AMPL 30 (S), DELAY 46 (S)"
   },
   "PRESET83 SM WARM": {
    "altiverb": "PRESET83 SM WARM",
@@ -3758,7 +3758,7 @@
      "inferred": 42.1
     }
    },
-   "label_string": "L: RT 3.1 (S), LF 1.3 (H), HF 0.6 (S), AMPL 60 (H), DELAY 79 (H), LP 10 (H)"
+   "label_string": "L: RT 3.1 (S), LF 1.3 (H), HF 0.6 (S), AMPL 40 (S), DELAY 79 (H), LP 10 (H)"
   },
   "PRESET85 MED REF": {
    "altiverb": "PRESET85 MED REF",
@@ -3845,7 +3845,7 @@
      "inferred": 21.2
     }
    },
-   "label_string": "L: RT 3.1 (S), LF 1.8 (H), HF 0.3 (S), AMPL 30 (H), DELAY 79 (H), LP 10 (H)"
+   "label_string": "L: RT 3.1 (S), LF 1.8 (H), HF 0.3 (S), AMPL 20 (S), DELAY 79 (H), LP 10 (H)"
   },
   "PRESET86 MED WARM": {
    "altiverb": "PRESET86 MED WARM",
@@ -4019,7 +4019,7 @@
      "inferred": 32.1
     }
    },
-   "label_string": "L: RT 4.5 (S), LF 1.5 (H), HF 0.5 (S), AMPL 50 (H), DELAY 114 (H), LP 10 (H)"
+   "label_string": "L: RT 4.5 (S), LF 1.5 (H), HF 0.5 (S), AMPL 30 (S), DELAY 114 (H), LP 10 (H)"
   },
   "PRESET88 LG REF": {
    "altiverb": "PRESET88 LG REF",
@@ -4106,7 +4106,7 @@
      "inferred": 10.7
     }
    },
-   "label_string": "L: RT 4.5 (S), LF 1.8 (H), HF 0.3 (S), AMPL 20 (H), DELAY 114 (H), LP 10 (H)"
+   "label_string": "L: RT 4.5 (S), LF 1.8 (H), HF 0.3 (S), AMPL 10 (S), DELAY 114 (H), LP 10 (H)"
   },
   "PRESET89 LG WARM": {
    "altiverb": "PRESET89 LG WARM",
@@ -4193,7 +4193,7 @@
      "inferred": 11.1
     }
    },
-   "label_string": "L: RT 4.5 (H), LF 2.0 (H), HF 0.2 (H), AMPL 20 (H), DELAY 114 (H), LP 10 (H)"
+   "label_string": "L: RT 4.5 (H), LF 2.0 (H), HF 0.2 (H), AMPL 10 (H), DELAY 114 (H), LP 10 (H)"
   },
   "PRESET9 CONCERT": {
    "altiverb": "PRESET9 CONCERT",
@@ -4280,7 +4280,7 @@
      "inferred": 32.1
     }
    },
-   "label_string": "L: RT 4.5 (S), LF 1.8 (H), HF 0.4 (S), AMPL 50 (H), DELAY 99 (H), LP 10 (H)"
+   "label_string": "L: RT 4.5 (S), LF 1.8 (H), HF 0.4 (S), AMPL 30 (S), DELAY 99 (H), LP 10 (H)"
   },
   "PRESET90 VERY LG": {
    "altiverb": "PRESET90 VERY LG",
