@@ -7,7 +7,7 @@
 
 namespace rv::dsp
 {
-// A stereo delay for the wet path. The delay time is smoothed so a change glides instead of clicking; at 0 ms the
+// A stereo delay for the wet path. The delay time is slew-limited so a change glides instead of clicking; at 0 ms the
 // output is the input exactly (no extra latency).
 class PreDelay
 {
@@ -20,8 +20,7 @@ class PreDelay
         const auto maxSamples = juce::jmax(2, (int)std::ceil(sampleRate * maxDelayMs * 0.001) + 2);
         left.assign((size_t)maxSamples, 0.0f);
         right.assign((size_t)maxSamples, 0.0f);
-        delaySamples.reset(sampleRate, 0.03);
-        delaySamples.setCurrentAndTargetValue(0.0f);
+        currentDelay = targetDelay = 0.0f;
         writePos = 0;
     }
 
@@ -30,13 +29,13 @@ class PreDelay
         std::fill(left.begin(), left.end(), 0.0f);
         std::fill(right.begin(), right.end(), 0.0f);
         writePos = 0;
-        delaySamples.setCurrentAndTargetValue(delaySamples.getTargetValue());
+        currentDelay = targetDelay;
     }
 
     void setDelayMs(float ms)
     {
         const auto maxSamples = (float)juce::jmax(0, (int)left.size() - 2);
-        delaySamples.setTargetValue(juce::jlimit(0.0f, maxSamples, ms * 0.001f * (float)sampleRate));
+        targetDelay = (juce::jlimit(0.0f, maxSamples, ms * 0.001f * (float)sampleRate));
     }
 
     void process(float* wetLeft, float* wetRight, int numSamples)
@@ -49,7 +48,10 @@ class PreDelay
             left[(size_t)writePos] = wetLeft[i];
             right[(size_t)writePos] = wetRight[i];
 
-            const auto delay = delaySamples.getNextValue();
+            // Slew-limited to half a sample per sample, so the read head always moves forward (a change glides as a
+            // pitch bend of at most an octave, instead of running backwards).
+            currentDelay += juce::jlimit(-maxSlew, maxSlew, targetDelay - currentDelay);
+            const auto delay = currentDelay;
             auto readPos = (float)writePos - delay;
             while (readPos < 0.0f)
                 readPos += (float)size;
@@ -67,7 +69,8 @@ class PreDelay
   private:
     double sampleRate = 48000.0;
     std::vector<float> left, right;
-    juce::SmoothedValue<float> delaySamples;
+    static constexpr float maxSlew = 0.5f;
+    float currentDelay = 0.0f, targetDelay = 0.0f;
     int writePos = 0;
 };
 } // namespace rv::dsp

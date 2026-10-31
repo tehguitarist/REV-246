@@ -46,7 +46,7 @@ TEST_CASE("PreDelay is transparent at 0 ms and delays by the set time")
 
     p.reset();
     p.setDelayMs(10.0f);
-    for (int i = 0; i < 4800; ++i) // let the smoothed delay settle
+    for (int i = 0; i < 40000; ++i) // let the slewed delay settle
     {
         float a = 0.0f, b = 0.0f;
         p.process(&a, &b, 1);

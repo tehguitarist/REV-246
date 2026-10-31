@@ -5,6 +5,7 @@
 #include "ui/Design.h"
 
 #include <cmath>
+#include <cstring>
 
 namespace rv::ui
 {
@@ -14,7 +15,10 @@ namespace P = rv::params;
 
 bool parseNumber(const juce::String& text, double& value)
 {
-    const auto s = text.trim();
+    auto s = text.trim();
+    for (const char* unit : {"dB", "db", "ms"})
+        if (s.endsWithIgnoreCase(unit))
+            s = s.dropLastCharacters((int)std::strlen(unit)).trim();
     if (s.isEmpty())
         return false;
     bool digit = false, point = false;
@@ -129,8 +133,10 @@ class ValueField final : public juce::Component
             return;
         double real = 0.0;
         const auto& range = param.getNormalisableRange();
-        if (!parseNumber(value.getText(), real) || real < (double)range.start || real > (double)range.end
-            || (negativeOnly && real > 0.0))
+        const auto parsed = parseNumber(value.getText(), real);
+        if (parsed && negativeOnly && real > 0.0)
+            real = -real; // "12" means -12 for the range and threshold
+        if (!parsed || real < (double)range.start || real > (double)range.end)
         {
             updateText();
             return;
@@ -185,15 +191,15 @@ class DuckPanel final : public juce::Component
         addAndMakeVisible(attackField);
         addAndMakeVisible(releaseField);
 
-        hint.setText("Keys off the input signal; lowers the wet while the input is over the threshold.",
+        hint.setText("Keyed by the input: lowers the reverb while the input is over the threshold.",
                      juce::dontSendNotification);
         hint.setFont(labelFont(13.0f));
         hint.setColour(juce::Label::textColourId, design::labelDimmed);
-        hint.setJustificationType(juce::Justification::centredLeft);
+        hint.setJustificationType(juce::Justification::topLeft);
         addAndMakeVisible(hint);
 
         refreshEnableButton();
-        setSize(370, 268);
+        setSize(370, 304);
     }
 
     void paint(juce::Graphics& g) override
@@ -223,7 +229,7 @@ class DuckPanel final : public juce::Component
         row(thresholdName, thresholdField);
         row(attackName, attackField);
         row(releaseName, releaseField);
-        hint.setBounds(r.removeFromTop(30));
+        hint.setBounds(r.removeFromTop(44));
     }
 
   private:
