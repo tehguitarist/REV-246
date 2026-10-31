@@ -67,10 +67,7 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
   - **LOW PASS:** no lever law in the presets. The dark M/L/E presets are per-preset output-kernel coefficients (library_notes 7.x); the lever shape stays H.
   - **pluginval** at 22.05-192 kHz: PASS.
   - **Disk:** 18 GB of old renders, caches and builds freed.
-- **Open, the user's calls:**
-  1. The LP lever shape: the Butterworth (current, H) or PRESET23's linear-phase shape scaled per step (H, +0.23 ms latency).
-  2. A preset-only output-kernel value for the dark M/L/E presets (an exact match; a new hidden parameter).
-  3. The full sweep-measured M/L audit rerun, about 3.5-4 h: `tools/ml_fix_diag.py`; delete each group's sweep WAVs after scoring, since disk is tight.
+- **Decided (user, 31 October evening):** LOW PASS stays the 2nd-order Butterworth; no preset-only kernel parameter; the full sweep-measured M/L audit is running (agent; REPORT_chainfix §10 when done); N LATE 0.2 being refitted (agent); the StateTests float `==` fixed and a GCC sweep of the whole plugin is clean.
 - **Open, small:**
   - N LATE 0.2 loop gains (refit, held out).
   - Defect candidate N 0.0_2.0_0.4.

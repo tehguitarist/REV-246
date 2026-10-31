@@ -154,7 +154,7 @@ TEST_CASE("a session saved before pre-delay and the ducker resets them to their 
     p.apvts.getParameter(id::preDelayMs)->setValueNotifyingHost(p.apvts.getParameter(id::preDelayMs)->convertTo0to1(80.0f));
     p.apvts.getParameter(id::duckEnabled)->setValueNotifyingHost(1.0f);
     p.setStateInformation(old.getData(), (int)old.getSize());
-    CHECK(p.apvts.getRawParameterValue(id::preDelayMs)->load() == 0.0f);
-    CHECK(p.apvts.getRawParameterValue(id::duckEnabled)->load() == 0.0f);
+    CHECK(juce::exactlyEqual(p.apvts.getRawParameterValue(id::preDelayMs)->load(), 0.0f));
+    CHECK(juce::exactlyEqual(p.apvts.getRawParameterValue(id::duckEnabled)->load(), 0.0f));
     CHECK(p.apvts.getRawParameterValue(id::duckRangeDb)->load() == Catch::Approx(-10.0f));
 }

@@ -241,7 +241,7 @@ float and 16-bit, from the build before it: worst -193 dB, i.e. float rounding; 
   `src/params/Parameters.cpp`). Each spec's law runs between the library steps. The default RT step is exactly 1.0 s.
   N's tables come from its spec (EARLY: 16 values, LATE: 0-2.0 s by 0.2, SPAN: 0-0.5 s); LATE's 11 values make the HF
   parameter 0-10, with S / M / L / E stopping at step 9.
-- LOW PASS: a guessed device-rate low-pass on the reverb path (H), 12 kHz = exact bypass.
+- LOW PASS: a guessed device-rate low-pass on the reverb path (H), 12 kHz = exact bypass. Kept by the user's decision (31 October 2026) after the Altiverb presets gave no lever law: their darker M / L / E presets differ in the output kernel's 2-tap coefficient, not by a filter after the program; PRESET23's steep linear-phase cut is one file, either the lever at 8 kHz or the Altiverb's processing (`../../docs/library_notes.md` 7.x). No preset-only kernel parameter (user, 31 October).
 - N's branch read kernel: on, as the spec adopts it; NL_BK=1 (the main taps' read kernel) stays off.
 - E's moving reads: as the spec adopts them (`e_sim.ADOPTED`): rates 0.553 Hz x (1 +- 0.5) per read, a triangle
   (E's data cannot tell it from a sine; the plan's "sine" was a misreading, corrected 30 October).
