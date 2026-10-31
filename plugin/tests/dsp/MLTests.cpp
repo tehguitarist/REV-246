@@ -42,6 +42,7 @@ void setUp(MLCore& core, Program p, double lf, double rt, double hf, bool modula
 {
     core.setProgram(p);
     core.setModulation(modulation);
+    core.setUnitLevels(false); // the reference IRs' units
     core.prepare();
     core.setSettings(settingsFor(p, lf, rt, hf));
     core.reset();

@@ -24,6 +24,8 @@ def main():
     if os.environ.get("EMT_ML_PLUS1"):                 # §37.2: CLA's 10 numbers + one peak (lb_resp's 13-number form)
         P = json.load(open(os.path.join(OUT, "plus1.json")))
         variants = {"none": None, "CLA10": bq["CLA"]["x"], **{k: bq["CLA"]["x"] + v["x"] for k, v in P.items()}}
+    if os.environ.get("EMT_ML_C13"):                   # §37.3: CLA-only 13 numbers (cla13.json) beside the shipped 10
+        variants = {"none": None, "CLA10": bq["CLA"]["x"], "C13T": json.load(open(os.path.join(OUT, "cla13.json")))["CLA13T"]["x"]}
     K0, res = am.K0, []
     for prog, (pre, lf, hf) in am.SET.items():
         names = sorted((os.path.basename(p)[:-4] for p in glob.glob(os.path.join(am.CACHE, pre + " *.npy"))), key=lambda t: float(t.split(" ")[-1][:-1]))
@@ -57,7 +59,7 @@ def main():
                 row[vn] = dict(null=dict(cluster_gap=uc.cluster_gap(prog, y, mdl), **pc._ml_nulls(prog, y, mdl, i1)), fp_oct=uc.fp_oct(y, mdl, K0, W))
             res.append(row)
             print(prog, name, " | ".join(f"{vn} {row[vn]['null']['first_pass']:.1f}" for vn in variants), flush=True)
-    json.dump(res, open(os.path.join(OUT, ("ml_plus1.json" if os.environ.get("EMT_ML_PLUS1") else "ml_joint.json")), "w"))
+    json.dump(res, open(os.path.join(OUT, ("ml_c13.json" if os.environ.get("EMT_ML_C13") else "ml_plus1.json" if os.environ.get("EMT_ML_PLUS1") else "ml_joint.json")), "w"))
     lines = []
     for prog in ("M", "L"):
         rr = [r for r in res if r["prog"] == prog and r["b"] == 0.0]
@@ -65,7 +67,7 @@ def main():
         for vn in variants:
             lines.append(f"  {vn:10s} fp {np.median([r[vn]['null']['first_pass'] for r in rr]):.1f} cl {np.median([r[vn]['null']['cluster_gap'] for r in rr]):.1f} r1 {np.median([r[vn]['null']['recirc1'] for r in rr]):.1f}"
                          + "   oct " + " ".join(f"{f}:{np.median([r[vn]['fp_oct'][str(f)] for r in rr]):.1f}" for f in uc.OCT))
-    open(os.path.join(OUT, ("ml_plus1.log" if os.environ.get("EMT_ML_PLUS1") else "ml_joint.log")), "w").write("\n".join(lines) + "\n")
+    open(os.path.join(OUT, ("ml_c13.log" if os.environ.get("EMT_ML_C13") else "ml_plus1.log" if os.environ.get("EMT_ML_PLUS1") else "ml_joint.log")), "w").write("\n".join(lines) + "\n")
     print("\n".join(lines))
 
 

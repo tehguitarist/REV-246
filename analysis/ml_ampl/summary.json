@@ -1,0 +1,14 @@
+{
+ "measure": "ratio = 20 log10(90 c / rev): c = cluster tap rms per AMPL unit (pair difference / dAMPL, sqrt(E/4 taps)), rev = rms of the cluster-free reverb, first pass [onset-3, onset+Pmin-10) and 40-120 ms; 100 Hz-10 kHz, device rate, Tomkin 96 kHz chain3 IRs vs plugin domain=device mod=0 renders; no free gain (tools/ml_ampl_check.py)",
+ "ratio_first_pass_db_median_p5_p95": {
+  "S": {"hw": [31.55, 30.96, 32.28], "plugin": [31.53, 30.94, 32.23], "plugin_minus_hw": [-0.03, -0.05, -0.02], "groups": 128},
+  "M": {"hw": [34.62, 34.10, 35.28], "plugin": [22.97, 22.45, 23.63], "plugin_minus_hw": [-11.65, -11.66, -11.65], "model_minus_hw": [-11.65, -11.66, -11.65], "groups": 160},
+  "L": {"hw": [37.38, 36.92, 37.94], "plugin": [25.78, 25.32, 26.35], "plugin_minus_hw": [-11.61, -11.62, -11.59], "model_minus_hw": [-11.61, -11.62, -11.59], "groups": 180}
+ },
+ "carryover_unit_fit_cluster_at_AMPL90_over_readtap_gain": {"S": 3.792, "M": 3.791, "L": 3.793, "units": "ml_lines.Model parts (unit cluster, unit read taps): S 1.129 / 0.2977, M 1.0725 / 0.2829, L 1.1355 / 0.2994 (Tomkin capture units)"},
+ "per_AMPL_db_vs_AMPL_over_90": {"S": {"30": 11.58, "60": 11.58, "90": 11.58}, "M": {"10": 11.58, "60": 11.58, "99": 11.67}, "L": {"80": 11.59}},
+ "linearity": "AMPL 0 files (S, L) cluster-free (< 1e-4 of the per-AMPL cluster); per-AMPL cluster equal at 10/30/60/80/90 to 0.01 dB; AMPL 99 +0.09 dB (= 100/99)",
+ "CLA_S_AMPL80": {"ratio_fp_R": 30.91, "tomkin_S_LF1_RT1_HF0.4-1.0_single_R": 30.92},
+ "held_out_split": {"M": {"fit_db": -11.652, "k": 23.53, "test_resid_median": 0.0, "test_resid_max": 0.063}, "L": {"fit_db": -11.606, "k": 23.66, "test_resid_max": 0.03}, "S": {"fit_db": -0.033, "test_resid_max": 0.027}},
+ "absolute_split_plugin_over_hw_db": {"S": {"cluster": 0.0, "reverb": 0.04}, "M": {"cluster": -0.69, "reverb": 10.97}, "L": {"cluster": -1.10, "reverb": 10.50}, "assumes": "one Tomkin capture gain for all programs (H)"}
+}

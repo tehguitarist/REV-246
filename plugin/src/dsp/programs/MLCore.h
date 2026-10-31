@@ -137,14 +137,23 @@ class MLCore final : public ProgramCore
         thetaNow = 0.0;
     }
 
+    // The hardware's cluster and reverb levels (default), or the reference IRs' units (the null tests: unit cluster
+    // at AMPL 90, reverb as the spec simulates it). Takes effect at the next setSettings().
+    void setUnitLevels(bool on) { unitLevels = on; }
+
     void setSettings(const Settings& s) override
     {
         lfX = s.lfX;
         rtS = s.rt;
         hfX = s.hfX;
-        // AMPL scales the cluster only; AMPL 90 = the reference IRs' unit cluster (H: the absolute scale is not
-        // resolved, spec controls.AMPL; the same convention as S's AMPL / 90).
-        clusterGain = s.amplPercent / 90.0;
+        // AMPL scales the cluster only, linearly through 0 (C: Tomkin's AMPL 0 files have no cluster). The reference
+        // IRs' units (unit cluster at AMPL 90, spec controls.AMPL) put the cluster 11.6 dB too low against the reverb:
+        // measured on Tomkin's AMPL pairs with no free gain, the hardware's cluster at AMPL 90 is 3.79 x the reverb's
+        // read-tap level in S, M and L alike, and CLA at AMPL 80 agrees to 0.01 dB (analysis/ml_ampl/summary.json, 31
+        // October 2026). With unitLevels the cluster gets S's level (1.135 at AMPL 90) and the reverb the measured
+        // ratio, which puts S / M / L at one level (H: one capture gain for Tomkin's whole library).
+        clusterGain = (unitLevels ? clusterAt90 : 1.0) * s.amplPercent / 90.0;
+        reverbGain = unitLevels ? (isL ? reverbL : reverbM) : 1.0;
         const bool was16 = quantise;
         quantise = s.sixteenBit;
         applyCoefs(law(program(), lfX, rtS, hfX));
@@ -244,7 +253,7 @@ class MLCore final : public ProgramCore
                 // Newest first at w = ~pos (it runs down as pos runs up): h[w + k] is k samples back.
                 auto& h = outHist[(size_t)ch];
                 const auto w = (size_t)(~pos & kernelMask);
-                h[w] = h[w + kernelSize] = clusterGain * cl[(size_t)ch] + rev;
+                h[w] = h[w + kernelSize] = clusterGain * cl[(size_t)ch] + reverbGain * rev;
                 (ch == 0 ? outL : outR)[i] = (float)dotProduct(t.kernel, h.data() + w, t.kernelTaps);
             }
         }
@@ -501,8 +510,12 @@ class MLCore final : public ProgramCore
         double b0 = 0.0, b1 = 0.0, a1 = 0.0, a2 = 0.0, s1 = 0.0, s2 = 0.0;
     };
 
-    bool isL = false;
-    double lfX = 1.0, rtS = 1.0, hfX = 0.9, clusterGain = 80.0 / 90.0;
+    bool isL = false, unitLevels = true;
+    // The hardware's levels (setSettings): S's cluster at AMPL 90, and the reverb at cluster / ratio, the ratio
+    // measured per program (M 3.828, L 3.807 = 11.65 / 11.61 dB over the reference IRs' units; held out on alternate
+    // groups to 0.06 dB).
+    static constexpr double clusterAt90 = 1.135, reverbM = 1.135 / 3.828, reverbL = 1.135 / 3.807;
+    double lfX = 1.0, rtS = 1.0, hfX = 0.9, clusterGain = 80.0 / 90.0, reverbGain = 1.0;
     Coefs coefs;
     std::array<Biquad, 4> filt{};
     std::array<ShelfPole16, 4> filt16{}; // 16-bit mode's form of the same filters
