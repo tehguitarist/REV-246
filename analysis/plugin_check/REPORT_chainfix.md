@@ -256,3 +256,122 @@ Medians, dB, R (L), the plugin against each capture; repeat = Tomkin's own captu
   (0.11–0.144, §9.8) brackets it; not changed here.
 - Run note: 6 workers passed 8 GB on the long L groups (LF 2.0, RT ≥ 2.6), and memguard stopped the run at 314 / 340.
   The resume with 4 workers peaked at 7.2 GB.
+
+## 8. Audit metrics on the plugin's renders
+
+The pulse check's metrics (G1–G6 of `tools/pulse_check.py`) are now run on the plugin's renders in place of the research
+model. The new code is `tools/plugin_pulse.py`, and the results are in `analysis/plugin_pulse/` (`s/`, `ml/`,
+`report.log`, `summary.json`). Inputs:
+
+- **Renders:** the existing ones in `renders_fix/96000/`, unchanged and not re-rendered. S is current; M / L are at
+  θ = 0.13 rad rms with modulation on.
+- **Into the bench's frame:** exactly as `plugin_check`'s `s` / `ml` stages do it. The fixed anchor comes from
+  `align_fix.json`, followed by chain3 deconvolution and the device grid.
+  - **S:** the per-channel tap-0 shift, then the 3-number refit (clock, shift, gain) per capture.
+  - **M / L:** cluster part plus reverb part, with 6 numbers per capture fitted on cluster, gap and first pass. These
+    are the same freedoms as the static model's fit.
+- **Model and capture pairs:** pulse_check's own full run (`analysis/pulse/s`, `analysis/pulse/ml`), on the same
+  captures.
+
+**Checks:**
+- The S nulls equal `s_fix/`'s `null_shift` to 0.1 dB.
+- One M group's metrics and nulls equal `ml_fix/`'s plugin rows bit for bit.
+
+**Run:**
+- S: 128 settings, 512 captures, 20 min with 4 workers, peak 1.74 GB.
+- M / L: 340 groups. 280 groups ran with 3 workers (15 min, 1.57 GB). The 60 long L groups (RT ≥ 10) ran with 1 worker
+  (20 min, 2.06 GB; a single RT 20 group peaks at 3.3 GB).
+
+**How to read the columns:** plugin vs capture / model vs capture [capture vs capture], medians, R.
+- **S:** the brackets are the cross-take pairs, 0–30 and 60–90.
+- **M / L:** the brackets are every pair in the group, with slipped captures left out.
+- **Early metrics' brackets are not a tolerance.** The capture pairs differ in AMPL, so their bracket values for
+  C50 / C80 / D50 / Ts, early levels, early IACC and early L/R mostly measure the cluster-level change between AMPLs.
+
+### S
+
+The plugin and the model are indistinguishable on every G2–G6 metric. Each is about 0.1 % from the capture on the
+decay metrics (octave and third-octave decay, late decay, EDT) and about 0.02 dB on the level and clarity metrics
+(EDC shape, C50 / C80 / D50 / Ts, tonal balance early and late, coherence, fine-structure sd, IACC).
+
+- **Inside tolerance:** every capture in every band (octave decay 512 / 512, third-octave 511–512 / 512, for both the
+  plugin and the model) is within its setting's largest cross-take difference (3 % floor).
+- **Echo density** |diff| is 0.002 for the plugin, the model and the pairs alike.
+- **The G5 fine-structure correlation is 1.000 everywhere**, so it does not discriminate here.
+- **Common bias (H):** the ~0.1 % decay bias that plugin and model share, but the pairs do not, is the capture's fade
+  compensation (the capture is divided by its ramp, the render is not). It is a floor of the measurement, not of the
+  plugin.
+- **EDR worst band:** 2.6 % for the plugin and 2.9 % for the model, against 0.9 % for the repeat (RT ≤ 0.6: 5.4 / 5.4
+  [0.5]). Plugin and model share it, so it is a model-level item. The 90th percentile over bands is 0.2 / 0.2 [0.1].
+- **G1 nulls**, held out (fold constants) apart from the 3-number fit:
+
+| Window (ms) | Plugin | Model | Repeat |
+|---|---|---|---|
+| 50–150 | −55.7 | −53.0 | −56.5 |
+| 150–300 | −53.2 | −51.2 | −54.2 |
+| 300–600 | −48.9 | −46.4 | −47.2 |
+| 600–1000 | −42.5 | −39.5 | −40.0 |
+
+The plugin is 1–3 dB better than the model in every group. With the clean captures only, this is the same as §6.
+
+### M and L: which metrics mean something
+
+The plugin's render is time-variant and so are the captures. Plugin vs capture should therefore be read against capture
+vs capture, not against the static model, which is a mean response and can sit closer to a capture than any other
+realisation can.
+
+- **Meaningful:** metrics computed on each IR and then compared. These are the decay times, EDT, EDC shape,
+  C50 / C80 / D50 / Ts, tonal balance, echo density, coherence values, fine-structure sd (colouration), mixing time,
+  IACC and L/R level.
+- **Measure decorrelation, not accuracy:** the waveform-matching metrics. These are the nulls past the first pass, the
+  fine-structure correlation (except L's window, which falls inside the deterministic first pass: 1.000), the
+  narrow-band envelope and EDR per 1/24 octave.
+
+**Results inside the capture tolerance:**
+
+- **Octave decay at 1–8 kHz:**
+  - M: 0.9 / 0.6 / 0.5 / 0.3 % against [0.8 / 0.6 / 0.5 / 0.2].
+  - L: 0.9 / 0.5 / 0.4 / 0.3 % against [0.7 / 0.4 / 0.2 / 0.2].
+  - Signed medians are within ±0.4 %.
+  - Within the group's largest pair difference: 341–348 of 347–350 for M, 344–357 of 358 for L.
+- **Late decay** at every octave (M 4.4–0.6 % against [4.6–0.6]; L 4.5–0.7 % against [4.9–0.6]).
+- **Third-octave decay** at every band, at the repeat or within about 0.6 % of it.
+- **Colouration:** fine-structure sd is within 0.01 dB of the capture (about 5 dB).
+- **Late tonal balance** is within 0.1 dB at every band.
+- **L/R:** late IACC within 0.001, L/R level within 0.01 dB, coherence within 0.01 (except M at 400 Hz, +0.014).
+- **Early metrics:** C50 / C80 / D50 / Ts, early tonal balance and early IACC match the capture to 0.0–0.08 dB, because
+  the cluster and first pass are deterministic and fitted. Here the plugin is better than the static model at
+  100–160 Hz (M early level 0.01 against 1.29 dB; L C50 at 125 Hz 0.04 against 0.53 dB).
+- **M echo density:** 0.022 / 0.020 [0.022].
+- **M mixing time:** 2.7 % / 2.6 % [2.7 %].
+- **Decorrelation:** M's nulls sit on the pairs' values (recirc 1–3: −18.8 / −13.5 / −9.7 against [−19.3 / −13.5 /
+  −9.9]). The static model is 2–3 dB "better" there, as a mean response must be.
+
+**Results where the plugin is clearly worse than the model and outside tolerance (all in the low band):**
+
+- **M, 125 Hz decay (−5/−25 dB):**
+  - Median error 2.6 % against the model's 1.9 % [1.9 %]; signed −1.2 %.
+  - EDC deviation 0.81 dB against 0.62 [0.64].
+  - Only 253 of 346 captures are within their group's pair spread, against 305 for the model.
+  - The excess is spread over RT, worst at RT 0.8 (6.2 % against 2.7 %).
+- **M EDT at 125–500 Hz:** 2.4 / 1.6 / 1.5 % against the model's 1.6 / 1.1 / 0.7 % [2.0 / 1.1 / 0.7]. At 500 Hz the
+  excess grows with RT, up to 2.2 % against 0.7 % at RT 4–5.
+- **L, 250 Hz decay:** 1.3 % against 0.9 % [0.9 %], worst at RT ≤ 3.6 (1.5–1.8 % against 0.7–0.8 %). Within the pair
+  spread: 318 of 358, against 339 for the model.
+- **L time structure:**
+  - Mixing time is 3.6 % from the capture, against 1.3 % for the model [1.4 %].
+  - Echo density |diff| is 0.011 / 0.008 [0.009].
+  - Recirc 1 null is −15.4 against [−17.6], 2.2 dB more decorrelated than Tomkin's pairs, as already seen in §7's
+    sweep pairs.
+
+**Likely cause (H):** the plugin's time variance, not its static structure. The static windows still null at −50 to
+−63 dB, and every excess is in metrics a realisation-to-realisation spread can move: few modes per band below 500 Hz,
+and L's early recirculation. They sit where the plugin decorrelates more than Tomkin's pairs: L by 2 dB at recirc 1
+here, and the +1.7 dB median of §7. The candidates are the same as §7's open item:
+
+- θ too deep for some settings;
+- the C++ port's modulation differing from the Python simulation, which matches Tomkin.
+
+A check that fits within the no-hardware rule: the same metrics on two plugin renders of one setting at different
+start phases (`renders_fix/*_sweep*` style). If plugin-vs-plugin shows the same low-band spread, the excess is
+modulation depth and not a decay-law error.
