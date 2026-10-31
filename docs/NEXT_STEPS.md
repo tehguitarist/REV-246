@@ -77,6 +77,8 @@ Hand-over for the next session. Read it with `EMT246_unit_facts.md` (what we kno
 
 - **Late on 31 October:** the full sweep-measured M/L audit (340 groups, REPORT_chainfix §10) puts the plugin at the static model's level; the one open item is M at RT <= 1.0, 500 Hz decay 1.82 % against the model's 1.43 % (H: theta depth against a short decay). N LATE 0.2 uses the unit's measured gains (NonLin §10.4), and the bench has an NL_LATE_TABLE switch. **Manual CI run 41193343005: green on macOS, Windows and Linux** (ctest, auval, pluginval), no warnings from the plugin's sources.
 
+- **1 November:** M short RT: no theta depth or rate law passes (analysis/ml_fix/depth), theta stays 0.13 / 0.83 Hz, the short-RT 500 Hz spread stays open (H: theta's shape; a triangle / smoothed-random theta scan, ~80 min, is the next cheap check). **Version 0.9.0** (pre-release; the release workflow marks 0.x as a GitHub pre-release). The AU / VST3 install into ~/Library/Audio/Plug-Ins for DAW testing (`-DRV_INSTALL_AFTER_BUILD=ON`, set in build-int). A release needs a green CI run on the release commit: the last one (41193343005) predates 0.9.0.
+
 **Resume here:**
 1. ~~One manual CI run~~ done 31 October (green). Next: the user's listening test; then the release pipeline (`plugin-release.yml`: signing, notarisation, installers; it needs a green CI run on the same commit).
 2. Before any further plugin_check: rerun `--stage align` (the 31 October latency change moved the engine's timing;
