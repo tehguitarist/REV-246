@@ -6,7 +6,7 @@
 
 ![REV-246](plugin/docs/images/screenshot.png)
 
-**A free, open-source digital reverb with a vintage heart.** REV-246 is inspired by the EMT 246, the rare late-1970s
+**A free, open-source digital reverb with a vintage heart.** REV-246 is inspired by the EMT 246, the rare mid 80s
 studio reverb prized for its dense, smooth tails and its distinctly period character: a little grit, a little weight,
 and a sound that sits in a mix instead of on top of it. It runs as AU, VST3 and standalone, on macOS, Windows and Linux.
 
