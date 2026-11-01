@@ -27,3 +27,11 @@ short-RT 500 Hz / EDT 250 spread as an open H item (theta's shape: a sine spends
 realisations of a short decay differ more than a shape with less weight at the extremes would at equal rms; or the
 captures' AMPL takes not being independent draws at short RT). A shape test (triangle / smoothed random, same rms and
 autocorrelation) is the next cheap check, ~80 min for 160 groups.
+
+## Theta shape (1 November 2026; tools/ml_fix_depth.py shape variants, report_shape.log)
+Same 0.13 rad rms, 0.83 Hz: triangle, smoothed random (autocorrelation-matched), sine + slow phase drift, all 160 M
+groups, fit on even / test on odd. Triangle = sine at every RT (draws at 3.0-5.0 within 0.2 points). Random wins only
+at RT 0.8 held out (500 Hz decay 1.67 -> 1.32 %, but 125 Hz 3.53 -> 3.88 %, 1 kHz in-tol 94 -> 83 %); drift only at
+RT 0.6 (mixed held out); both cost about double the sine at RT 1.2-5.0. One modulator in the unit, so no per-RT shape.
+Verdict: keep the sine; the M short-RT spread stays H (not depth, rate or shape; candidates: the AMPL captures not
+independent at short RT, or something outside the model).
