@@ -1,45 +1,21 @@
-# Agent guide: REV-246 (EMT 246 reverb reverse engineering)
+# REV-246 (plugin repository)
 
-**Read first:**
-1. `docs/NEXT_STEPS.md`: current status, working rules and the open questions.
-2. `docs/library_notes.md`: the Tomkin IR library, its naming and harness results.
-3. `docs/EMT246_unit_facts.md`: the single source of truth for findings.
+A JUCE VST3/AU/standalone reverb plugin in `plugin/`; the repository root holds the README, licence and the listening
+page (`docs/listen`, served by GitHub Pages). The measurement and analysis work behind the reverb is in the history,
+at the tag `research-archive`.
 
-The full file map is in `README.md`.
+Read `plugin/docs/DEVELOPMENT.md` (rules, parameters, source layout) and `plugin/docs/ENGINE.md` (the reverb engine) first.
 
-## Hard constraints
+## Rules
 
-- **No hardware access, ever.** There is no unit, no ROM/PROM dump and no new captures; repeat captures of a setting only exist where libraries already contain them. Evidence comes from existing IR libraries, documents and photos. Don't propose capture sessions or ROM dumps.
-- **Accuracy bar:** a null of **−50 dB minimum for every program** against hardware IRs, wherever a static IR can support it; ideally −60 dB or near bit-identical. Where it can't, **accuracy over null** (`docs/NEXT_STEPS.md` §2):
-  - **S:** −50 dB minimum, held out, up to each file's fade, with a clock ratio fitted per capture (repeat captures agree to about −57 dB, so about −60 dB is the most Tomkin can confirm). Stretch proof: about −70 dB on the CLA IR's R channel in its first ~300 ms (noise floor −76 dB there).
-  - **M and L:** −50 dB minimum on the cluster and the gap before the reverb starts. Their reverb is time-variant (two captures of one setting agree only to −27…−38 dB in the first 0.15 s), so for the reverb prove accuracy instead: the structure, per-band decay and spectrum, and the capture-to-capture decorrelation curve (`docs/ml_structure.md` §4–5).
-
-  Always report nulls:
-  - as **held-out** predictions (time windows or settings not used in the fit);
-  - with **excess over the noise floor**;
-  - with the parameter count.
-
-  An in-sample null from many free parameters is not evidence of the true algorithm.
-- **Tomkin library: work on the 96 kHz set only.** The 48 kHz files are the same capture rendered at another rate (`docs/library_notes.md` §5), so they carry no extra information and must not be used as a held-out set or as repeat captures. Leave `--separate-rates` off. Files are trimmed and faded per setting: take RT from the label, not the file.
-- **Efficiency matters.** The original ran on 2 × TMS32010 (about 50–70 weighted delay taps per sample). Prefer compact structural models over free FIRs.
-
-## Plugin (`plugin/`)
-
-A JUCE VST3/AU scaffold lives in `plugin/` (see `plugin/README.md` and `plugin/docs/DEVELOPMENT.md`). It is independent of the
-Python research code. Rules: **all C++ must be cross-platform** (no `M_PI`: MSVC; use `juce::MathConstants`), the plugin CI
-workflows (`.github/workflows/plugin-*.yml`) stay **manual-only** until told otherwise, and every GitHub Action must run
-on the current Node (check `runs.using`). Don't commit `plugin/build/`; `ui/` masters are never modified.
-
-## Conventions
-
-- **Label claims:**
-  - **C** = confirmed (primary source or direct measurement);
-  - **S** = strong (several measurements agree);
-  - **H** = hypothesis.
-
-  When a finding changes, update `docs/EMT246_unit_facts.md`.
-- **Device rate:** 19.2 MHz/728 = 26,373.6 Hz. All delays are integer device samples.
-- **Mono in, stereo out.** One mono input feeds the whole algorithm, with separate L and R outputs (one multiplexed DAC; L is half a sample late). A stereo IR file is therefore the complete 1-in/2-out response for that setting. Model the structure as shared up to the read-out, with per-channel output taps.
-- **Python:** use `.venv/bin/python`. Third-party downloads go in their own folders and are run with `-I`.
-- **Don't commit** `sources/` or third-party IR libraries unless their licence allows it.
-- **Git:** end commit messages with the attribution line given in the session's system reminder.
+- **All C++ must be cross-platform** (macOS, Windows/MSVC, Linux/GCC): no `M_PI` (use `juce::MathConstants`), no
+  POSIX-only calls, `juce::File` for paths, `juce::exactlyEqual` for float equality.
+- **Workflows are manual-only** (`workflow_dispatch`): CI first (`plugin-ci.yml`), then `plugin-release.yml`, which refuses a
+  commit whose CI has not passed. Every GitHub Action must run on the current Node.
+- The version is the `project(REV246 VERSION x.y.z)` line of `plugin/CMakeLists.txt` (release.yml greps it; keep the
+  format). Bump it when an Audio Unit changes, or Logic keeps the cached one.
+- Don't commit `plugin/build*/`. `ui/` holds the artwork masters and is never modified; `plugin/assets` is built from it.
+- Parameter IDs are permanent. After the first release a step table's range must not change (see DEVELOPMENT.md).
+- Generated headers (`plugin/src/dsp/generated/`, `plugin/src/presets/FactoryPresets.h`) came from generators that
+  now live only in the history; edit them by hand.
+- Commit messages end with the attribution line from the session's system reminder.

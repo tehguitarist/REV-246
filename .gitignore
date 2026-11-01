@@ -1,71 +1,15 @@
 .venv/
 __pycache__/
 .vscode/
-*.npy
-analysis/library/*/cache/
-analysis/library/pytest_synthetic/
 .DS_Store
-sources/
-irs/EMT 246 captures/
-analysis/library/tomkin*/files.csv
-analysis/library/tomkin*/pairs.csv
-analysis/library/trial*/
-analysis/q2/cache
-analysis/q2/residues*.npz
-irs/Altiverb EMT256 IRs/
-sweep_request/
-analysis/altiverb/cache/
-analysis/firstpass_gap/groups_*/
-analysis/outofband/groups*/
-analysis/chain_kernel/data_*.npz
-analysis/q2/cache_*
-analysis/q2/*_groups/
-analysis/loop_fir/*/
-analysis/lowband/*/
-analysis/dense_mid/*/prep/
-analysis/dense_mid/*/score_*/
-analysis/dense_mid/*/x_*.npy
-analysis/ml_fade/curves/
-analysis/ml_fade/rt/
-analysis/uad250/captures/
-analysis/uad250/au_render
-analysis/uad250/bundle/
-tools/e250/libmodcomb.dylib
-analysis/nl/cache_*
+.claude/
+.pytest_cache/
 
-# Program E audit (tools/e250/e_pulse.py): per-RT parts and full summaries are large; the compact summary is committed
-analysis/e250/e_pulse_parts*/
-analysis/e250/e_pulse*.json
-!analysis/e250/e_pulse_summary.json
-analysis/e250/uad/
-
-# Regenerable experiment outputs (large per-setting, gate and probe dumps; the summaries and reports stay tracked)
-analysis/nl_lowband30/*.pkl
-analysis/nl_lowband30/*.npz
-analysis/nl_lowband30/*.json
-analysis/nl_lowband30/*.log
-analysis/nl_lowband30/cand_sub18/*.pkl
-analysis/nl_lowband30/cand_residual/*.npz
-analysis/nl_lowband30/cand_residual/cache/
-analysis/nl_lowband30/cand_residual/stats*/
-analysis/nl/bench_bk_a0.*/
-analysis/fullband/s/
-analysis/fullband/s_tfix*/
-analysis/fullband/s_xcorr/
-analysis/fullband/s_shf_refit/
-analysis/fullband/takefit_pallf/
-analysis/fullband/ml/
-analysis/fullband/ml_*/
-analysis/fullband/xprobe/
-analysis/fullband/wide/
-analysis/fullband/compactcheck/
-analysis/fullband/gate_compactkernel/
-analysis/fullband/gate_lbcontrol/
-analysis/fullband/gate_lowband/
-analysis/fullband/gate_oldkernel/
-analysis/fullband/*.log
-analysis/pulse/gate_mlkf_compact/
-
-# A/B example wets (tools/ab_samples.py): large, regenerable
-analysis/ab_samples/*.npz
-analysis/ab_samples/*.wav
+# Local leftovers from the research this repository used to hold (kept in history at the tag research-archive)
+/analysis/
+/irs/
+/ref/
+/sources/
+/sweep_request/
+/tools/
+/tests/

@@ -1,6 +1,0 @@
-held-out pole error (rms x 1e-3, precision-weighted, 331 well-determined poles); law k [0.9157, 0.9349, 0.967, 0.9869]
-candidate                                                   | all  | HF 0.2 | HF 0.4 | HF 0.6 | LF 0.1 | LF 0.4 | LF 1 | LF 2
-A: §25.18 baseline (law + ramp + ceiling + HF table)        | 1.08 |  1.47 |  0.78 |  0.86 |  1.05 |  1.75 |  1.26 |  0.95
-B: law k + ramp + ceiling, no table                         | 2.19 |  2.88 |  1.66 |  1.81 |  2.33 |  2.77 |  2.18 |  1.73
-C: k per LF refitted (4 numbers) + ramp + ceiling, no table | 2.33 |  3.09 |  1.75 |  1.91 |  2.51 |  2.86 |  2.30 |  1.79
-k per LF refitted, per held-out RT fold: RT 0.3: [0.9168, 0.9351, 0.9669, 0.9868]; RT 0.6: [0.9161, 0.9344, 0.9669, 0.9878]; RT 0.8: [0.9147, 0.9341, 0.9661, 0.9875]; RT 1.0: [0.9158, 0.9344, 0.9664, 0.9861]; RT 1.4: [0.9161, 0.9349, 0.9668, 0.9864]; RT 1.8: [0.9168, 0.9348, 0.9667, 0.9867]; RT 2.2: [0.9161, 0.9347, 0.9666, 0.9868]; RT 2.5: [0.9161, 0.9346, 0.9663, 0.9868]

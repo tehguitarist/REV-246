@@ -1,9 +1,0 @@
-lam 0.01 params 18
-step-sub shipped: median L/R -49.0 / -47.0
-   pooled (all others)            median L/R  -51.3 /  -48.2  change -1.15  worse>0.5 100/1026  better>0.5 708   groups 1
-   own session                    median L/R  -50.6 /  -48.6  change -1.41  worse>0.5 93/1026  better>0.5 705   groups 7
-   own (session,SPAN)             median L/R  -50.8 /  -48.5  change -1.61  worse>0.5 94/1026  better>0.5 744   groups 10
-   own (session,SPAN,LATE>0)      median L/R  -50.9 /  -49.2  change -1.94  worse>0.5 82/1026  better>0.5 807   groups 19
-   own (session,SPAN,LATE)        median L/R  -49.9 /  -48.5  change -1.52  worse>0.5 117/1026  better>0.5 693   groups 93
-   own (session,SPAN,EARLY)       median L/R  -51.7 /  -49.1  change -2.23  worse>0.5 36/1026  better>0.5 869   groups 51
-[memguard] peak footprint 0.17 GB, 1 s, exit 0

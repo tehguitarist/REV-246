@@ -1,4 +1,0 @@
-# Loop coupling on the §29 baseline (128 settings, clean captures; 177 Hz - 4 kHz; coefficients chosen leaving one RT step out, L and R shared, every capture weighted by its window energy); R null median, baseline -> with the terms
-- cross (12): 50-150: -52.79 -> -52.78; 150-300: -49.93 -> -49.92; 300-600: -45.17 -> -45.12 | coefficients (median over folds) -0.0001 +0.0000 -0.0001 -0.0002 -0.0000 -0.0000 -0.0000 -0.0001 -0.0001 +0.0002 +0.0001 -0.0001
-- self (4): 50-150: -52.79 -> -53.05; 150-300: -49.93 -> -50.38; 300-600: -45.17 -> -44.98 | coefficients (median over folds) +0.0001 +0.0004 +0.0002 +0.0004
-- cross + self (16): 50-150: -52.79 -> -53.04; 150-300: -49.93 -> -50.36; 300-600: -45.17 -> -45.01 | coefficients (median over folds) +0.0001 -0.0001 +0.0000 -0.0001 -0.0001 +0.0004 -0.0001 -0.0000 -0.0000 -0.0001 +0.0001 -0.0001 +0.0003 +0.0001 -0.0001 +0.0004

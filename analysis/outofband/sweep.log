@@ -1,7 +1,0 @@
-
-## sweep: RT rotating / static, the M/L model through a simulated sweep (3 phases, 12.0 s tail)
-- M 2.0_5.0_0.9: 25-50 0.860 (RT_law 9.6 s); 50-100 1.004 (RT_law 9.4 s); 100-200 0.994 (RT_law 8.6 s); 5k-10k 0.996 (RT_law 4.3 s); 10k-11k 1.005 (RT_law 4.0 s); 11k-12k 0.999 (RT_law 4.0 s)
-- M 0.1_5.0_0.9: 25-50 0.993 (RT_law 0.7 s); 50-100 1.003 (RT_law 0.7 s); 100-200 1.005 (RT_law 0.9 s); 5k-10k 0.997 (RT_law 5.5 s); 10k-11k 1.004 (RT_law 5.1 s); 11k-12k 0.997 (RT_law 5.1 s)
-- L 2.0_20.0_1.0: 25-50 0.922 (RT_law 38.6 s); 50-100 0.839 (RT_law 37.6 s); 100-200 0.977 (RT_law 34.4 s); 5k-10k 0.993 (RT_law 19.2 s); 10k-11k 0.996 (RT_law 19.2 s); 11k-12k 0.991 (RT_law 19.2 s)
-- L 2.0_8.0_1.0: 25-50 0.945 (RT_law 15.4 s); 50-100 0.869 (RT_law 15.1 s); 100-200 0.971 (RT_law 13.9 s); 5k-10k 0.996 (RT_law 7.7 s); 10k-11k 0.995 (RT_law 7.7 s); 11k-12k 0.998 (RT_law 7.7 s)
-- L 0.1_20.0_1.0: 25-50 0.996 (RT_law 2.7 s); 50-100 0.984 (RT_law 2.8 s); 100-200 0.997 (RT_law 3.2 s); 5k-10k 0.991 (RT_law 25.4 s); 10k-11k 0.989 (RT_law 25.5 s); 11k-12k 0.997 (RT_law 25.6 s)

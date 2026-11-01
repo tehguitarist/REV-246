@@ -1,5 +1,8 @@
 # Development rules (plugin)
 
+> References below to `../docs/`, `../analysis/` and `../tools/` (the data sheet notes, fitted constants and generators) point at the
+> research that used to live in this repository; it is in the history at the tag `research-archive`.
+
 ## Cross-platform: every line must build on macOS, Windows (MSVC) and Linux (GCC)
 - **No `M_PI`, `M_E`, `M_SQRT2` and friends.** MSVC only defines them if `_USE_MATH_DEFINES` is set before `<cmath>`,
   which is fragile. Use `juce::MathConstants<float>::pi` (or `std::numbers` once C++20). The test targets define

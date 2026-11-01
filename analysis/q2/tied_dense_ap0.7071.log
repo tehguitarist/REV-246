@@ -1,3 +1,0 @@
-[tied_tied_g0.445_dense2000_ext1700_ap0.7071] 16009 free parameters; tap magnitude / kernel [0.2998]
-tied_tied_g0.445_dense2000_ext1700_ap0.7071 (8 held-out captures, 16009 params): 50-150: -54.2 [-2.7]; 150-300: -53.6 [-1.4]; 300-600: -48.1 [-1.7]; 600-1000: -37.2 [-1.7]
-   by rt: 0.8: -2.9/-1.8/-1.4; 1.8: -1.2/-1.2/-1.7

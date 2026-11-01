@@ -1,154 +1,208 @@
-# REV-246: EMT 246 reverb reverse-engineering workspace
+# REV-246
 
-Goal: recreate the EMT 246 digital reverb's S/M/L programs (Non-Lin as a bonus) as an efficient, ideally bit-accurate model, working **only from impulse responses and documents**. There is no hardware access.
+![Build](https://github.com/tehguitarist/REV-246/actions/workflows/plugin-ci.yml/badge.svg?branch=main)
+[![License](https://img.shields.io/badge/License-AGPLv3-blue.svg)](https://opensource.org/license/agpl-v3)
+[![Downloads](https://img.shields.io/github/downloads/tehguitarist/REV-246/total)](https://somsubhra.github.io/github-release-stats/?username=tehguitarist&repository=REV-246&page=1&per_page=30)
 
-**Start here:**
-1. `docs/NEXT_STEPS.md`: status, working rules, the open questions Q1–Q12 and a suggested order of work.
-2. `docs/library_notes.md`: the Tomkin IR library (layout, naming, harness results, the 48k = 96k finding).
-3. `docs/EMT246_unit_facts.md`: everything known about how the unit works, with confidence and sources.
+![REV-246](plugin/docs/images/screenshot.png)
 
-## File map
+**A free, open-source digital reverb with a vintage heart.** REV-246 is inspired by the EMT 246, the rare late-1970s
+studio reverb prized for its dense, smooth tails and its distinctly period character: a little grit, a little weight,
+and a sound that sits in a mix instead of on top of it. It runs as AU, VST3 and standalone, on macOS, Windows and Linux.
 
-### Docs (`docs/`)
+Five programmes cover everything from a tight room to a twenty-second cathedral, including a non-linear programme for
+gated and reverse drum sounds and the older EMT 250 algorithm. The panel keeps the original's six levers, glowing readouts and
+fader pack. Beneath it are modern conveniences that the original made hard or impossible: a ducker,
+a stereo-width control, true-stereo operation, presets, and switches for the 16-bit and transformer character that
+were fixed in the hardware (or, for the transformers, a factory option you had to order).
 
-| File | What it is |
+> REV-246 is an independent project. It is not affiliated with or endorsed by EMT or any other manufacturer.
+
+**Version 1.0.** **[Download the latest release](https://github.com/tehguitarist/REV-246/releases/latest)** for macOS (AU and VST3), Windows (VST3) and Linux (VST3).
+
+## Highlights
+
+- **Five programmes**, each with the full set of levers.
+- **Period character, switchable.** 16-bit processing and an optional transformer stage add the grit and weight of the
+  original; switch them off for a clean, modern tail.
+- **Six levers:** low-pass, reflections delay and amplitude, and decay: low-frequency multiplier,
+  reverberation time and high-frequency multiplier.
+- **Modern conveniences the original lacked:** an input-keyed ducker, a WIDTH control that
+  keeps the bass mono as it widens, a mono-sum or true-stereo input mode, and one-click switches for the 16-bit and
+  transformer character.
+- **65 factory presets** from small rooms and chambers to halls and cathedrals, plus your own user presets.
+- **Light on the CPU:** about 0.5 to 0.8 % of one Apple-silicon core at 44.1 / 48 kHz and about 1 % at 96 kHz, with about
+  1 ms of latency that your DAW compensates for.
+
+## Programmes
+
+| Programme | Character | Reverberation time |
+|---|---|---|
+| **S** | Short reverb: rooms, booths, live spaces (best between 0.2 and 1 s) | 0.2 to 2.5 s |
+| **M** | Medium reverb: the all-round concert hall (best between 0.8 and 4 s) | 0.5 to 5 s |
+| **L** | Long reverb: the cathedral, with widely spaced early reflections (best between 3 and 10 s) | 2 to 20 s |
+| **E** | The EMT 250 algorithm: recirculating delay loops with slowly moving taps, with extended pre-delay | 0.4 to 4.5 s |
+| **N** | Non-linear: an early section of fixed length (SPAN) with its own decay, then the late reverb; short SPAN gives gated reverb and a negative EARLY time gives reverse reverb | SPAN, early and late times |
+
+Every programme has the same six levers. The readouts above them show the value for the programme you are in; in N they
+change to the hardware's own labels (DELAY, SPAN, EARLY and LATE).
+
+## Features
+
+The first group is the original's; the second is what REV-246 adds.
+
+**The original's:**
+
+- **Six joystick levers** for the reverb's parameters, stepping through the same kinds of values as the hardware.
+  Click, hold, drag, use the mouse wheel or double-click to type a value.
+- **Mix, input and output faders** with a PAN control for the dry signal, and an optional LINK to move input and output
+  together.
+- **Level meter** with an overload light and a calibration button (**CAL**) for the reference level.
+- **16-bit mode:** reproduces the original's 16-bit reverb storage, for its faint, signal-dependent noise floor and grit in
+  the decays, and clips the input where the original's A/D converter did. Set it to FLOAT for full precision.
+- **XFMR:** the weight in the low end and gentle low-frequency harmonic distortion of the unit's optional input and
+  output transformers. Off, you hear the standard unit.
+
+**Added for modern use:**
+
+- **Ducker:** lowers the reverb while the input is over a threshold, so it blooms in the gaps. Range, threshold,
+  attack and release are adjustable.
+- **WIDTH:** sets how wide the wet signal sits, from mono through the original's width to extra wide, with the bass kept
+  mono as it widens.
+- **16-BIT / FLOAT and XFMR switches:** the original's storage depth was fixed and its transformers were an ordered
+  option; here both are one click, so you can A/B the period character against a clean tail.
+- **Factory and user presets**, with a bypass (power) button.
+- **Mono in / mono out, mono in / stereo out and stereo in / stereo out.** With a stereo input the reverb can sum to
+  mono first (**ORIGINAL**, the default) or run a reverb per channel (**TRUE ST**).
+
+## Install
+
+Download the installer for your system from the [latest release](https://github.com/tehguitarist/REV-246/releases/latest):
+
+| System | Installer | Formats |
+|---|---|---|
+| macOS | `.pkg` | AU, VST3 |
+| Windows | `.exe` | VST3 |
+| Linux | `.deb` | VST3 |
+
+Then rescan plugins in your DAW. Logic caches Audio Units, so if REV-246 does not show up, restart Logic or run
+`auval -v aufx Rv24 Lprc`.
+
+## Using it
+
+The initial state is fully wet, with INPUT and OUTPUT at 0 dB and LINK on, a short programme with a one-second decay, WIDTH at
+100 and both character options on.
+
+**Pick a programme** (S, M, L, E or N) and set the six joysticks. Each joystick is the original's lever: press the
+upper half of the round button to step the value up and the lower half to step it down. Hold it to repeat; after a
+second it speeds up. For convenience you can also drag or click the wedge above it, use the mouse wheel for one step per
+notch, and Option/Alt-click to return to the default.
+
+| Control | What it does |
 |---|---|
-| `NEXT_STEPS.md` | Hand-over: status, working rules (96 kHz only), open questions Q1–Q12, analogue stage, order of work, Non-Lin, gaps, modulation, Tomkin questions, UAD 250 test bench, plugin notes |
-| `library_notes.md` | The Tomkin library: licence, layout and naming, value sets, harness results, cross-rate (48k = 96k) analysis, harness usage, the Altiverb 246 captures (§6) |
-| `EMT246_unit_facts.md` | Consolidated fact sheet: hardware, converters, controls, programs, measured program-S algorithm, budgets, open questions, source index |
-| `model_s_results.md` | Program S grey-box model and its null tests. §14–16 the library work (laws, AP230 steps, the 5-tap injection), §17 the consolidated model, §19–21 the deconvolution-kernel fix and refit, §22–22.9 the loop corrections at strong settings, §23–25 the low band. **§38.1 is the current S baseline** (`analysis/loop_cv/hfcells_chain3_cap0.8475_apml/`: §35's with AP230's damped steps on the shared S / M / L table; §35's was `..._pshoulder/`: §32.6's pole curve and shelf cells plus the DC floor's shoulder at LF 0.4 / RT ≥ 0.6; all 128 settings held out by setting; the line of baselines runs §25.18 → §28 → §29 → §32.1–32.6 → §35); §25.9–25.13 the mid-band residual (closed) |
-| `ml_structure.md` | Programs M and L from the library: clusters and onsets (S's ×2 / ×4), the five-term late recursion (§7: S's four loops scaled ×2 / ×4 and coupled; the S carry-over test), lag precision, the time variance found with AMPL pairs as repeat captures, the noise floors and repeat-capture ceiling (S about −57 dB) that bound the null target, the line laws (§8), the time variance: a 0.83 Hz rotation of the coupling (§9), the first-pass gap (§10, the library's deconvolution kernel), the out-of-band check (§11) and the per-channel chain kernel `chain2` (§12, with the first-pass refit §12.7) |
-| `EMT246_discovery.md` | The original discovery and viability study. Hardware photos analysis in §2.3a; period sources in §10a; history in §10 |
-| `algorithm_research.md` | Reverb-algorithm lineage (EMT 250 patent, Blesser), classic and modern methods, topology hypotheses and tests (T1–T10), the stochastic-control analysis (§7.2b) |
-| `period_dsp_practice.md` | 1978–1990 reverb and TMS32010 practice (EMT, Lexicon, patents, German sources) turned into ranked, testable candidates (K1–K7) for the dense per-loop injection/read-out found in Q2, with test recipes, and the offline results for every candidate (§7: K1 holds, five equal signed taps per loop; K2–K7 not supported; in-sample) |
-| `analysis_harness_spec.md` | IR-library harness test specification (stages A–G), plus implementation status of A–C |
-| `EMT250_program.md` | Program E (the EMT 250 program on the 246): decoded structure (§11), moving reads (§12–14), the UAD 250 plugin as reference (§13–14), **the plugin specification (§15)** |
-| `UAD250_test_plan.md` | The UAD EMT 250 plugin bench: headless capture harness, test groups, results (structure, modulation, non-linearity) |
+| **LOWPASS** (f, kHz) | Low-pass filter on the reverb, 2 to 12 kHz |
+| **REFLECTIONS** (DELAY, AMPL.) | Delay before the early reflections, 0 to 999 ms, and their level, 0 to 100 % |
+| **DECAY** (LF ×, RT, HF ×) | Reverberation time in seconds, with multipliers for how much faster or slower the low and high frequencies decay |
+| **WIDTH** | Wet stereo width: 0 = mono, 100 = unchanged, 200 = extra wide. Above 100 the bass stays mono |
+| **DUCKER** | Lowers the reverb while the input is over a threshold. Click for its settings: range (0 to -60 dB), threshold, attack and release |
+| **MIX** | Wet/dry balance. PAN places the dry signal |
+| **INPUT / OUTPUT** | Levels, with LINK to move them together (one up by what the other is down). INPUT feeds the reverb and the dry; OUTPUT is the master, so a linked pair leaves the dry level where it was |
 
-### Plugin (`plugin/`)
+In the non-linear programme (N) the readouts change meaning to match the hardware's own labels (DELAY, SPAN, and early
+and late RT). Hover over any control for a description.
 
-The JUCE plugin scaffold (panel, parameters, presets, installers; the reverb is a placeholder): `plugin/README.md`.
+## Width
 
-### Code (`tools/`, `tests/`)
+The WIDTH halo is the first control in the right-hand group. Its arc runs from 0 to 200 with the value in the middle;
+100 leaves the wet signal unchanged, 0 sums it to mono and 200 widens it. Above 100 the low band is kept mono so the
+bass does not wander. Drag up to widen and down to narrow (Shift for fine), or use the wheel; double-click to type a
+value, or Option/Alt-click to return to 100. Width only affects the wet path, never the dry signal.
 
-| Path | What it does |
-|---|---|
-| `tools/analyze_ir.py` | Single-IR deep dive → `analysis/<name>/{summary.json, report.png, h_dev.npy}` |
-| `tools/deconv_grid.py` | Recovers the device-rate IR (19.2 MHz/728 ≈ 26,373.6 Hz) from a capture |
-| `tools/topology_tests.py` | Topology tests T1/T2 against synthetic controls |
-| `tools/model_s.py` | Program S model and studies. Stages: default, `--tighten`, `--tail`, `--diffuser`, `--allpass`, `--groups`, `--stochastic` |
-| `tools/ml_structure.py` | M/L structure from the 96 kHz library, with S as control: clusters and onsets from AMPL pairs, held-out tail-predictor (characteristic polynomial) tests, lag precision, AMPL-pair time-variance test, noise floors vs CLA, S repeat-capture null with a per-capture clock fit → `analysis/ml_structure/` |
-| `tools/altiverb_ml.py` | The Altiverb MED / LONG presets against the M / L model (`ml_structure.md` §17): chain FIR, gains, clock and AP damping step per preset; nulls, decay and G6 → `analysis/altiverb/ml_pulse.{json,log}` |
-| `tools/ml_kernel_fix.py` | M / L output kernel refitted on the first pass after the undamped all-pass step went to b = 0 (`ml_structure.md` §18) → `analysis/ml_lines/kernel_fix.{json,log}`, read by `ml_lines.Model` (`ML_KFIX=0` / `ML_B0=0` restore the stored kernel / b) |
-| `tools/ml_bsteps.py` | M / L's last all-pass damping as three step values per program and an RT × HF cell table (`ml_structure.md` §19) → `analysis/ml_lines/b_steps.json`, and the cell → step table (`cells`) that `ml_lines`'s default `ML_BREFIT=steps` reads (§22); its own step means, on the stale b, were tried and not adopted (`ML_BSTEP=1` all-data means, `cv` leave-one-LF-column-out); `score BASE CAND [out.json]` compares two `pulse_check --stage ml` runs on the damped settings |
-| `tools/s_step0.py` | AP230 step 0 at b = 0 with the loops re-adapted (`model_s_results.md` §39): `shift` (takefit at both b on the undamped settings → the per-loop change, compact forms held out) → `analysis/s_step0/shift.{json,log}`; `cells --form <f>` → a variant fold set `_apml0` for `loop_cv --retake --tag apml0` with `EMT_AP230=ap230_mltable_b0.json`; `STEP0_TF=rw` the late-weighted takefit pair (`TAKEFIT_WIN=1`, §40), with `EMT_COMPACT=diffuser_tied_fix-0.707107_ap230b0_chain3`. Tried twice, not adopted |
-| `tools/s_brefit.py` | S's AP230 damping steps on the current model (`model_s_results.md` §38): `fit` (each setting as `pulse_check --stage s` on a b grid, every window per capture, resumable) → `analysis/s_brefit/`; `cand` (per-setting held out by take, step tables, leave-one-LF-out, the M / L table, step 0 at b = 0; strict rule) → `cand.{json,log}`. Adopted by the user's decision (§38.1): `loop_fir.AP230` defaults to `ap230_mltable.json`; `EMT_AP230=ap230_g0.7071_chain2.json` restores §35's table |
-| `tools/ml_slip_scan.py` | Sample slips in the M / L captures (`ml_structure.md` §23): residual per 2 ms against the static model with the clock refitted on the cluster, jumps that stay, the lag step that refits after them → `analysis/ml_lines/slip_scan.{json,log}`; the slips are `defects.ML_SLIPPED` |
-| `tools/ml_brefit.py` | M / L's damped all-pass b refitted on the current model (`ml_structure.md` §22): `fit` (per setting, resumable, first-pass energy grids per capture and channel, cluster / gap, pipeline check against `analysis/pulse/ml`; `EMT_KERNEL=chain3` default) → `analysis/ml_lines/brefit/`; `write` → `b_refit.{json,log}`; `cand` (per-setting, step tables, S's, shared, cross-program; R and L, fit vs held-out captures) → `b_refit_cand.{json,log}`, `b_cand_<name>.json`. Adopted: one 3-value table, `analysis/ml_lines/b_steps_ml.json`, `ml_lines` default `ML_BREFIT=steps` (`0` stored b, `1` per-setting refits, or a file) |
-| `tools/ml_lines.py` | The M/L line gains and filters (`ml_structure.md` §8): the §7 model closed through the coupled lines with S's laws at the M/L line lengths; held-out recirculation nulls against repeat captures, limit scans, decay per octave, and the law fitted per setting. One checkpoint file per AMPL group (resumable; `--chunk i/n`) → `analysis/ml_lines/`. `fitted(prog, key)` rebuilds a setting's captures and models from those files (for residual work). Switches: `ML_POLE_CURVE=0`, `ML_HFRT=0`, `ML_L22=0` (L RT 2.2's HF floor 0.40, `ml_structure.md` §8.6); HF pole map = S's §32.6 curve since §8.7 (`ML_POLE_CURVE=25` / `0` for the older ones) |
-| `tools/loop_read/coupling.py` | Loop coupling in S (`model_s_results.md` §31): first-order cross-loop basis terms regressed on the clean residual, chosen leaving one RT step out (`--stage prep|fit`) → `analysis/lowband/chain3_coupling.{json,log}` |
-| `tools/loop_read/takefit_read.py`, `dcxfer_report.py` | What §31's per-setting refits contain (`model_s_results.md` §32): per-pass corrections per frequency, their transfer across cells and as LF + HF effects, the DC floor per loop → `analysis/lowband/chain3_takefit_read.{json,log}`; the bench scores of `lowband_shelf.py --stage dcxfer` (DC table per (LF, RT, loop)) and `--stage addxfer` (LF + HF effects per (RT, loop)), held out by setting and take → `analysis/lowband/chain3_dcxfer_report.log` |
-| `tools/loop_read/slope_cells.py`, `foldcmp.py` | The HF pole's slope across the loops per (HF, RT) cell (`model_s_results.md` §32.1): `slope_cells.py` writes the variant fold set `analysis/loop_cv/hfcells_chain3_cap0.8475_slope/` (the §29 folds and cells plus `hf_slope`, held out by LF step) for `loop_cv.py --retake --tag slope`; `foldcmp.py` compares two fold sets on clean captures with the excess over the chain3 repeat references; `lowband_shelf.py --stage slopexfer` scores the same table on the takefit bench |
-| `tools/loop_read/lf_cells.py`, `lfxfer_report.py`, `lowrt_xfer.py` | The shelf terms per (LF, RT) cell and loop (`model_s_results.md` §32.2–32.3): `lfxfer_report.py` reads `lowband_shelf.py --stage lfxfer` (per-loop means / common + slope from the cell's other HF steps, takefit bench) → `analysis/lowband/chain3_lfxfer_report.log`; `lf_cells.py [--zero-mean-gain]` writes the variant fold set `analysis/loop_cv/hfcells_chain3_cap0.8475_lfcell[zm]/` (`cells.json` `lf_gain` / `lf_dc` at RT ≥ 1.0) for `loop_cv.py --retake --tag lfcell[zm]`; `lf_cells.py --low` the same at RT ≤ 0.8 without the pole-limited HF steps → `_lowrt[zm]` (§32.3), and `lowrt_xfer.py` the offline transfer check behind it (→ `analysis/lowband/chain3_lowrt_xfer.log`); `_lowrt` was the §32.3 baseline |
-| `tools/loop_read/floor_form.py` | The DC floor's compact form (`model_s_results.md` §34, tried, not adopted): `--stage fit` reads the per-loop DC / Nyquist ends from a takefit run (`SHELF_TAKEFIT`, default `_pallf`), fits one plateau per RT step (held out by HF step) plus a shared shoulder and Nyquist rule (held out by RT step), checks laws in RT → `analysis/lowband/chain3_floor_form.{log,json}` and `analysis/loop_cv/hfcells_chain3_cap0.8475_pfloor/dcfloor.json`; `--stage folds` writes that fold set's `cells.json` without the floor cells. Switch `EMT_DCFLOOR=<dcfloor.json>` (read in `q2_injection.G_capped` via `_final_setting`, `pulse_check.setting_G`, `lowband_shelf.base_kw`; settings with a floor cell keep it). `lowband_shelf.py --stage takefit` with `SHELF_PREP_CELLS=<cells.json>` fits the captures on that table's model (two takefit runs then differ in the loop responses only); `lf_cells.py --delta NEW OLD --dir D [--low] [--zero-mean-gain]` moves a fold set's shelf cells by the change between two such runs; `foldcmp.py ... --per-setting` lists every setting beyond ±0.5 dB in every window 50–1000 ms, R and L | `--stage shoulder` (`model_s_results.md` §35, **in the baseline**): the shoulder alone where no floor cell acts (LF 0.4, RT ≥ 0.6), c, τ and the plateaus fitted on the floor-cell settings (held out by setting) → `analysis/lowband/chain3_floor_shoulder.{log,json}` and the fold set `analysis/loop_cv/hfcells_chain3_cap0.8475_pshoulder/` (the S baseline: `_pallf`'s folds and cells plus a per-setting `floor_form` entry in `cells.json`, read by `q2._final_setting`, `pulse_check.setting_G` and `lowband_shelf.base_kw` where no floor cell acts; no switch needed) |
-| `tools/loop_read/pole_cells.py` | The HF pole in the pole-limited cells as one curve of the law's pole with a drop-back (`model_s_results.md` §32.4–32.6): reads `lowband_shelf.py --stage takefit` on `_lowrt` (`SHELF_TAKEFIT`), writes `analysis/lowband/chain3_pole_cells.{log,json}` and the variant fold set `analysis/loop_cv/hfcells_chain3_cap0.8475_pcell/` (`cells.json` `hf_poles`) for `loop_cv.py --retake --tag pcell`; `--all` the same curve at every HF < 1 setting → `_pall` and `chain3_pole_cells_all.*` (§32.5), `--all --by-lf` held out by LF step → `_pallf`, `chain3_pole_cells_allf.*` (§32.6), the S baseline |
-| `tools/defects.py` | The data defects every tool leaves out: the 4 bad AMPL-0 captures, the 13 slipped files and the 4 glitch files (`library_notes.md` §2, `model_s_results.md` §28, §35.4) |
-| `tools/loop_read/stepband.py` | The slipped S captures (`model_s_results.md` §28): per octave band and model-free lag against a step-free capture, the step's time in reverb and file time, the stepped files, the 9 settings rescored from the pulse check, and the HF cells re-chosen on step-free captures from `lowband_shelf --stage hfcell` with `SHELF_TAG=_percap` → `analysis/lowband/chain3_stepband.{json,log}`; `loop_cv.py --retake --tag <t>` runs a variant fold set beside the baseline |
-| `tools/loop_read/setting_diag.py` | Two read-only diagnostics on one S setting through the pulse check's render: `bscan` (AP230's b scanned) and `resid` (the clean AMPL 0 / 90 residuals: energy, correlation, 0–60 ms per 5 ms; a shared residual is the model's); used on 1.0_0.3_0.4 (`NEXT_STEPS.md` §0 item 5) |
-| `tools/loop_read/glitch_scan.py` | A second capture defect at 99.9 ms file time (`model_s_results.md` §35.2): `scan` scores every S capture against the baseline just before and after 97 ms after tap 0 and lists the jumps (→ `analysis/lowband/chain3_glitch_scan.{json,log}`: the 13 SLIPPED files plus 4 unlisted ones, `defects.GLITCH`); `pairs` compares the RT 0.3 HF 0.2 / HF 0.4 captures of every LF step and times the departure per 1 ms (→ `chain3_glitch_pairs.log`) |
-| `tools/loop_read/pole_resid.py` | HF 0.2's per-setting pole residuals (takefit, mean of the takes) against panel candidates the pole curve ignores (HF floor, HF quantisation, shelf at f_ref, LF, …), leave-one-setting-out (`model_s_results.md` §35.3, negative; → `analysis/lowband/chain3_pole_resid.log`) |
-| `tools/loop_read/fixedpoint.py`, `c/s_loops_fx.c` | Exact coefficients and fixed point, Q9 / Q10 (`model_s_results.md` §36): `coefs` (takefit's per-loop p, D, N1, c0, c1 per take, also for another baseline: the read-bias check), `lattice` (2⁻ⁿ grid tests in 10 parametrisations, take noise + read bias, random grids, held out by setting), `consts` (scalar constants and the S / M / L AP230 steps against grids, rationals and shift-and-add forms, look-elsewhere corrected), `panel` (per-(LF, RT) / (HF, RT) / (LF, HF) tables or a smooth function, held out by take and setting), `snap <n>` (a variant fold set with every `hf_poles` entry on 2⁻ⁿ, for `loop_cv --retake --tag snap<n>`), `q10` (S's loops in float and 16-bit fixed point, truncation / rounding, impulse, idle noise and a simulated sweep) → `analysis/lowband/chain3_fixedpoint_*` |
-| `tools/unit_transfer.py` | The low-band transfer between the S model and CLA / the Altiverb (`model_s_results.md` §27): per IR and variant (plain, through `chain3`, the transfer measured on another unit, its 10-number biquad form) the nulls per window and octave and the sixth-octave transfer; `compact` fits the biquads → `analysis/unit_transfer/` |
-| `tools/unit_chain.py` | A compact per-unit chain model for the cross-unit floors (`model_s_results.md` §37): the S baseline on CLA / the Altiverb S presets with a counted chain (clock, shift, 7-tap FIR per channel, 13-number low-band cascade) fitted on one window or preset and scored on the others, against a free LTI transfer and each file's noise floor; `ml` the Altiverb MED / LONG first pass through the same cascades; `diag` HF / RT sensitivity and the residual's correlation with Tomkin's → `analysis/unit_chain/` |
-| `tools/ml_fade.py` | Tomkin's fade in M and L (`ml_structure.md` §15): per file the capture / static-model level against time before the end, fade shape and start fitted (model-free partner check), the per-file table `analysis/ml_fade/fade.json` that `ml_lines.usable_end` reads, and §8.3's per-octave RTs re-read with the new ends (`--stage measure|report|rt`) → `analysis/ml_fade/` |
-| `tools/ml_variance.py` | The M/L time variance (`ml_structure.md` §9): per capture, the residual after `ml_lines` fitted as kernels on candidate derivatives, held out across channels (the coupling rotation and its controls), θ's rate from the passes, ghost lags per octave; `sim` renders the rotating model through a simulated exponential sweep against Tomkin's AMPL pairs. One checkpoint file per AMPL group (resumable; `--chunk i/n`) → `analysis/ml_variance/` |
-| `tools/ml_carryover.py` | The S carry-over test for M and L (`NEXT_STEPS` §5 item 5): diffuser search by matched-filter sparsity, the 20 read taps per channel in every AMPL group, each tap's recirculation through the four lines (the coupling matrix), and held-out first-pass nulls against repeat captures (with the AP damping step and the M/L output kernel) → `analysis/ml_carryover/` |
-| `tools/chain_kernel.py` | The per-channel chain kernel (`ml_structure.md` §12): cluster-only windows of S/M/L on a 4× device grid, per-capture clock and shift, FIR × the schematic high-pass, held-out variants → `analysis/chain_kernel/` and `analysis/library/tomkin96/kernels/chain2.npz`; `--stage tail` / `write --name chain3` the long-tail kernel chain3 (`ml_structure.md` §13, the current one). With `EMT_KERNEL=chain3` (or `chain2`) the device-domain tools (`ml_structure`, `q1`, `q2`, `ml_*`, `firstpass_gap`, `outofband`) read caches rebuilt with it and write `_chain2` results |
-| `tools/q1_generalise.py` | Q1: Path B across the library (loop fits, control laws, AP230 step, shared-injection joint fit, held-out splits, repeat-capture ceiling, CLA check) → `analysis/q1/` |
-| `tools/q2_injection.py` | Q2: fade-free windows, Tomkin fade compensation (fixed 0.700 s ramp), per-setting free injections, q1's joint bench with corrected windows, fade-compensated nulls, residue regression, the `branches` bench (shared injection with branch exponents and window length), the `filters` / `loops` stages (loops refitted per setting with an injection frozen), the `tied` / `diffuser` / `ap230` / `capped` stages (the compact 5-tap model, −1/√2 diffuser, AP230 steps, saturating laws), `cla` (cross-unit), and `final` (the consolidated S model, `model_s_results.md` §17; with `--compact` / `--ap230` the chain2 refit of §21 and with `--gamma` / `--lfrt` / `--hfdp` / `--pramp` the loop terms of §22). `free --refs` is checkpointed per setting. With `EMT_KERNEL=<name>` every output gets `_<name>` and the repeat-capture references come from `nulls_free_<name>.json` → `analysis/q2/` |
-| `tools/firstpass_gap.py` | The first-pass gap (`ml_structure.md` §10, §12.3): per AMPL group the model parts and fits (`collect`), transfer error and residual spectra (`report`), the deconvolution-kernel correction (`chain`) → `analysis/firstpass_gap/` |
-| `tools/outofband.py` | Out-of-band check (`ml_structure.md` §11, §12.5): nulls and decay at 25–100 Hz and 10–12 kHz, the sweep simulation, kernel response → `analysis/outofband/` |
-| `tools/ap230_form.py` | AP230's damping placement at b > 0 (`model_s_results.md` §21.2): the two-tap filter in the feed-forward / feedback paths, both free → `analysis/ap230_form/` |
-| `tools/loop_fir.py` | S's loops at strong settings (`model_s_results.md` §22–22.8), injection frozen: free per-loop corrections held out by capture (`fit`, `report`, `coefs`), RT interpolation held out by setting (`interp`), grids on cached setups for the DC floor (`floor`), the shelf (`shelf`) and the HF cap / pole offset (`hfcap`), the parts of a correction (`probe`), tilt shapes (`tilt`). One checkpoint per setting in `analysis/loop_fir/<kernel>/` (not committed); `--current [--kc K]`: the free correction on top of the current S baseline (§25.14) |
-| `tools/loop_cv.py` | All loop terms with every constant chosen leaving one RT step out (8 folds), each setting scored with its fold's constants: the §22.9 baseline → `analysis/loop_cv/`; with `--lf04dc` §25.4 → `analysis/loop_cv/lf04dc/`; with `--cells` §25.6 → `analysis/loop_cv/cells/`; with `--hfcells` §25.7 (chain2) → `analysis/loop_cv/hfcells/`; with `EMT_KERNEL=chain3 --retake` §25.11 (§25.7's constants, compact numbers refitted on chain3) → `analysis/loop_cv/hfcells_chain3/`; with `EMT_PMAX=0.8475` added §25.18 (HF ceiling 0.8475, ramp and HF cells refitted) → `analysis/loop_cv/hfcells_chain3_cap0.8475/`; `--tag <t>` a variant fold set beside it: `stepfree` §28 (HF cells re-chosen on step-free captures), and with `EMT_HFRT_MIN=0.12` (the HF control floored at RT × HF ≥ 0.12 s) `hfrt`, the **current S baseline** (§29) → `analysis/loop_cv/hfcells_chain3_cap0.8475_hfrt/`; and `--xadd <dense_mid tag>` adds a dense_mid correction held out by fold → `hfcells_chain3_<tag>/` |
-| `tools/lowband_shelf.py` | S's LF shelf below 400 Hz (`model_s_results.md` §25): a free shelf per setting held out by capture, LF 0.4's DC constant on a grid and chosen leaving one RT step out, the DC floor and LF 0.1's DC ratio on a joint grid (§25.5), per-loop DC / Nyquist gains and the per-cell floor (§25.6), the HF pole per cell (§25.7) → `analysis/lowband/chain3_shelf_*` (reports `chain3_shelf_report.log`, `chain3_shelf_floor_report.log`) |
-| `tools/lowband_joint.py` | The measured low-band transfer of the Tomkin captures' processing (`NonLin_program.md` 11.8, `analysis/nl_lowband30/REPORT.md`): `response(f, mode)`, `NL_LOWBAND=0/1/2` (default 2 for N, in `nl_structure.processing_response`), `SML_LOWBAND` / `ML_LOWBAND` in `sml_fullband.py`; tables `analysis/lowband/chain3_lowband_joint.json` (shared N + S, 12–130 Hz) and `analysis/nl/lowband_N_fine.npz` (N, above 130 Hz). Bench side only, not the plugin |
-| `tools/nl_model.py`, `nl_structure.py`, `nl_early.py`, `nl_late.py`, `nl_spec.py` | Program N (`NonLin_program.md`): the static model, its 1,044-capture bench (`--stage noise \| bench \| report`, `analysis/nl/bench_warp2_bk_kf_a0.7_lb2`), the plugin spec |
-| `tools/sml_fullband.py` | S / M / L over the whole band 20 Hz–12.8 kHz and the full-band gate (`model_s_results.md` §41, `ml_structure.md` §25) |
-| `tools/dense_mid.py` | Diagnostic (`model_s_results.md` §25.9–25.10): a correction to the loop excitations fitted on the residual of training settings and scored held out by RT step. It can be dense, shared by the loops, per-tap, a tap level, a read kernel or the diffuser's gains and delays. Options: `--band` (fit band), `--project` (band-limit before scoring), `--test-all` (score every setting), `--stage decode` (read the common kernel) → `analysis/dense_mid/<kernel>/`. `--base TAG` holds a fitted correction fixed underneath; `--basis lkernelK` (a kernel per loop and channel), `diffuser2` (all-pass feedforward / feedback apart), `combo:PARTS` (few-number candidates in the excitation layout); `--from0` (weight 0–50 ms), `--regain` (score with each capture's gain refitted; §25.13); `--stage decodeloops` (§25.12) |
-| `tools/loop_read/` | Reading the current baseline's free loop corrections (`loop_fir.py --current`; `model_s_results.md` §25.14): `heldout.py` (held-out excess per cell, where in frequency), `poles.py` (each loop's HF pole and broadband gain), `capcomp.py` (the capped-pole loss-transfer test), `grid.py` (coefficient-grid test), `hfform.py` (filter forms on §22's old corrections), `capforms.py` (forms at the strong-HF cells: pole + fractional advance; §25.15), `warp.py` / `steps.py` / `steps_ml.py` (lag tracks: the S capture steps, the M / L per-cell drift; §25.16), `polelaw.py` / `polecurve.py` / `ml_poles.py` / `ml_curve.py` (the HF pole as one curve of the law's pole across S / M / L; §25.17), `ramp_refit.py` / `staircase.py` (the ramp around another ceiling; a staircase test; §25.18), `hfloop_read.py` (per-loop HF poles from `lowband_shelf.py --stage hfloop`: precision, staircase, grid; §25.19), `lfk.py` (the per-LF HF factor refitted; §25.20) → `analysis/loop_fir/chain3_current_kc8_read/` |
-| `tools/resid_common/` | The baseline's residual as a common waveform (`model_s_results.md` §25.12): `fixed.py` (alike across settings, amplitude per group), `echo.py` (vs the model's output), `outfir.py` (an output-side FIR held out by RT fold), `coherence.py` (transfer vs fixed waveform per band), `modes.py` (residual peaks vs the loops' modes), `out250.py` (fold agreement of a dense correction's output) → `analysis/dense_mid/<kernel>/resid/` |
-| `tools/memguard.py` | Runs a command under a hard memory cap: polls the physical footprint of its whole process group (workers included), kills it above `--limit-gb` and prints the peak. Use it for every run (NEXT_STEPS §2) |
-| `tools/lowband.py` | The S baseline at 25–200 Hz (`model_s_results.md` §23): per-band nulls and repeat references, the capture / model transfer, a fixed-transfer variant held out by RT fold, the cross-program check on S / M / L, third-octave decay errors → `analysis/lowband/` |
-| `tools/q2_candidates.py` | Offline tests of the period-practice candidates on the frozen flat injection: in-band sparsity with controls (K1), the comb factor and tied tap model, a recursive-stage scan (K2/K5), tap-position structure (K3), a common distributor (K6), the first-pass FIR, the residual (K5), and per-tap checks across the 128 per-setting injections (K7, K4) → `analysis/q2/` |
-| `tools/make_sweep.py` | Stimulus for sweep-capturing a convolution plugin: log sweep (48 / 96 kHz, −6/−12/−18 dBFS, optional 15 s tail), its inverse filter, a single-sample impulse → `sweep_request/` (not committed) |
-| `tools/altiverb_compare.py` | Altiverb 246 IRs against Tomkin: sweep deconvolution and clipping check, cluster taps, octave-band T60, tap spectrum vs the CLA kernel, S reverb null (`library_notes.md` §6, unit facts §5c) → `analysis/altiverb/` |
-| `tools/e250/` | Program E (`EMT250_program.md`): `e_model.py` (device-rate prep of the Altiverb REV-250 presets, static network fit held out by RT), `e_sim.py` (time-domain reference model with moving reads, sweep-capture simulation, statistics, `render_ir` / `--stage render`), `e_genfit.py` (moving-read generator fits), `e_spec.py` (plugin spec JSON + static reference IRs → `analysis/e250/`), `uad_moving.py`, `lp_chain.py`, `rev250_unlabelled.py` (§14 checks), `e_pulse.py` (the G1–G6 reverb-metric audit, §17) |
-| `tools/uad250/` | UAD EMT 250 plugin bench (`UAD250_test_plan.md`): `uad250_suite.py` capture harness, `analyze_*.py`; captures gitignored (licensed plugin renders) |
-| `tools/pulse_check.py` | The pulse check (stage G): the current S, M and L models against Tomkin (held out), CLA and the Altiverb S presets on nulls, octave / third-octave decays and EDCs, echo density, L/R coherence, fine structure and the M / L decorrelation, beside the capture-to-capture spread (`model_s_results.md` §26, `ml_structure.md` §14) → `analysis/pulse/`; `--stage gate --tag <name>` is the ~3 min PASS / FAIL sanity gate to run after any model change; G6 reverb metrics (C50 / C80 / D50 / Ts, tonal balance, 1/24-octave decay and ringing, coloration, mixing time, IACC; `model_s_results.md` §33) |
-| `tools/altiverb_predict.py` | The §17 S model against the Altiverb S presets, held out (clock, shift, gain + a per-channel FIR on the cluster region), the Altiverb vs CLA comparison, polarity / channel-offset diagnostics (`model_s_results.md` §18) → `analysis/altiverb/predict.json` |
-| `tools/altiverb_floor.py` | The effective-HF scan on the Altiverb LONG RT presets (`ml_structure.md` §8.6): the L carry-over model with the HF scanned (floors off), recirculation nulls per HF; the presets behave as HF about 0.45 at every RT, so they can't test L RT 2.2's floor |
-| `tools/analog/` | Analogue chain: `netlists.py` (input 7 246 131 and output 7 246 130 filters transcribed from the service manual), `mna.py` (AC solver, ideal or finite-GBW op-amps), `compare_kernel.py` (vs the reference kernel → `analysis/analog/`) |
-| `tools/harness/` | IR-library harness, stages A–C: `run.py` (CLI), `crossrate.py` (direct cross-rate comparison), `core.py` (per file), `library.py` (library level), `naming.py`, `report.py`, `synth.py` (synthetic test library), `config.json` (constants, templates, naming patterns) |
-| `tests/test_harness.py` | End-to-end harness tests: `.venv/bin/python -m pytest tests -q` |
+## Typed values
 
-### Data
+Double-click any display field except the program display to type a value instead of using its lever. The dialog lists
+the valid values or range for the current program and unit; an invalid entry leaves the current value untouched. S/M/L/E
+and N have different meanings and ranges (for example amplitude in % vs span in s), and RT is not used in N.
 
-| Path | Contents |
-|---|---|
-| `irs/EMT 246 captures/` (gitignored; Tomkin Mastering, no redistribution of the files) | The Tomkin/Kienast library: 96 kHz (the working set) and 48 kHz (the same capture), `Short RT`, `Med RT`, `Long RT`, `Non-Lin`, plus its README, the operation card scan and a front-panel photo. Naming scheme in `NEXT_STEPS.md` §2.1 |
-| `irs/eugtone_EMT246_CLA_shortRT.wav` | The one hardware IR so far: CLA's setting, captured by eugtone (S, LP 12, DELAY 10, AMPL 80, LF 1.0, RT 1.0, HF 0.9). Third-party |
-| `ref/kernel_eugtone_96k.npz` | Reference analogue-chain kernel (one cluster tap) |
-| `analysis/shortRT/` | `analyze_ir.py` output for the CLA IR. `h_dev.npy` is regenerated, not committed |
-| `analysis/model_s/`, `analysis/model_s_*.log` | Model study outputs (JSON, params, plots, logs) |
-| `analysis/library/synthetic/` | Harness run on the synthetic test library |
-| `analysis/nl_lowband30/` | The low-band study of Program N and its S / M / L cross-checks (`REPORT.md` parts 1–8; scripts `lb_*.py`, candidate searches `cand_*`; caches not committed). `analysis/lowband/`, `analysis/fullband/`, `analysis/nl/` hold the tables, the full-band gate and the N bench |
-| `analysis/library/tomkin96/` | Harness run on the Tomkin 96 kHz set: report, library.json, coverage, plots. Large per-file CSVs and the cache are not committed |
-| `analysis/library/tomkin/` | Cross-rate result (`crossrate.csv`) and the library kernels |
-| `analysis/chain_kernel/` | `chain_kernel.py` output: `fit.{json,log}` (held-out kernel variants), `chain2.json` (the written kernel's response, L/R, refitted M/L output kernels), `shifts.json` (per-capture tap-0 shift and clock); the windows `data_*.npz` are not committed |
-| `analysis/ml_fade/` | `ml_fade.py` output: `curves/` (one `.json` per AMPL group), `fits.json`, `fade.json` (per-file fade starts for `ml_lines.usable_end`), `report.log`, `rt/`, `rt.log` |
-| `analysis/ml_lines/` | `ml_lines.py` output: `law/` (one `.json` per AMPL group: nulls per window and variant, clocks, gains, band decay), `report.log`, `fit.json` / `fit.log` |
-| `analysis/ml_variance/` | `ml_variance.py` output: `rot/` (one `.json` per AMPL group: held-out nulls per window and candidate, θ rms, kernels, per-octave ghost lags, per-event correlations), `report.log`, `sim/` + `sim.log` (rotating model through a simulated sweep; `sim_075*` the first run at 0.75 Hz / 3.9 s) |
-| `analysis/ml_carryover/` | `ml_carryover.py` output: `diffuser`, `taps` (per-group tap positions and values), `routing` (recirculation gains, the coupling matrix) and `firstpass` (held-out nulls, fitted damping steps, output kernels), each `.json` + `.log` |
-| `analysis/ml_structure/` | `ml_structure.py` output: `summary.json`, `run.log` (the device-rate IR cache is not committed) |
-| `analysis/q2/` | `q2_injection.py` output: corrected windows (`fade2.json`), raw-end map for the fade ramp (`ramp.json`), per-setting free-injection results (`free.json`; the injections in `v/` are not committed), joint splits (`split_*.json`, `v_*.npy`), fade-compensated nulls (`nulls_*.json`), branch runs (`branches_*.json`; the frozen flat injection `branches_flat_0_ext1700.npy`), loop refits (`filters.json`), residue regression (`regress.json`; the residue arrays are regenerated), the candidate tests of `q2_candidates.py` (`k1_sparsity.*`, `k2_stages.*`, `structure.*`, `k5_resid.*`, `settings.*`), logs |
-| `analysis/q2/*_chain2*` | The chain2 work (`model_s_results.md` §20–22): AP230 steps and the compact refit (`ap230_g0.7071_chain2`, `diffuser_tied_fix-0.707107_ap230new_chain2`), the free models and repeat-capture references (`free_chain2.json`, `nulls_free_chain2.json`; `v_chain2/` and the `*_groups/` checkpoints are not committed), the final-stage scores (`final_s_chain2_refit*`) |
-| `analysis/firstpass_gap/`, `analysis/outofband/` | `firstpass_gap.py` and `outofband.py` outputs (reports, chain corrections; the per-group caches `groups_*` are not committed) |
-| `analysis/ap230_form/` | `ap230_form.py` output (`forms_chain2.{json,log}`) |
-| `analysis/loop_fir/` | `loop_fir.py` output: logs and summaries (`fit_`, `report_`, `coefs_`, `interp_`, `floor_`, `hfcap_chain2.log`; `chain2_coefs.json`, `chain2_interp.json`, `chain2_floor*.json`, `chain2_hfcap.json`, `chain2_probe*.json`, `chain2_tilt.json`); the per-setting fits in `chain2/` are not committed |
-| `analysis/lf_rt/` | Held-out bench runs of the single loop terms (`model_s_results.md` §22.2–22.8): trained constants (`lfrt_train*.json`, `hfdp_train.json`, `split2_*.json`) and their scored settings |
-| `analysis/loop_cv/` | `loop_cv.py` output: per fold the constants (`fold_<rt>.json`, `fold_all.json` = the baseline's constants) and scored rows, `constants.log`, `report.log` |
-| `analysis/lowband/` | `lowband.py` output: per setting `chain2/`, `chain2_tfix/`, `chain2_transfer/`, `chain2_slopes/`; per group `chain2_hk_mltransfer/`, `chain2_hk_mlcheck/`; the fixed transfer per fold `chain2_tfix_{A,B}.json`; `chain2_{base,tfix}_report.log` |
-| `analysis/analog/` | Analogue chain vs the CLA and Tomkin kernels (`summary*.json`, `chain*.png`) |
-| `sources/` (local only, gitignored) | Third-party primary sources: data sheet, 252 brochure, catalogues, 245 service manual, **246S service manual (scans)**, EMT Courier, EMT 250 patent, Studio Magazin pages, magazine extracts, studiorepair internal photos. See `sources/README.md` |
-| `ui/` | Plugin UI artwork for the plugin stage (PNG assets: front panel `main.png`, program / power buttons, faders, knob, joystick, LEDs, level meter, a full example) and `Asset positioning.csv` |
+The bottom bar holds the preset browser (previous, next, name, **SAVE**) and **CAL** for the meter reference on the
+left, then the **WIDTH** halo and the routing and character buttons (**ORIGINAL / TRUE ST**, **FLOAT / 16-BIT**,
+**XFMR**), **LINK** and **?** on the right. A changed preset's name turns italic with a `*`. Saving under an existing user-preset name asks
+before replacing it; factory names are read-only. ORIGINAL / TRUE ST, XFMR and LINK are preferences, so presets
+neither store nor change them.
 
-## Setup and common commands
+## Character options
+
+16-bit and XFMR are independent, both default on, and both only change the reverb path.
+
+**16-bit.** The original stored the intermediate results in its reverb loops as 16-bit words, and truncating them at
+that depth costs a little noise and grit: its service data put the reverb around 15 dB noisier than the unit's own
+straight-through path. With **16-BIT** selected, REV-246 quantises its loops the same way, and adds a little analogue
+hiss: very quiet, below the original's own specification, and only in 16-BIT mode. **16-BIT** is the default; switch
+to **FLOAT** for a cleaner tail.
+
+In 16-bit mode the input also clips where the original's A/D converter did. That converter left only 6 dB of headroom
+above the 0 mark on its meter, and it clipped hard: past full scale it simply holds the last code. Its input filter
+lifts the treble by up to 5 dB first, so cymbals and sibilance clip sooner than the meter suggests. And because it
+clipped at its own sample rate of 26.4 kHz, the clipping comes out as inharmonic grit rather than plain harmonics.
+Where it clips follows **CAL**: CAL sets what 0 VU means in dBFS, and the converter clips 6 dB above that for a low
+sine (at the default -18 dBFS, that's a sine peaking at -9 dBFS). **OVL** lights whenever the converter clips, and in
+FLOAT mode it lights where it would have clipped.
+
+REV-246 reports about 1 ms of latency (0.8-1.1 ms: the modelled output filter's correction and the conversion to and
+from the original's own sample rate), and your DAW compensates for it. It is the same in every programme and in FLOAT and 16-BIT, so switching
+never shifts the timing.
+
+**XFMR.** The original could be ordered with balanced input and output transformers, which the manual says raise the
+harmonic distortion slightly. **XFMR** is on by default; with it on, the wet path gains the low-frequency colour and
+gentle odd-harmonic distortion of that option. The low-frequency colour comes from measurement; the distortion is an informed
+estimate, since measurements of a unit's response cannot show it.
+
+## Hear it
+
+**[Listen in your browser](https://tehguitarist.github.io/REV-246/listen/)**: looping players that switch between dry, IR and REV-246 in sync.
+
+Four recordings, each with the **dry** take, a convolution with a reference **impulse response (IR)** and **REV-246** set to the
+same settings. All at a **40 % wet mix** (0.6 dry + 0.4 wet); the two wets are level-matched, so what you hear is the reverb's
+character and not its level. The recordings are summed to mono for the reverb (the original is mono in), the plugin's
+~1 ms latency is removed as a DAW would, and the three files of an example share one gain. The IR sources are numbered
+1 to 3 and stay unnamed.
+
+| Example | Settings | Dry | IR source | REV-246 |
+|---|---|---|---|---|
+| Room mic | Programme S, RT 1.0 s, LF 1.0, HF 0.9, AMPL 80 %, DELAY 10 ms (factory preset *S Drum Room*) | [dry](docs/listen/audio/room-mic_dry.mp3) | 1: [IR](docs/listen/audio/room-mic_ir.mp3) | [REV-246](docs/listen/audio/room-mic_plugin.mp3) |
+| Piano | Programme M, RT 1.5 s, LF 1.2, HF 0.7, AMPL 60 %, DELAY 40 ms (factory preset *M Piano*) | [dry](docs/listen/audio/piano_dry.mp3) | 2: [IR](docs/listen/audio/piano_ir.mp3) | [REV-246](docs/listen/audio/piano_plugin.mp3) |
+| Acoustic guitar | Programme S, RT 1.4 s, LF 1.0, HF 0.6, AMPL 60 %, DELAY 0 | [dry](docs/listen/audio/acoustic-guitar_dry.mp3) | 3: [IR](docs/listen/audio/acoustic-guitar_ir.mp3) | [REV-246](docs/listen/audio/acoustic-guitar_plugin.mp3) |
+| Snare (gated) | Programme N, SPAN 0.2 s, EARLY RT -3.0 s, LATE RT 0.8 s, DELAY 39 ms (factory preset *N Gated*) | [dry](docs/listen/audio/snare_dry.mp3) | 2: [IR](docs/listen/audio/snare-ir2_ir.mp3) | [REV-246](docs/listen/audio/snare-ir2_plugin.mp3) |
+| Snare (gated) | The same, DELAY 0 | [dry](docs/listen/audio/snare_dry.mp3) | 3: [IR](docs/listen/audio/snare-ir3_ir.mp3) | [REV-246](docs/listen/audio/snare-ir3_plugin.mp3) |
+
+The reverb is the plugin's own engine set to FLOAT with XFMR off: an impulse response is linear and noise-free, so 16-BIT's noise and grit and XFMR's added low-end weight would only move the plugin away from it. Both are there to switch on. The IRs are single measurements of a
+unit, so a time-varying programme (M here) and the original's analogue chain will differ from them in detail.
+
+## Build
+
+You need CMake 3.15 or newer and a C++17 compiler (Xcode on macOS, Visual Studio 2022 on Windows, GCC or Clang on
+Linux). JUCE is a git submodule.
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install numpy scipy soundfile matplotlib pandas pytest
-.venv/bin/python tools/analyze_ir.py irs/<file>.wav --out analysis/<name>      # one IR, deep dive
-.venv/bin/python tools/harness/run.py <library_dir> --templates              # inspect naming
-.venv/bin/python tools/harness/run.py <library_dir> --name <lib>             # whole library, stages A–C
-.venv/bin/python tools/harness/run.py "irs/EMT 246 captures/96kHz" --name tomkin96      # the Tomkin working set (96 kHz only)
-.venv/bin/python tools/harness/run.py "irs/EMT 246 captures" --name trial --sample 60   # quick spread-out subset (both rates)
-.venv/bin/python tools/harness/crossrate.py "irs/EMT 246 captures" --out analysis/library/tomkin/crossrate.csv   # direct 48k vs 96k comparison
-.venv/bin/python tools/ml_structure.py [--stage clusters|loops|lags|pairs|floors|clock]                # programs M/L (and S as control), 96 kHz set
-.venv/bin/python tools/ml_carryover.py [--stage diffuser|taps|routing|firstpass] [--only N]           # S carry-over to M/L (needs ml_structure's cache)
-.venv/bin/python tools/ml_lines.py [--stage law|report|fit|all] [--only N] [--chunk i/n] [--workers 4]   # M/L line laws (needs ml_carryover's firstpass.json)
-.venv/bin/python tools/ml_variance.py [--stage rot|report|sim|all] [--only N] [--chunk i/n] [--workers 4]  # M/L time variance (needs ml_lines' law files)
-.venv/bin/python tools/make_sweep.py                                                         # sweep, inverse and impulse stimuli → sweep_request/
-.venv/bin/python tools/altiverb_compare.py [--stage deconv|cluster|decay|spectrum|null]      # Altiverb 246 vs Tomkin (needs irs/Altiverb EMT256 IRs/)
-.venv/bin/python tools/analog/compare_kernel.py [--kernel <npz> --tag <name>]            # analogue chain vs a kernel
-.venv/bin/python tools/model_s.py [--tighten|--tail|--diffuser|--allpass|--groups|--stochastic]
-# the S baseline (model_s_results.md §22.9; current: §25.7 with --hfcells), on the chain-kernel IRs (caches: EMT_KERNEL=chain2 tools/q1_generalise.py --stage data)
-EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage constants                 # fold constants (needs loop_fir's fits and grids)
-for rt in 0.3 0.6 0.8 1.0 1.4 1.8 2.2 2.5; do EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage run --rt $rt; done
-EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --stage report                    # → analysis/loop_cv/report.log
-EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --lf04dc --stage constants|run|report   # + LF 0.4's DC 0.414 (model_s_results.md §25.4) → analysis/loop_cv/lf04dc/
-EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --cells --stage constants|run|report    # + the DC floor per cell (§25.6; needs lowband_shelf's floor grid, --gamma-nyq) → analysis/loop_cv/cells/
-EMT_KERNEL=chain2 .venv/bin/python tools/loop_cv.py --hfcells --stage constants|run|report  # + the HF pole per cell (§25.7; needs lowband_shelf's hfcell grid) → analysis/loop_cv/hfcells/
-EMT_KERNEL=chain2 .venv/bin/python tools/lowband.py --stage score [--variant tfix]      # low band, one file per setting (tfix needs transfer + tfit)
-EMT_KERNEL=chain2 .venv/bin/python tools/lowband.py --stage report [--variant tfix]     # → analysis/lowband/chain2_<variant>_report.log
-.venv/bin/python -m pytest tests -q
+git clone --recurse-submodules https://github.com/tehguitarist/REV-246.git
+cd REV-246
+cmake -S plugin -B plugin/build -DCMAKE_BUILD_TYPE=Release -DRV_STANDALONE=ON
+cmake --build plugin/build --config Release --parallel 3
 ```
+
+The plugins land in `plugin/build/REV246_artefacts/Release/{AU,VST3,Standalone}` (AU on macOS only). Add
+`-DRV_BUILD_TESTS=ON` and run `ctest --test-dir plugin/build -C Release` to build and run the tests.
+
+Development rules (cross-platform code, assets, CI) and the source layout are in
+[plugin/docs/DEVELOPMENT.md](plugin/docs/DEVELOPMENT.md); the engine is described in [plugin/docs/ENGINE.md](plugin/docs/ENGINE.md).
+The measurement and analysis work behind the reverb is kept in this repository's history, at the tag
+[`research-archive`](https://github.com/tehguitarist/REV-246/tree/research-archive).
+
+## Licence
+
+REV-246 is free software under the [GNU AGPLv3](LICENSE). It uses [JUCE](https://juce.com) under its AGPLv3 option,
+and the notices for it and the other third-party code are in [THIRD_PARTY_NOTICES.md](plugin/THIRD_PARTY_NOTICES.md).
+
+## Credits
+
+Built by Leigh Pierce, using [JUCE](https://juce.com/) for the plugin framework and interface.

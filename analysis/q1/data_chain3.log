@@ -1,2 +1,0 @@
-128 groups; L-R tap-0 offset after the cache's 19.19 us shift: median 0.0001, range 0.0000..0.0001
-EMT_KERNEL=chain3 .venv/bin/python tools/q1_generalise.py --stage data  4.78s user 0.35s system 90% cpu 5.642 total

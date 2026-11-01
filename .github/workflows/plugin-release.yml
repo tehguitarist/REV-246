@@ -28,6 +28,10 @@ on:
         description: "Create as a draft release (review before publishing)"
         type: boolean
         default: true
+      notes:
+        description: "Release notes"
+        type: string
+        default: ""
       skip_ci_check:
         description: "Release even though CI has not passed on this commit (leave off unless you know why)"
         type: boolean
@@ -451,6 +455,7 @@ jobs:
           tag_name: plugin-v${{ needs.version.outputs.version }}
           name: REV-246 v${{ needs.version.outputs.version }}
           draft: ${{ inputs.draft }}
+          body: ${{ inputs.notes }}
           prerelease: ${{ startsWith(needs.version.outputs.version, '0.') }} # every 0.x version is a pre-release
           files: |
             artifacts/**/*.zip

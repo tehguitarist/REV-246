@@ -1,8 +1,0 @@
-RT 0.3 [memguard] peak footprint 2.17 GB, 39 s, exit 0
-RT 0.6 [memguard] peak footprint 2.30 GB, 50 s, exit 0
-RT 0.8 [memguard] peak footprint 2.26 GB, 56 s, exit 0
-RT 1.0 [memguard] peak footprint 2.24 GB, 68 s, exit 0
-RT 1.4 [memguard] peak footprint 2.19 GB, 84 s, exit 0
-RT 1.8 [memguard] peak footprint 2.28 GB, 102 s, exit 0
-RT 2.2 [memguard] peak footprint 2.19 GB, 126 s, exit 0
-RT 2.5 [memguard] peak footprint 2.16 GB, 143 s, exit 0

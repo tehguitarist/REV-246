@@ -1,7 +1,0 @@
-untrimmed captures with a branch: 814  n differs between free and grid: 0
-0.0-0.05 814 free -54.1  grid -54.1  excess(grid) +24.9  <=-50: 698 -> 696  worse by >1 dB: 2
-0.05-0.15 814 free -59.6  grid -58.9  excess(grid) +12.9  <=-50: 723 -> 719  worse by >1 dB: 250
-0.15-0.3 803 free -57.8  grid -57.6  excess(grid) +10.1  <=-50: 616 -> 615  worse by >1 dB: 60
-0.3-0.6 750 free -49.5  grid -49.4  excess(grid) +8.5  <=-50: 366 -> 365  worse by >1 dB: 16
-0.6-1.0 513 free -39.1  grid -38.9  excess(grid) +6.6  <=-50: 50 -> 42  worse by >1 dB: 15
-1.0-2.0 255 free -28.2  grid -28.2  excess(grid) +5.7  <=-50: 0 -> 0  worse by >1 dB: 3
