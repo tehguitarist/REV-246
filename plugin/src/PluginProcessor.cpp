@@ -10,7 +10,10 @@
 namespace
 {
 constexpr double rampSeconds = 0.02; // 20 ms: the gain, mix, pan and crossfade ramps
-constexpr float vuRiseSeconds = 0.3f; // VU: 99% of a step in ~300 ms
+constexpr float vuRiseSeconds = 0.3f; // VU: 99% of a step in ~300 ms (ANSI C16.5 / IEC 60268-17)
+// Two cascaded one-poles of equal tau are critically damped: a step reaches 1 - (1 + x) e^-x of its value at x = t / tau,
+// which is 99% at x = 6.64. That is the slow start and the unhurried fall of a VU needle, which a single pole lacks.
+constexpr float vuCriticalDampingX99 = 6.64f;
 // Stereo-to-mono summation (original mode only): 0.5 = -6 dB, so two identical/correlated channels stay at unity
 // instead of gaining 6 dB. The equal-power alternative, 1/sqrt(2), would keep uncorrelated stereo at its power but
 // add 3 dB to centred material; input headroom matters more here, so use the conservative sum.
@@ -90,7 +93,6 @@ Rev246Processor::Rev246Processor()
     pTrueStereo = apvts.getRawParameterValue(id::trueStereo);
     pSixteenBit = apvts.getRawParameterValue(id::sixteenBit);
     pStereoWidth = apvts.getRawParameterValue(id::stereoWidth);
-    pPreDelayMs = apvts.getRawParameterValue(id::preDelayMs);
     pDuckEnabled = apvts.getRawParameterValue(id::duckEnabled);
     pDuckRangeDb = apvts.getRawParameterValue(id::duckRangeDb);
     pDuckThresholdDb = apvts.getRawParameterValue(id::duckThresholdDb);
@@ -135,7 +137,6 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
     stereoWidener.prepare(sampleRate);
     stereoWidener.setWidth(pStereoWidth->load(), true);
     ducker.prepare(sampleRate);
-    preDelay.prepare(sampleRate);
     for (auto* s : {&inGain, &outGain, &mixAmount, &panLeft, &panRight, &powerOn, &transformerOn})
         s->reset(sampleRate, rampSeconds);
     inGain.setCurrentAndTargetValue(rv::params::gainLinearFromPosition(pIn->load()));
@@ -151,9 +152,9 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
     dryStereo.reset(sampleRate, rampSeconds);
     // processBlock works in chunks of at most this many samples, so it never has to grow the scratch buffer.
     scratch.setSize(numScratchChannels, maxBlock, false, false, true);
-    // VU meter: a first-order RMS integrator. The classic VU reaches 99% in ~300 ms, so tau = 300 ms / ln 100.
-    vuTauSamples = (double)(vuRiseSeconds / std::log(100.0f)) * sampleRate;
-    vuLevel = 0.0f;
+    // VU meter: a critically damped (two-pole) RMS integrator that reaches 99% of a step in 300 ms, like the standard.
+    vuTauSamples = (double)(vuRiseSeconds / vuCriticalDampingX99) * sampleRate;
+    vuLevel = vuStage1 = 0.0f;
     inputVu.store(0.0f);
     inputClip.store(false);
     lastTrueStereo = isStereoToStereo() && isOn(*pTrueStereo);
@@ -161,7 +162,6 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
     engineKey = {}; // the engines are prepared afresh: send them their settings, and start in the current program
     applyParameters(); // rather than crossfading into it from the default one
     ducker.reset();
-    preDelay.reset();
     for (auto& e : engines)
         e.reset();
     const auto latency = engines[0].latency(); // the same for every program, both modes and both engines
@@ -239,12 +239,10 @@ void Rev246Processor::processChunk(juce::AudioBuffer<float>& buffer)
     // two sides come from the two engines.
     processTransformerOutputs(b, n, trueStereo);
 
-    // The input-keyed duck (its key is the undelayed input, so it leads the wet by the latency, ~1 ms: a small lookahead)
-    // comes before the pre-delay, so the gain envelope travels with the delayed wet and the
-    // reverb is still ducked when its first arrival happens. Width comes last (pure M/S gains: nothing moves in time).
+    // The input-keyed duck (its key is the undelayed input, so it leads the wet by the latency, ~1 ms: a small lookahead).
+    // Width comes last (pure M/S gains: nothing moves in time).
     auto* wetR = trueStereo ? b.wetR1 : b.wetR0;
     ducker.process(b.duckKey, b.wetL0, wetR, n);
-    preDelay.process(b.wetL0, wetR, n);
 
     stereoWidener.setWidth(pStereoWidth->load());
     if (stereoOut)
@@ -289,7 +287,6 @@ void Rev246Processor::applyParameters()
     mixAmount.setTargetValue(pMix->load());
     powerOn.setTargetValue(isOn(*pPower) ? 1.0f : 0.0f);
     transformerOn.setTargetValue(isOn(*pTransformer) ? 1.0f : 0.0f);
-    preDelay.setDelayMs(pPreDelayMs->load());
     ducker.setEnabled(isOn(*pDuckEnabled));
     ducker.setRangeDb(pDuckRangeDb->load());
     ducker.setThresholdDb(pDuckThresholdDb->load());
@@ -350,7 +347,8 @@ float Rev246Processor::processInputStage(const float* inL, const float* inR, con
 
     const auto rms = std::sqrt(sumSq / (float)n);
     const auto a = 1.0f - std::exp(-(float)n / (float)vuTauSamples);
-    vuLevel = a * rms + (1.0f - a) * vuLevel;
+    vuStage1 = a * rms + (1.0f - a) * vuStage1;
+    vuLevel = a * vuStage1 + (1.0f - a) * vuLevel;
     inputVu.store(vuLevel, std::memory_order_relaxed);
     return peak;
 }

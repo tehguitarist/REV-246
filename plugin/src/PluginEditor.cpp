@@ -116,8 +116,6 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
               [](float v) { return std::abs(v) < 0.005f ? juce::String("Centre") : juce::String(v < 0.f ? "L " : "R ") + juce::String(std::abs(v) * 100.f, 2) + " %"; }),
       widthKnob({0.0f, D::widthKnobTop, D::widthKnobW, D::widthKnobH}, *p.apvts.getParameter(P::id::stereoWidth), bubble,
                 [](float v) { return juce::String(juce::roundToInt(v)) + " %"; }),
-      preDelayKnob({0.0f, D::widthKnobTop, D::preDelayKnobW, D::widthKnobH}, *p.apvts.getParameter(P::id::preDelayMs),
-                   bubble, [](float v) { return juce::String(juce::roundToInt(v)) + " ms"; }, "PRE-DLY"),
       mixFader(images, L::Image::redFader, L::mixFader.cx, D::mixTop, D::mixBottom,
                *p.apvts.getParameter(P::id::mix), bubble, [](float v) { return juce::String(v * 100.f, 2) + " %"; }),
       inputFader(images, L::Image::whiteFader, L::inputFader.cx, D::gainTop, D::gainBottom,
@@ -127,7 +125,7 @@ Rev246Editor::Rev246Editor(Rev246Processor& p)
       presetBar(p.presets, *this),
       // The bar's buttons are placed by layoutBottomBar(); only their widths are set here.
       linkButton(images, L::link.bounds()),
-      duckButton(barSlot(D::duckWidth), "DUCK", rv::ui::BarButton::Kind::toggle, 28.0f),
+      duckButton(barSlot(D::duckWidth), "DUCKER", rv::ui::BarButton::Kind::toggle, 28.0f),
       transformerButton(barSlot(D::transformerWidth), "XFMR", rv::ui::BarButton::Kind::toggle),
       formatButton(barSlot(D::formatWidth), "FLOAT", rv::ui::BarButton::Kind::toggle),
       stereoButton(barSlot(D::stereoModeWidth), "ORIGINAL", rv::ui::BarButton::Kind::toggle),
@@ -171,7 +169,8 @@ Rev246Editor::~Rev246Editor()
 
 // The right end of the bar is laid out from the version number's width (fonts differ by platform): the version sits
 // versionRightPad from the panel's right edge, then the "?" versionGap to its left, then XFMR, FLOAT / 16-BIT,
-// ORIGINAL / TRUE ST, DUCK, the pre-delay halo and the width halo, each a barGap apart. CAL sits at the left end of the bar, after SAVE.
+// ORIGINAL / TRUE ST, DUCKER and the width halo, each a barGap apart. CAL sits at the left end of the bar, after SAVE. The REV-246
+// title is centred between CAL and the width halo, the nearest buttons on either side.
 void Rev246Editor::layoutBottomBar()
 {
     const auto versionWidth = rv::ui::textWidth(rv::ui::labelFont(D::versionCapHeight), versionText()) + 2.0f;
@@ -192,8 +191,13 @@ void Rev246Editor::layoutBottomBar()
     placeLeft(formatButton);
     placeLeft(stereoButton);
     placeLeft(duckButton);
-    placeLeft(preDelayKnob);
     placeLeft(widthKnob);
+
+    const auto calRight = D::calLeft + D::calWidth;
+    const auto widthLeft = widthKnob.getDesignBounds().getX();
+    auto tb = titleLabel.getDesignBounds();
+    tb.setX(0.5f * (calRight + widthLeft) - 0.5f * tb.getWidth());
+    titleLabel.setDesignBounds(tb);
 }
 
 void Rev246Editor::setUpProgramControls()
@@ -300,8 +304,6 @@ void Rev246Editor::setUpBarButtons()
 void Rev246Editor::setUpKnobsAndFaders()
 {
     widthKnob.onDoubleClick = [this] { promptWidthValue(); };
-    preDelayKnob.onDoubleClick = [this] { promptPreDelayValue(); };
-    preDelayKnob.helpText = rv::ui::help::preDelay();
     mixFader.helpText = rv::ui::help::mix();
     inputFader.helpText = rv::ui::help::input();
     outputFader.helpText = rv::ui::help::output();
@@ -320,7 +322,7 @@ void Rev246Editor::addChildren()
     for (auto& b : programButtons) designComponents.push_back(b.get());
     for (auto& l : leds) designComponents.push_back(l.get());
     for (auto* c : std::initializer_list<rv::ui::DesignComponent*>{&powerButton, &programDisplay, &lowpassDisplay, &reflectionsDisplay,
-                                                                  &decayDisplay, &levelMeter, &panKnob, &widthKnob, &preDelayKnob, &mixFader, &inputFader,
+                                                                  &decayDisplay, &levelMeter, &panKnob, &widthKnob, &mixFader, &inputFader,
                                                                   &outputFader, &linkButton, &duckButton, &transformerButton, &formatButton, &stereoButton, &calButton, &helpButton,
                                                                   &titleLabel, &versionLabel})
         designComponents.push_back(c);
@@ -546,24 +548,6 @@ void Rev246Editor::showCalMenu()
                            safe->meterCalIndex = safe->proc.getMeterCal();
                            safe->calButton.setLabel(safe->calLabel());
                        });
-}
-
-void Rev246Editor::promptPreDelayValue(const juce::String& initial)
-{
-    auto& pr = param(P::id::preDelayMs);
-    const auto current = juce::String(juce::roundToInt(pr.convertFrom0to1(pr.getValue())));
-    const juce::String hint("Valid: whole numbers from 0 to 200 (milliseconds).");
-    showValueDialog("Enter pre-delay", "Enter the reverb pre-delay.\nCurrent: " + current + " ms.\n" + hint,
-                    initial.isEmpty() ? current : initial, hint,
-                    [this](const juce::String& text) {
-                        double value = 0.0;
-                        if (!parseNumber(text, value) || value < 0.0 || value > (double)P::preDelayMaxMs
-                            || std::abs(value - (double)juce::roundToInt(value)) >= 1e-6)
-                            return false;
-                        setParamValue(param(P::id::preDelayMs), (float)juce::roundToInt(value));
-                        return true;
-                    },
-                    [this](const juce::String& text) { promptPreDelayValue(text); });
 }
 
 // The DUCK pop-up, a call-out box that points up at the button from the bar.

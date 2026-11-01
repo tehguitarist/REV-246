@@ -230,7 +230,7 @@ void PresetBar::showMenu()
     int id = 1;
     std::vector<juce::String> byId{{}};
     menu.addSectionHeader("Factory");
-    // The five Init presets at the top level; the Altiverb ones in one submenu per program.
+    // The five Init presets at the top level; the rest in one submenu per programme.
     const auto factory = presets.factoryNames();
     std::array<juce::PopupMenu, rv::params::numPrograms> altiverb;
     for (int i = 0; i < factory.size(); ++i)
@@ -242,7 +242,7 @@ void PresetBar::showMenu()
     }
     for (int p = 0; p < rv::params::numPrograms; ++p)
         if (altiverb[(size_t)p].getNumItems() > 0)
-            menu.addSubMenu("Altiverb " + rv::params::programLongName((rv::params::Program)p), altiverb[(size_t)p]);
+            menu.addSubMenu(rv::params::programLongName((rv::params::Program)p), altiverb[(size_t)p]);
     const auto users = presets.userNames();
     if (!users.isEmpty())
     {

@@ -12,7 +12,7 @@ and a sound that sits in a mix instead of on top of it. It runs as AU, VST3 and 
 
 Five programmes cover everything from a tight room to a twenty-second cathedral, including a non-linear programme for
 gated and reverse drum sounds and the older EMT 250 algorithm. The panel keeps the original's six levers, glowing readouts and
-fader pack. Beneath it are modern conveniences that the original made hard or impossible: an extra pre-delay, a ducker,
+fader pack. Beneath it are modern conveniences that the original made hard or impossible: a ducker,
 a stereo-width control, true-stereo operation, presets, and switches for the 16-bit and transformer character that
 were fixed in the hardware (or, for the transformers, a factory option you had to order).
 
@@ -29,10 +29,10 @@ listened to before the first release, so there is no download yet. When there is
   original; switch them off for a clean, modern tail.
 - **Six levers:** low-pass, reflections delay and amplitude, and decay: low-frequency multiplier,
   reverberation time and high-frequency multiplier.
-- **Modern conveniences the original lacked:** pre-delay (0 to 200 ms), an input-keyed ducker, a WIDTH control that
+- **Modern conveniences the original lacked:** an input-keyed ducker, a WIDTH control that
   keeps the bass mono as it widens, a mono-sum or true-stereo input mode, and one-click switches for the 16-bit and
   transformer character.
-- **64 factory presets** from small rooms and chambers to halls and cathedrals, plus your own user presets.
+- **65 factory presets** from small rooms and chambers to halls and cathedrals, plus your own user presets.
 - **Light on the CPU:** about 0.5 to 0.8 % of one Apple-silicon core at 44.1 / 48 kHz and about 1 % at 96 kHz, with about
   1 ms of latency that your DAW compensates for.
 
@@ -67,7 +67,6 @@ The first group is the original's; the second is what REV-246 adds.
 
 **Added for modern use:**
 
-- **Pre-delay:** up to 200 ms before the reverb, on top of the programme's own reflections delay.
 - **Ducker:** lowers the reverb while the input is over a threshold, so it blooms in the gaps. Range, threshold,
   attack and release are adjustable.
 - **WIDTH:** sets how wide the wet signal sits, from mono through the original's width to extra wide, with the bass kept
@@ -107,8 +106,7 @@ notch, and Option/Alt-click to return to the default.
 | **REFLECTIONS** (DELAY, AMPL.) | Delay before the early reflections, 0 to 999 ms, and their level, 0 to 100 % |
 | **DECAY** (LF ×, RT, HF ×) | Reverberation time in seconds, with multipliers for how much faster or slower the low and high frequencies decay |
 | **WIDTH** | Wet stereo width: 0 = mono, 100 = unchanged, 200 = extra wide. Above 100 the bass stays mono |
-| **PRE-DELAY** | Extra delay before the reverb, 0 to 200 ms (after the ducker). Option/Alt-click for 0 |
-| **DUCK** | Lowers the reverb while the input is over a threshold. Click for its settings: range (0 to -60 dB), threshold, attack and release |
+| **DUCKER** | Lowers the reverb while the input is over a threshold. Click for its settings: range (0 to -60 dB), threshold, attack and release |
 | **MIX** | Wet/dry balance. PAN places the dry signal |
 | **INPUT / OUTPUT** | Levels, with LINK to move them together |
 
@@ -173,10 +171,10 @@ character and not its level. The recordings are summed to mono for the reverb (t
 
 | Example | Settings | Dry | IR source | REV-246 |
 |---|---|---|---|---|
-| Room mic | Programme S, RT 1.0 s, LF 1.0, HF 0.9, AMPL 80 %, DELAY 10 ms | [dry](../docs/listen/audio/room-mic_dry.mp3) | 1: [IR](../docs/listen/audio/room-mic_ir.mp3) | [REV-246](../docs/listen/audio/room-mic_plugin.mp3) |
-| Piano | Programme M, RT 1.5 s, LF 1.2, HF 0.7, AMPL 60 %, DELAY 40 ms (factory preset *Altiverb P1 Piano*) | [dry](../docs/listen/audio/piano_dry.mp3) | 2: [IR](../docs/listen/audio/piano_ir.mp3) | [REV-246](../docs/listen/audio/piano_plugin.mp3) |
+| Room mic | Programme S, RT 1.0 s, LF 1.0, HF 0.9, AMPL 80 %, DELAY 10 ms (factory preset *S Drum Room*) | [dry](../docs/listen/audio/room-mic_dry.mp3) | 1: [IR](../docs/listen/audio/room-mic_ir.mp3) | [REV-246](../docs/listen/audio/room-mic_plugin.mp3) |
+| Piano | Programme M, RT 1.5 s, LF 1.2, HF 0.7, AMPL 60 %, DELAY 40 ms (factory preset *M Piano*) | [dry](../docs/listen/audio/piano_dry.mp3) | 2: [IR](../docs/listen/audio/piano_ir.mp3) | [REV-246](../docs/listen/audio/piano_plugin.mp3) |
 | Acoustic guitar | Programme S, RT 1.4 s, LF 1.0, HF 0.6, AMPL 60 %, DELAY 0 | [dry](../docs/listen/audio/acoustic-guitar_dry.mp3) | 3: [IR](../docs/listen/audio/acoustic-guitar_ir.mp3) | [REV-246](../docs/listen/audio/acoustic-guitar_plugin.mp3) |
-| Snare (gated) | Programme N, SPAN 0.2 s, EARLY RT -3.0 s, LATE RT 0.8 s, DELAY 39 ms (factory preset *Altiverb P54 Gated*) | [dry](../docs/listen/audio/snare_dry.mp3) | 2: [IR](../docs/listen/audio/snare-ir2_ir.mp3) | [REV-246](../docs/listen/audio/snare-ir2_plugin.mp3) |
+| Snare (gated) | Programme N, SPAN 0.2 s, EARLY RT -3.0 s, LATE RT 0.8 s, DELAY 39 ms (factory preset *N Gated*) | [dry](../docs/listen/audio/snare_dry.mp3) | 2: [IR](../docs/listen/audio/snare-ir2_ir.mp3) | [REV-246](../docs/listen/audio/snare-ir2_plugin.mp3) |
 | Snare (gated) | The same, DELAY 0 | [dry](../docs/listen/audio/snare_dry.mp3) | 3: [IR](../docs/listen/audio/snare-ir3_ir.mp3) | [REV-246](../docs/listen/audio/snare-ir3_plugin.mp3) |
 
 The reverb is the plugin's own engine set to FLOAT with XFMR off: an impulse response is linear and noise-free, so 16-BIT's noise and grit and XFMR's added low-end weight would only move the plugin away from it. Both are there to switch on. The IRs are single measurements of a

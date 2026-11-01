@@ -328,12 +328,11 @@ void migrateState(juce::ValueTree state)
     const int from = state.getProperty(stateVersionProperty, 0);
     if (from > stateVersion)
         return;
-    // from 0 and 1 share the layout, but 2 added pre-delay and the ducker: an older state has no nodes for them, and
+    // from 0 and 1 share the layout, but 2 added the ducker: an older state has no nodes for them, and
     // a host that loads it into a running plugin would leave their current values in place. Write the defaults.
     if (from < 2)
     {
         const struct { const char* paramId; float value; } added[] = {
-            {id::preDelayMs, 0.0f},
             {id::duckEnabled, 0.0f},
             {id::duckRangeDb, duckDefaultRangeDb},
             {id::duckThresholdDb, duckDefaultThresholdDb},
@@ -408,10 +407,6 @@ juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
 
     // Added after the first release: their IDs use a new version hint.
     auto newPid = [](const char* s) { return ParameterID(s, addedParameterVersion); };
-    layout.add(std::make_unique<AudioParameterFloat>(
-        newPid(id::preDelayMs), "Pre-delay", NormalisableRange<float>(0.f, preDelayMaxMs, 1.f), 0.f,
-        AudioParameterFloatAttributes().withStringFromValueFunction(
-            [](float v, int) { return String(juce::roundToInt(v)) + " ms"; })));
     layout.add(std::make_unique<AudioParameterBool>(newPid(id::duckEnabled), "Ducker", false));
     layout.add(std::make_unique<AudioParameterFloat>(
         newPid(id::duckRangeDb), "Ducker range", NormalisableRange<float>(duckMinRangeDb, duckMaxRangeDb, 0.01f),

@@ -21,8 +21,8 @@ inline constexpr float helpWidth = 90.0f, calWidth = 220.0f;
 inline constexpr float presetBarLeft = 58.0f;                       // the preset bar starts here; SAVE ends 1106 later
 inline constexpr float calLeft = presetBarLeft + 1114.0f;                          // CAL follows the preset buttons at the bar's left end
 inline constexpr float widthKnobTop = barTop + 10.0f, widthKnobW = 140.0f, widthKnobH = 130.0f;
-inline constexpr float preDelayKnobW = 100.0f, duckWidth = 150.0f;
-inline constexpr float titleLeft = 1597.0f, titleWidth = 300.0f;   // REV-246 centred on the panel
+inline constexpr float duckWidth = 200.0f;
+inline constexpr float titleLeft = 1597.0f, titleWidth = 300.0f;   // REV-246: centred between CAL and the width halo by layoutBottomBar (titleLeft is only its first position)
 inline constexpr float barRuleThickness = 4.0f, barRuleAlpha = 0.55f; // the gold rule where main.png ends
 inline constexpr float titleCapHeight = 42.0f, versionCapHeight = 30.0f;
 inline const juce::Colour barColour{0xff1a272d}; // main.png's own bottom edge

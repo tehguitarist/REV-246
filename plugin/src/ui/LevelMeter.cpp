@@ -28,13 +28,25 @@ LevelMeter::LevelMeter() : DesignComponent(unionBounds())
 void LevelMeter::setLevel(float vuLinear, bool clip, float refDbFs)
 {
     // Thresholds on the scale, in dB relative to the meter's 0 VU reference; the lowest LED is -12.
-    const auto db = juce::Decibels::gainToDecibels(vuLinear, -120.0f) - refDbFs;
+    const auto now = juce::Time::getMillisecondCounterHiRes();
+    const auto vuDb = juce::Decibels::gainToDecibels(vuLinear, -120.0f) - refDbFs;
+    if (vuDb >= heldDb)
+    {
+        heldDb = vuDb;
+        holdUntilMs = now + holdMs;
+    }
+    else if (now > holdUntilMs)
+        heldDb = juce::jmax(vuDb, heldDb - fallDbPerSecond * (float)(0.001 * (now - juce::jmax(lastMs, holdUntilMs))));
+    lastMs = now;
+    const auto db = heldDb;
     int count = 0;
     for (int i = design::numLevelLeds - 1; i >= 1; --i) // from -12 up to +3
         if (db >= design::levelStepsDb[i])
             count = design::numLevelLeds - i;
-    // OVL: +6 VU, or a peak (full scale, or the unit's A/D overload), whichever comes first.
-    const bool ovl = db >= design::levelStepsDb[0] || clip;
+    // OVL: +6 VU, or a peak (full scale, or the unit's A/D overload), whichever comes first; held like the level.
+    if (vuDb >= design::levelStepsDb[0] || clip)
+        overUntilMs = now + holdMs;
+    const bool ovl = now < overUntilMs;
     if (count != lit || ovl != over)
     {
         lit = count;
@@ -48,7 +60,8 @@ juce::String LevelMeter::getTooltip()
 {
     return "Input level in VU, after the INPUT fader (the 0 VU reference is set in the bottom bar). OVL lights at +6 VU, "
            "or on any peak the unit's A/D converter would clip (as its REG LED did: high frequencies and short peaks "
-           "can clip before the VU reading gets there).";
+           "can clip before the VU reading gets there). The meter has VU ballistics (300 ms to full reading); the lights hold "
+           "their peak for 0.4 s so a short hit stays readable.";
 }
 
 void LevelMeter::paint(juce::Graphics& g)

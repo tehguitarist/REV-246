@@ -34,6 +34,18 @@ def order(name):
     return (2, 0, 0.0)
 
 
+def display_name(plugin_name, program):
+    """The menu name: no 'Altiverb', no preset number, the programme letter first ('Altiverb P1 Piano' -> 'M Piano')."""
+    n = re.sub(r"^P\d+ ", "", plugin_name.removeprefix("Altiverb "))
+    return n if n.startswith(program + " ") else f"{program} {n}"
+
+
+# Extra presets that are not one of the Altiverb files: (name, programme, steps, label, source). Inserted before the
+# programme's other presets. Drum Room is the CLA capture's panel (the same steps as the S 1.0 s family preset).
+EXTRA = [("S Drum Room", "S", [7, 10, 8, 9, 8, 8],
+          "S: RT 1.0 (C), LF 1.0 (C), HF 0.9 (C), AMPL 80 (C), DELAY 10 (C), LP 12 (C)", "CLA capture")]
+
+
 def cstr(s):
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
@@ -51,8 +63,20 @@ def main():
             st = int(e["settings"][j]["step"])
             assert 0 <= st <= MAX_STEP[j], (name, j, st)
             steps.append(st)
-        assert len(e["plugin_name"]) <= 24, e["plugin_name"]
-        rows.append((e["plugin_name"], PROGRAMS.index(e["program"]), steps, e["label_string"], name))
+        nm = display_name(e["plugin_name"], e["program"])
+        assert len(nm) <= 24, nm
+        rows.append((nm, PROGRAMS.index(e["program"]), steps, e["label_string"], name))
+    for nm, prog, steps, label, src in EXTRA:
+        rows.insert(0, (nm, PROGRAMS.index(prog), steps, label, src))
+    # Two presets can lose the same name with their numbers (E 'Med Warm' x2): the RT from the label tells them apart.
+    seen = {}
+    for r in rows:
+        seen.setdefault(r[0], []).append(r)
+    for nm, group in seen.items():
+        if len(group) > 1:
+            for r in group:
+                rt = re.search(r"RT ([\d.]+)", r[3]).group(1)
+                rows[rows.index(r)] = (f"{nm} {rt}s",) + r[1:]
     names = [r[0] for r in rows]
     assert len(set(names)) == len(names), "duplicate preset names"
 
