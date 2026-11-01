@@ -30,6 +30,7 @@ DEC = ["recirc1", "recirc2", "0.3-0.6", "0.6-1.0"]             # the depth estim
 CORR = 10 * np.log10(1.5)
 RUN = os.environ.get("DEPTH_DIR", "runs")
 TAG = "" if RUN == "runs" else "_" + RUN
+BASE = os.environ.get("DEPTH_BASE", "d13")         # the current plugin's variant (the held-out 'before')
 sc = lambda m: 1.0 if m.startswith("oct_dev") else 100.0
 
 
@@ -46,7 +47,7 @@ def load():
         bad = lambda a: ("M", key, a) in ML_SLIPPED
         ref = json.load(open(os.path.join(REF, os.path.basename(fn))))
         vs = list(d["variants"])
-        g = dict(key=key, rt=d["rt"], lf=d["lf"], hf=d["hf"], vars=vs, SW={v: [] for v in vs + ["d0"]}, SWn={v: [] for v in vs + ["d0"]},
+        g = dict(corr=d.get("pair_corr_db", {}), key=key, rt=d["rt"], lf=d["lf"], hf=d["hf"], vars=vs, SW={v: [] for v in vs + ["d0"]}, SWn={v: [] for v in vs + ["d0"]},
                  SPP={v: [] for v in vs}, SPPn={v: [] for v in vs}, CC=[], CCn=[], PL=[], PLn=[])
         for r in d["rows"]:
             if bad(r["amp"]):
@@ -102,7 +103,7 @@ def stats(gs, v):
         o["n"][w] = med([x.get(w) for g in gs for x in nrows(g)], f=lambda z: z)
         if sppn:
             x = med([x.get(w) for g in gs for x in sppn(g)], f=lambda z: z)
-            o["sppn"][w] = None if x is None else x - CORR
+            o["sppn"][w] = None if x is None else x - gs[0]["corr"].get(v, CORR)
     return o
 
 
@@ -130,7 +131,7 @@ def main():
     f2 = lambda x, k=100.0: "-" if x is None else f"{x * k:.2f}"
     out.append(f"# M theta depth scan: {len(G)} groups, variants {vs} (rms rad), Python core through the sweep, 3 phases")
     # check: the Python d13 against the plugin's own sw3 (the same theta, sweep and phases)
-    pl, py = stats(G, "PL"), stats(G, "d13") if "d13" in vs else None
+    pl, py = stats(G, "PL"), stats(G, BASE) if BASE in vs else None
     if py:
         out.append("check, plugin sw3 / python d13 (all M): " + "; ".join(f"{m} {f2(pl['m'][m], sc(m))} / {f2(py['m'][m], sc(m))}" for m in LOW)
                    + "; recirc1 " + f"{pl['n']['recirc1']:.1f} / {py['n']['recirc1']:.1f}")
@@ -168,7 +169,7 @@ def main():
     out.append("\n## Held out (odd groups): current d13 -> law, per RT; metric medians |%| [CC], in-tol %, nulls vs [CC]")
     for rt in rts:
         gO = [g for g in G if g["rt"] == rt and not ev(g)]
-        a, b, c = stats(gO, "d13"), stats(gO, law[rt]), cc_stats(gO)
+        a, b, c = stats(gO, BASE), stats(gO, law[rt]), cc_stats(gO)
         pct = lambda x: "-" if x is None else f"{100 * x:.0f}"
         cells = [f"{m} {f2(a['m'][m], sc(m))} -> {f2(b['m'][m], sc(m))} [{f2(c['m'][m], sc(m))}] ({pct(a['tol'][m])}->{pct(b['tol'][m])}%)" for m in MET]
         nl = " ".join(f"{w} {a['n'][w]:.1f}->{b['n'][w]:.1f} [{c['n'][w]:.1f}]" for w in NUL if a["n"][w] is not None and c["n"][w] is not None)

@@ -27,8 +27,70 @@ OUT = os.path.join(ROOT, "analysis", "ml_fix", "depth")
 FS = pc.FS
 RATE = 0.83
 VARIANTS = {"d13": (0.13, RATE), "d11": (0.11, RATE), "d09": (0.09, RATE), "d07": (0.07, RATE)}
-if os.environ.get("DEPTH_VARIANTS"):                 # e.g. "r13x2:0.13:1.66,..." name:rms:rate
-    VARIANTS = {v.split(":")[0]: (float(v.split(":")[1]), float(v.split(":")[2])) for v in os.environ["DEPTH_VARIANTS"].split(",")}
+if os.environ.get("DEPTH_VARIANTS"):                 # e.g. "rx2:0.13:1.66,tri:0.13:0.83:tri" name:rms:rate[:shape]
+    VARIANTS = {v.split(":")[0]: (float(v.split(":")[1]), float(v.split(":")[2])) + ((v.split(":")[3],) if len(v.split(":")) > 3 else ())
+                for v in os.environ["DEPTH_VARIANTS"].split(",")}
+
+# theta shapes, all at rms `rms` (long-run) and centre rate `rate`; k = 0..NPH-1 the realisation:
+#   sine  A sin(2 pi f t + 2 pi k / 3), A = rms sqrt 2 (the plugin's)
+#   tri   the triangle of the same rms (peak rms sqrt 3), same phases
+#   rnd   Gaussian narrow-band noise: white noise through a 2-pole resonator at f, -3 dB bandwidth NB_HZ (Lorentzian line:
+#         autocorrelation cos(2 pi f tau) exp(-pi NB tau)), scaled to the long-run rms; seed SEED0 + k (k independent)
+#   drift sine with a Wiener phase: A sin(2 pi f t + 2 pi k / 3 + phi(t)), phi's diffusion set for the same Lorentzian
+#         envelope exp(-pi NB tau) (phase-diffusion line), seed SEED0 + k; constant amplitude
+NB_HZ = float(os.environ.get("THETA_NB", "0.12"))  # envelope 0.85 at 0.44 s: the library's rho(0.44 s) -0.56 against a pure
+                                                    # cosine's -0.66 (ml_structure 9.3: 0.82 / 0.38 / -0.56 vs 0.84 / 0.41 / -0.66)
+SEED0 = 4242
+FC = 200.0                                          # control rate of the random shapes (Hz), linear interpolation to the device rate
+_GAIN = {}
+
+
+def _resonator(rate, fc=FC):
+    r = np.exp(-np.pi * NB_HZ / fc)
+    w0 = 2 * np.pi * rate / fc
+    return [1.0], [1.0, -2 * r * np.cos(w0), r * r]
+
+
+def theta_fn(rms, rate, shape="sine", k=0):
+    from scipy.signal import lfilter
+    if shape == "sine":
+        A = rms * np.sqrt(2)
+        return lambda t: A * np.sin(2 * np.pi * rate * t + 2 * np.pi * k / NPH)
+    if shape == "tri":
+        A = rms * np.sqrt(3)
+        return lambda t: A * (2 / np.pi) * np.arcsin(np.sin(2 * np.pi * rate * t + 2 * np.pi * k / NPH))
+    if shape == "rnd":
+        b, a = _resonator(rate)
+        if (rate, NB_HZ) not in _GAIN:                # the long-run rms of the unit-noise process (one 4000 s draw)
+            _GAIN[(rate, NB_HZ)] = float(np.std(lfilter(b, a, np.random.default_rng(999).standard_normal(int(4000 * FC)))[int(100 * FC):]))
+        g = rms / _GAIN[(rate, NB_HZ)]
+
+        def f(t):
+            n = int(np.ceil(t[-1] * FC)) + 2
+            burn = int(60 * FC)
+            x = lfilter(b, a, np.random.default_rng(SEED0 + k).standard_normal(n + burn))[burn:] * g
+            return np.interp(t, np.arange(n) / FC, x)
+        return f
+    if shape == "drift":
+        A = rms * np.sqrt(2)
+        D = 2 * np.pi * NB_HZ                         # phase diffusion (rad^2 / s): <cos dphi(tau)> = exp(-D tau / 2) = exp(-pi NB tau)
+
+        def f(t):
+            n = int(np.ceil(t[-1] * FC)) + 2
+            ph = np.cumsum(np.random.default_rng(SEED0 + k).standard_normal(n)) * np.sqrt(D / FC)
+            return A * np.sin(2 * np.pi * rate * t + 2 * np.pi * k / NPH + np.interp(t, np.arange(n) / FC, ph))
+        return f
+    raise ValueError(shape)
+
+
+def pair_corr_db(rms, rate, shape, T=30.0, fs=200.0):
+    """10 log10 of the mean (theta_i - theta_j)^2 over the NPH realisations' pairs, against 2 rms^2 (random-phase pairs'
+    expectation, = Tomkin's): what a pair null of these realisations reads deeper / shallower than random pairs by. Over
+    the first T s (the sweep's span)."""
+    t = np.arange(int(T * fs)) / fs
+    th = [theta_fn(rms, rate, shape, k)(t) for k in range(NPH)]
+    d = [np.mean((th[i] - th[j]) ** 2) for i in range(NPH) for j in range(i + 1, NPH)]
+    return float(10 * np.log10(np.mean(d) / (2 * rms ** 2)))
 NPH = 3
 BANDS = pc.OCT
 
@@ -65,10 +127,13 @@ def _job(a):
     tail = max(6.0, min(18.0, 0.8 * float(key.split("_")[1])))
     fit = lambda x: np.vstack([x, np.zeros((max(0, n - len(x)), 2))])[:n]
     R = {"d0": fit(mv.sweep_measure(M, key, lambda tt: 0 * tt, tail))}
-    for v, (rms, rate) in VARIANTS.items():
-        A = rms * np.sqrt(2)
+    corr = {}
+    for v, spec in VARIANTS.items():
+        rms, rate = spec[:2]
+        shape = spec[2] if len(spec) > 2 else "sine"
+        corr[v] = pair_corr_db(rms, rate, shape)
         for k in range(NPH):
-            R[f"{v}_{k}"] = fit(mv.sweep_measure(M, key, lambda tt, A=A, rate=rate, ph=2 * np.pi * k / NPH: A * np.sin(2 * np.pi * rate * tt + ph), tail))
+            R[f"{v}_{k}"] = fit(mv.sweep_measure(M, key, theta_fn(rms, rate, shape, k), tail))
     tr = time.time() - t
     i0 = K0 + int(((cc.ONSET[prog][1] + 20) / FS) * FS)
     a_, b_ = R0[K0:K0 + int(2 * FS), 1], R["d0"][K0:K0 + int(2 * FS), 1]
@@ -99,7 +164,7 @@ def _job(a):
         rows.append(row)
         del mdl, Y
     lf, rt, hf = (float(x) for x in key.split("_"))
-    json.dump(dict(key=key, prog=prog, lf=lf, rt=rt, hf=hf, variants=VARIANTS, sweep0_vs_parts_db=check, pair_amp=pair_amp, render_s=tr, rows=rows), open(path, "w"))
+    json.dump(dict(key=key, prog=prog, lf=lf, rt=rt, hf=hf, variants=VARIANTS, pair_corr_db=corr, nb_hz=NB_HZ, seed0=SEED0, sweep0_vs_parts_db=check, pair_amp=pair_amp, render_s=tr, rows=rows), open(path, "w"))
     r = [x for x in rows if x["amp"] == pair_amp][0]["vs_cap"]
     print(f"{prog} {key}: {time.time() - t:.0f} s (sims {tr:.0f}); d0 vs parts {check:.0f} dB; 500 Hz decay vs cap "
           + " ".join(f"{v} {np.mean([abs(r[f'{v}_{k}']['oct_t500'] or np.nan) for k in range(NPH)]) * 100:.1f}" for v in VARIANTS)
