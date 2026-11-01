@@ -166,7 +166,7 @@ estimate, since measurements of a unit's response cannot show it.
 **[Listen in your browser](https://tehguitarist.github.io/REV-246/listen/)**: looping players that switch between dry, IR and REV-246 in sync.
 
 Four recordings, each with the **dry** take, a convolution with a reference **impulse response (IR)** and **REV-246** set to the
-same settings. All at a **35 % wet mix** (0.65 dry + 0.35 wet); the two wets are level-matched, so what you hear is the reverb's
+same settings. All at a **40 % wet mix** (0.6 dry + 0.4 wet); the two wets are level-matched, so what you hear is the reverb's
 character and not its level. The recordings are summed to mono for the reverb (the original is mono in), the plugin's
 ~1 ms latency is removed as a DAW would, and the three files of an example share one gain. The IR sources are numbered
 1 to 3 and stay unnamed.
