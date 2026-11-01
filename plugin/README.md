@@ -18,9 +18,7 @@ were fixed in the hardware (or, for the transformers, a factory option you had t
 
 > REV-246 is an independent project. It is not affiliated with or endorsed by EMT or any other manufacturer.
 
-**Status:** pre-release. The reverb engine, panel, presets and installers are in place and are being checked and
-listened to before the first release, so there is no download yet. When there is, the latest one will be here:
-**[Download the latest release](https://github.com/tehguitarist/REV-246/releases/latest)**.
+**Version 1.0.** **[Download the latest release](https://github.com/tehguitarist/REV-246/releases/latest)** for macOS (AU and VST3), Windows (VST3) and Linux (VST3).
 
 ## Highlights
 

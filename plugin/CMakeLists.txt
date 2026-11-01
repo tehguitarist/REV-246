@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(REV246 VERSION 0.9.3)   # release.yml greps this line for the version; keep the format
+project(REV246 VERSION 1.0.0)   # release.yml greps this line for the version; keep the format
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
