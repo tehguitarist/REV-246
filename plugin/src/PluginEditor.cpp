@@ -41,7 +41,6 @@ constexpr const char* watchedParams[] = {P::id::program, P::id::mix, P::id::pan,
                                          P::id::trueStereo, P::id::sixteenBit, P::id::duckEnabled};
 
 // Holding the DELAY lever for more than a second speeds it up to this many steps (ms) per press, as on the unit.
-constexpr int delayHoldStep = 10;
 
 // A bottom-bar slot of the given width and left edge, on the bar's button row.
 juce::Rectangle<float> barSlot(float width, float left = 0.0f) { return {left, D::barRowTop, width, D::barRowHeight}; }
@@ -220,7 +219,8 @@ void Rev246Editor::setUpJoy(int i)
     const auto joy = (Joy)i;
     // Tooltips are set by refreshJoys(), which knows the programme.
     auto stick = std::make_unique<rv::ui::Joystick>(images, joySlots[i]);
-    stick->onStep = [this, joy](int dir, int hold) { stepJoy(joy, dir, hold); };
+    stick->onStep = [this, joy](int dir, int steps) { stepJoy(joy, dir, steps); };
+    stick->range = [this, joy] { return P::joyMaxStep(program(), joy); };
     stick->onReset = [this, joy] { resetJoy(joy); };
     joysticks.push_back(std::move(stick));
 
@@ -402,9 +402,9 @@ void Rev246Editor::setJoyStep(Joy j, int step)
         setParamValue(param(P::joyId(j)), (float)step);
 }
 
-void Rev246Editor::stepJoy(Joy j, int direction, int hold)
+void Rev246Editor::stepJoy(Joy j, int direction, int steps)
 {
-    const int amount = (j == Joy::delay && hold > 0) ? delayHoldStep : 1; // the unit speeds up when a lever is held
+    const int amount = juce::jmax(1, steps); // a held lever speeds up with its range (Joystick)
     // From the step shown: a step past this program's last (left by N's longer HF column) reads as the last.
     setJoyStep(j, std::min(joyStep(j), P::joyMaxStep(program(), j)) + direction * amount);
 }

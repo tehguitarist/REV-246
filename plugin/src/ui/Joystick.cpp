@@ -26,8 +26,30 @@ void Joystick::mouseDown(const juce::MouseEvent& e)
             onReset();
         return;
     }
-    pushed = e.y < getHeight() / 2 ? 1 : -1;
-    repeats = 0;
+    pressedHalf = e.y < getHeight() / 2 ? 1 : -1;
+    pushed = 0;
+    push(pressedHalf);
+}
+
+void Joystick::mouseDrag(const juce::MouseEvent& e)
+{
+    if (pushed == 0 || e.mods.isAltDown())
+        return;
+    // Dragging pushes the lever the way the pointer has moved from where it was pressed (up on screen = up), once it has
+    // left a small dead zone; back inside it, the lever returns to the half that was pressed.
+    const auto deadZone = juce::jmax(5.0f, 0.12f * (float)getHeight());
+    const auto dy = (float)e.getDistanceFromDragStartY();
+    const auto direction = std::abs(dy) <= deadZone ? pressedHalf : dy < 0.0f ? 1 : -1;
+    if (direction != pushed)
+        push(direction);
+}
+
+void Joystick::push(int direction)
+{
+    pushed = direction;
+    pressMs = lastTickMs = juce::Time::getMillisecondCounterHiRes();
+    owed = 0.0;
+    accelerating = false;
     repaint();
     fire();
     startTimer(repeatMs);
@@ -44,19 +66,49 @@ void Joystick::mouseWheelMove(const juce::MouseEvent&, const juce::MouseWheelDet
 {
     const auto delta = w.isReversed ? -w.deltaY : w.deltaY;
     if (!juce::exactlyEqual(delta, 0.0f) && onStep)
-        onStep(delta > 0.0f ? 1 : -1, 0);
+        onStep(delta > 0.0f ? 1 : -1, 1);
+}
+
+// Held steps per second, `heldSeconds` after the press: from 4 at the end of the first second, growing by a factor
+// per second that is larger for longer levers, up to the whole range per second.
+double Joystick::stepsPerSecond(double heldSeconds) const
+{
+    const auto r = (double)juce::jmax(range ? range() : 15, 1);
+    const auto growth = 2.0 + std::log10(juce::jmax(r, 16.0) / 16.0);
+    const auto after = juce::jmax(0.0, heldSeconds - accelerateAfterMs * 0.001);
+    return juce::jmin(r, 4.0 * std::pow(growth, after));
 }
 
 void Joystick::timerCallback()
 {
-    ++repeats;
-    fire();
+    const auto now = juce::Time::getMillisecondCounterHiRes();
+    if (!accelerating)
+    {
+        if (now - pressMs < accelerateAfterMs - 1) // still the half-second repeat
+        {
+            fire();
+            return;
+        }
+        accelerating = true;
+        lastTickMs = now;
+        startTimer(tickMs);
+        fire();
+        return;
+    }
+    owed += stepsPerSecond(0.001 * (now - pressMs)) * 0.001 * (now - lastTickMs);
+    lastTickMs = now;
+    const auto n = (int)owed;
+    if (n > 0)
+    {
+        owed -= n;
+        fire(n);
+    }
 }
 
-void Joystick::fire()
+void Joystick::fire(int steps)
 {
     if (onStep)
-        onStep(pushed, repeats * repeatMs >= accelerateAfterMs ? repeats : 0);
+        onStep(pushed, juce::jmax(1, steps));
 }
 
 //==============================================================================

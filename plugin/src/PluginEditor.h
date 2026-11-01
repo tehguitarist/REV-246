@@ -75,7 +75,7 @@ class Rev246Editor : public juce::AudioProcessorEditor, private juce::Timer, pri
     void setToggle(const char* id, bool on) { setParamValue(param(id), on ? 1.0f : 0.0f); }
     void selectProgram(int index);
 
-    void stepJoy(Joy, int direction, int hold);
+    void stepJoy(Joy, int direction, int steps);
     void setJoyStep(Joy, int step);
     void setJoy(Joy, float fraction); // 0..1 -> the nearest step
     void resetJoy(Joy);               // the default step
