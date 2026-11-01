@@ -509,3 +509,33 @@ TEST_CASE("cost of the whole processor", "[.profile]")
                                 sixteen ? "16-bit" : "float", xfmr ? "on" : "off", 100.0 * t / seconds);
                 }
 }
+
+TEST_CASE("the dry passes through INPUT and OUTPUT, so a LINKed pair at mix 0 leaves it where it was")
+{
+    namespace P = rv::params;
+    for (const bool trueStereo : {false, true})
+    {
+        Rev246Processor p;
+        setLayout(p, 2, 2);
+        p.prepareToPlay(48000.0, 256);
+        setParam(p, P::id::mix, 0.0f);
+        setParam(p, P::id::trueStereo, trueStereo ? 1.0f : 0.0f);
+        // LINK moves the other fader by the same number of dB the opposite way.
+        setParam(p, P::id::inputGain, P::gainPositionFromDb(-6.0f));
+        setParam(p, P::id::outputGain, P::gainPositionFromDb(6.0f));
+        juce::MidiBuffer midi;
+        for (int i = 0; i < 12; ++i)
+        {
+            juce::AudioBuffer<float> b(2, 256);
+            for (int ch = 0; ch < 2; ++ch)
+                for (int k = 0; k < 256; ++k)
+                    b.setSample(ch, k, 0.25f);
+            p.processBlock(b, midi);
+            if (i == 11)
+            {
+                CHECK(std::abs(b.getSample(0, 255) - 0.25f) < 2e-3f);
+                CHECK(std::abs(b.getSample(1, 255) - 0.25f) < 2e-3f);
+            }
+        }
+    }
+}

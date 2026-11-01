@@ -114,7 +114,7 @@ class Rev246Processor : public juce::AudioProcessor
     EngineKey engineKey;
     // The reported latency is the engine's (ReverbEngine::latency: the same for every program and both modes): the dry
     // and bypassed signals are delayed by the same amount, in a ring per input channel.
-    std::array<std::vector<float>, 2> dryDelay;
+    std::array<std::vector<float>, 3> dryDelay; // the input's L and R, and the INPUT gain, each delayed by the latency
     size_t dryPos = 0;
 
     void applyMeterCal(int index); // the atomics only (audio-thread readable), not the UI state

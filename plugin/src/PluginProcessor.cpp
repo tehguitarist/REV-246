@@ -35,6 +35,7 @@ enum ScratchChannel
     chDuckKey,           // the dry input level that keys the ducker (one value per sample)
     chDryInL,            // the input, delayed by the reported latency
     chDryInR,
+    chDryGain,           // the INPUT gain that went with each delayed dry sample
     numScratchChannels
 };
 
@@ -69,11 +70,12 @@ struct Rev246Processor::BlockBuffers
           transformerWeight(s.getWritePointer(chTransformerWeight)),
           duckKey(s.getWritePointer(chDuckKey)),
           dryInL(s.getWritePointer(chDryInL)),
-          dryInR(s.getWritePointer(chDryInR))
+          dryInR(s.getWritePointer(chDryInR)),
+          dryGain(s.getWritePointer(chDryGain))
     {
     }
 
-    float *engineIn0, *engineIn1, *wetL0, *wetR0, *wetL1, *wetR1, *transformerWeight, *duckKey, *dryInL, *dryInR;
+    float *engineIn0, *engineIn1, *wetL0, *wetR0, *wetL1, *wetR1, *transformerWeight, *duckKey, *dryInL, *dryInR, *dryGain;
 };
 
 Rev246Processor::Rev246Processor()
@@ -165,8 +167,8 @@ void Rev246Processor::prepareToPlay(double sampleRate, int samplesPerBlock)
     for (auto& e : engines)
         e.reset();
     const auto latency = engines[0].latency(); // the same for every program, both modes and both engines
-    for (auto& d : dryDelay)
-        d.assign((size_t)latency, 0.0f);
+    for (size_t k = 0; k < dryDelay.size(); ++k)
+        dryDelay[k].assign((size_t)latency, k == 2 ? 1.0f : 0.0f);
     dryPos = 0;
     setLatencySamples(latency);
 }
@@ -320,8 +322,10 @@ float Rev246Processor::processInputStage(const float* inL, const float* inR, con
         const auto l = inL[i], r = inR[i];
         b.dryInL[i] = dryDelay[0][ringPos];
         b.dryInR[i] = dryDelay[1][ringPos];
+        b.dryGain[i] = dryDelay[2][ringPos];
         dryDelay[0][ringPos] = l;
         dryDelay[1][ringPos] = r;
+        dryDelay[2][ringPos] = g;
         ringPos = ringPos + 1 == ringSize ? 0 : ringPos + 1;
         const auto monoInput = monoSumGain * (l + r) * g;
         peak = std::max(peak, std::abs(monoInput));
@@ -388,14 +392,16 @@ void Rev246Processor::mixOutput(juce::AudioBuffer<float>& buffer, const BlockBuf
         const auto power = powerOn.getNextValue();
         const auto panL = panLeft.getNextValue(), panR = panRight.getNextValue();
         const auto route = routeGain.getNextValue();
-        const auto dryMono = monoSumGain * (b.dryInL[i] + b.dryInR[i]);
+        // The dry goes through INPUT as well as OUTPUT, so a LINKed pair (one up by what the other is down) leaves it where it was.
+        const auto dg = b.dryGain[i];
+        const auto dryMono = monoSumGain * (b.dryInL[i] + b.dryInR[i]) * dg;
         if (stereoOut)
         {
             // True stereo keeps the dry signal's channels; the original mode pans the mono sum as before.
             const auto st = dryStereo.getNextValue(); // 0 or 1 at rest: exactly one form, no rounding from the blend
             auto blend = [st, dryMono](float own) { return st >= 1.0f ? own : st <= 0.0f ? dryMono : dryMono + st * (own - dryMono); };
-            const auto dryL = blend(b.dryInL[i]) * panL;
-            const auto dryR = blend(b.dryInR[i]) * panR;
+            const auto dryL = blend(b.dryInL[i] * dg) * panL;
+            const auto dryR = blend(b.dryInR[i] * dg) * panR;
             const auto processedL = ((1.0f - mix) * dryL + mix * route * wetL[i]) * outputGain;
             const auto processedR = ((1.0f - mix) * dryR + mix * route * wetR[i]) * outputGain;
             // Power off: the host's signal, delayed only.
