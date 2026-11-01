@@ -108,7 +108,7 @@ notch, and Option/Alt-click to return to the default.
 | **WIDTH** | Wet stereo width: 0 = mono, 100 = unchanged, 200 = extra wide. Above 100 the bass stays mono |
 | **DUCKER** | Lowers the reverb while the input is over a threshold. Click for its settings: range (0 to -60 dB), threshold, attack and release |
 | **MIX** | Wet/dry balance. PAN places the dry signal |
-| **INPUT / OUTPUT** | Levels, with LINK to move them together |
+| **INPUT / OUTPUT** | Levels, with LINK to move them together (one up by what the other is down). INPUT feeds the reverb and the dry; OUTPUT is the master, so a linked pair leaves the dry level where it was |
 
 In the non-linear programme (N) the readouts change meaning to match the hardware's own labels (DELAY, SPAN, and early
 and late RT). Hover over any control for a description.
