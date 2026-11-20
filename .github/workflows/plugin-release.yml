@@ -3,10 +3,10 @@
 # GitHub Release. No push/schedule trigger — it ONLY runs when you start it from the Actions tab
 # or `gh workflow run release.yml`, so a release is never cut accidentally.
 #
-# macOS ships TWO builds: `macos` (native Apple Silicon, arm64) and `macos-intel` (x86_64, cross-
-# compiled on the same Apple Silicon runner via -DCMAKE_OSX_ARCHITECTURES=x86_64 rather than on
-# GitHub's near-retired macos-13 Intel-hosted pool). Both are signed/notarized identically; the Intel job's filenames carry an
-# "-Intel" tag so the two never collide in the same Release.
+# macOS ships TWO builds: `macos` (native Apple Silicon, arm64, the small default) and `macos-universal` (arm64 + x86_64, for
+# Intel Macs and Rosetta hosts; its x86_64 slice is cross-compiled on the same Apple Silicon runner). Both are
+# signed/notarized identically; the Universal job's filenames carry a "-Universal" tag so the two never collide in the same
+# Release.
 #
 # macOS artifacts are signed with a Developer ID Application certificate and notarized via
 # notarytool, using secrets configured in the repo (APPLE_CERT_P12_BASE64, APPLE_CERT_PASSWORD,
@@ -83,7 +83,7 @@ jobs:
         with: { submodules: recursive }
 
       - name: Configure
-        # arm64 only, stated rather than left to the runner, so this job never ships a universal or Intel binary.
+        # arm64 only, stated rather than left to the runner, so this job never ships a universal binary (the macos-universal job does).
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DRV_BUILD_TESTS=OFF
 
       - name: Build AU + VST3
@@ -95,9 +95,14 @@ jobs:
           for bin in build/REV246_artefacts/Release/VST3/REV-246.vst3/Contents/MacOS/REV-246 \
                      build/REV246_artefacts/Release/AU/REV-246.component/Contents/MacOS/REV-246; do
             echo "== $bin"; lipo -info "$bin"; vtool -show-build "$bin"; otool -L "$bin"
-            minos=$(vtool -show-build "$bin" | awk '/minos/ {print $2; exit}')
-            echo "minos=$minos"
-            case "$minos" in 10.*|11.*) ;; *) echo "::error::$bin needs macOS $minos"; exit 1 ;; esac
+            # vtool prints one block per slice: arm64 as "minos", x86_64 as a LC_VERSION_MIN_MACOSX "version". Every slice
+            # must have a minimum of macOS 11 or lower, and at least one must be found.
+            mins=$(vtool -show-build "$bin" | awk '/minos/ {print $2} /LC_VERSION_MIN_MACOSX/ {f=1} f && /^ *version/ {print $2; f=0}')
+            [ -n "$mins" ] || { echo "::error::no minimum macOS version found in $bin"; exit 1; }
+            for minos in $mins; do
+              echo "minos=$minos"
+              case "$minos" in 10.*|11.*) ;; *) echo "::error::$bin needs macOS $minos"; exit 1 ;; esac
+            done
           done
 
       - name: Import signing certificates
@@ -212,21 +217,19 @@ jobs:
             plugin/REV246-macOS-v*.zip
             plugin/REV246-macOS-v*.pkg
 
-  macos-intel:
-    name: macOS build (Intel)
+  macos-universal:
+    name: macOS build (Universal)
     needs: version
-    # GitHub's macos-13 (Intel-hosted) runner pool has become unreliable/near-retired — jobs can
-    # sit in "waiting for a runner" indefinitely. Build the Intel slice by CROSS-COMPILING on the
-    # Apple Silicon runner instead (Xcode's clang + the macOS SDK support this natively via
-    # -DCMAKE_OSX_ARCHITECTURES=x86_64 below) — no Intel hardware needed, and it's not subject to
-    # that pool's availability.
+    # One build with both slices (arm64 + x86_64), for Intel Macs and for hosts that run as Intel under Rosetta (some
+    # Ardour/Mixbus builds), which cannot load an arm64-only bundle. The Intel slice is CROSS-COMPILED on the Apple
+    # Silicon runner (GitHub's Intel-hosted pool is near-retired), so no Intel hardware is needed.
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v6
         with: { submodules: recursive }
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=x86_64 -DRV_BUILD_TESTS=OFF
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DRV_BUILD_TESTS=OFF
 
       - name: Build AU + VST3
         run: cmake --build build --config Release --target REV246_AU --target REV246_VST3 --parallel
@@ -237,9 +240,14 @@ jobs:
           for bin in build/REV246_artefacts/Release/VST3/REV-246.vst3/Contents/MacOS/REV-246 \
                      build/REV246_artefacts/Release/AU/REV-246.component/Contents/MacOS/REV-246; do
             echo "== $bin"; lipo -info "$bin"; vtool -show-build "$bin"; otool -L "$bin"
-            minos=$(vtool -show-build "$bin" | awk '/minos/ {print $2; exit}')
-            echo "minos=$minos"
-            case "$minos" in 10.*|11.*) ;; *) echo "::error::$bin needs macOS $minos"; exit 1 ;; esac
+            # vtool prints one block per slice: arm64 as "minos", x86_64 as a LC_VERSION_MIN_MACOSX "version". Every slice
+            # must have a minimum of macOS 11 or lower, and at least one must be found.
+            mins=$(vtool -show-build "$bin" | awk '/minos/ {print $2} /LC_VERSION_MIN_MACOSX/ {f=1} f && /^ *version/ {print $2; f=0}')
+            [ -n "$mins" ] || { echo "::error::no minimum macOS version found in $bin"; exit 1; }
+            for minos in $mins; do
+              echo "minos=$minos"
+              case "$minos" in 10.*|11.*) ;; *) echo "::error::$bin needs macOS $minos"; exit 1 ;; esac
+            done
           done
 
       - name: Import signing certificates
@@ -305,22 +313,22 @@ jobs:
       - name: Package
         run: |
           VERSION="${{ needs.version.outputs.version }}"
-          # Zip only the AU/VST3 bundles, NOT the whole Release dir — see the ARM job's comment.
-          # Filenames carry an "Intel" tag so this job's assets never collide with the ARM job's
+          # Zip only the AU/VST3 bundles, NOT the whole Release dir — see the arm64 job's comment.
+          # Filenames carry an "Universal" tag so this job's assets never collide with the arm64 job's
           # when both land in the same GitHub Release.
           PKG_DIR="$RUNNER_TEMP/REV-246"
           mkdir -p "$PKG_DIR"
           cp -R "build/REV246_artefacts/Release/AU" "build/REV246_artefacts/Release/VST3" "$PKG_DIR/"
           installer/stage_docs.sh "$PKG_DIR" "$VERSION" # the readme and licences, which the licences require
-          ditto -c -k --sequesterRsrc --keepParent "$PKG_DIR" "REV246-macOS-Intel-v${VERSION}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$PKG_DIR" "REV246-macOS-Universal-v${VERSION}.zip"
 
       - name: Build installer
         run: |
           VERSION="${{ needs.version.outputs.version }}"
           installer/macos/build_installer.sh "$VERSION" build/REV246_artefacts/Release .
           # build_installer.sh always names its output "REV246-macOS-v<version>-Installer.pkg" —
-          # rename it so this Intel build's asset doesn't collide with the ARM job's.
-          mv "REV246-macOS-v${VERSION}-Installer.pkg" "REV246-macOS-Intel-v${VERSION}-Installer.pkg"
+          # rename it so this Universal build's asset doesn't collide with the arm64 job's.
+          mv "REV246-macOS-v${VERSION}-Installer.pkg" "REV246-macOS-Universal-v${VERSION}-Installer.pkg"
 
       - name: Sign + notarize installer
         env:
@@ -330,7 +338,7 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           VERSION="${{ needs.version.outputs.version }}"
-          PKG="REV246-macOS-Intel-v${VERSION}-Installer.pkg"
+          PKG="REV246-macOS-Universal-v${VERSION}-Installer.pkg"
           SIGNED_PKG="$RUNNER_TEMP/signed.pkg"
 
           productsign --sign "$APPLE_INSTALLER_SIGNING_IDENTITY" --keychain "$KEYCHAIN_PATH" \
@@ -351,10 +359,10 @@ jobs:
 
       - uses: actions/upload-artifact@v6
         with:
-          name: REV246-macOS-Intel
+          name: REV246-macOS-Universal
           path: |
-            plugin/REV246-macOS-Intel-v*.zip
-            plugin/REV246-macOS-Intel-v*.pkg
+            plugin/REV246-macOS-Universal-v*.zip
+            plugin/REV246-macOS-Universal-v*.pkg
 
   windows:
     name: Windows build
@@ -477,7 +485,7 @@ jobs:
 
   publish:
     name: Publish release
-    needs: [version, macos, macos-intel, windows, linux]
+    needs: [version, macos, macos-universal, windows, linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v8

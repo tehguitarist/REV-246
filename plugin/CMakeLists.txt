@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.15)
 # 1.0.0 release was built with the runner's own OS as its minimum, "minos 26.0", and loaded on nothing older).
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS deployment version")
 
-project(REV246 VERSION 1.0.1)   # release.yml greps this line for the version; keep the format
+project(REV246 VERSION 1.0.2)   # release.yml greps this line for the version; keep the format
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -12,8 +12,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # installed on the user's machine. A plug-in built with a newer MSVC than the user's redistributable fails to load, which a
 # host's scanner reports as "broken". Needs CMP0091 (NEW from cmake_minimum_required 3.15); must precede JUCE.
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-# macOS ships two separate builds, not a universal binary: arm64, the default here and locally, and x86_64
-# ("Intel"), which release.yml cross-compiles with -DCMAKE_OSX_ARCHITECTURES=x86_64.
+# macOS ships two builds: arm64 only, the default here and locally, and a universal one (arm64 + x86_64) that release.yml
+# builds with -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" for Intel Macs and Rosetta hosts.
 
 option(RV_BUILD_TESTS "Build the unit tests (tests/, Catch2 v3)" OFF)
 option(RV_STANDALONE "Also build a Standalone app, for checking the UI without a host" OFF)

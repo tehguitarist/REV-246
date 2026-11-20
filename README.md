@@ -85,6 +85,9 @@ Download the installer for your system from the [latest release](https://github.
 | Windows | `.exe` | VST3 |
 | Linux | `.deb` | VST3 |
 
+On a Mac there are two installers: the standard one for Apple Silicon, and a **Universal** one for Intel Macs and for DAWs that
+run under Rosetta. If your DAW does not find REV-246 or reports it cannot be loaded, try the Universal installer.
+
 Then rescan plugins in your DAW. Logic caches Audio Units, so if REV-246 does not show up, restart Logic or run
 `auval -v aufx Rv24 Lprc`.
 
