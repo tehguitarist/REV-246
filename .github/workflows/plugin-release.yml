@@ -77,7 +77,7 @@ jobs:
   macos:
     name: macOS build
     needs: version
-    runs-on: macos-14 # pinned: the newest runner's SDK/libc++ can produce a binary that older macOS cannot load
+    runs-on: macos-latest # the minimum-macOS check below guards the binary, so no runner pin is needed
     steps:
       - uses: actions/checkout@v6
         with: { submodules: recursive }
@@ -219,8 +219,8 @@ jobs:
     # sit in "waiting for a runner" indefinitely. Build the Intel slice by CROSS-COMPILING on the
     # Apple Silicon runner instead (Xcode's clang + the macOS SDK support this natively via
     # -DCMAKE_OSX_ARCHITECTURES=x86_64 below) — no Intel hardware needed, and it's not subject to
-    # that pool's availability. Pinned to macos-14 like the arm64 job.
-    runs-on: macos-14
+    # that pool's availability.
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v6
         with: { submodules: recursive }
