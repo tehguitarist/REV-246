@@ -30,7 +30,7 @@ jobs:
       matrix:
         # Ubuntu pinned: ubuntu-latest changes image versions over time, which may rename apt packages or change the
         # fonts the editor tests render with. Move the pin deliberately, after one green run on the new image.
-        os: [macos-latest, windows-latest, ubuntu-24.04]
+        os: [macos-14, windows-latest, ubuntu-24.04]
     steps:
       - name: Checkout
         uses: actions/checkout@v6

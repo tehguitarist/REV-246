@@ -77,7 +77,7 @@ jobs:
   macos:
     name: macOS build
     needs: version
-    runs-on: macos-latest
+    runs-on: macos-14 # pinned: the newest runner's SDK/libc++ can produce a binary that older macOS cannot load
     steps:
       - uses: actions/checkout@v6
         with: { submodules: recursive }
@@ -88,6 +88,17 @@ jobs:
 
       - name: Build AU + VST3
         run: cmake --build build --config Release --target REV246_AU --target REV246_VST3 --parallel
+
+      - name: Check minimum macOS version
+        # Fails the release if the binaries would not load on older macOS: prints what they need and what they link.
+        run: |
+          for bin in build/REV246_artefacts/Release/VST3/REV-246.vst3/Contents/MacOS/REV-246 \
+                     build/REV246_artefacts/Release/AU/REV-246.component/Contents/MacOS/REV-246; do
+            echo "== $bin"; lipo -info "$bin"; vtool -show-build "$bin"; otool -L "$bin"
+            minos=$(vtool -show-build "$bin" | awk '/minos/ {print $2; exit}')
+            echo "minos=$minos"
+            case "$minos" in 10.*|11.*) ;; *) echo "::error::$bin needs macOS $minos"; exit 1 ;; esac
+          done
 
       - name: Import signing certificates
         env:
@@ -208,8 +219,8 @@ jobs:
     # sit in "waiting for a runner" indefinitely. Build the Intel slice by CROSS-COMPILING on the
     # Apple Silicon runner instead (Xcode's clang + the macOS SDK support this natively via
     # -DCMAKE_OSX_ARCHITECTURES=x86_64 below) — no Intel hardware needed, and it's not subject to
-    # that pool's availability.
-    runs-on: macos-latest
+    # that pool's availability. Pinned to macos-14 like the arm64 job.
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v6
         with: { submodules: recursive }
@@ -219,6 +230,17 @@ jobs:
 
       - name: Build AU + VST3
         run: cmake --build build --config Release --target REV246_AU --target REV246_VST3 --parallel
+
+      - name: Check minimum macOS version
+        # Fails the release if the binaries would not load on older macOS: prints what they need and what they link.
+        run: |
+          for bin in build/REV246_artefacts/Release/VST3/REV-246.vst3/Contents/MacOS/REV-246 \
+                     build/REV246_artefacts/Release/AU/REV-246.component/Contents/MacOS/REV-246; do
+            echo "== $bin"; lipo -info "$bin"; vtool -show-build "$bin"; otool -L "$bin"
+            minos=$(vtool -show-build "$bin" | awk '/minos/ {print $2; exit}')
+            echo "minos=$minos"
+            case "$minos" in 10.*|11.*) ;; *) echo "::error::$bin needs macOS $minos"; exit 1 ;; esac
+          done
 
       - name: Import signing certificates
         env:
@@ -347,6 +369,16 @@ jobs:
 
       - name: Build VST3
         run: cmake --build build --config Release --target REV246_VST3 --parallel
+
+      - name: Check the DLL needs no Visual C++ runtime
+        shell: pwsh
+        run: |
+          $vsroot = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          $dumpbin = Get-ChildItem "$vsroot\VC\Tools\MSVC" -Recurse -Filter dumpbin.exe | Where-Object { $_.FullName -match 'Hostx64\\x64' } | Select-Object -First 1
+          $dll = Get-ChildItem "build/REV246_artefacts/Release/VST3/REV-246.vst3/Contents/x86_64-win" -Filter *.vst3 | Select-Object -First 1
+          $deps = & $dumpbin.FullName /dependents $dll.FullName
+          $deps
+          if ($deps -match '(?i)vcruntime|msvcp|concrt|ucrtbase|api-ms-win-crt') { throw "The plug-in still depends on the Visual C++ / UCRT runtime DLLs" }
 
       - name: Package
         shell: pwsh
