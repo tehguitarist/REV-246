@@ -193,8 +193,23 @@ cmake -S plugin -B plugin/build -DCMAKE_BUILD_TYPE=Release -DRV_STANDALONE=ON
 cmake --build plugin/build --config Release --parallel 3
 ```
 
+On Windows, name the generator and 64-bit explicitly (this matters when more than one Visual Studio is installed, and
+without it the build can pick the wrong toolchain):
+
+```bash
+cmake -S plugin -B plugin/build -G "Visual Studio 17 2022" -A x64 -DRV_STANDALONE=ON
+cmake --build plugin/build --config Release --parallel 3
+```
+
 The plugins land in `plugin/build/REV246_artefacts/Release/{AU,VST3,Standalone}` (AU on macOS only). Add
 `-DRV_BUILD_TESTS=ON` and run `ctest --test-dir plugin/build -C Release` to build and run the tests.
+
+A VST3 is a bundle: on Windows `REV-246.vst3` is a folder (the DLL is inside it, in `Contents\x86_64-win`), so install the
+whole folder, into `C:\Program Files\Common Files\VST3`.
+
+After pulling new changes, run `git submodule update --init --recursive` to bring JUCE to the version the repository expects,
+and delete the `plugin/build` folder before configuring again if you change compiler or Visual Studio version: CMake keeps
+the compiler and generator from the first run in an existing build folder.
 
 Development rules (cross-platform code, assets, CI) and the source layout are in
 [plugin/docs/DEVELOPMENT.md](plugin/docs/DEVELOPMENT.md); the engine is described in [plugin/docs/ENGINE.md](plugin/docs/ENGINE.md).
