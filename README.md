@@ -183,7 +183,7 @@ unit, so a time-varying programme (M here) and the original's analogue chain wil
 
 ## Build
 
-You need CMake 3.15 or newer and a C++17 compiler (Xcode on macOS, Visual Studio 2022 on Windows, GCC or Clang on
+You need CMake 3.15 or newer and a C++17 compiler (Xcode on macOS, Visual Studio 2022 or 2026 on Windows, GCC or Clang on
 Linux). JUCE is a git submodule.
 
 ```bash
@@ -194,12 +194,16 @@ cmake --build plugin/build --config Release --parallel 3
 ```
 
 On Windows, name the generator and 64-bit explicitly (this matters when more than one Visual Studio is installed, and
-without it the build can pick the wrong toolchain):
+without it the build can pick the wrong toolchain). Use the generator that matches your Visual Studio: `"Visual Studio 17 2022"`
+for 2022 or `"Visual Studio 18 2026"` for 2026 (that one needs a recent CMake; the releases are built with 2026):
 
 ```bash
 cmake -S plugin -B plugin/build -G "Visual Studio 17 2022" -A x64 -DRV_STANDALONE=ON
 cmake --build plugin/build --config Release --parallel 3
 ```
+
+Both need the "Desktop development with C++" workload. If CMake cannot find a Visual Studio that is installed somewhere
+other than the default location, add `-DCMAKE_GENERATOR_INSTANCE="<full path to the Visual Studio folder>"`.
 
 The plugins land in `plugin/build/REV246_artefacts/Release/{AU,VST3,Standalone}` (AU on macOS only). Add
 `-DRV_BUILD_TESTS=ON` and run `ctest --test-dir plugin/build -C Release` to build and run the tests.
