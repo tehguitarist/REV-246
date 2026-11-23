@@ -472,7 +472,7 @@ jobs:
           cp -R "build/REV246_artefacts/Release/VST3/REV-246.vst3" "$STAGE/"
           cp -R "build/REV246_artefacts/Release/LV2/REV-246.lv2" "$STAGE/"
           installer/stage_docs.sh "$STAGE" "$VERSION"
-          (cd "$RUNNER_TEMP" && zip -r "${GITHUB_WORKSPACE}/REV246-Linux-v${VERSION}.zip" "REV-246")
+          (cd "$RUNNER_TEMP" && zip -r "${GITHUB_WORKSPACE}/plugin/REV246-Linux-v${VERSION}.zip" "REV-246")
 
       - name: Build installer
         run: |
