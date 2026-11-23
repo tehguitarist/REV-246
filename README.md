@@ -8,7 +8,7 @@
 
 **A free, open-source digital reverb with a vintage heart.** REV-246 is inspired by the EMT 246, the rare mid 80s
 studio reverb prized for its dense, smooth tails and its distinctly period character: a little grit, a little weight,
-and a sound that sits in a mix instead of on top of it. It runs as AU, VST3 and standalone, on macOS, Windows and Linux.
+and a sound that sits in a mix instead of on top of it. It runs as AU, VST3, LV2 (Linux) and standalone, on macOS, Windows and Linux.
 
 Five programmes cover everything from a tight room to a twenty-second cathedral, including a non-linear programme for
 gated and reverse drum sounds and the older EMT 250 algorithm. The panel keeps the original's six levers, glowing readouts and
@@ -18,7 +18,7 @@ were fixed in the hardware (or, for the transformers, a factory option you had t
 
 > REV-246 is an independent project. It is not affiliated with or endorsed by EMT or any other manufacturer.
 
-**Version 1.0.** **[Download the latest release](https://github.com/tehguitarist/REV-246/releases/latest)** for macOS (AU and VST3), Windows (VST3) and Linux (VST3).
+**Version 1.0.** **[Download the latest release](https://github.com/tehguitarist/REV-246/releases/latest)** for macOS (AU and VST3), Windows (VST3) and Linux (VST3, LV2).
 
 ## Highlights
 
@@ -83,7 +83,7 @@ Download the installer for your system from the [latest release](https://github.
 |---|---|---|
 | macOS | `.pkg` | AU, VST3 |
 | Windows | `.exe` | VST3 |
-| Linux | `.deb` | VST3 |
+| Linux | `.deb` | VST3, LV2 |
 
 On a Mac there are two installers: the standard one for Apple Silicon, and a **Universal** one for Intel Macs and for DAWs that
 run under Rosetta. If your DAW does not find REV-246 or reports it cannot be loaded, try the Universal installer.
