@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.15)
 # 1.0.0 release was built with the runner's own OS as its minimum, "minos 26.0", and loaded on nothing older).
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS deployment version")
 
-project(REV246 VERSION 1.0.2)   # release.yml greps this line for the version; keep the format
+project(REV246 VERSION 1.0.3)   # release.yml greps this line for the version; keep the format
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -52,6 +52,9 @@ set(RV_SOURCES
 # build, for testing in a DAW. Off by default (CI, release builds).
 option(RV_INSTALL_AFTER_BUILD "Copy the built plug-ins into the user's plug-in folders" OFF)
 set(RV_FORMATS AU VST3)
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    list(APPEND RV_FORMATS LV2)   # LV2 is built on Linux only
+endif()
 if (RV_STANDALONE)
     list(APPEND RV_FORMATS Standalone)
 endif()
@@ -67,6 +70,7 @@ juce_add_plugin(REV246
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
     VST3_CATEGORIES Fx Reverb
+    LV2URI "https://github.com/tehguitarist/REV-246"   # permanent: hosts identify the plug-in by it
     AU_MAIN_TYPE kAudioUnitType_Effect
     COPY_PLUGIN_AFTER_BUILD ${RV_INSTALL_AFTER_BUILD}
 )
